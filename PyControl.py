@@ -61,30 +61,6 @@ class Event_buffer():
             self.read_index = (self.read_index + 1) % self.buffer_length
         return (ID, timestamp)
 
-class Event_buffer_1():
-    #  Ring buffer for events, specified by an event ID and timestamp.
-
-    def __init__(self, buffer_length = 10):
-        self.buffer_length = buffer_length
-        self._ID_buffer = Ring_buffer('i', buffer_length, -1)       # Integer buffer for event IDs
-        self.timestamp_buffer = Ring_buffer('L', buffer_length, 0) # Unsigned long buffer for timestamps.
-
-    def reset(self):
-        self._ID_buffer.reset()
-        self.timestamp_buffer.reset()
-
-    def put(self, ID, timestamp = None):
-        if not timestamp:
-            timestamp = pyb.millis()
-        self._ID_buffer.put(ID)
-        self.timestamp_buffer.put(timestamp)
-        assert self._ID_buffer.write_index == self.timestamp_buffer.write_index, \
-                'Write index mismatch.'
-
-    def get(self):
-        return (self._ID_buffer.get(), self.timestamp_buffer.get())
-
-
 # class Int_events():
 #     # Class for attaching external interupts to event buffers.
 #     def __init__(self):
