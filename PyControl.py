@@ -1,58 +1,45 @@
 from array import array
 import pyb
 
-class Ring_buffer():
-    # Generic ring buffer class using array object to hold items.  All item in the 
-    # ring buffer must be of the same type, specified at initialisation by typecode argument.
+# Units
+minute = 60000
+second = 1000
+ms = 1
 
-    def __init__(self, typecode = 'i', buffer_length = 10, null_value = -1):
-        self.typecode = typecode
-        self.null_value = null_value
-        self.buffer_length = buffer_length
-        self.reset()
+# ----------------------------------------------------------------------------------------
+# Event Que
+# ----------------------------------------------------------------------------------------
 
-    def reset(self):
-        self.buffer = array(self.typecode, [self.null_value] * self.buffer_length)
-        self.read_index  = 0
-        self.write_index = 0
-
-    def put(self, value):
-        assert self.buffer[self.write_index] == self.null_value, 'Buffer full'
-        self.buffer[self.write_index] = value
-        self.write_index = (self.write_index + 1) % self.buffer_length
-
-    def get(self):
-        value = self.buffer[self.read_index]
-        self.buffer[self.read_index] = self.null_value
-        if value != self.null_value:
-            self.read_index = (self.read_index + 1) % self.buffer_length
-        return value
-
-class Event_buffer():
-    # Generic ring buffer class using array object to hold items.  All item in the 
-    # ring buffer must be of the same type, specified at initialisation by typecode argument.
+class Event_queue():
+    #  Queue for holding events consisting of an event ID and timestamp.
 
     def __init__(self, buffer_length = 10):
-        self.ID_null_value = -1  # ID null value.
+        self.ID_null_value =  0  # ID null value.
         self.TS_null_value =  0  # Time stamp null value.       
         self.buffer_length = buffer_length
         self.reset()
 
     def reset(self):
+        # Empty queue, set IDs to null value.
         self.ID_buffer = array('i', [self.ID_null_value] * self.buffer_length)
         self.TS_buffer = array('L', [self.TS_null_value] * self.buffer_length)
         self.read_index  = 0
         self.write_index = 0
 
-    def put(self, ID, timestamp = None):
+    def put(self, event):
+        # Put event in que.  If event in an int, it is treated as the event ID and a 
+        # timestamp is generated.  event can also be an (ID, timestamp) tuple .
         assert self.ID_buffer[self.write_index] == self.ID_null_value, 'Buffer full'
-        if not timestamp:
-            timestamp = pyb.millis()
-        self.ID_buffer[self.write_index] = ID
-        self.TS_buffer[self.write_index] = timestamp
+        if isinstance(event, int):
+            self.ID_buffer[self.write_index] = event
+            self.TS_buffer[self.write_index] = pyb.millis()
+        else:
+            self.ID_buffer[self.write_index] = event[0]
+            self.TS_buffer[self.write_index] = event[1]            
         self.write_index = (self.write_index + 1) % self.buffer_length
 
     def get(self):
+        # Get event from buffer.  If no events are available return event with null ID.
         ID = self.ID_buffer[self.read_index]
         timestamp =  self.TS_buffer[self.read_index] 
         self.ID_buffer[self.read_index] = self.ID_null_value
@@ -61,6 +48,81 @@ class Event_buffer():
             self.read_index = (self.read_index + 1) % self.buffer_length
         return (ID, timestamp)
 
-# class Int_events():
-#     # Class for attaching external interupts to event buffers.
-#     def __init__(self):
+    def available(self):
+        # Return true if buffer contains events.
+        return self.ID_buffer[self.read_index] != self.ID_null_value
+
+# ----------------------------------------------------------------------------------------
+# Timer_array
+# ----------------------------------------------------------------------------------------
+
+class timer_array():
+
+    def __init__(self, n_timers = 10):
+        self.n_timers = n_timers
+        self.ID_null_value = -1  # ID null value.    
+        self.triggered_events = Event_queue(n_timers)
+        self.timer_set = False # Variable used in set() fuction.
+        self.reset()
+        
+
+
+    def reset(self):
+        self.IDs = array('i', [self.ID_null_value] * self.n_timers)
+        self.trigger_times = array('L', [0] * self.n_timers)
+        self.index  = 0
+        self.max_active = 0 
+        self.triggered_events.reset()
+
+    def set(self, ID, interval, current_time = None):
+        # Set a timer to trigger with specified event ID after 'interval' ms has elapsed.
+        if not current_time:
+            current_time = pyb.millis()
+        self.timer_set = False
+        self.index = 0
+        while not self.timer_set:
+            if self.IDs[self.index] == self.ID_null_value:
+                self.IDs[self.index] = ID
+                self.trigger_times[self.index] = current_time + interval
+                self.timer_set = True
+            if self.index >= self.n_timers:
+                print('ERROR: insufficient timers available, increase n_timers.')
+            self.index += 1
+
+    def check(self, current_time = None):
+        #Check whether any timers have triggered and place corresponding events into 
+        # triggered_events buffer.
+        if not current_time:
+            current_time = pyb.millis()
+        for self.index in range(self.n_timers):
+            if self.IDs[self.index] != self.ID_null_value and \
+               ((current_time - self.trigger_times[self.index]) >= 0):
+               self.triggered_events.put((self.IDs[self.index], current_time))
+               self.IDs[self.index] = self.ID_null_value
+        return self.triggered_events.available()
+
+# ----------------------------------------------------------------------------------------
+# Framework
+# ----------------------------------------------------------------------------------------
+
+state_machines = []  # List to hold state machines.
+ 
+timer = timer_array()  # Instantiate timer_array object.
+
+def register_machine(state_machine):
+    machine_ID = len(state_machines)
+    state_machines.append(state_machine)
+    return(machine_ID)
+
+def publish_event(event):
+    for state_machine in state_machines:
+        state_machine.event_queue.put(event)
+
+def framework_update():
+    if timer.check(): # Check for timer events.
+        while timer.triggered_events.available():
+            publish_event(timer.triggered_events.get())
+    for state_machine in state_machines:
+        state_machine.update()
+
+
