@@ -1,10 +1,6 @@
 from array import array
 import pyb
 
-# Units
-minute = 60000
-second = 1000
-ms = 1
 
 # ----------------------------------------------------------------------------------------
 # Event Que
@@ -102,12 +98,22 @@ class timer_array():
         return self.triggered_events.available()
 
 # ----------------------------------------------------------------------------------------
-# Framework
+# Framework variables and objects
 # ----------------------------------------------------------------------------------------
 
 state_machines = []  # List to hold state machines.
  
 timer = timer_array()  # Instantiate timer_array object.
+
+# Units
+
+minute = 60000
+second = 1000
+ms = 1
+
+# ----------------------------------------------------------------------------------------
+# Framework functions.
+# ----------------------------------------------------------------------------------------
 
 def register_machine(state_machine):
     machine_ID = len(state_machines)
@@ -119,10 +125,24 @@ def publish_event(event):
         state_machine.event_queue.put(event)
 
 def framework_update():
-    if timer.check(): # Check for timer events.
+    # Check timers and publish timer events.
+    if timer.check(): 
         while timer.triggered_events.available():
             publish_event(timer.triggered_events.get())
+    # Update state machines
     for state_machine in state_machines:
         state_machine.update()
+
+def framework_run(cycles):
+    for state_machine in state_machines:
+        state_machine.reset()
+        timer.reset()
+    for i in range(cycles):
+        framework_update()
+
+
+
+
+
 
 
