@@ -60,8 +60,6 @@ class timer_array():
         self.triggered_events = Event_queue(n_timers)
         self.timer_set = False # Variable used in set() fuction.
         self.reset()
-        
-
 
     def reset(self):
         self.IDs = array('i', [self.ID_null_value] * self.n_timers)
@@ -105,12 +103,6 @@ state_machines = []  # List to hold state machines.
  
 timer = timer_array()  # Instantiate timer_array object.
 
-# Units
-
-minute = 60000
-second = 1000
-ms = 1
-
 # ----------------------------------------------------------------------------------------
 # Framework functions.
 # ----------------------------------------------------------------------------------------
@@ -118,13 +110,15 @@ ms = 1
 def register_machine(state_machine):
     machine_ID = len(state_machines)
     state_machines.append(state_machine)
-    return(machine_ID)
+    state_machine.ID = machine_ID
+    state_machine.timer = timer
 
-def publish_event(event):
+def publish_event(event_ID):
+    # Put event in queue's of all state machines.
     for state_machine in state_machines:
-        state_machine.event_queue.put(event)
+        state_machine.event_queue.put(event_ID)
 
-def framework_update():
+def _update():
     # Check timers and publish timer events.
     if timer.check(): 
         while timer.triggered_events.available():
@@ -133,12 +127,12 @@ def framework_update():
     for state_machine in state_machines:
         state_machine.update()
 
-def framework_run(cycles):
+def run_machines(cycles):
     for state_machine in state_machines:
         state_machine.reset()
         timer.reset()
     for i in range(cycles):
-        framework_update()
+        _update()
 
 
 
