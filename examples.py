@@ -9,15 +9,18 @@ class blinker(State_machine):
     states= {'LED_on'  :  1,
              'LED_off' :  2}
 
-    events = {'timer_evt' :  3}
+    events = {'timer_evt' :  1}
 
     initial_state = 'LED_off'
 
+    LED = pyb.LED(1)
+    
+
     def __init__(self):
-        self.LED = pyb.LED(1)
-        super().__init__()
+        State_machine.__init__(self)
 
     def process_event(self, event):
+
 
         if   self.current_state == 'LED_on':
 
