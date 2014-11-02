@@ -86,7 +86,7 @@ class timer_array():
         for self.index in range(self.n_timers):
             if self.event_IDs[self.index] != ID_null_value and \
                ((current_time - self.trigger_times[self.index]) >= 0):
-               event_queue.put((self.machine_IDs[self.index], self.event_IDs[self.index], current_time))
+               publish_event((self.machine_IDs[self.index], self.event_IDs[self.index], current_time))
                self.event_IDs[self.index] = ID_null_value
 
 
@@ -100,18 +100,19 @@ timer = timer_array()  # Instantiate timer_array object.
 
 event_queue = Event_queue() # Instantiate event que object.
 
+
+
 # ----------------------------------------------------------------------------------------
 # Framework functions.
 # ----------------------------------------------------------------------------------------
 
-def register(State_machines):
-    if type(State_machines) is not list:
-        State_machines = [State_machines]
-    for i, state_machine in enumerate(State_machines):
+def register(state_machine):
         machine_ID = len(state_machines)
         state_machines.append(state_machine)
-        state_machine.ID = machine_ID
-        state_machine.timer = timer
+        return machine_ID
+
+def publish_event(event):
+    event_queue.put(event)
 
 def _update():
     # Check timers and process events in que.

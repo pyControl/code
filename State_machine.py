@@ -1,6 +1,5 @@
 import pyb
 from array import array
-from PyControl import ID_null_value
 
 # ----------------------------------------------------------------------------------------
 # Units
@@ -17,18 +16,19 @@ ms = 1
 
 class State_machine():
 
-    def __init__(self):
+    def __init__(self, PyControl):
         # Setup event dictionaries:
         self.events['entry'] = -1 # add entry and exit events to dictionary.
         self.events['exit' ] = -2 
         self._ID2event = {ID:event for event, ID # Dict mapping IDs to event names.
                                    in self.events.items()}
-        self.ID    = None # Overwritten when machine is registered to framework.
-        self.timer = None # Overwritten when machine is registered to framework.
+
+        self.pc = PyControl # Pointer to framework.
+        self.ID  = self.pc.register(self)
 
     def start(self):
-        # Puts agent in initial state, with single entry event in que.
-        # Called by framework when run is started.
+        # Called when run is started.
+        # Puts agent in initial state, and runs entry event.
         self.current_state = self.initial_state
         self.process_event('entry')
 
@@ -38,7 +38,7 @@ class State_machine():
         pass
 
     def set_timer(self, event, interval):
-        self.timer.set(self.events[event], int(interval), self.ID)
+        self.pc.timer.set(self.events[event], int(interval), self.ID)
 
     def process_event_ID(self, event_ID):
         # Process event given event ID

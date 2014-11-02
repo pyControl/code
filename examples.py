@@ -16,12 +16,12 @@ class blinker(State_machine):
     initial_state = 'LED_off'
 
         
-    def __init__(self, LED = 1, period = 1.):
+    def __init__(self, PyControl, LED = 1, period = 1.):
         # Instance variables.
         self.LED = pyb.LED(LED)
         self.period = period
 
-        State_machine.__init__(self)
+        State_machine.__init__(self, PyControl)
 
     def process_event(self, event):
 
