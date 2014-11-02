@@ -6,6 +6,8 @@ from State_machine import *
 
 class blinker(State_machine):
 
+    # Class variables.
+
     states= {'LED_on'  :  1,
              'LED_off' :  2}
 
@@ -13,19 +15,20 @@ class blinker(State_machine):
 
     initial_state = 'LED_off'
 
-    LED = pyb.LED(1)
-    
+        
+    def __init__(self, LED = 1, period = 1.):
+        # Instance variables.
+        self.LED = pyb.LED(LED)
+        self.period = period
 
-    def __init__(self):
         State_machine.__init__(self)
 
     def process_event(self, event):
 
-
         if   self.current_state == 'LED_on':
 
             if event == 'entry':
-                self.set_timer('timer_evt', 1 * second)
+                self.set_timer('timer_evt', self.period * second)
                 print('LED_on')
                 self.LED.on()
 
@@ -39,9 +42,12 @@ class blinker(State_machine):
         elif self.current_state == 'LED_off':
 
             if event == 'entry':
-                self.set_timer('timer_evt', 1 * second)
+                self.set_timer('timer_evt', self.period * second)
 
             if event == 'timer_evt':
                 self.goto_state('LED_on')
+
+    def stop(self):
+        self.LED.off()
 
 

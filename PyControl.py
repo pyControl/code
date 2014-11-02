@@ -59,6 +59,7 @@ class timer_array():
     def reset(self):
         global current_time
         current_time = pyb.millis()
+        self.start_time = current_time
         self.event_IDs           = array('i', [ID_null_value] * self.n_timers)
         self.trigger_times = array('L', [0]  * self.n_timers)
         self.machine_IDs   = array('i', [-1] * self.n_timers)
@@ -103,12 +104,14 @@ event_queue = Event_queue() # Instantiate event que object.
 # Framework functions.
 # ----------------------------------------------------------------------------------------
 
-def register_machine(state_machine):
-    machine_ID = len(state_machines)
-    state_machines.append(state_machine)
-    state_machine.ID = machine_ID
-    state_machine.timer = timer
-
+def register(State_machines):
+    if type(State_machines) is not list:
+        State_machines = [State_machines]
+    for i, state_machine in enumerate(State_machines):
+        machine_ID = len(state_machines)
+        state_machines.append(state_machine)
+        state_machine.ID = machine_ID
+        state_machine.timer = timer
 
 def _update():
     # Check timers and process events in que.
@@ -123,13 +126,17 @@ def _update():
         else:
             state_machines[event[0]].process_event_ID(event[1])
 
-
-def run_machines(cycles):
+def run_machines(duration):
+    global current_time
     timer.reset()
+    end_time = timer.start_time + duration
     for state_machine in state_machines:
-        state_machine.start()        
-    for i in range(cycles):
+        state_machine.start()
+    while (current_time - end_time) < 0:            
         _update()
+    for state_machine in state_machines:
+        state_machine.stop()  
+
 
 
 

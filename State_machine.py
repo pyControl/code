@@ -32,6 +32,11 @@ class State_machine():
         self.current_state = self.initial_state
         self.process_event('entry')
 
+    def stop(self):
+        # Called at end of run. Overwrite with desired
+        # functionality when state machines are defined.
+        pass
+
     def set_timer(self, event, interval):
         self.timer.set(self.events[event], int(interval), self.ID)
 
@@ -40,7 +45,7 @@ class State_machine():
         self.process_event(self._ID2event[event_ID])
 
     def process_event(self, event):
-        # Process event given event name. Overwritten with desired
+        # Process event given event name. Overwrite with desired
         # functionality when state machines are defined.
         pass
 
