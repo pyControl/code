@@ -1,11 +1,19 @@
-import PyControl as pc
-import examples  as ex 
+from PyControl import *
+from examples import *
 
-b = ex.blinker()      # Create an instance of blinker object.
+# Instantiate state machines.
 
-pc.register_machine(b) # Register it with PyControl.
+blinker_1 = blinker(LED = 1, period = 1)      
+blinker_2 = blinker(LED = 2, period = 0.5)     
+blinker_3 = blinker(LED = 3, period = 0.25) 
+blinker_4 = blinker(LED = 4, period = 0.125) 
 
-pc.run_machines(10000)  # Run PyControl for 10000 cycles.
+# Register machiness with PyControl.
+register([blinker_1, blinker_2, blinker_3, blinker_4]) 
+
+
+# Run PyControl.
+run_machines(5 * second)  
 
 
 
