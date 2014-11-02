@@ -38,7 +38,7 @@ class BoxIO():
 
     def __init__(self, addr = 0x20, int_pin = 'X1'):
 
-        self.addr = 0x20     # Device address
+        self.addr = addr     # Device address
 
         i2c.mem_write(0x00, self.addr, IODIRB, timeout=5000)   # Set all port B pins as outputs.
         i2c.mem_write(2, self.addr, IOCONA, timeout=5000)      # Set interrupts active high
@@ -51,25 +51,25 @@ class BoxIO():
         self.output_state = 0
         i2c.mem_write(self.output_state, self.addr, GPIOB, timeout=5000)    # Set all output lines low.
 
-        self.ports{ 1: {'DIO_A': 0,
-                        'DIO_B': 4,
-                        'ULN_A': 0,
-                        'ULN_B': 4}
+        self.ports = { 1: {'DIO_A': 0,
+                           'DIO_B': 4,
+                           'ULN_A': 0,
+                           'ULN_B': 4},
 
-                    2: {'DIO_A': 1,
-                        'DIO_B': 5,
-                        'ULN_A': 1,
-                        'ULN_B': 5}
+                       2: {'DIO_A': 1,
+                           'DIO_B': 5,
+                           'ULN_A': 1,
+                           'ULN_B': 5},
 
-                    3: {'DIO_A': 2,
-                        'DIO_B': 6,
-                        'ULN_A': 2,
-                        'ULN_B': 6}
+                       3: {'DIO_A': 2,
+                           'DIO_B': 6,
+                           'ULN_A': 2,
+                           'ULN_B': 6},
 
-                    4: {'DIO_A': 3,
-                        'DIO_B': 7,
-                        'ULN_A': 3,
-                        'ULN_B': 7}}      
+                       4: {'DIO_A': 3,
+                           'DIO_B': 7,
+                           'ULN_A': 3,
+                           'ULN_B': 7}}      
 
 
     def ISR(self, line):
@@ -95,15 +95,18 @@ class BoxIO():
                 print('Pin {} changed, now: {}'.format(pin, pin_state))
         self.input_state = new_input_state
 
-class poke():
-    def __init__(self, boxIO, signal,  port = None, LED_pin = None,
+class Poke():
+    def __init__(self, boxIO, port = None, LED_pin = None,
                  SOL_pin = None, sig_pin = None):
     
         self.boxIO = boxIO
+
         if port:
+            if type(port) is int:
+                port = boxIO.ports[port]
             self.LED_pin = port['ULN_B']
             self.SOL_pin = port['ULN_A']
-            self.sig_pin = port[DIO_A]
+            self.sig_pin = port['DIO_A']
         else:
             self.LED_pin = LED_pin
             self.SOL_pin = SOL_pin
@@ -114,18 +117,18 @@ class poke():
 
         # Interrupt setup code here.
 
-    def LED_on():
-        boxIO.digital_write(self.LED_pin, True)
+    def LED_on(self):
+        self.boxIO.digital_write(self.LED_pin, True)
         self.LED_state = True
 
-    def LED_off():
-        boxIO.digital_write(self.LED_pin, False)
+    def LED_off(self):
+        self.boxIO.digital_write(self.LED_pin, False)
         self.LED_state = False
 
-    def SOL_on():
-        boxIO.digital_write(self.SOL_pin, True)
+    def SOL_on(self):
+        self.boxIO.digital_write(self.SOL_pin, True)
         self.SOL_state = True
 
-    def SOL_off():
-        boxIO.digital_write(self.SOL_pin, False)
+    def SOL_off(self):
+        self.boxIO.digital_write(self.SOL_pin, False)
         self.SOL_state = False
