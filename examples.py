@@ -4,7 +4,7 @@ from State_machine import *
 # Blinker example.
 # ----------------------------------------------------------------------------------------
 
-class blinker(State_machine):
+class Blinker(State_machine):
 
     # Class variables.
 
@@ -51,7 +51,7 @@ class blinker(State_machine):
         self.LED.off()
 
 
-class button(State_machine):
+class Button(State_machine):
 
         
     states= {'LED_on'  :  1,
@@ -64,8 +64,9 @@ class button(State_machine):
     def __init__(self, PyControl, LED = 1):
         # Instance variables.
         self.LED = pyb.LED(LED)
+        State_machine.__init__(self, PyControl)
 
-def process_event(self, event):
+    def process_event(self, event):
 
         if   self.current_state == 'LED_on':
 
@@ -82,7 +83,7 @@ def process_event(self, event):
 
         elif self.current_state == 'LED_off':
 
-            if event == 'button_evt':
+            if event == 'button_event':
                 self.goto_state('LED_on')
 
     def stop(self):

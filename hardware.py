@@ -42,9 +42,13 @@ class BoxIO():
         self.pc = PyControl  # Pointer to framework.
         self.addr = addr     # Device I2C address
         self.interrupt_timestamp = pyb.millis() # Time of last interrupt.
-        self.interupt_triggered = False   # Flag to tell framework to run process_interrupt.
+        self.interrupt_triggered = False   # Flag to tell framework to run process_interrupt.
         self.active_pins = []             # Pins checked for changes on interrupt.
         self.events = {}  # Events published on interrupts  {pin:(rising, falling, machine_ID)}
+
+        # Setup.
+
+        self.pc.register_hardware(self) # Register boxIO with framwork.
 
         # Configure MCP23017---------------------------------------------------------
         i2c.mem_write(0x00, self.addr, IODIRB, timeout=5000)   # Set all port B pins as outputs.
@@ -78,7 +82,7 @@ class BoxIO():
 
 
     def ISR(self, line):
-        self.interupt_triggered = True
+        self.interrupt_triggered = True
         self.interrupt_timestamp = pyb.millis()
 
     def enable_interrupts(self):
@@ -118,7 +122,7 @@ class BoxIO():
                     if falling_event:
                         self.pc.publish_event((machine_ID, falling_event, self.interrupt_timestamp))
         self.input_state = new_input_state 
-        self.interupt_triggered = False
+        self.interrupt_triggered = False
 
 #Class Digital_input():
 

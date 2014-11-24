@@ -24,7 +24,7 @@ class State_machine():
                                    in self.events.items()}
 
         self.pc = PyControl # Pointer to framework.
-        self.ID  = self.pc.register(self)
+        self.ID  = self.pc.register_machine(self)
 
     def start(self):
         # Called when run is started.
