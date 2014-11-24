@@ -95,6 +95,8 @@ class timer_array():
 # ----------------------------------------------------------------------------------------
 
 state_machines = []  # List to hold state machines.
+
+hardware = []          # List to hold hardware objects.
  
 timer = timer_array()  # Instantiate timer_array object.
 
@@ -106,10 +108,13 @@ event_queue = Event_queue() # Instantiate event que object.
 # Framework functions.
 # ----------------------------------------------------------------------------------------
 
-def register(state_machine):
+def register_machine(state_machine):
         machine_ID = len(state_machines)
         state_machines.append(state_machine)
         return machine_ID
+
+def register_hardware(boxIO):
+    hardware.append(boxIO)
 
 def publish_event(event):
     event_queue.put(event)
@@ -119,6 +124,9 @@ def _update():
     global current_time
     current_time = pyb.millis()
     timer.check() 
+    for boxIO in hardware:
+        if boxIO.interrupt_triggered:
+            boxIO.process_interrupt()
     while event_queue.available():
         event = event_queue.get()
         if event[0] == -1: # Publish event to all machines.
