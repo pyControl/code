@@ -36,45 +36,62 @@ IOCONA    = 0x0A   # Port A configuration register.
 
 class BoxIO():
 
-    def __init__(self, addr = 0x20, int_pin = 'X1'):
+    def __init__(self, PyControl, addr = 0x20, int_pin = 'X1'):
 
-        self.addr = addr     # Device address
+        # Variables----------------------------------------------------------------
+        self.pc = PyControl  # Pointer to framework.
+        self.addr = addr     # Device I2C address
+        self.interrupt_timestamp = pyb.millis() # Time of last interrupt.
+        self.interupt_triggered = False   # Flag to tell framework to run process_interrupt.
+        self.active_pins = []             # Pins checked for changes on interrupt.
+        self.events = {}  # Events published on interrupts  {pin:(rising, falling, machine_ID)}
 
+        # Configure MCP23017---------------------------------------------------------
         i2c.mem_write(0x00, self.addr, IODIRB, timeout=5000)   # Set all port B pins as outputs.
         i2c.mem_write(2, self.addr, IOCONA, timeout=5000)      # Set interrupts active high
         i2c.mem_write(0xFF, self.addr, GPINTENA, timeout=5000) # Turn on interrupts for port A
-
-        # Configure pyboard interrupt
         self.extint = pyb.ExtInt(int_pin, pyb.ExtInt.IRQ_RISING, pyb.Pin.PULL_NONE, self.ISR)
-
         self.input_state  = i2c.mem_read(1, self.addr, GPIOA, timeout=5000)[0] # Read current state of inputs.
-        self.output_state = 0
-        i2c.mem_write(self.output_state, self.addr, GPIOB, timeout=5000)    # Set all output lines low.
+        self.outputs_off()
+
+        # Mapping of MCP pins to RJ45 ports---------------------------------------
 
         self.ports = { 1: {'DIO_A': 0,
                            'DIO_B': 4,
-                           'ULN_A': 0,
-                           'ULN_B': 4},
+                           'POW_A': 0,
+                           'POW_B': 4},
 
                        2: {'DIO_A': 1,
                            'DIO_B': 5,
-                           'ULN_A': 1,
-                           'ULN_B': 5},
+                           'POW_A': 1,
+                           'POW_B': 5},
 
                        3: {'DIO_A': 2,
                            'DIO_B': 6,
-                           'ULN_A': 2,
-                           'ULN_B': 6},
+                           'POW_A': 2,
+                           'POW_B': 6},
 
                        4: {'DIO_A': 3,
                            'DIO_B': 7,
-                           'ULN_A': 3,
-                           'ULN_B': 7}}      
+                           'POW_A': 3,
+                           'POW_B': 7}}      
 
 
     def ISR(self, line):
-        print('Interrupt!')
+        self.interupt_triggered = True
+        self.interrupt_timestamp = pyb.millis()
 
+    def enable_interrupts(self):
+        self.extint.enable()
+
+    def disable_interrupts(self):
+        self.extint.disable()
+
+    def outputs_off(self):
+        # Set all output lines low.
+        self.output_state = 0
+        i2c.mem_write(self.output_state, self.addr, GPIOB, timeout=5000)   
+        
     def digital_write(self, pin, value):
         if value:  # Set pin high
             self.output_state = self.output_state | (1 << pin)
@@ -86,36 +103,45 @@ class BoxIO():
         self.input_state = i2c.mem_read(1, self.addr, GPIOA, timeout=5000)[0]
         return bool(self.input_state & (1 << pin))
 
-    def changed_pins(self):
+    def process_interrupt(self):
+        # Evaluate which active pins have changed state and publish required events.
         new_input_state = i2c.mem_read(1, self.addr, GPIOA, timeout=5000)[0]
         changed_pins = new_input_state ^ self.input_state
-        for pin in range(8):
-            if changed_pins & (1 << pin):
-                pin_state = bool(new_input_state & (1 << pin))
-                print('Pin {} changed, now: {}'.format(pin, pin_state))
-        self.input_state = new_input_state
+        for pin in self.active_pins:
+            pin_bit = 1 << pin
+            if changed_pins & pin_bit: # Pin has changed.
+                rising_event, falling_event, machine_ID = self.events[pin]
+                if new_input_state & pin_bit: # Rising
+                    if rising_event:
+                       self.pc.publish_event((machine_ID, rising_event, self.interrupt_timestamp))
+                else:                         #Falling
+                    if falling_event:
+                        self.pc.publish_event((machine_ID, falling_event, self.interrupt_timestamp))
+        self.input_state = new_input_state 
+        self.interupt_triggered = False
+
+#Class Digital_input():
 
 class Poke():
-    def __init__(self, boxIO, port = None, LED_pin = None,
-                 SOL_pin = None, sig_pin = None):
+    def __init__(self, boxIO, port, rising_event = None, falling_event = None, machine_ID = -1):
     
         self.boxIO = boxIO
 
-        if port:
-            if type(port) is int:
-                port = boxIO.ports[port]
-            self.LED_pin = port['ULN_B']
-            self.SOL_pin = port['ULN_A']
-            self.sig_pin = port['DIO_A']
-        else:
-            self.LED_pin = LED_pin
-            self.SOL_pin = SOL_pin
-            self.sig_pin = sig_pin
+        if type(port) is int:
+            port = boxIO.ports[port]
+        self.LED_pin = port['POW_B']
+        self.SOL_pin = port['POW_A']
+        self.sig_pin = port['DIO_A']
+
+
+        self.pin_bit = 1 << self.sig_pin # Used for indexing boxIO input state byte.
 
         self.LED_off()
         self.SOL_off()
 
-        # Interrupt setup code here.
+        # Event setup here
+        self.boxIO.active_pins.append(self.sig_pin)
+        self.boxIO.events[self.sig_pin] = (rising_event, falling_event, machine_ID)
 
     def LED_on(self):
         self.boxIO.digital_write(self.LED_pin, True)
@@ -132,3 +158,10 @@ class Poke():
     def SOL_off(self):
         self.boxIO.digital_write(self.SOL_pin, False)
         self.SOL_state = False
+
+    def get_state(self, force_read = False):
+        if force_read: # Read directly from MCP.
+            return self.boxIO.digital_read(self.sig_pin)
+        else: # Get stored value of MCP input state.
+            return bool(self.boxIO.input_state & self.pin_bit)
+
