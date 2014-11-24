@@ -51,3 +51,40 @@ class blinker(State_machine):
         self.LED.off()
 
 
+class button(State_machine):
+
+        
+    states= {'LED_on'  :  1,
+             'LED_off' :  2}
+
+    events = {'button_event' :  1}
+
+    initial_state = 'LED_off'
+
+    def __init__(self, PyControl, LED = 1):
+        # Instance variables.
+        self.LED = pyb.LED(LED)
+
+def process_event(self, event):
+
+        if   self.current_state == 'LED_on':
+
+            if event == 'entry':
+                print('LED_on')
+                self.LED.on()
+
+            elif event == 'exit':
+                print('LED_off')
+                self.LED.off()
+
+            elif event == 'button_event':
+                self.goto_state('LED_off')
+
+        elif self.current_state == 'LED_off':
+
+            if event == 'button_evt':
+                self.goto_state('LED_on')
+
+    def stop(self):
+        self.LED.off()
+
