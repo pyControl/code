@@ -82,7 +82,8 @@ class BoxIO():
 
 
     def ISR(self, line):
-        self.interrupt_triggered = True
+        self.interrupt_triggered = True    # Set tag on boxIO object (unique for each boxIO).
+        self.pc.interrupts_waiting = True  # Set tag on framework (common to all boxIOs).
         self.interrupt_timestamp = pyb.millis()
 
     def enable_interrupts(self):
@@ -109,6 +110,7 @@ class BoxIO():
 
     def process_interrupt(self):
         # Evaluate which active pins have changed state and publish required events.
+        self.interrupt_triggered = False
         new_input_state = i2c.mem_read(1, self.addr, GPIOA, timeout=5000)[0]
         changed_pins = new_input_state ^ self.input_state
         for pin in self.active_pins:
@@ -122,7 +124,7 @@ class BoxIO():
                     if falling_event:
                         self.pc.publish_event((machine_ID, falling_event, self.interrupt_timestamp))
         self.input_state = new_input_state 
-        self.interrupt_triggered = False
+        
 
 #Class Digital_input():
 

@@ -102,6 +102,7 @@ timer = timer_array()  # Instantiate timer_array object.
 
 event_queue = Event_queue() # Instantiate event que object.
 
+interrupts_waiting = False # Set true if interrupt waiting to be processed.
 
 
 # ----------------------------------------------------------------------------------------
@@ -116,18 +117,20 @@ def register_machine(state_machine):
 def register_hardware(boxIO):
     hardware.append(boxIO)
 
-def publish_event(event):
+def publish_event(event):    
     event_queue.put(event)
 
 def _update():
-    # Check timers and process events in que.
-    global current_time
+    # Perform framework update functions in order of priority.
+    global current_time, interrupts_waiting
     current_time = pyb.millis()
     timer.check() 
-    for boxIO in hardware:
-        if boxIO.interrupt_triggered:
-            boxIO.process_interrupt()
-    while event_queue.available():
+    if interrupts_waiting:
+        interrupts_waiting = False
+        for boxIO in hardware:
+            if boxIO.interrupt_triggered:
+                boxIO.process_interrupt()
+    elif event_queue.available():
         event = event_queue.get()
         if event[0] == -1: # Publish event to all machines.
             for state_machine in state_machines:
@@ -136,15 +139,19 @@ def _update():
             state_machines[event[0]].process_event_ID(event[1])
 
 def run_machines(duration):
+    # Pre run----------------------------
     global current_time
     timer.reset()
     end_time = timer.start_time + duration
     for state_machine in state_machines:
         state_machine.start()
+    # Run--------------------------------
     while (current_time - end_time) < 0:            
         _update()
+    # Post run---------------------------
     for state_machine in state_machines:
         state_machine.stop()  
+
 
 
 

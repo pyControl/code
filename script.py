@@ -2,6 +2,7 @@ import PyControl as pc
 import hardware as hw
 from examples import *
 
+
 # Initialise hardware.
 
 boxIO = hw.BoxIO(pc)
@@ -16,7 +17,7 @@ button_1 = Button(pc)
 
 
 # Run PyControl.
-pc.run_machines(5 * second)  
+pc.run_machines(20 * second)  
 
 
 
