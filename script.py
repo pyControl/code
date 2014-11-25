@@ -6,15 +6,18 @@ from examples import *
 # Initialise hardware.
 
 boxIO = hw.BoxIO(pc)
-poke = hw.Poke(boxIO, 1, rising_event = 1)
+
+poke_1 = hw.Poke(boxIO, 1)
+poke_2 = hw.Poke(boxIO, 2)
+poke_3 = hw.Poke(boxIO, 3)
+poke_4 = hw.Poke(boxIO, 4)
 
 # Instantiate state machines.
 
-#blinker_1 = Blinker(pc, LED = 1, period = 1)      
-#blinker_2 = Blinker(pc, LED = 2, period = 0.5)     
-
-button_1 = Button(pc)
-
+button_1 = Button(pc, poke_1)
+button_2 = Button(pc, poke_2)
+button_3 = Button(pc, poke_3)
+button_4 = Button(pc, poke_4)
 
 # Run PyControl.
 pc.run_machines(20 * second)  

@@ -61,10 +61,13 @@ class Button(State_machine):
 
     initial_state = 'LED_off'
 
-    def __init__(self, PyControl, LED = 1):
-        # Instance variables.
-        self.LED = pyb.LED(LED)
-        State_machine.__init__(self, PyControl)
+    def __init__(self, PyControl, poke, LED = 1):
+        self.poke = poke
+        # Setup hardware events.
+        self.poke.set_events(self.events['button_event'])
+
+        # Run state machine init.
+        State_machine.__init__(self, PyControl, poke)
 
     def process_event(self, event):
 
@@ -72,11 +75,11 @@ class Button(State_machine):
 
             if event == 'entry':
                 print('LED_on')
-                self.LED.on()
+                self.poke.LED_on()
 
             elif event == 'exit':
                 print('LED_off')
-                self.LED.off()
+                self.poke.LED_off()
 
             elif event == 'button_event':
                 self.goto_state('LED_off')
@@ -87,5 +90,7 @@ class Button(State_machine):
                 self.goto_state('LED_on')
 
     def stop(self):
-        self.LED.off()
+        self.poke.LED_off()
+
+
 

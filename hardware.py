@@ -129,25 +129,35 @@ class BoxIO():
 #Class Digital_input():
 
 class Poke():
-    def __init__(self, boxIO, port, rising_event = None, falling_event = None, machine_ID = -1):
+    def __init__(self, boxIO, port):
     
         self.boxIO = boxIO
 
         if type(port) is int:
             port = boxIO.ports[port]
-        self.LED_pin = port['POW_B']
-        self.SOL_pin = port['POW_A']
-        self.sig_pin = port['DIO_A']
-
-
-        self.pin_bit = 1 << self.sig_pin # Used for indexing boxIO input state byte.
+        self.LED_pin   = port['POW_B']
+        self.SOL_pin   = port['POW_A']
+        self.sig_pin_A = port['DIO_A']
+        self.sig_pin_B = port['DIO_B']
 
         self.LED_off()
         self.SOL_off()
 
-        # Event setup here
-        self.boxIO.active_pins.append(self.sig_pin)
-        self.boxIO.events[self.sig_pin] = (rising_event, falling_event, machine_ID)
+        self.machine_ID = -1  # Overwritten to assign signals to specific machine.
+
+    def set_events(self, rising_A = None, falling_A = None,
+                         rising_B = None, falling_B = None):
+        # Assign framework event to poke input pins.
+        if rising_A or falling_A:
+            self.pin_bit_A = 1 << self.sig_pin_A # Used for indexing boxIO input state byte.
+            self.boxIO.active_pins.append(self.sig_pin_A)
+            self.boxIO.events[self.sig_pin_A] = (rising_A, falling_A, self.machine_ID)        
+        if rising_B or falling_B:
+            self.pin_bit_B = 1 << self.sig_pin_B # Used for indexing boxIO input state byte.
+            self.boxIO.active_pins.append(self.sig_pin_B)
+            self.boxIO.events[self.sig_pin_B] = (rising_B, falling_B, self.machine_ID)        
+
+    sef
 
     def LED_on(self):
         self.boxIO.digital_write(self.LED_pin, True)
@@ -157,6 +167,12 @@ class Poke():
         self.boxIO.digital_write(self.LED_pin, False)
         self.LED_state = False
 
+    def LED_toggle(self):
+        if self.LED_state:
+            self.LED_off
+        else:
+            self.LED_on
+
     def SOL_on(self):
         self.boxIO.digital_write(self.SOL_pin, True)
         self.SOL_state = True
@@ -165,9 +181,16 @@ class Poke():
         self.boxIO.digital_write(self.SOL_pin, False)
         self.SOL_state = False
 
+    def SOL_toggle(self):
+        if self.SOL_state:
+            self.SOL_off
+        else:
+            self.SOL_on
+
     def get_state(self, force_read = False):
         if force_read: # Read directly from MCP.
-            return self.boxIO.digital_read(self.sig_pin)
+            return self.boxIO.digital_read(self.sig_pin_A)
         else: # Get stored value of MCP input state.
             return bool(self.boxIO.input_state & self.pin_bit)
+
 

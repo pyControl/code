@@ -16,7 +16,7 @@ ms = 1
 
 class State_machine():
 
-    def __init__(self, PyControl):
+    def __init__(self, PyControl, DIO = None):
         # Setup event dictionaries:
         self.events['entry'] = -1 # add entry and exit events to dictionary.
         self.events['exit' ] = -2 
@@ -25,6 +25,8 @@ class State_machine():
 
         self.pc = PyControl # Pointer to framework.
         self.ID  = self.pc.register_machine(self)
+        if DIO:
+            DIO.machine_ID = self.ID
 
     def start(self):
         # Called when run is started.
