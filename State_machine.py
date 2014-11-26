@@ -20,13 +20,14 @@ class State_machine():
         # Setup event dictionaries:
         self.events['entry'] = -1 # add entry and exit events to dictionary.
         self.events['exit' ] = -2 
+        self.events[None]    = None # Make event dict return None if None used to index.
         self._ID2event = {ID:event for event, ID # Dict mapping IDs to event names.
                                    in self.events.items()}
 
         self.pc = PyControl # Pointer to framework.
         self.ID  = self.pc.register_machine(self)
         if DIO:
-            DIO.machine_ID = self.ID
+            DIO.set_machine(self)
 
     def start(self):
         # Called when run is started.

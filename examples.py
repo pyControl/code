@@ -64,7 +64,7 @@ class Button(State_machine):
     def __init__(self, PyControl, poke, LED = 1):
         self.poke = poke
         # Setup hardware events.
-        self.poke.set_events(self.events['button_event'])
+        self.poke.set_events('button_event')
 
         # Run state machine init.
         State_machine.__init__(self, PyControl, poke)
