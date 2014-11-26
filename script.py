@@ -2,7 +2,6 @@ import PyControl as pc
 import hardware as hw
 from examples import *
 
-
 # Initialise hardware.
 
 boxIO = hw.BoxIO(pc)

@@ -43,8 +43,7 @@ class BoxIO():
         self.addr = addr     # Device I2C address
         self.interrupt_timestamp = pyb.millis() # Time of last interrupt.
         self.interrupt_triggered = False   # Flag to tell framework to run process_interrupt.
-        self.active_pins = []             # Pins checked for changes on interrupt.
-        self.events = {}  # Events published on interrupts  {pin:(rising, falling, machine_ID)}
+        self.active_pins = {}  # {pin: (rising_event_ID, falling_event_ID, machine_ID)}
 
         # Setup.
 
@@ -60,7 +59,7 @@ class BoxIO():
 
         # Mapping of MCP pins to RJ45 ports---------------------------------------
 
-        self.ports = { 1: {'DIO_A': 0,
+        self.ports = { 1: {'DIO_A': 0,  
                            'DIO_B': 4,
                            'POW_A': 0,
                            'POW_B': 4},
@@ -116,11 +115,11 @@ class BoxIO():
         for pin in self.active_pins:
             pin_bit = 1 << pin
             if changed_pins & pin_bit: # Pin has changed.
-                rising_event, falling_event, machine_ID = self.events[pin]
-                if new_input_state & pin_bit: # Rising
+                rising_event, falling_event, machine_ID = self.active_pins[pin]
+                if new_input_state & pin_bit: # Pin is high - rising change.
                     if rising_event:
-                       self.pc.publish_event((machine_ID, rising_event, self.interrupt_timestamp))
-                else:                         #Falling
+                       self.pc.publish_event((machine_ID,  rising_event, self.interrupt_timestamp))
+                else:                         # Pin is low - falling change.
                     if falling_event:
                         self.pc.publish_event((machine_ID, falling_event, self.interrupt_timestamp))
         self.input_state = new_input_state 
@@ -143,21 +142,23 @@ class Poke():
         self.LED_off()
         self.SOL_off()
 
-        self.machine_ID = -1  # Overwritten to assign signals to specific machine.
+        self.events = {}  # Events published on interrupts  {pin:(rising_event_name, falling_event_name)}
 
-    def set_events(self, rising_A = None, falling_A = None,
+    def set_events(self, rising = None, falling = None,
                          rising_B = None, falling_B = None):
         # Assign framework event to poke input pins.
-        if rising_A or falling_A:
-            self.pin_bit_A = 1 << self.sig_pin_A # Used for indexing boxIO input state byte.
-            self.boxIO.active_pins.append(self.sig_pin_A)
-            self.boxIO.events[self.sig_pin_A] = (rising_A, falling_A, self.machine_ID)        
+        if rising or falling:
+            self.events[self.sig_pin_A] = (rising, falling)  
         if rising_B or falling_B:
-            self.pin_bit_B = 1 << self.sig_pin_B # Used for indexing boxIO input state byte.
-            self.boxIO.active_pins.append(self.sig_pin_B)
-            self.boxIO.events[self.sig_pin_B] = (rising_B, falling_B, self.machine_ID)        
+            self.events[self.sig_pin_B] = (rising_B, falling_B)  
 
-    sef
+
+    def set_machine(self, state_machine):
+        for pin in self.events:
+            rising_event, falling_event = self.events[pin]
+            rising_event_ID  = state_machine.events[self.events[pin][0]]
+            falling_event_ID = state_machine.events[self.events[pin][1]]
+            self.boxIO.active_pins[pin] = (rising_event_ID, falling_event_ID, state_machine.ID)    
 
     def LED_on(self):
         self.boxIO.digital_write(self.LED_pin, True)
