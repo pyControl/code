@@ -21,6 +21,9 @@ class State_machine():
         self.events['entry'] = -1 # add entry and exit events to dictionary.
         self.events['exit' ] = -2 
         self.events[None]    = None # Make event dict return None if None used to index.
+
+        self.check_valid_IDs()
+
         self._ID2event = {ID:event for event, ID # Dict mapping IDs to event names.
                                    in self.events.items()}
 
@@ -57,5 +60,20 @@ class State_machine():
         self.current_state = next_state
         self.process_event('entry')
 
+    def check_valid_IDs(self):
+        # Check that there are no repeated state or events IDs.
+        all_IDs = list(self.events.values()) + list(self.states.values())
+        unique_IDs = set(all_IDs)
+        if len(unique_IDs) < len(all_IDs):
+            print('Error: State and event IDs must be unique.')
+            
 
-
+    def print_IDs(self):
+        # Print event and state dictionaries.
+        print('Events:')
+        for event in self.events:
+            if event and self.events[event] > 0: # Print only user defined events.
+                print(str(self.events[event]) + ': ' + event)
+        print('States:')
+        for state in self.states:
+            print(str(self.states[state]) + ': ' + state)

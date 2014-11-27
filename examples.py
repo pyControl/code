@@ -11,7 +11,7 @@ class Blinker(State_machine):
     states= {'LED_on'  :  1,
              'LED_off' :  2}
 
-    events = {'timer_evt' :  1}
+    events = {'timer_evt' :  3}
 
     initial_state = 'LED_off'
 
@@ -57,7 +57,8 @@ class Button(State_machine):
     states= {'LED_on'  :  1,
              'LED_off' :  2}
 
-    events = {'button_event' :  1}
+    events = {'button_event' :  3,
+              'timer_event'  :  4}
 
     initial_state = 'LED_off'
 
@@ -74,12 +75,18 @@ class Button(State_machine):
         if   self.current_state == 'LED_on':
 
             if event == 'entry':
+                self.set_timer('timer_event', 500 * ms)
                 print('LED_on')
                 self.poke.LED_on()
+
+            elif event == 'timer_event':
+                if self.poke.get_state():
+                    self.poke.SOL_on()
 
             elif event == 'exit':
                 print('LED_off')
                 self.poke.LED_off()
+                self.poke.SOL_off()
 
             elif event == 'button_event':
                 self.goto_state('LED_off')
@@ -91,6 +98,7 @@ class Button(State_machine):
 
     def stop(self):
         self.poke.LED_off()
+        self.poke.SOL_off()
 
 
 
