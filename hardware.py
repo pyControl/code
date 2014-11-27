@@ -103,8 +103,9 @@ class BoxIO():
             self.output_state = self.output_state & ~(1 << pin)
         i2c.mem_write(self.output_state, self.addr, GPIOB, timeout=5000)
 
-    def digital_read(self, pin):   
-        self.input_state = i2c.mem_read(1, self.addr, GPIOA, timeout=5000)[0]
+    def digital_read(self, pin, force_read = True):
+        if force_read: # Read input state from MCP rather than using stored value from previous read.   
+            self.input_state = i2c.mem_read(1, self.addr, GPIOA, timeout=5000)[0]
         return bool(self.input_state & (1 << pin))
 
     def process_interrupt(self):
@@ -189,9 +190,7 @@ class Poke():
             self.SOL_on
 
     def get_state(self, force_read = False):
-        if force_read: # Read directly from MCP.
-            return self.boxIO.digital_read(self.sig_pin_A)
-        else: # Get stored value of MCP input state.
-            return bool(self.boxIO.input_state & self.pin_bit)
+        return self.boxIO.digital_read(self.sig_pin_A, force_read)
+
 
 

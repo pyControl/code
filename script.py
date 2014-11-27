@@ -7,6 +7,8 @@ from examples import *
 boxIO = hw.BoxIO(pc)
 
 poke_1 = hw.Poke(boxIO, 1)
+button_1 = Button(pc, poke_1)
+
 poke_2 = hw.Poke(boxIO, 2)
 poke_3 = hw.Poke(boxIO, 3)
 poke_4 = hw.Poke(boxIO, 4)
