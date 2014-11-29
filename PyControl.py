@@ -104,6 +104,13 @@ event_queue = Event_queue() # Instantiate event que object.
 
 interrupts_waiting = False # Set true if interrupt waiting to be processed.
 
+data_output_queue = Event_queue() # Queue used for outputing events to serial line.
+
+output_data = True  # Whether to output data to the serial line.
+
+verbose = False     # True: output names, False: output IDs
+
+current_time = pyb.millis()
 
 # ----------------------------------------------------------------------------------------
 # Framework functions.
@@ -119,6 +126,8 @@ def register_hardware(boxIO):
 
 def publish_event(event):    
     event_queue.put(event)
+    if output_data:
+        data_output_queue.put(event)
 
 def _update():
     # Perform framework update functions in order of priority.
@@ -137,6 +146,12 @@ def _update():
                 state_machine.process_event_ID(event[1])
         else:
             state_machines[event[0]].process_event_ID(event[1])
+    elif data_output_queue.available():
+        event = data_output_queue.get()
+        print('{} {} {}'.format(event[0],event[1],event[2]))
+
+
+
 
 def run_machines(duration):
     # Pre run----------------------------
