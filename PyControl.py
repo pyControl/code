@@ -86,7 +86,7 @@ class timer_array():
         for self.index in range(self.n_timers):
             if self.event_IDs[self.index] != ID_null_value and \
                ((current_time - self.trigger_times[self.index]) >= 0):
-               publish_event((self.machine_IDs[self.index], self.event_IDs[self.index], current_time))
+               publish_event((self.machine_IDs[self.index], self.event_IDs[self.index], current_time), output_data = False)
                self.event_IDs[self.index] = ID_null_value
 
 
@@ -124,10 +124,19 @@ def register_machine(state_machine):
 def register_hardware(boxIO):
     hardware.append(boxIO)
 
-def publish_event(event):    
-    event_queue.put(event)
-    if output_data:
+def publish_event(event, output_data = True):    
+    event_queue.put(event) # Publish to state machines.
+    if output_data:        # Publish to serial output.
         data_output_queue.put(event)
+
+def output_data(event):
+    # Output data to serial line.
+    if verbose: # Print event name.
+        event_name = state_machines[event[0]]._ID2name[event[1]]
+        print('{} {} '.format(event[2], event[0]) + event_name)
+    else: # Print event ID.
+        print('{} {} {}'.format(event[2], event[0], event[1]))
+
 
 def _update():
     # Perform framework update functions in order of priority.
@@ -147,11 +156,8 @@ def _update():
         else:
             state_machines[event[0]].process_event_ID(event[1])
     elif data_output_queue.available():
-        event = data_output_queue.get()
-        print('{} {} {}'.format(event[0],event[1],event[2]))
-
-
-
+        output_data(data_output_queue.get())
+        
 
 def run_machines(duration):
     # Pre run----------------------------
