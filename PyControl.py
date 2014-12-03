@@ -46,49 +46,32 @@ class Event_queue():
         return self.ID_buffer[self.read_index] != ID_null_value
 
 # ----------------------------------------------------------------------------------------
-# Timer_array
+# Timer
 # ----------------------------------------------------------------------------------------
 
-class timer_array():
+class Timer():
 
-    def __init__(self, n_timers = 10):
-        self.n_timers = n_timers  
+    def __init__(self):
         self.timer_set = False # Variable used in set() fuction.
         self.reset()
 
     def reset(self):
-        global current_time
-        current_time = pyb.millis()
-        self.start_time = current_time
-        self.event_IDs           = array('i', [ID_null_value] * self.n_timers)
-        self.trigger_times = array('L', [0]  * self.n_timers)
-        self.machine_IDs   = array('i', [-1] * self.n_timers)
+        self.active_timers = [] # list of tuples: (trigger_time, machine_ID, event_ID)
 
     def set(self, event_ID, interval, machine_ID):
         # Set a timer to trigger with specified event ID after 'interval' ms has elapsed.
         global current_time
-        self.timer_set = False
-        self.index = 0
-        while not self.timer_set:
-            if self.event_IDs[self.index] == ID_null_value:
-                self.event_IDs[self.index] = event_ID
-                self.trigger_times[self.index] = current_time + interval
-                self.machine_IDs[self.index] = machine_ID
-                self.timer_set = True
-            if self.index >= self.n_timers:
-                print('ERROR: insufficient timers available, increase n_timers.')
-            self.index += 1
+        trigger_time = current_time + interval
+        self.active_timers.append((trigger_time, machine_ID, event_ID))
 
     def check(self):
         #Check whether any timers have triggered and place corresponding events into 
-        # event que
+        # event que.
         global current_time
-        for self.index in range(self.n_timers):
-            if self.event_IDs[self.index] != ID_null_value and \
-               ((current_time - self.trigger_times[self.index]) >= 0):
-               publish_event((self.machine_IDs[self.index], self.event_IDs[self.index], current_time), output_data = False)
-               self.event_IDs[self.index] = ID_null_value
-
+        for i,active_timer in enumerate(self.active_timers):
+            if current_time - active_timer[0] >= 0:
+                publish_event((active_timer[1], active_timer[2], current_time), output_data = False)
+                self.active_timers.pop(i)
 
 # ----------------------------------------------------------------------------------------
 # Framework variables and objects
@@ -98,7 +81,7 @@ state_machines = []  # List to hold state machines.
 
 hardware = []          # List to hold hardware objects.
  
-timer = timer_array()  # Instantiate timer_array object.
+timer = Timer()  # Instantiate timer_array object.
 
 event_queue = Event_queue() # Instantiate event que object.
 
@@ -162,8 +145,9 @@ def _update():
 def run_machines(duration):
     # Pre run----------------------------
     global current_time
+    current_time = pyb.millis()
     timer.reset()
-    end_time = timer.start_time + duration
+    end_time = current_time + duration
     for state_machine in state_machines:
         state_machine.start()
     # Run--------------------------------

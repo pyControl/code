@@ -21,7 +21,9 @@ button_3 = Button(pc, poke_3)
 button_4 = Button(pc, poke_4)
 
 # Run PyControl.
-pc.run_machines(20 * second)  
+
+def run():
+	pc.run_machines(20 * second)  
 
 
 
