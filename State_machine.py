@@ -16,7 +16,7 @@ ms = 1
 
 class State_machine():
 
-    def __init__(self, PyControl, DIO = None):
+    def __init__(self, PyControl, hardware = None):
         # Setup event dictionaries:
         self.events['entry'] = -1 # add entry and exit events to dictionary.
         self.events['exit' ] = -2 
@@ -29,13 +29,13 @@ class State_machine():
 
         self.pc = PyControl # Pointer to framework.
         self.ID  = self.pc.register_machine(self)
-        if DIO:
-            DIO.set_machine(self)
+        if hardware:
+            hardware.set_machine(self)
 
     def start(self):
         # Called when run is started.
         # Puts agent in initial state, and runs entry event.
-        self.current_state = self.initial_state
+        self.state = self.initial_state
         self.process_event('entry')
 
     def stop(self):
@@ -55,9 +55,9 @@ class State_machine():
         # functionality when state machines are defined.
         pass
 
-    def goto_state(self, next_state):
+    def goto(self, next_state):
         self.process_event('exit')
-        self.current_state = next_state
+        self.state = next_state
         self.process_event('entry')
         self.pc.data_output_queue.put((self.ID, self.states[next_state], self.pc.current_time))
 
