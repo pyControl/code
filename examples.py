@@ -74,15 +74,15 @@ class Button(State_machine):
 
             if event == 'entry':
                 self.set_timer('timer_event', 500 * ms)
-                self.poke.LED_on()
+                self.poke.LED.on()
 
             elif event == 'timer_event':
                 if self.poke.get_state():
-                    self.poke.SOL_on()
+                    self.poke.SOL.on()
 
             elif event == 'exit':
-                self.poke.LED_off()
-                self.poke.SOL_off()
+                self.poke.LED.off()
+                self.poke.SOL.off()
 
             elif event == 'button_event':
                 self.goto('LED_off')
@@ -93,8 +93,8 @@ class Button(State_machine):
                 self.goto('LED_on')
 
     def stop(self):
-        self.poke.LED_off()
-        self.poke.SOL_off()
+        self.poke.LED.off()
+        self.poke.SOL.off()
 
 
 

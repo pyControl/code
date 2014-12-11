@@ -1,23 +1,3 @@
-# BoxControl MCP pin mappings.
-
-# A0: DIO_1A  # Port A mappings
-# A1: DIO_2A
-# A2: DIO_3A
-# A3: DIO_4A
-# A4: DIO_1B
-# A5: DIO_2B
-# A6: DIO_3B
-# A7: DIO_4B
-
-# B0: SOL_1  # Port A mappings
-# B1: SOL_2
-# B2: SOL_3
-# B3: SOL_4
-# B4: LED_1
-# B5: LED_2
-# B6: LED_3
-# B7: LED_4
-
 import pyb
 from pyb import I2C
 
@@ -33,6 +13,9 @@ GPIOB     = 0x13   # Port B state register
 GPINTENA  = 0x04   # Port A interrupt on change enable register.
 IOCONA    = 0x0A   # Port A configuration register.
 
+# ----------------------------------------------------------------------------------------
+# boxIO
+# ----------------------------------------------------------------------------------------
 
 class BoxIO():
 
@@ -58,6 +41,24 @@ class BoxIO():
         self.outputs_off()
 
         # Mapping of MCP pins to RJ45 ports---------------------------------------
+
+        # A0: DIO_1A  # Port A mappings
+        # A1: DIO_2A
+        # A2: DIO_3A
+        # A3: DIO_4A
+        # A4: DIO_1B
+        # A5: DIO_2B
+        # A6: DIO_3B
+        # A7: DIO_4B
+
+        # B0: SOL_1  # Port A mappings
+        # B1: SOL_2
+        # B2: SOL_3
+        # B3: SOL_4
+        # B4: LED_1
+        # B5: LED_2
+        # B6: LED_3
+        # B7: LED_4
 
         self.ports = { 1: {'DIO_A': 0,  
                            'DIO_B': 4,
@@ -126,7 +127,33 @@ class BoxIO():
         self.input_state = new_input_state 
         
 
-#Class Digital_input():
+# ----------------------------------------------------------------------------------------
+# Digital Output
+# ----------------------------------------------------------------------------------------
+
+class digital_output():
+    def __init__(self, boxIO, pin):
+        self.pin = pin
+        self.boxIO = boxIO
+        self.state = False
+
+    def on(self):
+         self.boxIO.digital_write(self.pin, True)
+         self.state = True
+
+    def off(self):
+         self.boxIO.digital_write(self.pin, False)
+         self.state = False
+
+    def toggle(self):
+        if self.state:
+            self.off()
+        else:
+            self.on()        
+
+# ----------------------------------------------------------------------------------------
+# Poke
+# ----------------------------------------------------------------------------------------
 
 class Poke():
     def __init__(self, boxIO, port):
@@ -135,13 +162,10 @@ class Poke():
 
         if type(port) is int:
             port = boxIO.ports[port]
-        self.LED_pin   = port['POW_B']
-        self.SOL_pin   = port['POW_A']
+        self.LED = digital_output(boxIO, port['POW_B'])
+        self.SOL = digital_output(boxIO, port['POW_A'])
         self.sig_pin_A = port['DIO_A']
         self.sig_pin_B = port['DIO_B']
-
-        self.LED_off()
-        self.SOL_off()
 
         self.events = {}  # Events published on interrupts  {pin:(rising_event_name, falling_event_name)}
 
@@ -160,34 +184,6 @@ class Poke():
             rising_event_ID  = state_machine.events[self.events[pin][0]]
             falling_event_ID = state_machine.events[self.events[pin][1]]
             self.boxIO.active_pins[pin] = (rising_event_ID, falling_event_ID, state_machine.ID)    
-
-    def LED_on(self):
-        self.boxIO.digital_write(self.LED_pin, True)
-        self.LED_state = True
-
-    def LED_off(self):
-        self.boxIO.digital_write(self.LED_pin, False)
-        self.LED_state = False
-
-    def LED_toggle(self):
-        if self.LED_state:
-            self.LED_off
-        else:
-            self.LED_on
-
-    def SOL_on(self):
-        self.boxIO.digital_write(self.SOL_pin, True)
-        self.SOL_state = True
-
-    def SOL_off(self):
-        self.boxIO.digital_write(self.SOL_pin, False)
-        self.SOL_state = False
-
-    def SOL_toggle(self):
-        if self.SOL_state:
-            self.SOL_off
-        else:
-            self.SOL_on
 
     def get_state(self, force_read = False):
         return self.boxIO.digital_read(self.sig_pin_A, force_read)
