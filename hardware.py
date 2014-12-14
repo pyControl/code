@@ -171,7 +171,7 @@ class Poke():
 
     def set_events(self, rising = None, falling = None,
                          rising_B = None, falling_B = None):
-        # Assign framework event to poke input pins.
+        # Assign event names to poke input pins.
         if rising or falling:
             self.events[self.sig_pin_A] = (rising, falling)  
         if rising_B or falling_B:
@@ -179,14 +179,48 @@ class Poke():
 
 
     def set_machine(self, state_machine):
+        # Assigns poke to state machine.  For each input with an event name assigned, adds appropriate event codes, 
+        #  and state_maching ID to boxIO object active_pins dictionary.
         for pin in self.events:
             rising_event, falling_event = self.events[pin]
-            rising_event_ID  = state_machine.events[self.events[pin][0]]
-            falling_event_ID = state_machine.events[self.events[pin][1]]
+            if rising_event in state_machine.events:
+                rising_event_ID  = state_machine.events[rising_event]
+            else:
+                rising_event_ID = None
+            if falling_event in state_machine.events:
+                falling_event_ID = state_machine.events[falling_event]
+            else:
+                falling_event_ID = None
             self.boxIO.active_pins[pin] = (rising_event_ID, falling_event_ID, state_machine.ID)    
 
     def get_state(self, force_read = False):
         return self.boxIO.digital_read(self.sig_pin_A, force_read)
 
 
+# ----------------------------------------------------------------------------------------
+# Hardware collections.
+# ----------------------------------------------------------------------------------------
+
+class Box():
+
+    def __init__(self, PyControl, addr = 0x20, int_pin = 'X1'):
+        self.boxIO = BoxIO(PyControl, addr, int_pin)
+
+        # Instantiate components.
+        self.left_poke   = Poke(self.boxIO, port = 1)
+        self.center_poke = Poke(self.boxIO, port = 2)
+        self.right_poke  = Poke(self.boxIO, port = 3)
+        self.houselight  = digital_output(self.boxIO, pin = 3)
+
+        # Assign event names to inputs.
+
+        self.left_poke.set_events(rising = 'left_poke', falling = 'left_poke_out')
+        self.center_poke.set_events(rising = 'high_poke', rising_B = 'low_poke')
+        self.right_poke.set_events(rising = 'right_poke', falling = 'right_poke_out')
+
+        self.all_inputs = [self.left_poke, self.center_poke, self.right_poke]
+
+    def set_machine(self, state_machine):
+        for i in self.all_inputs:
+            i.set_machine(state_machine)
 

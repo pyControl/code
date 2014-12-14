@@ -1,5 +1,6 @@
 import pyb
 from array import array
+from utility import *
 
 # ----------------------------------------------------------------------------------------
 # Units
@@ -20,7 +21,6 @@ class State_machine():
         # Setup event dictionaries:
         self.events['entry'] = -1 # add entry and exit events to dictionary.
         self.events['exit' ] = -2 
-        self.events[None]    = None # Make event dict return None if None used to index.
 
         self.check_valid_IDs()
 
