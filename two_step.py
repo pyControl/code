@@ -102,7 +102,7 @@ class Two_step(State_machine):
             if event == 'exit':
                 self.box.right_poke.LED.off()
 
-            if event == 'left_poke':
+            if event == 'right_poke':
                 if withprob(self.reward_probs[1]):
                     self.goto('right_reward')
                 else:
@@ -126,6 +126,7 @@ class Two_step(State_machine):
 
             if event == 'entry':
                 self.box.right_poke.SOL.on()
+                self.set_timer('state_timer', 100 * ms)
 
             if event == 'exit':
                 self.box.right_poke.SOL.off()
@@ -135,17 +136,26 @@ class Two_step(State_machine):
             
 
         elif self.state == 'wait_for_poke_out':
+
+            if event == 'entry':
+                if not (self.box.left_poke.get_state() or \
+                        self.box.right_poke.get_state()):
+                    self.goto('inter_trial') # Subject already left poke.
+
             if event in ['left_poke_out', 'right_poke_out']:
                 self.goto('inter_trial')
 
 
         elif self.state == 'inter_trial':
 
-            if event == entry:
+            if event == 'entry':
                 self.set_timer('state_timer', 1 * second)
 
             if event == 'state_timer':
                 self.goto('center_active')
+
+    def stop(self):
+        self.box.off()
 
 
 

@@ -93,7 +93,9 @@ output_data = True  # Whether to output data to the serial line.
 
 verbose = False     # True: output names, False: output IDs
 
-current_time = pyb.millis()
+current_time = None # Time since run started (milliseconds).
+
+start_time = None # Time when run was started.
 
 # ----------------------------------------------------------------------------------------
 # Framework functions.
@@ -123,8 +125,8 @@ def output_data(event):
 
 def _update():
     # Perform framework update functions in order of priority.
-    global current_time, interrupts_waiting
-    current_time = pyb.millis()
+    global current_time, interrupts_waiting, start_time
+    current_time = pyb.elapsed_millis(start_time)
     timer.check() 
     if interrupts_waiting:
         interrupts_waiting = False
@@ -145,7 +147,9 @@ def _update():
 def run_machines(duration):
     # Pre run----------------------------
     global current_time
-    current_time = pyb.millis()
+    global start_time
+    start_time =  pyb.millis()
+    current_time = 0
     timer.reset()
     end_time = current_time + duration
     for state_machine in state_machines:
