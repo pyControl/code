@@ -36,6 +36,7 @@ class State_machine():
         # Called when run is started.
         # Puts agent in initial state, and runs entry event.
         self.state = self.initial_state
+        self.pc.data_output_queue.put((self.ID, self.states[self.state], self.pc.current_time))
         self.process_event('entry')
 
     def stop(self):
@@ -58,8 +59,8 @@ class State_machine():
     def goto(self, next_state):
         self.process_event('exit')
         self.state = next_state
-        self.process_event('entry')
         self.pc.data_output_queue.put((self.ID, self.states[next_state], self.pc.current_time))
+        self.process_event('entry')
 
     def check_valid_IDs(self):
         # Check that there are no repeated state or events IDs.
