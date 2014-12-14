@@ -130,7 +130,38 @@ class BoxIO():
         
 
 # ----------------------------------------------------------------------------------------
-# Digital Output
+# Digital Input
+# ----------------------------------------------------------------------------------------
+
+class digital_input():
+    def __init__(self, boxIO, pin):
+        self.pin = pin
+        self.boxIO = boxIO
+        self.rising_event = None
+        self.falling_event = None
+
+    def set_events(self, rising, falling):
+        # Set event names for rising and falling edges.
+        self.rising_event = rising
+        self.falling_event = falling
+
+    def set_machine(self, state_machine):
+        # Attach digital input to state machine.
+        if self.rising_event in state_machine.events:
+            rising_event_ID  = state_machine.events[self.rising_event]
+        else:
+            rising_event_ID = None
+        if self.falling_event in state_machine.events:
+            falling_event_ID = state_machine.events[self.falling_event]
+        else:
+            falling_event_ID = None
+        self.boxIO.active_pins[self.pin] = (rising_event_ID, falling_event_ID, state_machine.ID) 
+
+    def get_state(self, force_read = False):
+        return self.boxIO.digital_read(self.pin, force_read)
+
+# ----------------------------------------------------------------------------------------
+# Digital Output.
 # ----------------------------------------------------------------------------------------
 
 class digital_output():
@@ -151,8 +182,9 @@ class digital_output():
         if self.state:
             self.off()
         else:
-            self.on()        
+            self.on()    
 
+ 
 # ----------------------------------------------------------------------------------------
 # Poke
 # ----------------------------------------------------------------------------------------
@@ -162,42 +194,26 @@ class Poke():
     
         self.boxIO = boxIO
 
-        if type(port) is int:
-            port = boxIO.ports[port]
-        self.LED = digital_output(boxIO, port['POW_B'])
-        self.SOL = digital_output(boxIO, port['POW_A'])
-        self.sig_pin_A = port['DIO_A']
-        self.sig_pin_B = port['DIO_B']
-
-        self.events = {}  # Events published on interrupts  {pin:(rising_event_name, falling_event_name)}
+        self.LED = digital_output(boxIO, boxIO.ports[port]['POW_B'])
+        self.SOL = digital_output(boxIO, boxIO.ports[port]['POW_A'])
+        self.input_A = digital_input(boxIO, boxIO.ports[port]['DIO_A'])
+        self.input_B = digital_input(boxIO, boxIO.ports[port]['DIO_B'])
 
     def set_events(self, rising = None, falling = None,
                          rising_B = None, falling_B = None):
         # Assign event names to poke input pins.
-        if rising or falling:
-            self.events[self.sig_pin_A] = (rising, falling)  
-        if rising_B or falling_B:
-            self.events[self.sig_pin_B] = (rising_B, falling_B)  
+        self.input_A.set_events(rising, falling)
+        self.input_B.set_events(rising_B, falling_B)
 
 
     def set_machine(self, state_machine):
         # Assigns poke to state machine.  For each input with an event name assigned, adds appropriate event codes, 
         #  and state_maching ID to boxIO object active_pins dictionary.
-        for pin in self.events:
-            rising_event, falling_event = self.events[pin]
-            if rising_event in state_machine.events:
-                rising_event_ID  = state_machine.events[rising_event]
-            else:
-                rising_event_ID = None
-            if falling_event in state_machine.events:
-                falling_event_ID = state_machine.events[falling_event]
-            else:
-                falling_event_ID = None
-            self.boxIO.active_pins[pin] = (rising_event_ID, falling_event_ID, state_machine.ID)    
+        self.input_A.set_machine(state_machine)
+        self.input_B.set_machine(state_machine)
 
     def get_state(self, force_read = False):
-        return self.boxIO.digital_read(self.sig_pin_A, force_read)
-
+        return self.input_A.get_state(force_read)
 
 # ----------------------------------------------------------------------------------------
 # Hardware collections.
@@ -222,17 +238,9 @@ class Box():
 
         self.all_inputs = [self.left_poke, self.center_poke, self.right_poke]
 
-        self.all_outputs = [self.left_poke.LED,  self.left_poke.SOL, 
-                            self.right_poke.LED, self.right_poke.SOL,
-                            self.center_poke.LED, self.center_poke.SOL,
-                            self.houselight]
-
     def set_machine(self, state_machine):
         for i in self.all_inputs:
             i.set_machine(state_machine)
 
     def off(self):
-        # Turn of all outputs.
-        for output in self.all_outputs:
-            output.off()
-
+        self.boxIO.outputs_off()
