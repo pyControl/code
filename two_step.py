@@ -20,10 +20,9 @@ class Two_step(State_machine):
               'low_poke'         : 15,
               'session_timer'    : 16,
               'state_timer'      : 17,
-              'session_start'    : 18,
-              'session_stop'     : 19}
+              'session_startstop': 18}
 
-    initial_state = 'center_active'
+    initial_state = 'pre_session'
 
     norm_prob = 0.8
     reward_probs = [0.2,0.8]
@@ -36,26 +35,21 @@ class Two_step(State_machine):
 
     def process_event(self, event):
 
-        # Events processed irrespective of state.
+        # Session starting and stopping behaviour.
 
-        if event == 'session_stop':
-            self.goto('post_session')
-
-        # State dependent event processing.
-
-        elif self.state == 'pre_session':
-
-            if event == 'session_start':
-                self.goto('center_active')
-
-            elif event == 'exit':
+        if event == 'session_startstop':
+            if self.state == 'pre_session':
                 self.box.houselight.on()
-
+                self.goto('center_active')
+            else:
+                self.goto('post_session')
 
         elif self.state == 'post_session':
 
             if event == 'entry':
-                self.box.houselight.off()           
+                self.box.houselight.off()     
+
+        # Within trial event processing.
 
 
         elif self.state == 'center_active':

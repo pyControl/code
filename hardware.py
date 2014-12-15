@@ -133,12 +133,12 @@ class BoxIO():
 # Digital Input
 # ----------------------------------------------------------------------------------------
 
-class digital_input():
-    def __init__(self, boxIO, pin):
+class Digital_input():
+    def __init__(self, boxIO, pin, rising = None, falling = None):
         self.pin = pin
         self.boxIO = boxIO
-        self.rising_event = None
-        self.falling_event = None
+        self.rising_event = rising
+        self.falling_event = falling
 
     def set_events(self, rising, falling):
         # Set event names for rising and falling edges.
@@ -157,14 +157,15 @@ class digital_input():
             falling_event_ID = None
         self.boxIO.active_pins[self.pin] = (rising_event_ID, falling_event_ID, state_machine.ID) 
 
-    def get_state(self, force_read = False):
+    def __call__(self, force_read = False):
+        # Calling Digital_input object returns state of input. 
         return self.boxIO.digital_read(self.pin, force_read)
 
 # ----------------------------------------------------------------------------------------
 # Digital Output.
 # ----------------------------------------------------------------------------------------
 
-class digital_output():
+class Digital_output():
     def __init__(self, boxIO, pin):
         self.pin = pin
         self.boxIO = boxIO
@@ -190,14 +191,19 @@ class digital_output():
 # ----------------------------------------------------------------------------------------
 
 class Poke():
-    def __init__(self, boxIO, port):
-    
+    def __init__(self, boxIO, port, rising = None, falling = None, rising_B = None, falling_B = None):
+ 
+
         self.boxIO = boxIO
 
-        self.LED = digital_output(boxIO, boxIO.ports[port]['POW_B'])
-        self.SOL = digital_output(boxIO, boxIO.ports[port]['POW_A'])
-        self.input_A = digital_input(boxIO, boxIO.ports[port]['DIO_A'])
-        self.input_B = digital_input(boxIO, boxIO.ports[port]['DIO_B'])
+        port_pins = boxIO.ports[port]
+
+        self.LED     = Digital_output(boxIO, port_pins['POW_B'])
+        self.SOL     = Digital_output(boxIO, port_pins['POW_A'])
+        self.input_A = Digital_input( boxIO, port_pins['DIO_A'])
+        self.input_B = Digital_input( boxIO, port_pins['DIO_B'])
+
+        self.set_events(rising, falling, rising_B, falling_B)
 
     def set_events(self, rising = None, falling = None,
                          rising_B = None, falling_B = None):
@@ -212,8 +218,8 @@ class Poke():
         self.input_A.set_machine(state_machine)
         self.input_B.set_machine(state_machine)
 
-    def get_state(self, force_read = False):
-        return self.input_A.get_state(force_read)
+    def get_state(self):
+        return self.input_A()
 
 # ----------------------------------------------------------------------------------------
 # Hardware collections.
@@ -225,18 +231,13 @@ class Box():
         self.boxIO = BoxIO(PyControl, addr, int_pin)
 
         # Instantiate components.
-        self.left_poke   = Poke(self.boxIO, port = 1)
-        self.center_poke = Poke(self.boxIO, port = 2)
-        self.right_poke  = Poke(self.boxIO, port = 3)
-        self.houselight  = digital_output(self.boxIO, pin = 3)
+        self.left_poke   = Poke(self.boxIO, port = 1, rising = 'left_poke', falling = 'left_poke_out')
+        self.center_poke = Poke(self.boxIO, port = 2, rising = 'high_poke', rising_B = 'low_poke')
+        self.right_poke  = Poke(self.boxIO, port = 3, rising = 'right_poke', falling = 'right_poke_out')
+        self.button      = Digital_input(self.boxIO, pin = 3, rising = 'session_startstop')
+        self.houselight  = Digital_output(self.boxIO, pin = 3)
 
-        # Assign event names to inputs.
-
-        self.left_poke.set_events(rising = 'left_poke', falling = 'left_poke_out')
-        self.center_poke.set_events(rising = 'high_poke', rising_B = 'low_poke')
-        self.right_poke.set_events(rising = 'right_poke', falling = 'right_poke_out')
-
-        self.all_inputs = [self.left_poke, self.center_poke, self.right_poke]
+        self.all_inputs = [self.left_poke, self.center_poke, self.right_poke, self.button]
 
     def set_machine(self, state_machine):
         for i in self.all_inputs:
