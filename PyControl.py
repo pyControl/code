@@ -137,9 +137,9 @@ def _update():
         event = event_queue.get()
         if event[0] == -1: # Publish event to all machines.
             for state_machine in state_machines:
-                state_machine.process_event_ID(event[1])
+                state_machine._process_event_ID(event[1])
         else:
-            state_machines[event[0]].process_event_ID(event[1])
+            state_machines[event[0]]._process_event_ID(event[1])
     elif data_output_queue.available():
         output_data(data_output_queue.get())
         
@@ -153,7 +153,7 @@ def run_machines(duration):
     timer.reset()
     end_time = current_time + duration
     for state_machine in state_machines:
-        state_machine.start()
+        state_machine._start()
     # Run--------------------------------
     while (current_time - end_time) < 0:            
         _update()

@@ -228,6 +228,7 @@ class Poke():
 class Box():
 
     def __init__(self, PyControl, addr = 0x20, int_pin = 'X1'):
+        
         self.boxIO = BoxIO(PyControl, addr, int_pin)
 
         # Instantiate components.
