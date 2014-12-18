@@ -3,21 +3,18 @@ from array import array
 from utility import *
 
 # ----------------------------------------------------------------------------------------
-# Units
-# ----------------------------------------------------------------------------------------
-
-minute = 60000
-second = 1000
-ms = 1
-
-
-# ----------------------------------------------------------------------------------------
 # State Machine
 # ----------------------------------------------------------------------------------------
 
 class State_machine():
 
     def __init__(self, PyControl, hardware = None):
+
+        if type(self.events) == list and type(self.states) == list:
+            self.assign_IDs()
+        elif not (type(self.events) == dict and type(self.states) == dict):
+            print('Error: events and states must both be lists or both be dicts.') 
+
         # Setup event dictionaries:
         self.events['entry'] = -1 # add entry and exit events to dictionary.
         self.events['exit' ] = -2 
@@ -27,6 +24,8 @@ class State_machine():
         self._ID2name = {ID:event for event, ID # Dict mapping IDs to event names.
                                    in list(self.events.items()) + list(self.states.items())}
 
+        self.make_event_dispatch_dict()
+
         self.pc = PyControl # Pointer to framework.
         self.ID  = self.pc.register_machine(self)
         if hardware:
@@ -34,19 +33,13 @@ class State_machine():
 
     # Methods called by user.
 
-
-    def process_event(self, event):
-        # Process event given event name. Overwrite with desired
-        # functionality when state machines are defined.
-        pass
-
     def goto(self, next_state):
         # Transition to new state, calling exit action of old state
         # and entry action of new state.
-        self.process_event('exit')
+        self._process_event('exit')
         self.state = next_state
         self.pc.data_output_queue.put((self.ID, self.states[next_state], self.pc.current_time))
-        self.process_event('entry')
+        self._process_event('entry')
 
     def set_timer(self, event, interval):
         # Set a timer to return specified event afterinterval milliseconds.
@@ -59,16 +52,33 @@ class State_machine():
 
     # Methods called by PyControl framework.
 
+    def _process_event(self, event):
+        # Process event given event name by calling appropriate state event handler method.
+        if self.event_dispatch_dict['all_states']:        # If machine has all_states event handler method. 
+            self.event_dispatch_dict['all_states'](event) # Evaluate all_states event handler method.
+        if self.event_dispatch_dict[self.state]:          # If state has event handler method.
+            self.event_dispatch_dict[self.state](event)   # Evaluate state event handler method.
+
+
     def _start(self):
         # Called when run is started.
         # Puts agent in initial state, and runs entry event.
         self.state = self.initial_state
         self.pc.data_output_queue.put((self.ID, self.states[self.state], self.pc.current_time))
-        self.process_event('entry')
+        self._process_event('entry')
 
     def _process_event_ID(self, event_ID):
         # Process event given event ID
-        self.process_event(self._ID2name[event_ID])
+        self._process_event(self._ID2name[event_ID])
+
+    def assign_IDs(self):
+        # If states and events are specified as list of names, 
+        # convert to dict of {names: IDs}.
+        n_states = len(self.states) 
+        state_IDs = list(range(1, n_states + 1))
+        event_IDs = list(range(n_states + 1, n_states + len(self.events) + 1))
+        self.states = dict(zip(self.states, state_IDs))
+        self.events = dict(zip(self.events, event_IDs))
 
     def _check_valid_IDs(self):
         # Check that there are no repeated state or events IDs.
@@ -80,12 +90,25 @@ class State_machine():
             if not type(ID) == int:
                 print('Error: Event and state IDs must be integers.')
 
-    def _print_ID2name(self):
-        # Print event and state dictionaries.
-        print('Events:')
-        for event in self.events:
-            if event and self.events[event] > 0: # Print only user defined events.
-                print(str(self.events[event]) + ': ' + event)
+    def _print_IDs(self):
+        # Print event and state IDs
         print('States:')
-        for state in self.states:
-            print(str(self.states[state]) + ': ' + state)
+        for state_ID in sorted(self.states.values()):
+            print(str(state_ID) + ': ' + self._ID2name[state_ID])
+        print('Events:')
+        for event_ID in sorted(self.events.values()):
+            if event_ID > 0: # Print only user defined events.
+                print(str(event_ID) + ': ' + self._ID2name[event_ID])
+
+    def make_event_dispatch_dict(self):
+        # Makes a dictionary mapping state names to state event handler functions used by _process_event.
+        methods = dir(self) # List of methods of state machine instance.
+        self.event_dispatch_dict = {}
+        for state in list(self.states.keys()) + ['all_states']:
+            if state in methods:
+                self.event_dispatch_dict[state] = getattr(self, state)
+            else:
+                self.event_dispatch_dict[state] = None
+
+
+
