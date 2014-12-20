@@ -53,6 +53,7 @@ class Two_step(State_machine):
     def center_active(self, event):
         if event == 'entry':
             self.box.center_poke.LED.on()
+            self.dprint('This is only a test.')
         elif event == 'exit':
             self.box.center_poke.LED.off()
         elif event == 'high_poke':
