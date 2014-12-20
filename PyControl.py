@@ -116,31 +116,33 @@ def publish_event(event, output_data = True):
 
 def output_data(event):
     # Output data to serial line.
-    if verbose: # Print event name.
-        event_name = state_machines[event[0]]._ID2name[event[1]]
-        print('{} {} '.format(event[2], event[0]) + event_name)
-    else: # Print event ID.
-        print('{} {} {}'.format(event[2], event[0], event[1]))
-
+    event_name = state_machines[event[0]]._ID2name[event[1]]
+    if event_name == 'dprint': # Print user generated output string.
+        print('{} {} '.format(event[2], event[0]) + state_machines[event[0]].dprint_queue.pop(0))
+    else:  # Print event or state change.
+        if verbose: # Print event/state name.
+            print('{} {} '.format(event[2], event[0]) + event_name)
+        else: # Print event/state ID.
+            print('{} {} {}'.format(event[2], event[0], event[1]))
 
 def _update():
     # Perform framework update functions in order of priority.
     global current_time, interrupts_waiting, start_time
     current_time = pyb.elapsed_millis(start_time)
     timer.check() 
-    if interrupts_waiting:
+    if interrupts_waiting:         # Priority 1: Process interrupts.
         interrupts_waiting = False
         for boxIO in hardware:
             if boxIO.interrupt_triggered:
                 boxIO.process_interrupt()
-    elif event_queue.available():
+    elif event_queue.available():  # Priority 2: Process events in queue.
         event = event_queue.get()
         if event[0] == -1: # Publish event to all machines.
             for state_machine in state_machines:
                 state_machine._process_event_ID(event[1])
         else:
             state_machines[event[0]]._process_event_ID(event[1])
-    elif data_output_queue.available():
+    elif data_output_queue.available(): # Priority 3: Output data.
         output_data(data_output_queue.get())
         
 
