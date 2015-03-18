@@ -24,23 +24,19 @@ class Two_step(State_machine):
 
     initial_state = 'pre_session'
 
-    norm_prob = 0.8
-    reward_probs = [0.2,0.8]
-
     def __init__(self, PyControl, box):
 
         self.box = box
 
+        self.norm_prob = 0.8
+        self.reward_probs = [0.2,0.8]
+
         State_machine.__init__(self, PyControl, box)
 
-    def stop(self):
+    def stop(self):  # Turn off hardware at end of run.
         self.box.off()
 
     # State event handler functions.
-
-    def all_states(self, event):
-        if event == 'session_startstop' and not self.state == 'pre_session':
-            self.goto('post_session')
 
     def pre_session(self, event):
         if event == 'session_startstop':
@@ -53,7 +49,6 @@ class Two_step(State_machine):
     def center_active(self, event):
         if event == 'entry':
             self.box.center_poke.LED.on()
-            self.dprint('This is only a test.')
         elif event == 'exit':
             self.box.center_poke.LED.off()
         elif event == 'high_poke':
@@ -120,6 +115,10 @@ class Two_step(State_machine):
             self.set_timer('state_timer', 1 * second)
         if event == 'state_timer':
             self.goto('center_active')
+
+    def all_states(self, event):
+        if event == 'session_startstop' and not self.state == 'pre_session':
+            self.goto('post_session')
 
 
 
