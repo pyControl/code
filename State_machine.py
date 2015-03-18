@@ -11,7 +11,7 @@ class State_machine():
     def __init__(self, PyControl, hardware = None):
 
         if type(self.events) == list and type(self.states) == list:
-            self.assign_IDs()
+            self._assign_IDs()
         elif not (type(self.events) == dict and type(self.states) == dict):
             print('Error: events and states must both be lists or both be dicts.') 
 
@@ -25,7 +25,7 @@ class State_machine():
         self._ID2name = {ID:event for event, ID # Dict mapping IDs to event names.
                                    in list(self.events.items()) + list(self.states.items())}
 
-        self.make_event_dispatch_dict()
+        self._make_event_dispatch_dict()
 
         self.dprint_queue = [] # Queue for strings output using dprint function. 
 
@@ -56,19 +56,22 @@ class State_machine():
             self.dprint_queue.append(print_string)
             self.pc.data_output_queue.put((self.ID, self.events['dprint'], self.pc.current_time))
 
+    # Methods called by PyControl framework.
+
     def stop(self):
         # Called at end of run. Overwrite with desired
         # functionality when state machine is defined.
         pass
 
-    # Methods called by PyControl framework.
-
     def _process_event(self, event):
         # Process event given event name by calling appropriate state event handler method.
-        if self.event_dispatch_dict['all_states']:                  # If machine has all_states event handler method. 
-            handled = self.event_dispatch_dict['all_states'](event) # Evaluate all_states event handler method.
-        if (not handled) and self.event_dispatch_dict[self.state]:  # If all_states does not return handled = True and machine has state event handler method.
-            self.event_dispatch_dict[self.state](event)             # Evaluate state event handler method.
+        if self.event_dispatch_dict['all_states']:                      # If machine has all_states event handler method. 
+            handled = self.event_dispatch_dict['all_states'](event)     # Evaluate all_states event handler method.
+            if (not handled) and self.event_dispatch_dict[self.state]:  # If all_states does not return handled = True and machine has state event handler method.
+                self.event_dispatch_dict[self.state](event)             # Evaluate state event handler method.
+        elif self.event_dispatch_dict[self.state]:
+            self.event_dispatch_dict[self.state](event)                 # Evaluate state event handler method.
+
 
     def _start(self):
         # Called when run is started.
@@ -81,7 +84,7 @@ class State_machine():
         # Process event given event ID
         self._process_event(self._ID2name[event_ID])
 
-    def assign_IDs(self):
+    def _assign_IDs(self):
         # If states and events are specified as list of names, 
         # convert to dict of {names: IDs}.
         n_states = len(self.states) 
@@ -110,7 +113,7 @@ class State_machine():
             if event_ID > 0: # Print only user defined events.
                 print(str(event_ID) + ': ' + self._ID2name[event_ID])
 
-    def make_event_dispatch_dict(self):
+    def _make_event_dispatch_dict(self):
         # Makes a dictionary mapping state names to state event handler functions used by _process_event.
         methods = dir(self) # List of methods of state machine instance.
         self.event_dispatch_dict = {}
