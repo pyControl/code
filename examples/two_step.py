@@ -24,33 +24,31 @@ class Two_step(State_machine):
 
     initial_state = 'pre_session'
 
-    def __init__(self, PyControl, box):
-
-        self.box = box
+    def __init__(self, PyControl, hw):
 
         self.norm_prob = 0.8
         self.reward_probs = [0.2,0.8]
 
-        State_machine.__init__(self, PyControl, box)
+        State_machine.__init__(self, PyControl, hw)
 
     def stop(self):  # Turn off hardware at end of run.
-        self.box.off()
+        self.hw.off()
 
     # State event handler functions.
 
     def pre_session(self, event):
         if event == 'session_startstop':
-            self.box.houselight.on()
+            self.hw.houselight.on()
             self.goto('center_active')
 
     def post_session(self, event):
-            self.box.houselight.off()     
+            self.hw.houselight.off()     
 
     def center_active(self, event):
         if event == 'entry':
-            self.box.center_poke.LED.on()
+            self.hw.center_poke.LED.on()
         elif event == 'exit':
-            self.box.center_poke.LED.off()
+            self.hw.center_poke.LED.off()
         elif event == 'high_poke':
             if withprob(self.norm_prob):
                 self.goto('left_active')
@@ -64,9 +62,9 @@ class Two_step(State_machine):
 
     def left_active(self, event):
         if event == 'entry':
-            self.box.left_poke.LED.on()
+            self.hw.left_poke.LED.on()
         elif event == 'exit':
-            self.box.left_poke.LED.off()
+            self.hw.left_poke.LED.off()
         elif event == 'left_poke':
             if withprob(self.reward_probs[0]):
                 self.goto('left_reward')
@@ -75,9 +73,9 @@ class Two_step(State_machine):
 
     def right_active(self, event):
         if event == 'entry':
-            self.box.right_poke.LED.on()
+            self.hw.right_poke.LED.on()
         elif event == 'exit':
-            self.box.right_poke.LED.off()
+            self.hw.right_poke.LED.off()
         elif event == 'right_poke':
             if withprob(self.reward_probs[1]):
                 self.goto('right_reward')
@@ -86,26 +84,26 @@ class Two_step(State_machine):
 
     def left_reward(self, event):
         if event == 'entry':
-            self.box.left_poke.SOL.on()
+            self.hw.left_poke.SOL.on()
             self.set_timer('state_timer', 100 * ms)
         elif event == 'exit':
-            self.box.left_poke.SOL.off()
+            self.hw.left_poke.SOL.off()
         elif event == 'state_timer':
             self.goto('wait_for_poke_out')
 
     def right_reward(self, event):
         if event == 'entry':
-            self.box.right_poke.SOL.on()
+            self.hw.right_poke.SOL.on()
             self.set_timer('state_timer', 100 * ms)
         if event == 'exit':
-            self.box.right_poke.SOL.off()
+            self.hw.right_poke.SOL.off()
         if event == 'state_timer':
             self.goto('wait_for_poke_out')     
         
     def wait_for_poke_out(self, event):
         if event == 'entry':
-            if not (self.box.left_poke.get_state() or \
-                    self.box.right_poke.get_state()):
+            if not (self.hw.left_poke.get_state() or \
+                    self.hw.right_poke.get_state()):
                 self.goto('inter_trial') # Subject already left poke.
         elif event in ['left_poke_out', 'right_poke_out']:
             self.goto('inter_trial')

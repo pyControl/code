@@ -8,10 +8,10 @@ pc.verbose = True  # Set human readable output.
 
 boxIO = hw.BoxIO(pc)
 
-poke_1 = hw.Poke(boxIO, 1)
-poke_2 = hw.Poke(boxIO, 2)
-poke_3 = hw.Poke(boxIO, 3)
-poke_4 = hw.Poke(boxIO, 4)
+poke_1 = hw.Poke(boxIO, 1, 'button_event')
+poke_2 = hw.Poke(boxIO, 2, 'button_event')
+poke_3 = hw.Poke(boxIO, 3, 'button_event')
+poke_4 = hw.Poke(boxIO, 4, 'button_event')
 
 # # Instantiate state machines.
 

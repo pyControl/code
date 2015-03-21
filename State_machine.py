@@ -31,6 +31,8 @@ class State_machine():
 
         self.pc = PyControl # Pointer to framework.
         self.ID  = self.pc.register_machine(self)
+
+        self.hw = hardware
         if hardware:
             hardware.set_machine(self)
 
