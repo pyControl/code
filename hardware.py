@@ -119,13 +119,13 @@ class BoxIO():
         for pin in self.active_pins:
             pin_bit = 1 << pin
             if changed_pins & pin_bit: # Pin has changed.
-                rising_event, falling_event, machine_ID = self.active_pins[pin]
+                rising_event_ID, falling_event_ID, machine_ID = self.active_pins[pin]
                 if new_input_state & pin_bit: # Pin is high - rising change.
-                    if rising_event:
-                       self.pc.publish_event((machine_ID,  rising_event, self.interrupt_timestamp))
+                    if rising_event_ID:
+                       self.pc.publish_event((machine_ID,  rising_event_ID, self.interrupt_timestamp))
                 else:                         # Pin is low - falling change.
-                    if falling_event:
-                        self.pc.publish_event((machine_ID, falling_event, self.interrupt_timestamp))
+                    if falling_event_ID:
+                        self.pc.publish_event((machine_ID, falling_event_ID, self.interrupt_timestamp))
         self.input_state = new_input_state 
         
 
