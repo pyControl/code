@@ -1,4 +1,4 @@
-import PyControl as pc
+import pyControl as pc
 import hardware as hw
 from examples.button import *
 

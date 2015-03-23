@@ -1,4 +1,4 @@
-from State_machine import *
+from state_machine import *
 
 class Blinker(State_machine):
 
