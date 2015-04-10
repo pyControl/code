@@ -29,10 +29,12 @@ initial_state = 'pre_session'
 norm_prob = 0.8
 reward_probs = [0.2,0.8]
 
+# Run start and stop behaviour.
+
 def run_end():  # Turn off hardware at end of run.
     hw.off()
 
-# State behaviour definitions.
+# State & event dependent behaviour.
 
 def pre_session(event):
     if event == 'session_startstop':
@@ -40,6 +42,7 @@ def pre_session(event):
         goto('center_active')
 
 def post_session(event):
+    if event == 'entry':
         hw.houselight.off()     
 
 def center_active(event):

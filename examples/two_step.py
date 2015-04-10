@@ -42,6 +42,7 @@ class Two_step(State_machine):
             self.goto('center_active')
 
     def post_session(self, event):
+        if event == 'entry':
             self.hw.houselight.off()     
 
     def center_active(self, event):
