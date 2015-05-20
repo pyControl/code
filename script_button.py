@@ -20,7 +20,7 @@ button_2 = Button(pc, poke_2)
 button_3 = Button(pc, poke_3)
 button_4 = Button(pc, poke_4)
 
-# Run PyControl.
+# Run pyControl.
 
 def run(dur = 20):
 	pc.run_machines(dur * second)  

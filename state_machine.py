@@ -8,7 +8,7 @@ from utility import *
 
 class State_machine():
 
-    def __init__(self, PyControl, hardware = None):
+    def __init__(self, pyControl, hardware = None):
 
         if type(self.events) == list and type(self.states) == list:
             self._assign_IDs()
@@ -29,7 +29,7 @@ class State_machine():
 
         self.dprint_queue = [] # Queue for strings output using dprint function. 
 
-        self.pc = PyControl # Pointer to framework.
+        self.pc = pyControl # Pointer to framework.
         self.ID  = self.pc.register_machine(self)
 
         self.hw = hardware
@@ -58,7 +58,7 @@ class State_machine():
             self.dprint_queue.append(print_string)
             self.pc.data_output_queue.put((self.ID, self.events['dprint'], self.pc.current_time))
 
-    # Methods called by PyControl framework.
+    # Methods called by pyControl framework.
 
     def stop(self):
         # Called at end of run. Overwrite with desired

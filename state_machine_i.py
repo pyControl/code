@@ -82,6 +82,7 @@ class State_machine():
         elif self.event_dispatch_dict[self.sm.state]:
             self.event_dispatch_dict[self.sm.state](event)                 # Evaluate state event handler method.
 
+
     def _start(self):
         # Called when run is started.
         # Puts agent in initial state, and runs entry event.

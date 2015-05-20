@@ -95,7 +95,7 @@ verbose = False     # True: output names, False: output IDs
 
 current_time = None # Time since run started (milliseconds).
 
-start_time = None # Time when run was started.
+start_time = 0      # Time when run was started.
 
 # ----------------------------------------------------------------------------------------
 # Framework functions.
@@ -134,7 +134,7 @@ def _update():
         interrupts_waiting = False
         for boxIO in hardware:
             if boxIO.interrupt_triggered:
-                boxIO.process_interrupt()
+                boxIO._process_interrupt()
     elif event_queue.available():  # Priority 2: Process events in queue.
         event = event_queue.get()
         if event[0] == -1: # Publish event to all machines.

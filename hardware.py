@@ -19,13 +19,13 @@ IOCONA    = 0x0A   # Port A configuration register.
 
 class BoxIO():
 
-    def __init__(self, PyControl, addr = 0x20, int_pin = 'X1'):
+    def __init__(self, pyControl, addr = 0x20, int_pin = 'X1'):
 
         # Variables----------------------------------------------------------------
-        self.pc = PyControl  # Pointer to framework.
+        self.pc = pyControl  # Pointer to framework.
         self.addr = addr     # Device I2C address
         self.interrupt_timestamp = pyb.millis() # Time of last interrupt.
-        self.interrupt_triggered = False   # Flag to tell framework to run process_interrupt.
+        self.interrupt_triggered = False   # Flag to tell framework to run _process_interrupt.
         self.active_pins = {}  # {pin: (rising_event_ID, falling_event_ID, machine_ID)}
 
         # Setup.
@@ -110,7 +110,7 @@ class BoxIO():
             self.input_state = i2c.mem_read(1, self.addr, GPIOA, timeout=5000)[0]
         return bool(self.input_state & (1 << pin))
 
-    def process_interrupt(self):
+    def _process_interrupt(self):
         # Evaluate which active pins have changed state and publish required events.
         self.interrupt_timestamp = self.interrupt_timestamp - self.pc.start_time
         self.interrupt_triggered = False
@@ -227,9 +227,9 @@ class Poke():
 
 class Box():
 
-    def __init__(self, PyControl, addr = 0x20, int_pin = 'X1'):
+    def __init__(self, pyControl, addr = 0x20, int_pin = 'X1'):
         
-        self.boxIO = BoxIO(PyControl, addr, int_pin)
+        self.boxIO = BoxIO(pyControl, addr, int_pin)
 
         # Instantiate components.
         self.left_poke   = Poke(self.boxIO, port = 1, rising = 'left_poke', falling = 'left_poke_out')
