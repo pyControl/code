@@ -1,6 +1,6 @@
 import pyControl as pc
-import state_machine_j as sm
-import hardware as hw
+import state_machine_i as sm
+import hardware_i as hw
 import examples.two_step_i as two_step_i
 from utility import *
 
@@ -10,7 +10,7 @@ box = hw.Box(pc)   # Initialise hardware.
 
 task = sm.State_machine(pc, two_step_i, box)  # Initialise task.
 
-def run(dur = 20):  # Run PyControl.
+def run(dur = 20):  # Run pyControl.
 	pc.run_machines(dur * second)  
 
 

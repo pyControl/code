@@ -8,7 +8,7 @@ box = hw.Box(pc)   # Initialise hardware.
 
 task = Two_step(pc,box)  # Initialise task.
 
-def run(dur = 20):  # Run PyControl.
+def run(dur = 20):  # Run pyControl.
 	pc.run_machines(dur * second)  
 
 

@@ -24,12 +24,12 @@ class Two_step(State_machine):
 
     initial_state = 'pre_session'
 
-    def __init__(self, PyControl, hw):
+    def __init__(self, pyControl, hw):
 
         self.norm_prob = 0.8
         self.reward_probs = [0.2,0.8]
 
-        State_machine.__init__(self, PyControl, hw)
+        State_machine.__init__(self, pyControl, hw)
 
     def stop(self):  # Turn off hardware at end of run.
         self.hw.off()
