@@ -1,32 +1,28 @@
-from state_machine import *
+from utility import *
 
-class Button(State_machine):
+# States and events.
   
-    states= {'LED_on'  :  1,
-             'LED_off' :  2}
+states= ['LED_on',
+         'LED_off']
 
-    events = {'button_event' :  3,
-              'timer_event'  :  4}
+events = ['button_event']
 
-    initial_state = 'LED_off'
+initial_state = 'LED_off'
 
-    # State event handler functions.
+# Define behaviour.
 
-    def LED_on(self, event):
-            if event == 'entry':
-                self.set_timer('timer_event', 2 * second)
-                self.hw.LED.on()
-            elif event == 'exit':
-                self.hw.LED.off()
-            elif event == 'timer_event':
-                self.goto('LED_off')
-            elif event == 'button_event':
-                self.goto('LED_off')
+def LED_on(event):
+        if event == 'entry':
+            hw.LED.on()
+        elif event == 'exit':
+            hw.LED.off()
+        elif event == 'button_event':
+            goto('LED_off')
 
-    def LED_off(self, event):
-            if event == 'button_event':
-                self.goto('LED_on')
+def LED_off(event):
+        if event == 'button_event':
+            goto('LED_on')
 
-    def stop(self):
-        self.hw.LED.off()
+def run_end():  # Turn off hardware at end of run.
+    hw.LED.off()
 

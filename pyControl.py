@@ -150,9 +150,13 @@ def run_machines(duration):
     # Pre run----------------------------
     global current_time
     global start_time
+    timer.reset()
+    event_queue.reset()
+    data_output_queue.reset()
+    for boxIO in hardware:
+        boxIO.reset()
     start_time =  pyb.millis()
     current_time = 0
-    timer.reset()
     end_time = current_time + duration
     for state_machine in state_machines:
         state_machine._start()
