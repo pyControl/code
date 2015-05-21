@@ -43,7 +43,7 @@ class Digital_input():
             self.falling_event_ID = None
 
     def _ISR(self, line):
-        # Interrupt service routing called on pin change.
+        # Interrupt service routine called on pin change.
         self.interrupt_timestamp = pyb.millis()
         if self.debounce and ((self.interrupt_timestamp - self.prev_timestamp) < 
                               self.debounce): # Rollover safe?
@@ -106,7 +106,7 @@ class Digital_output():
 # Poke
 # ----------------------------------------------------------------------------------------
 
-ports = {1: {'DIO_A': 'Y1',   # Pin mappings for pyDev development board.
+ports = {1: {'DIO_A': 'Y1',   # Pin mappings for pyControl devboard 1.0 board.
              'DIO_B': 'Y4',
              'POW_A': 'Y8',
              'POW_B': 'Y7'},
