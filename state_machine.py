@@ -1,4 +1,5 @@
 import pyb
+import pyControl as pc
 from array import array
 from utility import *
 
@@ -7,11 +8,11 @@ from utility import *
 # ----------------------------------------------------------------------------------------
 
 class State_machine():
-# State machine class created by passing in state machine description object sm.
-# sm is a module which defines the states, events and functionality of the state machine
-# object that is created. 
+    # State machine behaviour is defined by passing state machine description object sm to 
+    # State_machine constructor. sm is a module which defines the states, events and  
+    # functionality of the state machine  object that is created (see examples). 
 
-    def __init__(self, pyControl, sm, hardware = None):
+    def __init__(self, sm, hardware = None):
 
         self.sm = sm
         self.events = sm.events
@@ -37,14 +38,14 @@ class State_machine():
 
         self.dprint_queue = [] # Queue for strings output using dprint function. 
 
-        self.pc = pyControl # Pointer to framework.
-        self.ID  = self.pc.register_machine(self)
+        self.ID  = pc.register_machine(self)
 
         self.sm.hw = hardware
         if hardware:
             hardware.set_machine(self)
 
-        # Attach user functions to discription object namespace.
+        # Attach user functions to discription object namespace, this allows the user to write e.g.
+        # goto('state_1') in the task description to access State_machine goto function. 
         sm.goto      = self.goto
         sm.set_timer = self.set_timer
         sm.dprint    = self.dprint  
@@ -56,20 +57,20 @@ class State_machine():
         # and entry action of new state.
         self._process_event('exit')
         self.sm.state = next_state
-        self.pc.data_output_queue.put((self.ID, self.states[next_state], self.pc.current_time))
+        pc.data_output_queue.put((self.ID, self.states[next_state], pc.current_time))
         self._process_event('entry')
 
     def set_timer(self, event, interval):
         # Set a timer to return specified event afterinterval milliseconds.
-        self.pc.timer.set(self.events[event], int(interval), self.ID)
+        pc.timer.set(self.events[event], int(interval), self.ID)
 
     def dprint(self, print_string):
         # Used to output data 'print_string', along with ID of originating machine and timestamp.
         # 'print_string' is stored and only printed to serial line once higher priority events 
         # (e.g. interupt handling, state changes) have all been processed.
-        if self.pc.output_data:
+        if pc.output_data:
             self.dprint_queue.append(print_string)
-            self.pc.data_output_queue.put((self.ID, self.events['dprint'], self.pc.current_time))
+            pc.data_output_queue.put((self.ID, self.events['dprint'], pc.current_time))
 
     # Methods called by pyControl framework.
 
@@ -82,12 +83,11 @@ class State_machine():
         elif self.event_dispatch_dict[self.sm.state]:
             self.event_dispatch_dict[self.sm.state](event)                 # Evaluate state event handler method.
 
-
     def _start(self):
         # Called when run is started.
         # Puts agent in initial state, and runs entry event.
         self.sm.state = self.initial_state
-        self.pc.data_output_queue.put((self.ID, self.states[self.sm.state], self.pc.current_time))
+        pc.data_output_queue.put((self.ID, self.states[self.sm.state], pc.current_time))
         if self.event_dispatch_dict['run_start']:
             self.event_dispatch_dict['run_start']()
         self._process_event('entry')
