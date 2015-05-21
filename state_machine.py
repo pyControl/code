@@ -10,7 +10,7 @@ from utility import *
 class State_machine():
     # State machine behaviour is defined by passing state machine description object sm to 
     # State_machine constructor. sm is a module which defines the states, events and  
-    # functionality of the state machine  object that is created (see examples). 
+    # functionality of the state machine object that is created (see examples). 
 
     def __init__(self, sm, hardware = None):
 
@@ -75,13 +75,12 @@ class State_machine():
     # Methods called by pyControl framework.
 
     def _process_event(self, event):
-        # Process event given event name by calling appropriate state event handler method.
-        if self.event_dispatch_dict['all_states']:                      # If machine has all_states event handler method. 
-            handled = self.event_dispatch_dict['all_states'](event)     # Evaluate all_states event handler method.
-            if (not handled) and self.event_dispatch_dict[self.sm.state]:  # If all_states does not return handled = True and machine has state event handler method.
-                self.event_dispatch_dict[self.sm.state](event)             # Evaluate state event handler method.
-        elif self.event_dispatch_dict[self.sm.state]:
-            self.event_dispatch_dict[self.sm.state](event)                 # Evaluate state event handler method.
+        # Process event given event name by calling appropriate state event handler function.
+        if self.event_dispatch_dict['all_states']:                      # If machine has all_states event handler function. 
+            handled = self.event_dispatch_dict['all_states'](event)     # Evaluate all_states event handler function.
+            if handled: return                                          # If all_states event handler returns true, don't evaluate state specific behaviour.
+        if self.event_dispatch_dict[self.sm.state]:                     # If state machine has event handler function for current state.
+            self.event_dispatch_dict[self.sm.state](event)              # Evaluate state event handler function.
 
     def _start(self):
         # Called when run is started.
