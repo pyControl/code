@@ -7,8 +7,16 @@ from utility import *
 # ----------------------------------------------------------------------------------------
 
 class State_machine():
+# State machine class created by passing in state machine description object sm.
+# sm is a module which defines the states, events and functionality of the state machine
+# object that is created. 
 
-    def __init__(self, pyControl, hardware = None):
+    def __init__(self, pyControl, sm, hardware = None):
+
+        self.sm = sm
+        self.events = sm.events
+        self.states = sm.states
+        self.initial_state = sm.initial_state
 
         if type(self.events) == list and type(self.states) == list:
             self._assign_IDs()
@@ -25,16 +33,21 @@ class State_machine():
         self._ID2name = {ID:event for event, ID # Dict mapping IDs to event names.
                                    in list(self.events.items()) + list(self.states.items())}
 
-        self._make_event_dispatch_dict()
+        self._make_event_dispatch_dict(sm)
 
         self.dprint_queue = [] # Queue for strings output using dprint function. 
 
         self.pc = pyControl # Pointer to framework.
         self.ID  = self.pc.register_machine(self)
 
-        self.hw = hardware
+        self.sm.hw = hardware
         if hardware:
             hardware.set_machine(self)
+
+        # Attach user functions to discription object namespace.
+        sm.goto      = self.goto
+        sm.set_timer = self.set_timer
+        sm.dprint    = self.dprint  
 
     # Methods called by user.
 
@@ -42,7 +55,7 @@ class State_machine():
         # Transition to new state, calling exit action of old state
         # and entry action of new state.
         self._process_event('exit')
-        self.state = next_state
+        self.sm.state = next_state
         self.pc.data_output_queue.put((self.ID, self.states[next_state], self.pc.current_time))
         self._process_event('entry')
 
@@ -60,27 +73,29 @@ class State_machine():
 
     # Methods called by pyControl framework.
 
-    def stop(self):
-        # Called at end of run. Overwrite with desired
-        # functionality when state machine is defined.
-        pass
-
     def _process_event(self, event):
         # Process event given event name by calling appropriate state event handler method.
         if self.event_dispatch_dict['all_states']:                      # If machine has all_states event handler method. 
             handled = self.event_dispatch_dict['all_states'](event)     # Evaluate all_states event handler method.
-            if (not handled) and self.event_dispatch_dict[self.state]:  # If all_states does not return handled = True and machine has state event handler method.
-                self.event_dispatch_dict[self.state](event)             # Evaluate state event handler method.
-        elif self.event_dispatch_dict[self.state]:
-            self.event_dispatch_dict[self.state](event)                 # Evaluate state event handler method.
+            if (not handled) and self.event_dispatch_dict[self.sm.state]:  # If all_states does not return handled = True and machine has state event handler method.
+                self.event_dispatch_dict[self.sm.state](event)             # Evaluate state event handler method.
+        elif self.event_dispatch_dict[self.sm.state]:
+            self.event_dispatch_dict[self.sm.state](event)                 # Evaluate state event handler method.
 
 
     def _start(self):
         # Called when run is started.
         # Puts agent in initial state, and runs entry event.
-        self.state = self.initial_state
-        self.pc.data_output_queue.put((self.ID, self.states[self.state], self.pc.current_time))
+        self.sm.state = self.initial_state
+        self.pc.data_output_queue.put((self.ID, self.states[self.sm.state], self.pc.current_time))
+        if self.event_dispatch_dict['run_start']:
+            self.event_dispatch_dict['run_start']()
         self._process_event('entry')
+
+    def stop(self):
+        # Calls user defined stop function at end of run if function is defined.
+        if self.event_dispatch_dict['run_end']:
+            self.event_dispatch_dict['run_end']()
 
     def _process_event_ID(self, event_ID):
         # Process event given event ID
@@ -115,13 +130,13 @@ class State_machine():
             if event_ID > 0: # Print only user defined events.
                 print(str(event_ID) + ': ' + self._ID2name[event_ID])
 
-    def _make_event_dispatch_dict(self):
+    def _make_event_dispatch_dict(self, sm):
         # Makes a dictionary mapping state names to state event handler functions used by _process_event.
-        methods = dir(self) # List of methods of state machine instance.
+        methods = dir(sm) # List of methods of state machine instance.
         self.event_dispatch_dict = {}
-        for state in list(self.states.keys()) + ['all_states']:
+        for state in list(self.states.keys()) + ['all_states', 'run_start', 'run_end']:
             if state in methods:
-                self.event_dispatch_dict[state] = getattr(self, state)
+                self.event_dispatch_dict[state] = getattr(sm, state)
             else:
                 self.event_dispatch_dict[state] = None
 

@@ -24,3 +24,17 @@ def mean(x):
 minute = 60000
 second = 1000
 ms = 1
+
+# ----------------------------------------------------------------------------------------
+# Variables class.
+# ----------------------------------------------------------------------------------------
+
+class variables():
+    # Class for holding task variables.  Main purpose is to create single scope shared 
+    # across state behaviour functions to ensure that when variables are created or 
+    # modified in one state this persists to other states. Will eventually have functionality
+    # for outputting and modifying variables over serial.
+    def __init__(self):
+        pass
+
+v = variables()

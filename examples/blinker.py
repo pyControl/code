@@ -1,43 +1,38 @@
-from state_machine import *
+from utility import *
 
-class Blinker(State_machine):
+# States and events.
 
-    # Class variables.
+states = {'LED_on'  :  1,
+          'LED_off' :  2}
 
-    states= {'LED_on'  :  1,
-             'LED_off' :  2}
+events = {'timer_evt' :  3}
 
-    events = {'timer_evt' :  3}
+initial_state = 'LED_off'
 
-    initial_state = 'LED_off'
+# Variables.
 
+v.LED = pyb.LED(1)
+v.period = 1
         
-    def __init__(self, pyControl, LED = 1, period = 1.):
-        # Instance variables.
-        self.LED = pyb.LED(LED)
-        self.period = period
+# Define behaviour.
 
-        State_machine.__init__(self, pyControl)
+def LED_on(event):
+    if event == 'entry':
+        set_timer('timer_evt', v.period * second)
+        v.LED.on()
+    elif event == 'exit':
+        v.LED.off()
+    elif event == 'timer_evt':
+        goto('LED_off')
 
-    def LED_on(self, event):
-        if event == 'entry':
-            self.set_timer('timer_evt', self.period * second)
-            self.LED.on()
-        elif event == 'exit':
-            self.LED.off()
-        elif event == 'timer_evt':
-            self.goto('LED_off')
+def LED_off(event):
+    if event == 'entry':
+        set_timer('timer_evt', v.period * second)
+    elif event == 'timer_evt':
+        goto('LED_on')
 
-    def LED_off(self, event):
-        if event == 'entry':
-            self.set_timer('timer_evt', self.period * second)
-        elif event == 'timer_evt':
-            self.goto('LED_on')
-
-    def stop(self):
-        self.LED.off()
-
-
+def run_end():  # Turn off hardware at end of run.
+    v.LED.off()
 
 
 
