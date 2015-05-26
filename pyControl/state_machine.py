@@ -34,7 +34,7 @@ class State_machine():
         self._ID2name = {ID:event for event, ID # Dict mapping IDs to event names.
                                    in list(self.events.items()) + list(self.states.items())}
 
-        self._make_event_dispatch_dict(sm)
+        self._make_event_dispatch_dict()
 
         self.dprint_queue = [] # Queue for strings output using dprint function. 
 
@@ -129,13 +129,13 @@ class State_machine():
             if event_ID > 0: # Print only user defined events.
                 print(str(event_ID) + ': ' + self._ID2name[event_ID])
 
-    def _make_event_dispatch_dict(self, sm):
+    def _make_event_dispatch_dict(self):
         # Makes a dictionary mapping state names to state event handler functions used by _process_event.
-        methods = dir(sm) # List of methods of state machine instance.
+        methods = dir(self.sm) # List of methods of state machine instance.
         self.event_dispatch_dict = {}
         for state in list(self.states.keys()) + ['all_states', 'run_start', 'run_end']:
             if state in methods:
-                self.event_dispatch_dict[state] = getattr(sm, state)
+                self.event_dispatch_dict[state] = getattr(self.sm, state)
             else:
                 self.event_dispatch_dict[state] = None
 
