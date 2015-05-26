@@ -1,10 +1,7 @@
-import pyControl as pc
-import state_machine as sm
-import hardware as hw
+from pyControl import *
 import examples as ex
-from utility import *
 
-pc.verbose = True  # Set human readable output.
+fw.verbose = True  # Set human readable output.
 
 example = 'two_step'  # blinker, button or two_step,
 
@@ -20,7 +17,7 @@ elif example == 'two_step':
 	task = sm.State_machine(ex.two_step, box)    # Initialise state machine.
 
 def run(dur = 20):  # Run pyControl.
-	pc.run_machines(dur * second)  
+	fw.run_machines(dur * second)  
 
 
 

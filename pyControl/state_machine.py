@@ -1,7 +1,7 @@
 import pyb
-import pyControl as pc
 from array import array
-from utility import *
+from . import framework as fw
+from .utility import *
 
 # ----------------------------------------------------------------------------------------
 # State Machine
@@ -38,7 +38,7 @@ class State_machine():
 
         self.dprint_queue = [] # Queue for strings output using dprint function. 
 
-        self.ID  = pc.register_machine(self)
+        self.ID  = fw.register_machine(self)
 
         self.sm.hw = hardware
         if hardware:
@@ -57,20 +57,20 @@ class State_machine():
         # and entry action of new state.
         self._process_event('exit')
         self.sm.state = next_state
-        pc.data_output_queue.put((self.ID, self.states[next_state], pc.current_time))
+        fw.data_output_queue.put((self.ID, self.states[next_state], fw.current_time))
         self._process_event('entry')
 
     def set_timer(self, event, interval):
         # Set a timer to return specified event afterinterval milliseconds.
-        pc.timer.set(self.events[event], int(interval), self.ID)
+        fw.timer.set(self.events[event], int(interval), self.ID)
 
     def dprint(self, print_string):
         # Used to output data 'print_string', along with ID of originating machine and timestamp.
         # 'print_string' is stored and only printed to serial line once higher priority events 
         # (e.g. interupt handling, state changes) have all been processed.
-        if pc.output_data:
+        if fw.output_data:
             self.dprint_queue.append(print_string)
-            pc.data_output_queue.put((self.ID, self.events['dprint'], pc.current_time))
+            fw.data_output_queue.put((self.ID, self.events['dprint'], fw.current_time))
 
     # Methods called by pyControl framework.
 
@@ -86,7 +86,7 @@ class State_machine():
         # Called when run is started.
         # Puts agent in initial state, and runs entry event.
         self.sm.state = self.initial_state
-        pc.data_output_queue.put((self.ID, self.states[self.sm.state], pc.current_time))
+        fw.data_output_queue.put((self.ID, self.states[self.sm.state], fw.current_time))
         if self.event_dispatch_dict['run_start']:
             self.event_dispatch_dict['run_start']()
         self._process_event('entry')
