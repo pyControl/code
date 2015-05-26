@@ -106,8 +106,8 @@ def register_machine(state_machine):
         state_machines.append(state_machine)
         return machine_ID
 
-def register_hardware(boxIO):
-    hardware.append(boxIO)
+def register_hardware(hwo):
+    hardware.append(hwo)
 
 def publish_event(event, output_data = True):    
     event_queue.put(event) # Publish to state machines.
@@ -132,9 +132,9 @@ def _update():
     timer.check() 
     if interrupts_waiting:         # Priority 1: Process interrupts.
         interrupts_waiting = False
-        for boxIO in hardware:
-            if boxIO.interrupt_triggered:
-                boxIO._process_interrupt()
+        for hwo in hardware:
+            if hwo.interrupt_triggered:
+                hwo._process_interrupt()
     elif event_queue.available():  # Priority 2: Process events in queue.
         event = event_queue.get()
         if event[0] == -1: # Publish event to all machines.
@@ -153,8 +153,8 @@ def run_machines(duration):
     timer.reset()
     event_queue.reset()
     data_output_queue.reset()
-    for boxIO in hardware:
-        boxIO.reset()
+    for hwo in hardware:
+        hwo.reset()
     start_time =  pyb.millis()
     current_time = 0
     end_time = current_time + duration

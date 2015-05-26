@@ -1,5 +1,5 @@
 import pyb
-import pyControl as pc
+from . import framework as fw
 
 # ----------------------------------------------------------------------------------------
 # Digital Input
@@ -27,7 +27,7 @@ class Digital_input():
         pyb.ExtInt(pin, pyb.ExtInt.IRQ_RISING_FALLING, pull, self._ISR) # Configure interrupt on pin.
         self.interrupt_timestamp = 0         # Time interrupt occured.
         self.interrupt_rising = False        # True for rising interrupt, false for falling interrupt.
-        pc.register_hardware(self)           # Register Digital_input with framwork.
+        fw.register_hardware(self)           # Register Digital_input with framwork.
         self.reset()
 
     def set_machine(self, state_machine):
@@ -56,16 +56,16 @@ class Digital_input():
             return # Ignore interrupt as no event_ID assigned to edge.
         self.prev_timestamp = self.interrupt_timestamp
         self.interrupt_triggered = True    # Set tag on Digital_input.
-        pc.interrupts_waiting = True  # Set tag on framework (common to all Digital_inputs).
+        fw.interrupts_waiting = True  # Set tag on framework (common to all Digital_inputs).
 
     def _process_interrupt(self):
         # Put apropriate event for interrupt in event queue.
-        timestamp = self.interrupt_timestamp - pc.start_time
+        timestamp = self.interrupt_timestamp - fw.start_time
         self.interrupt_triggered = False
         if self.interrupt_rising:
-            pc.publish_event((self.machine_ID, self.rising_event_ID, timestamp))
+            fw.publish_event((self.machine_ID, self.rising_event_ID, timestamp))
         else:
-            pc.publish_event((self.machine_ID, self.falling_event_ID, timestamp))
+            fw.publish_event((self.machine_ID, self.falling_event_ID, timestamp))
 
     def __call__(self, force_read = False):
         # Calling Digital_input object returns state of the input. 
@@ -131,7 +131,7 @@ class Poke():
 
     def set_machine(self, state_machine):
         # Assigns poke to state machine.  For each input with an event name assigned, adds appropriate event codes, 
-        #  and state_maching ID to boxIO object active_pins dictionary.
+        #  and state_maching ID to hwo object active_pins dictionary.
         self.input_A.set_machine(state_machine)
         self.input_B.set_machine(state_machine)
 
