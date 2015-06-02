@@ -17,7 +17,7 @@ elif example == 'two_step':
 	task = sm.State_machine(ex.two_step, box)    # Initialise state machine.
 
 def run(dur = 20):  # Run pyControl.
-	fw.run_machines(dur * second)  
+	fw.run(dur)  
 
 
 

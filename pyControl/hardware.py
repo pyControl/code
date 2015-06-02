@@ -155,6 +155,7 @@ class Box():
         self.center_poke = Poke(port = 2, rising = 'high_poke', rising_B = 'low_poke')
         self.right_poke  = Poke(port = 3, rising = 'right_poke', falling = 'right_poke_out', rising_B = 'session_startstop')
         self.houselight  = self.center_poke.SOL
+        self.right_poke.input_B.debounce = 200
 
         self.all_inputs = [self.left_poke, self.center_poke, self.right_poke]
 
