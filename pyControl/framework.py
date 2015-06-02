@@ -1,5 +1,6 @@
 from array import array
 import pyb
+from .utility import second
 
 ID_null_value =  0  # Event ID null value, no event may have this ID.
 
@@ -146,7 +147,8 @@ def _update():
         output_data(data_output_queue.get())
         
 
-def run_machines(duration):
+def run(duration):
+    # Run framework for specified number of seconds.
     # Pre run----------------------------
     global current_time
     global start_time
@@ -157,15 +159,17 @@ def run_machines(duration):
         hwo.reset()
     start_time =  pyb.millis()
     current_time = 0
-    end_time = current_time + duration
+    end_time = current_time + duration * second
     for state_machine in state_machines:
         state_machine._start()
+    print('Run started.')
     # Run--------------------------------
     while (current_time - end_time) < 0:            
         _update()
     # Post run---------------------------
     for state_machine in state_machines:
         state_machine.stop()  
+    print('Run finished.')
 
 
 
