@@ -1,4 +1,3 @@
-import kick
 from pyboard import Pyboard, PyboardError
 import os
 import time
@@ -9,15 +8,15 @@ import time
 
 pyControl_dir = os.path.join('..', 'pyControl') # Path to folder of pyControl framwork files.
 
-examples_dir = os.path.join('..', 'examples') # Path to folder of example scripts.
+examples_dir = os.path.join('..', 'examples')   # Path to folder of example scripts.
 
 # ----------------------------------------------------------------------------------------
 #  Pycboard class.
 # ----------------------------------------------------------------------------------------
 
 class Pycboard(Pyboard):
-    '''Pycontrol board instance inherits functionally from Pyboard and adds functionallity
-    for file transfer and pyControl operations.
+    '''Pycontrol board inherits from Pyboard and adds functionallity for file transfer
+    and pyControl operations.
     '''
 
     def __init__(self, serial_device, baudrate=115200):
@@ -27,6 +26,13 @@ class Pycboard(Pyboard):
         except PyboardError:
             self.load_framework()
             self.reset()
+
+    def reset(self):
+        'Enter raw repl (soft reboots pyboard), import modules.'
+        self.enter_raw_repl()
+        self.exec('from pyControl import *;import os')
+        self.framework_running = False
+        self.data = None
                              
     # ------------------------------------------------------------------------------------
     # File transfer
@@ -60,6 +66,7 @@ class Pycboard(Pyboard):
             target_path = target_folder + '/' + f
             self.transfer_file(file_path, target_path)
 
+
     def load_framework(self):
         'Copy the pyControl framework folder to the board.'
         print('Transfering pyControl framework to pyboard.')
@@ -73,12 +80,6 @@ class Pycboard(Pyboard):
     # pyControl operations.
     # ------------------------------------------------------------------------------------
 
-    def reset(self):
-        'Enter raw repl (soft reboots pyboard), import modules.'
-        self.enter_raw_repl()
-        self.exec('from pyControl import *;import os')
-
-
     def setup_state_machine(self, sm_name, hardware = None, sm_dir = None):
         ''' Transfer state machine descriptor file sm_name.py from folder sm_dir
         (defaults to examples_dir) to board. Instantiate state machine object as 
@@ -86,6 +87,7 @@ class Pycboard(Pyboard):
         state machine constructor by setting the hardware argument to a string which
         instantiates a hardware object. 
         '''
+        self.reset()
         if not sm_dir:
             sm_dir = examples_dir
         sm_path = os.path.join(sm_dir, sm_name + '.py')
@@ -101,22 +103,33 @@ class Pycboard(Pyboard):
         self.exec(sm_name + '_instance = sm.State_machine({}, hwo)'.format(sm_name))
 
 
-    def run_framework(self, dur, verbose = False):
-        '''Run framework for specified duration (seconds).'''
+    def start_framework(self, dur, verbose = False):
+        'Start pyControl framwork running on pyboard.'
         self.exec('fw.verbose = ' + repr(verbose))
         self.exec_raw_no_follow('fw.run({})'.format(dur))
-        data = self.serial.read(1)
-        while True:
-            if data.endswith(b'\x04'): # End of framework run.
-                break
-            elif data.endswith(b'\r\n'):  # End of data line.
-                print(data[:-1].decode()) 
-                data = self.serial.read(1)
-            elif self.serial.inWaiting() > 0:
-                new_data = self.serial.read(1)
-                data = data + new_data
-        data_err = self.read_until(2, b'\x04>', timeout=10) # If not included, micropython board appears to crash/reset.
+        self.framework_running = True
+        self.data = b''
 
+
+    def process_data(self):
+        'Process data output from the pyboard to the serial line.'
+        while self.serial.inWaiting() > 0:
+            self.data = self.data + self.serial.read(1)  
+            if self.data.endswith(b'\x04'): # End of framework run.
+                self.framework_running = False
+                data_err = self.read_until(2, b'\x04>', timeout=10) 
+                break
+            elif self.data.endswith(b'\r\n'):  # End of data line.
+                print(self.data[:-1].decode()) 
+                self.data = b''
+              
+
+    def run_framework(self, dur, verbose = False):
+        '''Run framework for specified duration (seconds).'''
+        self.start_framework(dur, verbose)
+        while self.framework_running:
+            self.process_data()     
+        
 
     def run_state_machine(self, sm_name, dur, hardware = None, sm_dir = None,
                           verbose = False):
@@ -125,6 +138,5 @@ class Pycboard(Pyboard):
             board.run_state_machine('blinker', 5) 
             board.run_state_machine('two_step', 20, 'hw.Box()', verbose = True)
         '''
-        self.reset()
         self.setup_state_machine(sm_name, hardware, sm_dir)
         self.run_framework(dur, verbose)
