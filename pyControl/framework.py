@@ -70,8 +70,12 @@ class Timer():
         # event que.
         global current_time
         for i,active_timer in enumerate(self.active_timers):
-            if current_time - active_timer[0] >= 0:
-                publish_event((active_timer[1], active_timer[2], current_time), output_data = False)
+            if current_time - active_timer[0] >= 0: # Timer has elapsed.
+                if active_timer[1] == -2: # Hardware debounce timer.
+                    hardware[active_timer[2]]._deactivate_debounce() # Event ID is used to index hardware objects.
+                else:
+                    publish_event((active_timer[1], active_timer[2], current_time),
+                                   output_data = False) # Timer events are not output to serial line.
                 self.active_timers.pop(i)
 
 # ----------------------------------------------------------------------------------------
@@ -108,7 +112,9 @@ def register_machine(state_machine):
         return machine_ID
 
 def register_hardware(hwo):
+    hardware_ID = len(hardware)
     hardware.append(hwo)
+    return hardware_ID
 
 def publish_event(event, output_data = True):    
     event_queue.put(event) # Publish to state machines.
@@ -137,11 +143,11 @@ def _update():
             if hwo.interrupt_triggered:
                 hwo._process_interrupt()
     elif event_queue.available():  # Priority 2: Process events in queue.
-        event = event_queue.get()
+        event = event_queue.get()       
         if event[0] == -1: # Publish event to all machines.
             for state_machine in state_machines:
                 state_machine._process_event_ID(event[1])
-        else:
+        else: # Publish event to single machine.
             state_machines[event[0]]._process_event_ID(event[1])
     elif data_output_queue.available(): # Priority 3: Output data.
         output_data(data_output_queue.get())

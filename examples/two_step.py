@@ -103,8 +103,8 @@ def right_reward(event):
     
 def wait_for_poke_out(event):
     if event == 'entry':
-        if not (hw.left_poke.get_state() or \
-                hw.right_poke.get_state()):
+        if not (hw.left_poke.value() or \
+                hw.right_poke.value()):
             goto('inter_trial') # Subject already left poke.
     elif event in ['left_poke_out', 'right_poke_out']:
         goto('inter_trial')
