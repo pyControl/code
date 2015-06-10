@@ -26,7 +26,7 @@ def run(dur = 20):  # Run pyControl.
 
 
 from pyControl import *
-import examples as ex
+import two_step
 fw.verbose = True
 box = hw.Box()                               # Initialise hardware.
-task = sm.State_machine(ex.two_step, box)    # Initialise state machine.
+task = sm.State_machine(two_step, box)    # Initialise state machine.

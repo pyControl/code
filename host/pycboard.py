@@ -10,6 +10,8 @@ pyControl_dir = os.path.join('..', 'pyControl') # Path to folder of pyControl fr
 
 examples_dir = os.path.join('..', 'examples')   # Path to folder of example scripts.
 
+data_file_dir = os.path.join('..', 'data')   # Path to folder of example scripts.
+
 # ----------------------------------------------------------------------------------------
 #  Pycboard class.
 # ----------------------------------------------------------------------------------------
@@ -26,6 +28,8 @@ class Pycboard(Pyboard):
         except PyboardError:
             self.load_framework()
             self.reset()
+        self.data_file = None
+
 
     def reset(self):
         'Enter raw repl (soft reboots pyboard), import modules.'
@@ -33,19 +37,42 @@ class Pycboard(Pyboard):
         self.exec('from pyControl import *;import os')
         self.framework_running = False
         self.data = None
-                             
+
+
+
+    # def disable_flash_drive(self):
+    #     'Disable micropython board appearing as USB flash drive.'
+    #     self.exec("pyb.usb_mode('VCP')")
+    #     self.write_file('boot.py', "import pyb; pyb.usb_mode('VCP')")
+
+
+    # def enable_flash_drive(self):
+    #     'Enable micropython board appearing as USB flash drive.'
+    #     self.exec("pyb.usb_mode('CDC+MSC')")
+    #     self.write_file('boot.py', "import pyb; pyb.usb_mode('CDC+MSC')")
+
+
     # ------------------------------------------------------------------------------------
     # File transfer
     # ------------------------------------------------------------------------------------
+
+
+    def write_file(self, target_path, data):
+        '''Write data to file at specified path on pyboard, any data already
+        in the file will be deleted.
+        '''
+        self.exec("tmpfile = open('{}','w')".format(target_path))
+        self.exec("tmpfile.write({data})".format(data=repr(data)))
+        self.exec('tmpfile.close()')
+
 
     def transfer_file(self, file_path, target_path = None):
         '''Copy a file into the root directory of the pyboard.'''
         if not target_path:
             target_path = os.path.split(file_path)[-1]
-        data = open(file_path).read()
-        self.exec("tmpfile = open('{}','w')".format(target_path))
-        self.exec("tmpfile.write({data})".format(data=repr(data)))
-        self.exec('tmpfile.close()')
+        transfer_file = open(file_path) 
+        self.write_file(target_path, transfer_file.read())
+        transfer_file.close()
 
 
     def transfer_folder(self, folder_path, target_folder = None, file_type = 'all'):
@@ -120,7 +147,11 @@ class Pycboard(Pyboard):
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
                 break
             elif self.data.endswith(b'\r\n'):  # End of data line.
-                print(self.data[:-1].decode()) 
+                data_string = self.data.decode() 
+                print(data_string[:-1]) 
+                if self.data_file:
+                    self.data_file.write(data_string)
+                    self.data_file.flush()
                 self.data = b''
               
 
@@ -140,3 +171,18 @@ class Pycboard(Pyboard):
         '''
         self.setup_state_machine(sm_name, hardware, sm_dir)
         self.run_framework(dur, verbose)
+
+    # ------------------------------------------------------------------------------------
+    # Data logging
+    # ------------------------------------------------------------------------------------
+
+    def open_data_file(self, file_name, data_dir = None):
+        'Open a file to write pyControl data to.'
+        if not data_dir:
+            data_dir = data_file_dir
+        file_path = os.path.join(data_dir, file_name)
+        self.data_file = open(file_path, 'a+')
+
+    def close_data_file(self):
+        self.data_file.close()
+        self.data_file = None

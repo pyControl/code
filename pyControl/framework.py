@@ -124,8 +124,8 @@ def publish_event(event, output_data = True):
 def output_data(event):
     # Output data to serial line.
     event_name = state_machines[event[0]]._ID2name[event[1]]
-    if event_name == 'dprint': # Print user generated output string.
-        print('{} {} '.format(event[2], event[0]) + state_machines[event[0]].dprint_queue.pop(0))
+    if event_name == 'print': # Print user generated output string.
+        print('{} {} '.format(event[2], event[0]) + state_machines[event[0]].print_queue.pop(0))
     else:  # Print event or state change.
         if verbose: # Print event/state name.
             print('{} {} '.format(event[2], event[0]) + event_name)
@@ -168,14 +168,13 @@ def run(duration):
     end_time = current_time + duration * second
     for state_machine in state_machines:
         state_machine._start()
-    print('Run started.')
     # Run--------------------------------
     while (current_time - end_time) < 0:            
         _update()
     # Post run---------------------------
     for state_machine in state_machines:
         state_machine.stop()  
-    print('Run finished.')
+
 
 
 

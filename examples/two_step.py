@@ -47,6 +47,7 @@ def post_session(event):
 
 def center_active(event):
     if event == 'entry':
+        print('This is only a test')
         hw.center_poke.LED.on()
     elif event == 'exit':
         hw.center_poke.LED.off()
