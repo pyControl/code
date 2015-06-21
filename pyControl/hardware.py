@@ -119,71 +119,108 @@ class Digital_output():
 
 
 # ----------------------------------------------------------------------------------------
+# Hardware object.
+# ----------------------------------------------------------------------------------------
+
+class Hardware_group():
+    # Class containing collection of Digital_inputs, Digital_outputs or other 
+    # Hardware_groups.
+
+    def set_machine(self, state_machine):
+        for inp in self.all_inputs:
+            inp.set_machine(state_machine)
+
+    def reset(self):
+        for inp in self.all_inputs:
+            inp.reset()
+
+    def off(self):
+        for outp in self.all_outputs:
+            outp.off()
+
+
+# ----------------------------------------------------------------------------------------
 # Poke
 # ----------------------------------------------------------------------------------------
 
-ports = {1: {'DIO_A': 'Y1',   # Pin mappings for pyControl devboard 1.0 board.
-             'DIO_B': 'Y4',
-             'POW_A': 'Y8',
-             'POW_B': 'Y7'},
-
-         2: {'DIO_A': 'Y2',
-             'DIO_B': 'Y5',
-             'POW_A': 'Y10',
-             'POW_B': 'Y9'},
-
-         3: {'DIO_A': 'Y3',
-             'DIO_B': 'Y6',
-             'POW_A': 'Y12',
-             'POW_B': 'Y11'}}
-
-class Poke():
+class Poke(Hardware_group):
     def __init__(self, port, rising = None, falling = None, rising_B = None,
                  falling_B = None, debounce = 5):
 
-        self.SOL     = Digital_output(ports[port]['POW_A'])
-        self.LED     = Digital_output(ports[port]['POW_B'])
-        self.input_A = Digital_input(ports[port]['DIO_A'], rising,   falling,   debounce = debounce)
-        self.input_B = Digital_input(ports[port]['DIO_B'], rising_B, falling_B, debounce = debounce)
+        self.SOL     = Digital_output(port['POW_A'])
+        self.LED     = Digital_output(port['POW_B'])
+        self.input_A = Digital_input(port['DIO_A'], rising,   falling,   debounce = debounce)
+        self.input_B = Digital_input(port['DIO_B'], rising_B, falling_B, debounce = debounce)
 
-    def set_machine(self, state_machine):
-        self.input_A.set_machine(state_machine)
-        self.input_B.set_machine(state_machine)
+        self.all_inputs  = [self.input_A, self.input_B]
+        self.all_outputs = [self.SOL, self.LED]
 
     def value(self):
         # Return the state of input A.
         return self.input_A.value()
 
-    def off(self): # Turn off all outputs.
-        self.SOL.off()
-        self.LED.off()
-
 # ----------------------------------------------------------------------------------------
 # Hardware collections.
 # ----------------------------------------------------------------------------------------
 
-class Box():
+class Box(Hardware_group):
 
-    def __init__(self):
+    ports_dvb =  {1: {'DIO_A': 'Y1',   # Pin mappings for pyControl devboard 1.0 board.
+                      'DIO_B': 'Y4',
+                      'POW_A': 'Y8',
+                      'POW_B': 'Y7'},
+
+                  2: {'DIO_A': 'Y2',
+                      'DIO_B': 'Y5',
+                      'POW_A': 'Y10',
+                      'POW_B': 'Y9'},
+
+                  3: {'DIO_A': 'Y3',
+                      'DIO_B': 'Y6',
+                      'POW_A': 'Y12',
+                      'POW_B': 'Y11'}}
+
+    ports_bkb = {1: {'DIO_A': 'X1',   # Pin mappings for pyControl breakout 1.0 board.
+                      'DIO_B': 'X2',
+                      'POW_A': 'Y4',
+                      'POW_B': 'Y8'},
+ 
+                  2: {'DIO_A': 'X3',
+                      'DIO_B': 'X4',
+                      'POW_A': 'Y3',
+                      'POW_B': 'Y7'},
+ 
+                  3: {'DIO_A': 'X7',
+                      'DIO_B': 'X8',
+                      'POW_A': 'Y2',
+                      'POW_B': 'Y6'},
+ 
+                  4: {'DIO_A': 'X12',
+                      'DIO_B': 'X11',
+                      'POW_A': 'Y1',
+                      'POW_B': 'Y5'}}
+
+    def __init__(self, board = 'dvb'):
+
+        assert board in ('dvb, bkb'), "Invalid board specifier. Allowed: 'dvb', 'bkb'"
+
+        if board == 'dvb':
+            ports = self.ports_dvb
+        elif board == 'bkb':
+            ports = self.ports_bkb
 
         # Instantiate components.
-        self.left_poke   = Poke(port = 1, rising = 'left_poke', falling = 'left_poke_out')
-        self.center_poke = Poke(port = 2, rising = 'high_poke', rising_B = 'low_poke')
-        self.right_poke  = Poke(port = 3, rising = 'right_poke', falling = 'right_poke_out',
-                                rising_B = 'session_startstop')
+        self.left_poke   = Poke(ports[1], rising = 'left_poke', falling = 'left_poke_out',
+                                          rising_B = 'session_startstop')
+        self.center_poke = Poke(ports[2], rising = 'high_poke', rising_B = 'low_poke')
+        self.right_poke  = Poke(ports[3], rising = 'right_poke', falling = 'right_poke_out')
+                                          
         self.houselight  = self.center_poke.SOL
 
-        self.all_inputs = [self.left_poke, self.center_poke, self.right_poke]
+        self.all_inputs  = [self.left_poke, self.center_poke, self.right_poke]
+        self.all_outputs = [self.left_poke, self.center_poke, self.right_poke]
 
 
-    def set_machine(self, state_machine):
-        for i in self.all_inputs:
-            i.set_machine(state_machine)
 
-    def reset(self):
-        for i in self.all_inputs:
-            i.reset()
 
-    def off(self): # Turn off all outputs.
-        for o in [self.left_poke, self.right_poke, self.center_poke]:
-            o.off()
+

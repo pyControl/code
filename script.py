@@ -18,15 +18,3 @@ elif example == 'two_step':
 
 def run(dur = 20):  # Run pyControl.
     fw.run(dur)  
-
-
-
-
-
-
-
-from pyControl import *
-import two_step
-fw.verbose = True
-box = hw.Box()                               # Initialise hardware.
-task = sm.State_machine(two_step, box)    # Initialise state machine.
