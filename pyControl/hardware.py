@@ -180,7 +180,7 @@ class Box(Hardware_group):
                       'POW_A': 'Y12',
                       'POW_B': 'Y11'}}
 
-    ports_bkb = {1: {'DIO_A': 'X1',   # Pin mappings for pyControl breakout 1.0 board.
+    ports_bkb =  {1: {'DIO_A': 'X1',   # Pin mappings for pyControl breakout 1.0 board.
                       'DIO_B': 'X2',
                       'POW_A': 'Y4',
                       'POW_B': 'Y8'},
