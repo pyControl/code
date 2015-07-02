@@ -14,7 +14,7 @@ data_dir = os.path.join('..', 'data')   # Path to data storage folder
 # Hardware serial ports
 # ----------------------------------------------------------------------------------------
 
-box_serials={1:'COM17',    #Dictionary of box numbers with respective serial port addresses.
-             2:'COM33'} 
+box_serials={1:'COM1',    #Dictionary of box numbers with respective serial port addresses.
+             2:'COM2'} 
 
 

@@ -157,7 +157,6 @@ class Pycboard(Pyboard):
                     self.data_file.write(data_string)
                     self.data_file.flush()
                 self.data = b''
-              
 
     def run_framework(self, dur, verbose = False):
         '''Run framework for specified duration (seconds).'''
@@ -174,6 +173,26 @@ class Pycboard(Pyboard):
         '''
         self.setup_state_machine(sm_name, hardware, sm_dir)
         self.run_framework(dur, verbose)
+
+    def set_variable(self, sm_name, v_name, v_value):
+        'Set state machine variable when framework not running.'
+        try:self.exec(sm_name + '_instance')
+        except PyboardError:
+            print('Variable not set: invalid state machine name.')
+            return
+        try: self.exec(sm_name + '_instance.sm.v.' + v_name)
+        except PyboardError: 
+            print('Variable not set: invalid variable name.')
+            return
+        self.exec(sm_name + '_instance.sm.v.' + v_name + '=' + repr(v_value))
+
+    def get_variable(self, sm_name, v_name):
+        'Get value of state machine variable when framework not running.'
+        try:
+            v_value = self.eval(sm_name + '_instance.sm.v.' + v_name).decode()
+            return v_value
+        except PyboardError: 
+            print('Invalid variable or state machine name.')
 
     # ------------------------------------------------------------------------------------
     # Data logging

@@ -20,7 +20,10 @@ file_names = {box_n: experiment.subjects[box_n] + date + '.txt' for box_n in box
 
 boxes = Boxes(boxes_to_use, experiment.hardware)
 
-if input('\nRun hardware test (y / n)\n') == 'y':
+if input('\nReload framework? (y / n)\n') == 'y':
+	boxes.load_framework()
+
+if input('\nRun hardware test? (y / n)\n') == 'y':
 	print('Uploading hardware test.')
 	# !! upload hardware test to boxes.
 	boxes.start_framework(data_output = False)
@@ -34,7 +37,7 @@ print('Uploading task.')
 boxes.setup_state_machine(experiment.task)
 # !! Set variables.
 boxes.open_data_file(file_names)
-# !! Print state and event info to data files.
+boxes.print_IDs()
 
 input('\nHit enter to start experiment. To quit at any time, hit ctrl + c.\n\n')
 

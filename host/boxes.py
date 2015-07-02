@@ -18,6 +18,10 @@ class Boxes():
         for box in self.boxes.values():
             box.start_framework(dur, verbose, data_output)        
 
+    def load_framework(self):
+        for box in self.boxes.values():
+            box.load_framework()
+
     def process_data(self):
         for box in self.boxes.values():
             box.process_data()
@@ -28,7 +32,7 @@ class Boxes():
 
     def print_IDs(self):
         for box in self.boxes.values():
-            box.print_IDs
+            box.print_IDs()
 
     def set_variables(self):
         pass
