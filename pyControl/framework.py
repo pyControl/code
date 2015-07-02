@@ -94,13 +94,17 @@ interrupts_waiting = False # Set true if interrupt waiting to be processed.
 
 data_output_queue = Event_queue() # Queue used for outputing events to serial line.
 
-output_data = True  # Whether to output data to the serial line.
+data_output = True  # Whether to output data to the serial line.
 
 verbose = False     # True: output names, False: output IDs
 
 current_time = None # Time since run started (milliseconds).
 
+running = False     # Set to True when framework is running, set to False to stop run.
+
 start_time = 0      # Time when run was started.
+
+usb_serial = pyb.USB_VCP()  # USB serial port object.
 
 # ----------------------------------------------------------------------------------------
 # Framework functions.
@@ -118,8 +122,14 @@ def register_hardware(hwo):
 
 def publish_event(event, output_data = True):    
     event_queue.put(event) # Publish to state machines.
-    if output_data:        # Publish to serial output.
+    if output_data and data_output:  # Publish to serial output.
         data_output_queue.put(event)
+
+def print_IDs():
+    # Print event and state ID for all state machines.
+    for i, state_machine in enumerate(state_machines):
+        print('State machine: ' + str(i))
+        state_machine._print_IDs()
 
 def output_data(event):
     # Output data to serial line.
@@ -134,7 +144,7 @@ def output_data(event):
 
 def _update():
     # Perform framework update functions in order of priority.
-    global current_time, interrupts_waiting, start_time
+    global current_time, interrupts_waiting, start_time, running
     current_time = pyb.elapsed_millis(start_time)
     timer.check() 
     if interrupts_waiting:         # Priority 1: Process interrupts.
@@ -149,15 +159,18 @@ def _update():
                 state_machine._process_event_ID(event[1])
         else: # Publish event to single machine.
             state_machines[event[0]]._process_event_ID(event[1])
-    elif data_output_queue.available(): # Priority 3: Output data.
+    elif usb_serial.any():        # Priority 3: Check for serial input from computer.
+        bytes_recieved = usb_serial.readall()
+        if bytes_recieved == b'E': # code to stop run over serial.
+            running = False
+    elif data_output_queue.available(): # Priority 4: Output data.
         output_data(data_output_queue.get())
         
 
-def run(duration):
+def run(duration = None):
     # Run framework for specified number of seconds.
     # Pre run----------------------------
-    global current_time
-    global start_time
+    global current_time, start_time, running
     timer.reset()
     event_queue.reset()
     data_output_queue.reset()
@@ -165,13 +178,19 @@ def run(duration):
         hwo.reset()
     start_time =  pyb.millis()
     current_time = 0
-    end_time = current_time + duration * second
     for state_machine in state_machines:
         state_machine._start()
     # Run--------------------------------
-    while (current_time - end_time) < 0:            
-        _update()
+    running = True
+    if duration: # Run for finite time.
+        end_time = current_time + duration * second
+        while ((current_time - end_time) < 0) and running:            
+            _update()
+    else:
+        while running:
+            _update()
     # Post run---------------------------
+    running = False
     for state_machine in state_machines:
         state_machine.stop()  
 
