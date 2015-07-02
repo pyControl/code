@@ -57,7 +57,8 @@ class State_machine():
         # and entry action of new state.
         self._process_event('exit')
         self.sm.state = next_state
-        fw.data_output_queue.put((self.ID, self.states[next_state], fw.current_time))
+        if fw.data_output:
+            fw.data_output_queue.put((self.ID, self.states[next_state], fw.current_time))
         self._process_event('entry')
 
     def set_timer(self, event, interval):
@@ -68,7 +69,7 @@ class State_machine():
         # Used to output data 'print_string', along with ID of originating machine and timestamp.
         # 'print_string' is stored and only printed to serial line once higher priority events 
         # (e.g. interupt handling, state changes) have all been processed.
-        if fw.output_data:
+        if fw.data_output:
             self.print_queue.append(print_string)
             fw.data_output_queue.put((self.ID, self.events['print'], fw.current_time))
 
@@ -86,7 +87,8 @@ class State_machine():
         # Called when run is started.
         # Puts agent in initial state, and runs entry event.
         self.sm.state = self.initial_state
-        fw.data_output_queue.put((self.ID, self.states[self.sm.state], fw.current_time))
+        if fw.data_output:
+            fw.data_output_queue.put((self.ID, self.states[self.sm.state], fw.current_time))
         if self.event_dispatch_dict['run_start']:
             self.event_dispatch_dict['run_start']()
         self._process_event('entry')

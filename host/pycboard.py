@@ -1,16 +1,7 @@
 from pyboard import Pyboard, PyboardError
+from config import *
 import os
 import time
-
-# ----------------------------------------------------------------------------------------
-# Paths
-# ----------------------------------------------------------------------------------------
-
-pyControl_dir = os.path.join('..', 'pyControl') # Path to folder of pyControl framwork files.
-
-examples_dir = os.path.join('..', 'examples')   # Path to folder of example scripts.
-
-data_file_dir = os.path.join('..', 'data')   # Path to folder of example scripts.
 
 # ----------------------------------------------------------------------------------------
 #  Pycboard class.
@@ -129,14 +120,27 @@ class Pycboard(Pyboard):
             self.exec('hwo = None')
         self.exec(sm_name + '_instance = sm.State_machine({}, hwo)'.format(sm_name))
 
+    def print_IDs(self):
+        'Print state and event IDs.'
+        ID_info = self.exec('fw.print_IDs()').decode()
+        if self.data_file: # Print IDs to file.
+            self.data_file.write(ID_info)
+        else: # Print to screen.
+            print(ID_info)
 
-    def start_framework(self, dur, verbose = False):
+    def start_framework(self, dur = None, verbose = False, data_output = True):
         'Start pyControl framwork running on pyboard.'
         self.exec('fw.verbose = ' + repr(verbose))
+        self.exec('fw.data_output = ' + repr(data_output))
         self.exec_raw_no_follow('fw.run({})'.format(dur))
         self.framework_running = True
         self.data = b''
 
+    def stop_framework(self):
+        'Stop framework running on pyboard by sending stop command.'
+        self.serial.write(b'E')
+        self.framework_running = False
+        data_err = self.read_until(2, b'\x04>', timeout=10) 
 
     def process_data(self):
         'Process data output from the pyboard to the serial line.'
@@ -161,7 +165,6 @@ class Pycboard(Pyboard):
         while self.framework_running:
             self.process_data()     
         
-
     def run_state_machine(self, sm_name, dur, hardware = None, sm_dir = None,
                           verbose = False):
         '''Run the state machine sm_name from directory sm_dir for the specified 
@@ -176,11 +179,13 @@ class Pycboard(Pyboard):
     # Data logging
     # ------------------------------------------------------------------------------------
 
-    def open_data_file(self, file_name, data_dir = None):
+    def open_data_file(self, file_name, sub_dir = None):
         'Open a file to write pyControl data to.'
-        if not data_dir:
-            data_dir = data_file_dir
-        file_path = os.path.join(data_dir, file_name)
+        if sub_dir:
+            d_dir = os.path.join(data_dir, sub_dir)
+        else:
+            d_dir = data_dir
+        file_path = os.path.join(d_dir, file_name)
         self.data_file = open(file_path, 'a+')
 
     def close_data_file(self):
