@@ -35,8 +35,7 @@ else:
 print('Uploading task.')
 
 boxes.setup_state_machine(experiment.task)
-# !! Set variables.
-boxes.open_data_file(file_names)
+boxes.open_data_file(file_names, sub_dir = experiment.folder)
 boxes.print_IDs()
 
 input('\nHit enter to start experiment. To quit at any time, hit ctrl + c.\n\n')
