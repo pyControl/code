@@ -1,6 +1,8 @@
 from experiments import experiments
 from boxes import Boxes
 import datetime
+import json
+import os
 from config import *
 
 date = datetime.date.today().strftime('-%Y-%m-%d')
@@ -21,20 +23,37 @@ file_names = {box_n: experiment.subjects[box_n] + date + '.txt' for box_n in box
 boxes = Boxes(boxes_to_use, experiment.hardware)
 
 if input('\nReload framework? (y / n)\n') == 'y':
-	boxes.load_framework()
+    boxes.load_framework()
 
 if input('\nRun hardware test? (y / n)\n') == 'y':
-	print('Uploading hardware test.')
-	# !! upload hardware test to boxes.
-	boxes.start_framework(data_output = False)
-	input('\nPress any key when finished with hardware test.\n')
-	boxes.stop_framework()
+    print('Uploading hardware test.')
+    # !! upload hardware test to boxes.
+    boxes.start_framework(data_output = False)
+    input('\nPress any key when finished with hardware test.\n')
+    boxes.stop_framework()
 else:
-	print('Skipping hardware test.')
+    print('Skipping hardware test.\n')
 
-print('Uploading task.')
+print('Uploading task.\n')
 
 boxes.setup_state_machine(experiment.task)
+
+if experiment.set_variables: # Set state machine variables from experiment specification.
+    print('\nSetting state machine variables.\n')
+    for v_name in experiment.set_variables:
+        boxes.set_variable(experiment.task, v_name, experiment.set_variables[v_name])
+
+if experiment.persistent_variables:
+    pv_file_path = os.path.join(data_dir, experiment.folder, 'persistent_variables.txt')
+    if os.path.exists(pv_file_path):
+        print('\nSetting persistent variables.\n')
+        with open(pv_file_path, 'r') as pv_file:
+            persistent_v_values = eval(pv_file.read())
+        for v_name in persistent_v_values.keys():
+            boxes.set_variable(experiment.task, v_name, persistent_v_values[v_name])
+    else:
+        print('\nPersistent variables not set as persistent_variables.txt does not exist.\n')
+
 boxes.open_data_file(file_names, sub_dir = experiment.folder)
 boxes.print_IDs()
 
@@ -49,6 +68,15 @@ try:
 except KeyboardInterrupt:
     boxes.stop_framework()
     boxes.close_data_file()
+
+    if experiment.persistent_variables:
+        print('\nStoring persistent variables.\n')
+        persistent_v_values = {}
+        for v_name in experiment.persistent_variables:
+            persistent_v_values[v_name] = boxes.get_variable(experiment.task, v_name)
+            with open(pv_file_path, 'w') as pv_file:
+                pv_file.write(repr(persistent_v_values))
+    
     boxes.close()
     # !! transfer files as necessary.
 
