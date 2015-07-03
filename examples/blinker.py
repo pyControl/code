@@ -11,7 +11,7 @@ initial_state = 'LED_off'
 
 # Variables.
 
-v.LED = pyb.LED(1)
+v.LED = pyb.LED(4)
 v.period = 1
         
 # Define behaviour.

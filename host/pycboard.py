@@ -204,6 +204,8 @@ class Pycboard(Pyboard):
             d_dir = os.path.join(data_dir, sub_dir)
         else:
             d_dir = data_dir
+        if not os.path.exists(d_dir):
+            os.mkdir(d_dir)
         file_path = os.path.join(d_dir, file_name)
         self.data_file = open(file_path, 'a+')
 
