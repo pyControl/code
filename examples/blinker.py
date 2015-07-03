@@ -11,28 +11,28 @@ initial_state = 'LED_off'
 
 # Variables.
 
-v.LED = pyb.LED(4)
-v.period = 1
+v.LED_n  = 1 # Number of LED to use.
+v.period = 1 # Period of blinking
         
 # Define behaviour.
 
 def LED_on(event):
     if event == 'entry':
-        set_timer('timer_evt', v.period * second)
-        v.LED.on()
+        set_timer('timer_evt', 0.5 * v.period * second)
+        pyb.LED(v.LED_n).on()
     elif event == 'exit':
-        v.LED.off()
+        pyb.LED(v.LED_n).off()
     elif event == 'timer_evt':
         goto('LED_off')
 
 def LED_off(event):
     if event == 'entry':
-        set_timer('timer_evt', v.period * second)
+        set_timer('timer_evt', 0.5 * v.period * second)
     elif event == 'timer_evt':
         goto('LED_on')
 
 def run_end():  # Turn off hardware at end of run.
-    v.LED.off()
+    pyb.LED(v.LED_n).off()
 
 
 

@@ -190,7 +190,7 @@ class Pycboard(Pyboard):
         'Get value of state machine variable when framework not running.'
         try:
             v_value = self.eval(sm_name + '_instance.sm.v.' + v_name).decode()
-            return v_value
+            return eval(v_value)
         except PyboardError: 
             print('Invalid variable or state machine name.')
 

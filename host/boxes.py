@@ -36,7 +36,7 @@ class Boxes():
             box.print_IDs()
 
     def set_variable(self, sm_name, v_name, v_value):
-        '''Set specified variable on a all pyboards. If v_value is a
+        '''Set specified variable on a all pycboards. If v_value is a
          dict whose keys match the box ID numbers, the variable on each
          box is set to the corresponding value from the dictionary.  Otherwise
          the variable on all boxes is set to v_value.
@@ -47,6 +47,14 @@ class Boxes():
         else:
             for box in self.boxes.values():
                 box.set_variable(sm_name, v_name, v_value)
+
+    def get_variable(self, sm_name, v_name):
+        '''Get value of specified variable from all boxes and return as dict with 
+        box numbers as keys.'''
+        v_values = {}
+        for box_ID in self.boxes.keys():
+            v_values[box_ID] = self.boxes[box_ID].get_variable(sm_name, v_name)
+        return v_values
 
     def open_data_file(self, file_names, sub_dir = None):
         for box_ID in self.boxes.keys():
