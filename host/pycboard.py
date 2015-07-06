@@ -150,19 +150,24 @@ class Pycboard(Pyboard):
                 self.framework_running = False
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
                 break
-            elif self.data.endswith(b'\r\n'):  # End of data line.
+            elif self.data.endswith(b'\n'):  # End of data line.
                 data_string = self.data.decode() 
                 print(data_string[:-1]) 
                 if self.data_file:
-                    self.data_file.write(data_string)
-                    self.data_file.flush()
+                    if data_string.split(' ')[2][0] != '#': # Output not a coment, write to file.
+                        self.data_file.write(data_string)
+                        self.data_file.flush()
                 self.data = b''
 
     def run_framework(self, dur, verbose = False):
         '''Run framework for specified duration (seconds).'''
         self.start_framework(dur, verbose)
-        while self.framework_running:
-            self.process_data()     
+        try:
+            while self.framework_running:
+                self.process_data()     
+        except KeyboardInterrupt:
+            self.stop_framework()
+
         
     def run_state_machine(self, sm_name, dur, hardware = None, sm_dir = None,
                           verbose = False):
@@ -207,7 +212,7 @@ class Pycboard(Pyboard):
         if not os.path.exists(d_dir):
             os.mkdir(d_dir)
         file_path = os.path.join(d_dir, file_name)
-        self.data_file = open(file_path, 'a+')
+        self.data_file = open(file_path, 'a+', newline = '\n')
 
     def close_data_file(self):
         self.data_file.close()

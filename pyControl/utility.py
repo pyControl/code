@@ -1,4 +1,5 @@
 import pyb
+import math
 
 # ----------------------------------------------------------------------------------------
 # Utility functions.
@@ -18,12 +19,36 @@ def mean(x):
     return(sum(x)/len(x))
 
 # ----------------------------------------------------------------------------------------
+# Utility classes
+# ----------------------------------------------------------------------------------------
+
+class exp_mov_ave:
+    # Exponential moving average class.
+    def __init__(self, tau, init_value):
+        self.tau = tau
+        self.init_value = init_value
+        self.reset()
+
+    def reset(self, init_value = None, tau = None):
+        if tau:
+            self.tau = tau
+        if init_value:
+            self.init_value = init_value
+        self.ave = self.init_value
+        self._m = math.exp(-1./self.tau)
+        self._i = 1 - self._m
+
+    def update(self, sample):
+        self.ave = (self.ave * self._m) + (self._i * sample)
+
+# ----------------------------------------------------------------------------------------
 # Units.
 # ----------------------------------------------------------------------------------------
 
-minute = 60000
-second = 1000
 ms = 1
+second = 1000
+minute = 60 * second
+hour = 60 * minute
 
 # ----------------------------------------------------------------------------------------
 # Variables class.

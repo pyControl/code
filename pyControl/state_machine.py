@@ -86,11 +86,11 @@ class State_machine():
     def _start(self):
         # Called when run is started.
         # Puts agent in initial state, and runs entry event.
+        if self.event_dispatch_dict['run_start']:
+            self.event_dispatch_dict['run_start']()
         self.sm.state = self.initial_state
         if fw.data_output:
             fw.data_output_queue.put((self.ID, self.states[self.sm.state], fw.current_time))
-        if self.event_dispatch_dict['run_start']:
-            self.event_dispatch_dict['run_start']()
         self._process_event('entry')
 
     def stop(self):
@@ -125,11 +125,13 @@ class State_machine():
         # Print event and state IDs
         print('States:')
         for state_ID in sorted(self.states.values()):
-            print(str(state_ID) + ': ' + self._ID2name[state_ID])
+            print(self._ID2name[state_ID] + ': ' + str(state_ID))
+        print('')
         print('Events:')
         for event_ID in sorted(self.events.values()):
             if event_ID > 0: # Print only user defined events.
-                print(str(event_ID) + ': ' + self._ID2name[event_ID])
+                print(self._ID2name[event_ID]  + ': ' +  str(event_ID))
+        print('')
 
     def _make_event_dispatch_dict(self):
         # Makes a dictionary mapping state names to state event handler functions used by _process_event.
