@@ -1,7 +1,7 @@
 from experiments import experiments
 from boxes import Boxes
 import datetime
-import json
+from pprint import pformat
 import os
 from config import *
 
@@ -55,9 +55,11 @@ if experiment.persistent_variables:
         print('\nPersistent variables not set as persistent_variables.txt does not exist.\n')
 
 boxes.open_data_file(file_names, sub_dir = experiment.folder)
-boxes.print_IDs()
+boxes.print_IDs() # Print state and event information to file.
 
 input('\nHit enter to start experiment. To quit at any time, hit ctrl + c.\n\n')
+
+boxes.write_to_file('Run started at: ' + datetime.datetime.now().strftime('%H:%M:%S' + '\n'))
 
 boxes.start_framework(dur = None, verbose = True)
 
@@ -75,7 +77,7 @@ except KeyboardInterrupt:
         for v_name in experiment.persistent_variables:
             persistent_v_values[v_name] = boxes.get_variable(experiment.task, v_name)
             with open(pv_file_path, 'w') as pv_file:
-                pv_file.write(repr(persistent_v_values))
+                pv_file.write(pformat(persistent_v_values))
     
     boxes.close()
     # !! transfer files as necessary.

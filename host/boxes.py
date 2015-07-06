@@ -37,11 +37,11 @@ class Boxes():
 
     def set_variable(self, sm_name, v_name, v_value):
         '''Set specified variable on a all pycboards. If v_value is a
-         dict whose keys match the box ID numbers, the variable on each
+         dict whose keys include all the box ID numbers, the variable on each
          box is set to the corresponding value from the dictionary.  Otherwise
          the variable on all boxes is set to v_value.
         '''
-        if type(v_value) == dict and self.boxes.keys() == v_value.keys(): 
+        if type(v_value) == dict and set(self.boxes.keys()) <= set(v_value.keys()): 
             for box_ID in self.boxes.keys():
                 self.boxes[box_ID].set_variable(sm_name, v_name, v_value[box_ID])
         else:
@@ -67,6 +67,10 @@ class Boxes():
     def close(self):
         for box in self.boxes.values():
             box.close()
+
+    def write_to_file(self, write_string):
+        for box in self.boxes.values():
+            box.data_file.write(write_string)
 
 
 
