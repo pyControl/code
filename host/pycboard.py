@@ -19,6 +19,7 @@ class Pycboard(Pyboard):
         except PyboardError:
             self.load_framework()
             self.reset()
+        self.unique_ID = eval(self.eval('pyb.unique_id()').decode())
         self.data_file = None
 
 
@@ -28,8 +29,6 @@ class Pycboard(Pyboard):
         self.exec('from pyControl import *;import os')
         self.framework_running = False
         self.data = None
-
-
 
     # def disable_flash_drive(self):
     #     'Disable micropython board appearing as USB flash drive.'
@@ -149,6 +148,7 @@ class Pycboard(Pyboard):
             if self.data.endswith(b'\x04'): # End of framework run.
                 self.framework_running = False
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
+                print(data_err)
                 break
             elif self.data.endswith(b'\n'):  # End of data line.
                 data_string = self.data.decode() 

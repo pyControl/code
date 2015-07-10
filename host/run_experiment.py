@@ -27,7 +27,7 @@ if input('\nReload framework? (y / n)\n') == 'y':
 
 if input('\nRun hardware test? (y / n)\n') == 'y':
     print('Uploading hardware test.')
-    # !! upload hardware test to boxes.
+    boxes.setup_state_machine('hardware_test')
     boxes.start_framework(data_output = False)
     input('\nPress any key when finished with hardware test.\n')
     boxes.stop_framework()
@@ -59,7 +59,7 @@ boxes.print_IDs() # Print state and event information to file.
 
 input('\nHit enter to start experiment. To quit at any time, hit ctrl + c.\n\n')
 
-boxes.write_to_file('Run started at: ' + datetime.datetime.now().strftime('%H:%M:%S' + '\n'))
+boxes.write_to_file('Run started at: ' + datetime.datetime.now().strftime('%H:%M:%S' + '\n\n'))
 
 boxes.start_framework(dur = None, verbose = True)
 

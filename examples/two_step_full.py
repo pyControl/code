@@ -162,7 +162,7 @@ v.outcome_generator = Outcome_generator(verbose = True)
 
 def run_start():
     hw.houselight.on()
-    set_timer('session_timer', 2 * hour)
+    set_timer('session_timer', v.session_duration)
     v.outcome_generator.reset()
     v.outcome_generator.print_block_info()
     print('Reward sizes: ' + repr(v.reward_delivery_durations))
@@ -246,6 +246,7 @@ def inter_trial(event):
 def post_session(event):
     if event == 'entry':
         hw.houselight.off() 
+        stop_framework()
 
 def all_states(event):
     if event == 'session_timer':
