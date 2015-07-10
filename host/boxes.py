@@ -1,5 +1,6 @@
 from pycboard import Pycboard 
-from config import *
+from pprint import pformat
+import config
 
 class Boxes():
     '''Provides functionallity for doing operations on a group of Pycboards.
@@ -9,7 +10,11 @@ class Boxes():
         self.hw = hardware
         self.boxes = {}
         for box_ID in box_numbers:
-            self.boxes[box_ID] = Pycboard(box_serials[box_ID])
+            self.boxes[box_ID] = Pycboard(config.box_serials[box_ID])
+        self.unique_IDs = {box_ID: self.boxes[box_ID].unique_ID
+                                   for box_ID in self.boxes}
+        if hasattr(config, 'box_unique_IDs'):
+            assert(self.check_unique_IDs(True)), 'Hardware unique IDs of attached pyboards do not match those specified in config.py'
 
     def setup_state_machine(self, sm_name, sm_dir = None):
         for box in self.boxes.values():
@@ -72,10 +77,21 @@ class Boxes():
         for box in self.boxes.values():
             box.data_file.write(write_string)
 
+    def save_unique_IDs(self, f_name = 'unique_IDs.txt'):
+        with open(f_name, 'w') as id_file:             
+                id_file.write(pformat(self.unique_IDs))
 
-
-
-
+    def check_unique_IDs(self, close_on_bad_ID = False):
+        'Check whether hardware unique IDs of pyboards match those provided.'
+        print('Checking hardware IDs.')
+        IDs_OK = True
+        for box_ID in self.boxes.keys():
+            if config.box_unique_IDs[box_ID] != self.unique_IDs[box_ID]:
+                print('Box number {} does not match supplied unique ID.'.format(box_ID))
+                IDs_OK = False
+        if close_on_bad_ID and not IDs_OK:
+            self.close()
+        return IDs_OK
 
 
 

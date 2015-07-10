@@ -21,13 +21,13 @@ exp_two_step = Experiment(
           start_date = '2015-07-02',
           subjects = {1: 'm001',
                       2: 'm002'},
-          task = 'two_step_full',
+          task = 'two_step',
           hardware = "hw.Box()",
-          set_variables = {'outcome_generator.settings': {'first_session'       :  False,
-                                                          'high_trans_contrast' :  True,
-                                                          'high_reward_contrast':  True},
-                           'reward_delivery_durations':calibration['large']},
-          persistent_variables = ['outcome_generator.state']
+          # set_variables = {'outcome_generator.settings': {'first_session'       :  False,
+          #                                                 'high_trans_contrast' :  True,
+          #                                                 'high_reward_contrast':  True},
+          #                  'reward_delivery_durations':calibration['large']},
+          # persistent_variables = ['outcome_generator.state']
           )
 
 

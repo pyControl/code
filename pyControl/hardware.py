@@ -212,7 +212,8 @@ class Box(Hardware_group):
         # Instantiate components.
         self.left_poke   = Poke(ports[1], rising = 'left_poke', falling = 'left_poke_out',
                                           rising_B = 'session_startstop')
-        self.center_poke = Poke(ports[2], rising = 'high_poke', rising_B = 'low_poke')
+        self.center_poke = Poke(ports[2], rising   = 'high_poke', falling = 'high_poke_out',
+                                          rising_B = 'low_poke',  falling_B = 'low_poke_out')
         self.right_poke  = Poke(ports[3], rising = 'right_poke', falling = 'right_poke_out')
                                           
         self.houselight  = self.center_poke.SOL
