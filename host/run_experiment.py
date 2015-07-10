@@ -61,7 +61,7 @@ input('\nHit enter to start experiment. To quit at any time, hit ctrl + c.\n\n')
 
 boxes.write_to_file('Run started at: ' + datetime.datetime.now().strftime('%H:%M:%S' + '\n\n'))
 
-boxes.start_framework(dur = None, verbose = True)
+boxes.start_framework(dur = None, verbose = False)
 
 try:
     while True:  # Read data untill interupted by user.
