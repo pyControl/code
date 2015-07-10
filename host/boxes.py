@@ -6,15 +6,17 @@ class Boxes():
     '''Provides functionallity for doing operations on a group of Pycboards.
     Most methods are a thin wrapper around the corresponding pycboard method.'''
 
-    def __init__(self, box_numbers, hardware): 
+    def __init__(self, box_numbers, hardware = None): 
         self.hw = hardware
         self.boxes = {}
         for box_ID in box_numbers:
+            print('Opening connection to box {}'.format(box_ID))
             self.boxes[box_ID] = Pycboard(config.box_serials[box_ID])
         self.unique_IDs = {box_ID: self.boxes[box_ID].unique_ID
                                    for box_ID in self.boxes}
         if hasattr(config, 'box_unique_IDs'):
-            assert(self.check_unique_IDs(True)), 'Hardware unique IDs of attached pyboards do not match those specified in config.py'
+            assert(self.check_unique_IDs(close_on_bad_ID = False)), \
+            'Hardware unique IDs of attached pyboards do not match those specified in config.py'
 
     def setup_state_machine(self, sm_name, sm_dir = None):
         for box in self.boxes.values():
@@ -83,16 +85,16 @@ class Boxes():
 
     def check_unique_IDs(self, close_on_bad_ID = False):
         'Check whether hardware unique IDs of pyboards match those provided.'
-        print('Checking hardware IDs.')
+        print('Checking hardware IDs...  ', end = '')
         IDs_OK = True
         for box_ID in self.boxes.keys():
             if config.box_unique_IDs[box_ID] != self.unique_IDs[box_ID]:
-                print('Box number {} does not match supplied unique ID.'.format(box_ID))
+                print('\nBox number {} does not match supplied unique ID.'.format(box_ID))
                 IDs_OK = False
         if close_on_bad_ID and not IDs_OK:
             self.close()
+        if IDs_OK: print('IDs OK.')
         return IDs_OK
-
 
 
 

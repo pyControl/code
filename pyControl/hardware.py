@@ -215,7 +215,7 @@ class Box(Hardware_group):
         self.center_poke = Poke(ports[2], rising   = 'high_poke', falling = 'high_poke_out',
                                           rising_B = 'low_poke',  falling_B = 'low_poke_out')
         self.right_poke  = Poke(ports[3], rising = 'right_poke', falling = 'right_poke_out')
-                                          
+                             
         self.houselight  = self.center_poke.SOL
 
         self.all_inputs  = [self.left_poke, self.center_poke, self.right_poke]
