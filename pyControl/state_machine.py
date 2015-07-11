@@ -48,7 +48,8 @@ class State_machine():
         # goto('state_1') in the task description to access State_machine goto function. 
         sm.goto      = self.goto
         sm.set_timer = self.set_timer
-        sm.print    = self.print  
+        sm.print     = self.print 
+        sm.stop_framework = self.stop_framework  
 
     # Methods called by user.
 
@@ -72,6 +73,9 @@ class State_machine():
         if fw.data_output:
             self.print_queue.append(print_string)
             fw.data_output_queue.put((self.ID, self.events['print'], fw.current_time))
+
+    def stop_framework(self):
+        fw.running = False
 
     # Methods called by pyControl framework.
 

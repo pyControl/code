@@ -50,6 +50,7 @@ class Outcome_generator:
         self.block_trials = 0                       # Number of trials into current block.
         self.trial_number = 0                       # Current trial number.
         self.reward_number = 0                      # Current number of rewards.
+        self.block_number = 0                       # Current block number.
         self.trans_crit_reached = False             # True if transition criterion reached in current block.
         self.trials_post_criterion = 0              # Current number of trials past criterion.    
         self.nb_hazard_prob = 1 / (self.mean_neutral_block_length # Prob. of block transition on each trial
@@ -57,9 +58,6 @@ class Outcome_generator:
         
     def first_step(self, first_step_choice):
         # Update moving average.
-        self.block_trials += 1
-        self.trial_number += 1
-
         self.mov_ave.update(first_step_choice)
         second_step_state = first_step_choice ^  withprob(self.norm_prob) ^ self.state['trans']
         if self.verbose: self.print_state()
@@ -67,6 +65,9 @@ class Outcome_generator:
         
     def second_step(self, second_step_state):
         # Evaluate trial outcome.
+
+        self.block_trials += 1
+        self.trial_number += 1
 
         if (self.settings['first_session'] and # First trials of first session are all rewarded.
             self.trial_number <= self.first_session_rewards):
@@ -91,7 +92,8 @@ class Outcome_generator:
              (self.state['reward'] == 1 and withprob(self.nb_hazard_prob) or   # Neutral block: transitions are stochastic.
               self.trials_post_criterion >= self.min_trials_post_criterion)):  # Non-neutral block: transitions occur fixed
              # Block transition                                                # number of trials after threshold crossing.
-            self.block_trials = 0
+            self.block_number += 1
+            self.block_trials  = 0
             self.trials_post_criterion = 0
             self.trans_crit_reached = False
             if self.state['reward'] == 1:                 # End of neutral block always transitions to one side 
@@ -124,6 +126,11 @@ class Outcome_generator:
             print('# Transition block: ' + {0:'B - High --> right', 
                                             1:'A - High --> left'}[self.state['trans']])
 
+    def print_summary(self):
+        print('$ Total trials    : {}'.format(self.trial_number))
+        print('$ Total rewards   : {}'.format(self.reward_number))
+        print('$ Completed blocks: {}'.format(self.block_number))
+
 #-------------------------------------------------------------------------------------
 # State machine definition.
 #-------------------------------------------------------------------------------------
@@ -153,19 +160,20 @@ initial_state = 'center_active'
 
 # Variables.
 
-v.session_duration = 2 * hour
+v.session_duration = 10 * second #2 * hour
 v.inter_trial_interval = 1 * second
 v.reward_delivery_durations = [80, 80] # ms
-v.outcome_generator = Outcome_generator(verbose = True)
+v.outcome_generator = Outcome_generator(verbose = False)
 
 # Run start and stop behaviour.
 
 def run_start():
     hw.houselight.on()
     set_timer('session_timer', v.session_duration)
+    print('Reward sizes: ' + repr(v.reward_delivery_durations))
     v.outcome_generator.reset()
     v.outcome_generator.print_block_info()
-    print('Reward sizes: ' + repr(v.reward_delivery_durations))
+    
 
 def run_end():  # Turn off hardware at end of run.
     hw.off()
@@ -246,6 +254,9 @@ def inter_trial(event):
 def post_session(event):
     if event == 'entry':
         hw.houselight.off() 
+        v.outcome_generator.print_summary()
+        set_timer('state_timer', 1 * second)
+    elif event == 'state_timer':
         stop_framework()
 
 def all_states(event):

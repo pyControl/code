@@ -1,5 +1,5 @@
 from experiment  import Experiment
-#from calibration import calibration
+from calibration import calibration
 
 
 exp_pilot = Experiment(
@@ -17,8 +17,8 @@ exp_pilot = Experiment(
           hardware = "hw.Box('bkb')",
           set_variables = {'outcome_generator.settings': {'first_session'       :  True,
                                                           'high_trans_contrast' :  True,
-                                                          'high_reward_contrast':  True}},#,
-                           #'reward_delivery_durations':calibration['large']},
+                                                          'high_reward_contrast':  True},
+                           'reward_delivery_durations':calibration['large']},
           persistent_variables = ['outcome_generator.state']
           )
 
@@ -43,11 +43,24 @@ exp_main = Experiment(
           hardware = "hw.Box('bkb')",
           set_variables = {'outcome_generator.settings': {'first_session'       :  True,
                                                           'high_trans_contrast' :  True,
-                                                          'high_reward_contrast':  True}},#,
-                          # 'reward_delivery_durations':calibration['large']},
+                                                          'high_reward_contrast':  True},
+                           'reward_delivery_durations':calibration['large']},
           persistent_variables = ['outcome_generator.state']
           )
 
-experiments = [exp_pilot, exp_main]
+exp_test = Experiment(
+          name = 'Test',    
+          start_date = '2015-00-00',
+          subjects = {1:  'm001'},
+          task = 'two_step_full',
+          hardware = "hw.Box()",
+          set_variables = {'outcome_generator.settings': {'first_session'       :  True,
+                                                          'high_trans_contrast' :  True,
+                                                          'high_reward_contrast':  True},
+                           'reward_delivery_durations':calibration['large']},
+          persistent_variables = ['outcome_generator.state']
+          )
+
+experiments = [exp_pilot, exp_main, exp_test]
 
 

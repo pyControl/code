@@ -12,7 +12,7 @@ class Pycboard(Pyboard):
     and pyControl operations.
     '''
 
-    def __init__(self, serial_device, baudrate=115200):
+    def __init__(self, serial_device, ID_number = None, baudrate=115200):
         super().__init__(serial_device, baudrate=115200)
         try:
             self.reset() 
@@ -21,7 +21,7 @@ class Pycboard(Pyboard):
             self.reset()
         self.unique_ID = eval(self.eval('pyb.unique_id()').decode())
         self.data_file = None
-
+        self.ID_number = ID_number
 
     def reset(self):
         'Enter raw repl (soft reboots pyboard), import modules.'
@@ -152,6 +152,8 @@ class Pycboard(Pyboard):
                 break
             elif self.data.endswith(b'\n'):  # End of data line.
                 data_string = self.data.decode() 
+                if self.ID_number:
+                    print('Box {}:'.format(self.ID_number), end = '')
                 print(data_string[:-1]) 
                 if self.data_file:
                     if data_string.split(' ')[2][0] != '#': # Output not a coment, write to file.

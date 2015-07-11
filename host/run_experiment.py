@@ -64,22 +64,24 @@ boxes.write_to_file('Run started at: ' + datetime.datetime.now().strftime('%H:%M
 boxes.start_framework(dur = None, verbose = False)
 
 try:
-    while True:  # Read data untill interupted by user.
-        boxes.process_data()
+    boxes_running = True
+    while boxes_running:  # Read data untill interupted by user.
+        boxes_running = boxes.process_data()
     
 except KeyboardInterrupt:
     boxes.stop_framework()
-    boxes.close_data_file()
 
-    if experiment.persistent_variables:
-        print('\nStoring persistent variables.\n')
-        persistent_v_values = {}
-        for v_name in experiment.persistent_variables:
-            persistent_v_values[v_name] = boxes.get_variable(experiment.task, v_name)
-            with open(pv_file_path, 'w') as pv_file:
-                pv_file.write(pformat(persistent_v_values))
-    
-    boxes.close()
+boxes.close_data_file()
+
+if experiment.persistent_variables:
+    print('\nStoring persistent variables.\n')
+    persistent_v_values = {}
+    for v_name in experiment.persistent_variables:
+        persistent_v_values[v_name] = boxes.get_variable(experiment.task, v_name)
+        with open(pv_file_path, 'w') as pv_file:
+            pv_file.write(pformat(persistent_v_values))
+
+boxes.close()
     # !! transfer files as necessary.
 
 
