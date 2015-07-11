@@ -11,7 +11,7 @@ class Boxes():
         self.boxes = {}
         for box_ID in box_numbers:
             print('Opening connection to box {}'.format(box_ID))
-            self.boxes[box_ID] = Pycboard(config.box_serials[box_ID])
+            self.boxes[box_ID] = Pycboard(config.box_serials[box_ID], box_ID)
         self.unique_IDs = {box_ID: self.boxes[box_ID].unique_ID
                                    for box_ID in self.boxes}
         if hasattr(config, 'box_unique_IDs'):
@@ -32,7 +32,11 @@ class Boxes():
 
     def process_data(self):
         for box in self.boxes.values():
-            box.process_data()
+            n_boxes_running = 0
+            if box.framework_running:
+                box.process_data()
+                n_boxes_running += 1
+        return n_boxes_running > 0
 
     def stop_framework(self):
         for box in self.boxes.values():
