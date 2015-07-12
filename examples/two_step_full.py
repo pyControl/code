@@ -160,10 +160,10 @@ initial_state = 'center_active'
 
 # Variables.
 
-v.session_duration = 10 * second #2 * hour
+v.session_duration = 2 * hour
 v.inter_trial_interval = 1 * second
 v.reward_delivery_durations = [80, 80] # ms
-v.outcome_generator = Outcome_generator(verbose = False)
+v.outcome_generator = Outcome_generator(verbose = True)
 
 # Run start and stop behaviour.
 

@@ -153,7 +153,7 @@ class Pycboard(Pyboard):
             elif self.data.endswith(b'\n'):  # End of data line.
                 data_string = self.data.decode() 
                 if self.ID_number:
-                    print('Box {}:'.format(self.ID_number), end = '')
+                    print('Box {}: '.format(self.ID_number), end = '')
                 print(data_string[:-1]) 
                 if self.data_file:
                     if data_string.split(' ')[2][0] != '#': # Output not a coment, write to file.

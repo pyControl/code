@@ -15,10 +15,10 @@ exp_pilot = Experiment(
                       8: 'm286'},
           task = 'two_step_full',
           hardware = "hw.Box('bkb')",
-          set_variables = {'outcome_generator.settings': {'first_session'       :  True,
-                                                          'high_trans_contrast' :  True,
+          set_variables = {'outcome_generator.settings': {'first_session'       :  False,
+                                                          'high_trans_contrast' :  False,
                                                           'high_reward_contrast':  True},
-                           'reward_delivery_durations':calibration['large']},
+                           'reward_delivery_durations':calibration['medium']},
           persistent_variables = ['outcome_generator.state']
           )
 
@@ -41,7 +41,7 @@ exp_main = Experiment(
                       14: 'm312'},
           task = 'two_step_full',
           hardware = "hw.Box('bkb')",
-          set_variables = {'outcome_generator.settings': {'first_session'       :  True,
+          set_variables = {'outcome_generator.settings': {'first_session'       :  False,
                                                           'high_trans_contrast' :  True,
                                                           'high_reward_contrast':  True},
                            'reward_delivery_durations':calibration['large']},
