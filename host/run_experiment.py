@@ -59,7 +59,7 @@ boxes.print_IDs() # Print state and event information to file.
 
 input('\nHit enter to start experiment. To quit at any time, hit ctrl + c.\n\n')
 
-boxes.write_to_file('Run started at: ' + datetime.datetime.now().strftime('%H:%M:%S' + '\n\n'))
+boxes.write_to_file('Run started at: ' + datetime.datetime.now().strftime('%H:%M:%S') + '\n\n')
 
 boxes.start_framework(dur = None, verbose = False)
 
@@ -82,6 +82,8 @@ if experiment.persistent_variables:
             pv_file.write(pformat(persistent_v_values))
 
 boxes.close()
+
+input('\nHit any key to close program.')
     # !! transfer files as necessary.
 
 
