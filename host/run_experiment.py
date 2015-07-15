@@ -71,7 +71,7 @@ try:
 except KeyboardInterrupt:
     boxes.stop_framework()
 
-boxes.close_data_file()
+boxes.close_data_file(copy_to_transfer = True)
 
 if experiment.persistent_variables:
     print('\nStoring persistent variables.\n')
