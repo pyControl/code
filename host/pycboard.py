@@ -1,6 +1,7 @@
 from pyboard import Pyboard, PyboardError
 from config import *
 import os
+import shutil
 import time
 
 # ----------------------------------------------------------------------------------------
@@ -213,9 +214,12 @@ class Pycboard(Pyboard):
             d_dir = data_dir
         if not os.path.exists(d_dir):
             os.mkdir(d_dir)
-        file_path = os.path.join(d_dir, file_name)
-        self.data_file = open(file_path, 'a+', newline = '\n')
+        self.file_path = os.path.join(d_dir, file_name)
+        self.data_file = open(self.file_path, 'a+', newline = '\n')
 
-    def close_data_file(self):
+    def close_data_file(self, copy_to_transfer = False):
         self.data_file.close()
+        if copy_to_transfer: # Copy data file to transfer folder.
+            shutil.copy2(self.file_path, os.path.join(data_dir, 'transfer'))
         self.data_file = None
+        self.file_path = None

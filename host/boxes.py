@@ -71,9 +71,9 @@ class Boxes():
         for box_ID in self.boxes.keys():
             self.boxes[box_ID].open_data_file(file_names[box_ID], sub_dir)
 
-    def close_data_file(self):
+    def close_data_file(self, copy_to_transfer = False):
         for box in self.boxes.values():
-            box.close_data_file()
+            box.close_data_file(copy_to_transfer)
 
     def close(self):
         for box in self.boxes.values():
