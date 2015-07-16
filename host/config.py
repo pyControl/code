@@ -8,7 +8,9 @@ pyControl_dir = os.path.join('..', 'pyControl') # Path to folder of pyControl fr
 
 examples_dir = os.path.join('..', 'examples')   # Path to folder of example scripts.
 
-data_dir = os.path.join('..', 'data')   # Path to data storage folder
+tasks_dir = os.path.join('..', 'tasks')         # Path to task scripts.
+
+data_dir = os.path.join('..', 'data')           # Path to data storage folder
 
 # ----------------------------------------------------------------------------------------
 # Hardware serial ports

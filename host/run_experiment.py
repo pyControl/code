@@ -36,7 +36,7 @@ else:
 
 print('Uploading task.\n')
 
-boxes.setup_state_machine(experiment.task)
+boxes.setup_state_machine(experiment.task, tasks_dir)
 
 if experiment.set_variables: # Set state machine variables from experiment specification.
     print('\nSetting state machine variables.\n')
