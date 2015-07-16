@@ -218,6 +218,8 @@ class Box(Hardware_group):
                              
         self.houselight  = self.center_poke.SOL
 
+        self.opto_stim = Digital_output('X12')
+
         self.all_inputs  = [self.left_poke, self.center_poke, self.right_poke]
         self.all_outputs = [self.left_poke, self.center_poke, self.right_poke]
 
