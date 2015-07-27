@@ -100,14 +100,17 @@ class Pycboard(Pyboard):
 
     def setup_state_machine(self, sm_name, hardware = None, sm_dir = None):
         ''' Transfer state machine descriptor file sm_name.py from folder sm_dir
-        (defaults to examples_dir) to board. Instantiate state machine object as 
+        (defaults to tasks_dir then examples_dir) to board. Instantiate state machine object as 
         sm_name_instance. Hardware obects can be instantiated and passed to the 
         state machine constructor by setting the hardware argument to a string which
         instantiates a hardware object. 
         '''
         self.reset()
         if not sm_dir:
-            sm_dir = examples_dir
+            if os.path.exists(os.path.join(tasks_dir, sm_name + '.py')):
+                sm_dir = tasks_dir
+            else:
+                sm_dir = examples_dir
         sm_path = os.path.join(sm_dir, sm_name + '.py')
         assert os.path.exists(sm_path), 'State machine file not found at: ' + sm_path
         print('Transfering state machine {} to pyboard.'.format(repr(sm_name)))

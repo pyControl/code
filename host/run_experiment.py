@@ -16,7 +16,7 @@ for i, exp in enumerate(experiments):
 
 experiment = experiments[int(input('\n\nEnter which experiment to run: '))]
 
-boxes_to_use = experiment.subjects.keys()
+boxes_to_use = list(experiment.subjects.keys())
 
 file_names = {box_n: experiment.subjects[box_n] + date + '.txt' for box_n in boxes_to_use}
 
@@ -44,7 +44,8 @@ if experiment.set_variables: # Set state machine variables from experiment speci
         boxes.set_variable(experiment.task, v_name, experiment.set_variables[v_name])
 
 if experiment.persistent_variables:
-    pv_file_path = os.path.join(data_dir, experiment.folder, 'persistent_variables.txt')
+    pv_file_path = os.path.join(data_dir, experiment.folder,
+                               'persistent_variables_{}.txt'.format(boxes_to_use[0]))
     if os.path.exists(pv_file_path):
         print('\nSetting persistent variables.\n')
         with open(pv_file_path, 'r') as pv_file:
