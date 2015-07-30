@@ -1,5 +1,5 @@
 from pyboard import Pyboard, PyboardError
-from config import *
+from config.config import *
 import os
 import shutil
 import time

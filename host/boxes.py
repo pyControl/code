@@ -1,6 +1,6 @@
 from pycboard import Pycboard 
 from pprint import pformat
-import config
+import config.config as config
 
 class Boxes():
     '''Provides functionallity for doing operations on a group of Pycboards.

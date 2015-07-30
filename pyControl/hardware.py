@@ -7,7 +7,7 @@ from . import framework as fw
 
 class Digital_input():
     def __init__(self, pin, rising = None, falling = None,
-                 debounce = 5, pull = pyb.Pin.PULL_DOWN):
+                 debounce = 5, pull = pyb.Pin.PULL_NONE):
         # Digital_input class provides functionallity to generate framework events when a
         # specified pin on the Micropython board changes state. Seperate events can be
         # specified for rising and falling pin changes. The event names associated with
@@ -145,12 +145,12 @@ class Hardware_group():
 
 class Poke(Hardware_group):
     def __init__(self, port, rising = None, falling = None, rising_B = None,
-                 falling_B = None, debounce = 5):
+                 falling_B = None, debounce = 5, pull = pyb.Pin.PULL_NONE):
 
         self.SOL     = Digital_output(port['POW_A'])
         self.LED     = Digital_output(port['POW_B'])
-        self.input_A = Digital_input(port['DIO_A'], rising,   falling,   debounce = debounce)
-        self.input_B = Digital_input(port['DIO_B'], rising_B, falling_B, debounce = debounce)
+        self.input_A = Digital_input(port['DIO_A'], rising,   falling,   debounce, pull)
+        self.input_B = Digital_input(port['DIO_B'], rising_B, falling_B, debounce, pull)
 
         self.all_inputs  = [self.input_A, self.input_B]
         self.all_outputs = [self.SOL, self.LED]
@@ -159,62 +159,95 @@ class Poke(Hardware_group):
         # Return the state of input A.
         return self.input_A.value()
 
+
+# ----------------------------------------------------------------------------------------
+# Board pin mapping dictionaries.
+# ----------------------------------------------------------------------------------------
+
+# These dictionaries provide pin mappings for specific boards whose schematics are
+# provided in the pyControl/schematics folder.
+
+breakout_1_0 = {'ports': {1: {'DIO_A': 'X1',   # RJ45 connector port pin mappings.
+                              'DIO_B': 'X2',
+                              'POW_A': 'Y4',
+                              'POW_B': 'Y8'},
+         
+                          2: {'DIO_A': 'X3',
+                              'DIO_B': 'X4',
+                              'POW_A': 'Y3',
+                              'POW_B': 'Y7'},
+         
+                          3: {'DIO_A': 'X7',
+                              'DIO_B': 'X8',
+                              'POW_A': 'Y2',
+                              'POW_B': 'Y6'},
+         
+                          4: {'DIO_A': 'X12',
+                              'DIO_B': 'X11',
+                              'POW_A': 'Y1',
+                              'POW_B': 'Y5'}},
+                'BNC_1': 'Y11',      # BNC connector pins.
+                'BNC_2': 'Y12',
+                'DAC_1': 'X5',
+                'DAC_2': 'X6',
+                'button_1': 'X9',    # User pushbuttons.
+                'button_2': 'X10'}
+
+devboard_1_0 = {'ports': {1: {'DIO_A': 'Y1',   # Use buttons and LEDs to emulate breakout board ports.
+                              'DIO_B': 'Y4',
+                              'POW_A': 'Y8',
+                              'POW_B': 'Y7'},
+
+                          2: {'DIO_A': 'Y2',
+                              'DIO_B': 'Y5',
+                              'POW_A': 'Y10',
+                              'POW_B': 'Y9'},
+
+                          3: {'DIO_A': 'Y3',
+                              'DIO_B': 'Y6',
+                              'POW_A': 'Y12',
+                              'POW_B': 'Y11'}},
+                'button_1': 'Y1',  # Access buttons and pins directly. 
+                'button_2': 'Y2',
+                'button_3': 'Y3',
+                'button_4': 'Y4',
+                'button_5': 'Y5',
+                'button_6': 'Y6',
+                'LED_1': 'Y7',
+                'LED_2': 'Y8',
+                'LED_3': 'Y9',
+                'LED_4': 'Y10',
+                'LED_5': 'Y11',
+                'LED_6': 'Y12',
+                'BNC_1': 'X7',     # BNC connector pins.
+                'BNC_2': 'X8',
+                'DAC_1': 'X5',
+                'DAC_2': 'X6',
+                }
+
 # ----------------------------------------------------------------------------------------
 # Hardware collections.
 # ----------------------------------------------------------------------------------------
 
 class Box(Hardware_group):
 
-    ports_dvb =  {1: {'DIO_A': 'Y1',   # Pin mappings for pyControl devboard 1.0 board.
-                      'DIO_B': 'Y4',
-                      'POW_A': 'Y8',
-                      'POW_B': 'Y7'},
-
-                  2: {'DIO_A': 'Y2',
-                      'DIO_B': 'Y5',
-                      'POW_A': 'Y10',
-                      'POW_B': 'Y9'},
-
-                  3: {'DIO_A': 'Y3',
-                      'DIO_B': 'Y6',
-                      'POW_A': 'Y12',
-                      'POW_B': 'Y11'}}
-
-    ports_bkb =  {1: {'DIO_A': 'X1',   # Pin mappings for pyControl breakout 1.0 board.
-                      'DIO_B': 'X2',
-                      'POW_A': 'Y4',
-                      'POW_B': 'Y8'},
- 
-                  2: {'DIO_A': 'X3',
-                      'DIO_B': 'X4',
-                      'POW_A': 'Y3',
-                      'POW_B': 'Y7'},
- 
-                  3: {'DIO_A': 'X7',
-                      'DIO_B': 'X8',
-                      'POW_A': 'Y2',
-                      'POW_B': 'Y6'},
- 
-                  4: {'DIO_A': 'X12',
-                      'DIO_B': 'X11',
-                      'POW_A': 'Y1',
-                      'POW_B': 'Y5'}}
-
     def __init__(self, board = 'dvb'):
 
         assert board in ('dvb, bkb'), "Invalid board specifier. Allowed: 'dvb', 'bkb'"
 
-        if board == 'dvb':
-            ports = self.ports_dvb
-        elif board == 'bkb':
-            ports = self.ports_bkb
+        if board == 'dvb': # settings for devboard_1_0
+            ports = devboard_1_0['ports']
+            pull = pull = pyb.Pin.PULL_DOWN
+        elif board == 'bkb': # Settings for breakout board 1_0
+            ports = breakout_1_0['ports']
+            pull = pull = pyb.Pin.PULL_NONE
 
         # Instantiate components.
         self.left_poke   = Poke(ports[1], rising = 'left_poke', falling = 'left_poke_out',
-                                          rising_B = 'session_startstop')
+                                          rising_B = 'session_startstop', pull = pull)
         self.center_poke = Poke(ports[2], rising   = 'high_poke', falling = 'high_poke_out',
-                                          rising_B = 'low_poke',  falling_B = 'low_poke_out')
-        self.right_poke  = Poke(ports[3], rising = 'right_poke', falling = 'right_poke_out')
+                                          rising_B = 'low_poke',  falling_B = 'low_poke_out', pull = pull)
+        self.right_poke  = Poke(ports[3], rising = 'right_poke', falling = 'right_poke_out',  pull = pull)
                              
         self.houselight  = self.center_poke.SOL
 
