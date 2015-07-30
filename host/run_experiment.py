@@ -1,9 +1,10 @@
-from experiments import experiments
+from config.experiments import experiments
+from config.config import *
 from boxes import Boxes
 import datetime
 from pprint import pformat
 import os
-from config import *
+
 
 date = datetime.date.today().strftime('-%Y-%m-%d')
 
