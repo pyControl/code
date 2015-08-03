@@ -1,10 +1,16 @@
-from config.experiments import experiments
+import config.experiments as exps
+from experiment import Experiment
 from config.config import *
 from boxes import Boxes
 import datetime
 from pprint import pformat
+from sys import exit
 import os
 
+# Create list of available experiments
+
+experiments = [e for e in [getattr(exps, c) for c in dir(exps)]
+               if isinstance(e, Experiment)] # Construct list of available experiments.
 
 date = datetime.date.today().strftime('-%Y-%m-%d')
 
@@ -22,6 +28,11 @@ boxes_to_use = list(experiment.subjects.keys())
 file_names = {box_n: experiment.subjects[box_n] + date + '.txt' for box_n in boxes_to_use}
 
 boxes = Boxes(boxes_to_use, experiment.hardware)
+
+if not boxes.check_unique_IDs():
+    input('Hardware ID check failed, press any key to close program.')
+    boxes.close()
+    exit()
 
 if input('\nReload framework? (y / n)\n') == 'y':
     boxes.load_framework()

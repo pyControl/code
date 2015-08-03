@@ -1,5 +1,6 @@
 from pycboard import Pycboard 
 from pprint import pformat
+import os
 import config.config as config
 
 class Boxes():
@@ -14,9 +15,6 @@ class Boxes():
             self.boxes[box_ID] = Pycboard(config.box_serials[box_ID], box_ID)
         self.unique_IDs = {box_ID: self.boxes[box_ID].unique_ID
                                    for box_ID in self.boxes}
-        if hasattr(config, 'box_unique_IDs'):
-            assert(self.check_unique_IDs(close_on_bad_ID = False)), \
-            'Hardware unique IDs of attached pyboards do not match those specified in config.py'
 
     def setup_state_machine(self, sm_name, sm_dir = None):
         for box in self.boxes.values():
@@ -83,22 +81,28 @@ class Boxes():
         for box in self.boxes.values():
             box.data_file.write(write_string)
 
-    def save_unique_IDs(self, f_name = 'unique_IDs.txt'):
-        with open(f_name, 'w') as id_file:             
+    def save_unique_IDs(self):
+        with open(os.path.join('config', 'hardware_unique_IDs.txt'), 'w') as id_file:        
                 id_file.write(pformat(self.unique_IDs))
 
-    def check_unique_IDs(self, close_on_bad_ID = False):
-        'Check whether hardware unique IDs of pyboards match those provided.'
+    def check_unique_IDs(self):
+        '''Check whether hardware unique IDs of pyboards match those saved in 
+        config.hardware_unique_IDs, if file not available no checking is performed.'''
+        try:
+            with open(os.path.join('config', 'hardware_unique_IDs.txt'), 'r') as id_file:        
+                unique_IDs = eval(id_file.read())
+        except FileNotFoundError:
+            print('No hardware IDs saved, skipping hardware ID check.')
+            return True          
         print('Checking hardware IDs...  ', end = '')
         IDs_OK = True
         for box_ID in self.boxes.keys():
-            if config.box_unique_IDs[box_ID] != self.unique_IDs[box_ID]:
-                print('\nBox number {} does not match supplied unique ID.'.format(box_ID))
+            if unique_IDs[box_ID] != self.unique_IDs[box_ID]:
+                print('\nBox number {} does not match saved unique ID.'.format(box_ID))
                 IDs_OK = False
-        if close_on_bad_ID and not IDs_OK:
-            self.close()
         if IDs_OK: print('IDs OK.')
         return IDs_OK
+
 
 
 
