@@ -195,7 +195,11 @@ class Pycboard(Pyboard):
         except PyboardError: 
             print('Variable not set: invalid variable name.')
             return
-        self.exec(sm_name + '_instance.sm.v.' + v_name + '=' + repr(v_value))
+        set_value = None 
+        while set_value != v_value: 
+            self.exec(sm_name + '_instance.sm.v.' + v_name + '=' + repr(v_value))
+            set_value = self.get_variable(sm_name, v_name)
+
 
     def get_variable(self, sm_name, v_name):
         'Get value of state machine variable when framework not running.'

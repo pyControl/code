@@ -7,6 +7,21 @@ from pprint import pformat
 from sys import exit
 import os
 
+def config_menu():
+    print('\nOpening connection to all boxes listed in config.py.\n\n')
+    boxes = Boxes(box_serials.keys())
+    selection = None
+    while selection != 3:
+        selection = int(input('''\n\nConfig menu:
+                                 \n\n 1. Reload framwork.
+                                 \n\n 2. Save hardware IDs.
+                                 \n\n 3. Exit config menu.\n\n'''))
+        if selection == 1:
+            boxes.load_framework()
+        elif selection == 2:
+            boxes.save_unique_IDs()
+    boxes.close()
+
 # Create list of available experiments
 
 experiments = [e for e in [getattr(exps, c) for c in dir(exps)]
@@ -14,14 +29,21 @@ experiments = [e for e in [getattr(exps, c) for c in dir(exps)]
 
 date = datetime.date.today().strftime('-%Y-%m-%d')
 
-print('Experiments available:\n')
+selection = 0
+while selection == 0: 
 
-for i, exp in enumerate(experiments):
-  print('\nExperiment number : {}  Name:  {}\n'.format(i, exp.name))
-  for bx in exp.subjects:
-    print('    Box : {}   '.format(bx) + exp.subjects[bx])
+    print('\nExperiments available:\n')
 
-experiment = experiments[int(input('\n\nEnter which experiment to run: '))]
+    for i, exp in enumerate(experiments):
+      print('\nExperiment number : {}  Name:  {}\n'.format(i + 1, exp.name))
+      for bx in exp.subjects:
+        print('    Box : {}   '.format(bx) + exp.subjects[bx])
+
+    selection = int(input('\n\nEnter number of experiment to run, for config options enter 0: \n'))
+    if selection == 0:
+        config_menu()
+
+experiment = experiments[selection - 1]
 
 boxes_to_use = list(experiment.subjects.keys())
 
@@ -33,9 +55,6 @@ if not boxes.check_unique_IDs():
     input('Hardware ID check failed, press any key to close program.')
     boxes.close()
     exit()
-
-if input('\nReload framework? (y / n)\n') == 'y':
-    boxes.load_framework()
 
 if input('\nRun hardware test? (y / n)\n') == 'y':
     print('Uploading hardware test.')

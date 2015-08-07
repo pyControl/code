@@ -82,6 +82,7 @@ class Boxes():
             box.data_file.write(write_string)
 
     def save_unique_IDs(self):
+        print('Saving hardware unique IDs.')
         with open(os.path.join('config', 'hardware_unique_IDs.txt'), 'w') as id_file:        
                 id_file.write(pformat(self.unique_IDs))
 
