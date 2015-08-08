@@ -196,6 +196,8 @@ def run(duration = None):
     running = False
     for state_machine in state_machines:
         state_machine.stop()  
+    while data_output_queue.available():
+        output_data(data_output_queue.get())
 
 
 
