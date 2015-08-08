@@ -165,7 +165,7 @@ class Pycboard(Pyboard):
                         self.data_file.flush()
                 self.data = b''
 
-    def run_framework(self, dur, verbose = False):
+    def run_framework(self, dur = None, verbose = False):
         '''Run framework for specified duration (seconds).'''
         self.start_framework(dur, verbose)
         try:
