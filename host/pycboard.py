@@ -185,29 +185,49 @@ class Pycboard(Pyboard):
         self.setup_state_machine(sm_name, hardware, sm_dir)
         self.run_framework(dur, verbose)
 
+    # ------------------------------------------------------------------------------------
+    # Getting and setting variables.
+    # ------------------------------------------------------------------------------------
+
     def set_variable(self, sm_name, v_name, v_value):
         'Set state machine variable when framework not running.'
-        try:self.exec(sm_name + '_instance')
-        except PyboardError:
-            print('Variable not set: invalid state machine name.')
-            return
-        try: self.exec(sm_name + '_instance.sm.v.' + v_name)
-        except PyboardError: 
-            print('Variable not set: invalid variable name.')
-            return
-        set_value = None 
-        while set_value != v_value: 
-            self.exec(sm_name + '_instance.sm.v.' + v_name + '=' + repr(v_value))
-            set_value = self.get_variable(sm_name, v_name)
+        if self._check_variable_exits(sm_name, v_name):
+            set_value = None 
+            while set_value != v_value: 
+                try:
+                    self.exec(sm_name + '_instance.sm.v.' + v_name + '=' + repr(v_value))
+                    set_value = self.get_variable(sm_name, v_name)
+                except PyboardError as e:
+                    print(e) 
 
 
     def get_variable(self, sm_name, v_name):
         'Get value of state machine variable when framework not running.'
+        if self._check_variable_exits(sm_name, v_name):
+            v_value = None
+            while v_value == None:
+                try:
+                    self.serial.flushInput()
+                    v_value = self.eval(sm_name + '_instance.sm.v.' + v_name).decode()
+                    return eval(v_value)
+                except PyboardError as e:
+                    print(e) 
+
+
+    def _check_variable_exits(self, sm_name, v_name):
         try:
-            v_value = self.eval(sm_name + '_instance.sm.v.' + v_name).decode()
-            return eval(v_value)
-        except PyboardError: 
-            print('Invalid variable or state machine name.')
+            self.exec(sm_name + '_instance')
+        except PyboardError as e:
+            print('Variable not set: invalid state machine name.\n')
+            print('Pyboard error message: \n\n' + str(e))
+            return False
+        try: 
+            self.exec(sm_name + '_instance.sm.v.' + v_name)
+        except PyboardError as e: 
+            print('Variable not set: invalid variable name.\n')
+            print('Pyboard error message: \n\n' + str(e))
+            return False
+        return True
 
     # ------------------------------------------------------------------------------------
     # Data logging
