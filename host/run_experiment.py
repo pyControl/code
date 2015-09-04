@@ -15,11 +15,15 @@ def config_menu():
         selection = int(input('''\n\nConfig menu:
                                  \n\n 1. Reload framwork.
                                  \n\n 2. Save hardware IDs.
-                                 \n\n 3. Exit config menu.\n\n'''))
+                                 \n\n 3. Exit config menu.
+                                 \n\n 4. Close program.\n\n'''))
         if selection == 1:
             boxes.load_framework()
         elif selection == 2:
             boxes.save_unique_IDs()
+        elif selection == 4:
+            boxes.close()
+            exit()
     boxes.close()
 
 # Create list of available experiments

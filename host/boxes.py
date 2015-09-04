@@ -50,11 +50,14 @@ class Boxes():
          box is set to the corresponding value from the dictionary.  Otherwise
          the variable on all boxes is set to v_value.
         '''
+
         if type(v_value) == dict and set(self.boxes.keys()) <= set(v_value.keys()): 
             for box_ID in self.boxes.keys():
+                print('Setting variable ' + v_name + 'for box {}'.format(box_ID))
                 self.boxes[box_ID].set_variable(sm_name, v_name, v_value[box_ID])
         else:
             for box in self.boxes.values():
+                print('Setting variable ' + v_name + 'for box {}'.format(box.ID_number))
                 box.set_variable(sm_name, v_name, v_value)
 
     def get_variable(self, sm_name, v_name):

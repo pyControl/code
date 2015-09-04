@@ -215,19 +215,28 @@ class Pycboard(Pyboard):
 
 
     def _check_variable_exits(self, sm_name, v_name):
-        try:
-            self.exec(sm_name + '_instance')
-        except PyboardError as e:
-            print('Variable not set: invalid state machine name.\n')
-            print('Pyboard error message: \n\n' + str(e))
-            return False
-        try: 
-            self.exec(sm_name + '_instance.sm.v.' + v_name)
-        except PyboardError as e: 
+        attempt_n = 0
+        sm_exists = False
+        while attempt_n < 5:
+            if not sm_exists: 
+                try:
+                    self.exec(sm_name + '_instance')
+                    sm_exists = True
+                except PyboardError as e:
+                    err_message = e
+            else:
+                try: 
+                    self.exec(sm_name + '_instance.sm.v.' + v_name)
+                    return True # State machine and variable both exist.
+                except PyboardError as e: 
+                    err_message = e
+            attempt_n += 1
+        if sm_exists:
             print('Variable not set: invalid variable name.\n')
-            print('Pyboard error message: \n\n' + str(e))
-            return False
-        return True
+        else:
+            print('Variable not set: invalid state machine name.\n')
+        print('Pyboard error message: \n\n' + str(err_message))
+        return False
 
     # ------------------------------------------------------------------------------------
     # Data logging
