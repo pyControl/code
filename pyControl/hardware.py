@@ -253,8 +253,11 @@ class Box(Hardware_group):
 
         self.opto_stim = Digital_output('X12')
 
+        self.house_red = Digital_output('Y1')
+
         self.all_inputs  = [self.left_poke, self.center_poke, self.right_poke]
-        self.all_outputs = [self.left_poke, self.center_poke, self.right_poke, self.opto_stim]
+        self.all_outputs = [self.left_poke, self.center_poke, self.right_poke, self.opto_stim,
+                            self.house_red]
 
 
 
