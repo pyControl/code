@@ -307,15 +307,15 @@ exp_one_step_main = Experiment(
 exp_test = Experiment(
           name = 'Test',    
           start_date = '2015-00-00',
-          subjects = {13: 'm353',
-                      14: 'm354'},
-          task = 'two_step_full_opto',
+          subjects = {1: 'm353'},
+                      #14: 'm354'},
+          task = 'one_step',
           hardware = "hw.Box('bkb')",
-          set_variables = {'outcome_generator.settings': {'first_session'       :  False,
-                                                          'high_trans_contrast' :  True,
-                                                          'high_reward_contrast':  True},
+          set_variables = {'outcome_generator.first_session': False,
                            'reward_delivery_durations':calibration['large']},
-          persistent_variables = ['outcome_generator.state']
+          persistent_variables = ['outcome_generator.reward_state',
+                                  'hold_generator.hold_dur',
+                                  'hold_generator.mov_ave.ave']
           )
 
 

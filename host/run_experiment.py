@@ -8,7 +8,7 @@ from sys import exit
 import os
 
 def config_menu():
-    print('\nOpening connection to all boxes listed in config.py.\n\n')
+    print('\n\nOpening connection to all boxes listed in config.py.\n\n')
     boxes = Boxes(box_serials.keys())
     selection = None
     while selection != 3:
@@ -43,7 +43,7 @@ while selection == 0:
       for bx in exp.subjects:
         print('    Box : {}   '.format(bx) + exp.subjects[bx])
 
-    selection = int(input('\n\nEnter number of experiment to run, for config options enter 0: \n'))
+    selection = int(input('\n\nEnter number of experiment to run, for config options enter 0: '))
     if selection == 0:
         config_menu()
 
@@ -53,6 +53,8 @@ boxes_to_use = list(experiment.subjects.keys())
 
 file_names = {box_n: experiment.subjects[box_n] + date + '.txt' for box_n in boxes_to_use}
 
+print('')
+
 boxes = Boxes(boxes_to_use, experiment.hardware)
 
 if not boxes.check_unique_IDs():
@@ -60,21 +62,21 @@ if not boxes.check_unique_IDs():
     boxes.close()
     exit()
 
-if input('\nRun hardware test? (y / n)\n') == 'y':
-    print('Uploading hardware test.')
+if input('\nRun hardware test? (y / n) ') == 'y':
+    print('\nUploading hardware test.\n')
     boxes.setup_state_machine('hardware_test')
     boxes.start_framework(data_output = False)
-    input('\nPress any key when finished with hardware test.\n')
+    input('\nPress any key when finished with hardware test.')
     boxes.stop_framework()
 else:
-    print('Skipping hardware test.\n')
+    print('\nSkipping hardware test.')
 
-print('Uploading task.\n')
+print('\nUploading task.\n')
 
 boxes.setup_state_machine(experiment.task, tasks_dir)
 
 if experiment.set_variables: # Set state machine variables from experiment specification.
-    print('\nSetting state machine variables.\n')
+    print('\nSetting state machine variables.')
     for v_name in experiment.set_variables:
         boxes.set_variable(experiment.task, v_name, experiment.set_variables[v_name])
 
@@ -82,7 +84,7 @@ if experiment.persistent_variables:
     pv_file_path = os.path.join(data_dir, experiment.folder,
                                'persistent_variables_{}.txt'.format(boxes_to_use[0]))
     if os.path.exists(pv_file_path):
-        print('\nSetting persistent variables.\n')
+        print('\nSetting persistent variables.')
         with open(pv_file_path, 'r') as pv_file:
             persistent_v_values = eval(pv_file.read())
         for v_name in persistent_v_values.keys():
@@ -110,7 +112,7 @@ except KeyboardInterrupt:
 boxes.close_data_file(copy_to_transfer = True)
 
 if experiment.persistent_variables:
-    print('\nStoring persistent variables.\n')
+    print('\nStoring persistent variables.')
     persistent_v_values = {}
     for v_name in experiment.persistent_variables:
         persistent_v_values[v_name] = boxes.get_variable(experiment.task, v_name)
