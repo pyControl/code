@@ -3,6 +3,7 @@ from config.config import *
 import os
 import shutil
 import time
+from copy import deepcopy
 
 # ----------------------------------------------------------------------------------------
 #  Pycboard class.
@@ -189,35 +190,59 @@ class Pycboard(Pyboard):
     # Getting and setting variables.
     # ------------------------------------------------------------------------------------
 
-    def set_variable(self, sm_name, v_name, v_value):
-        'Set state machine variable when framework not running.'
+
+    def set_variable(self, sm_name, v_name, v_value, verbose = False):
+        '''Set state machine variable when framework not running, some checking is 
+        performed to verify variable has not got corrupted during setting.'''
+        try:
+            eval(repr(v_value))
+        except:
+            print('Set variable error, unable to eval(repr(v_value)).')
+            return
         if self._check_variable_exits(sm_name, v_name):
-            set_value = None 
-            while set_value != v_value: 
+            attempt_n, prev_set_value = (0, None)
+            while attempt_n < 5:
+                attempt_n += 1
                 try:
                     self.exec(sm_name + '_instance.sm.v.' + v_name + '=' + repr(v_value))
-                    set_value = self.get_variable(sm_name, v_name)
+                    set_value = self.get_variable(sm_name, v_name, pre_checked = True)
+                    if set_value == v_value: 
+                        return # Variable set exactly.
+                    elif ((type(set_value) == float) and 
+                          ((abs(set_value - v_value) / v_value) < 0.01)):
+                        return # Variable set within floating point accuracy.
+                    elif prev_set_value == set_value:  
+                        return # Variable set consistently twice.
+                    prev_set_value = deepcopy(set_value)  
                 except PyboardError as e:
                     print(e) 
+            print('Unable to set variable: ' + v_name)
 
 
-    def get_variable(self, sm_name, v_name):
+    def get_variable(self, sm_name, v_name, pre_checked = False):
         'Get value of state machine variable when framework not running.'
-        if self._check_variable_exits(sm_name, v_name):
-            v_value = None
-            while v_value == None:
+        if pre_checked or self._check_variable_exits(sm_name, v_name):
+            attempt_n, v_string, v_value = (0, None, None)
+            while attempt_n < 5:
+                attempt_n += 1
                 try:
                     self.serial.flushInput()
-                    v_value = self.eval(sm_name + '_instance.sm.v.' + v_name).decode()
-                    return eval(v_value)
+                    v_string = self.eval(sm_name + '_instance.sm.v.' + v_name).decode()
                 except PyboardError as e:
                     print(e) 
-
+                if v_string is not None:
+                    try:
+                        return(eval(v_string))
+                    except:
+                        if attempt_n == 5:
+                            print('Get variable error; unable to eval string: ' + v_string)
+            print('Unable to get variable: ' + v_name)
 
     def _check_variable_exits(self, sm_name, v_name):
         attempt_n = 0
         sm_exists = False
         while attempt_n < 5:
+            attempt_n += 1
             if not sm_exists: 
                 try:
                     self.exec(sm_name + '_instance')
@@ -230,7 +255,6 @@ class Pycboard(Pyboard):
                     return True # State machine and variable both exist.
                 except PyboardError as e: 
                     err_message = e
-            attempt_n += 1
         if sm_exists:
             print('Variable not set: invalid variable name.\n')
         else:

@@ -50,14 +50,11 @@ class Boxes():
          box is set to the corresponding value from the dictionary.  Otherwise
          the variable on all boxes is set to v_value.
         '''
-
         if type(v_value) == dict and set(self.boxes.keys()) <= set(v_value.keys()): 
             for box_ID in self.boxes.keys():
-                print('Setting variable ' + v_name + 'for box {}'.format(box_ID))
                 self.boxes[box_ID].set_variable(sm_name, v_name, v_value[box_ID])
         else:
             for box in self.boxes.values():
-                print('Setting variable ' + v_name + 'for box {}'.format(box.ID_number))
                 box.set_variable(sm_name, v_name, v_value)
 
     def get_variable(self, sm_name, v_name):
@@ -96,9 +93,9 @@ class Boxes():
             with open(os.path.join('config', 'hardware_unique_IDs.txt'), 'r') as id_file:        
                 unique_IDs = eval(id_file.read())
         except FileNotFoundError:
-            print('No hardware IDs saved, skipping hardware ID check.')
+            print('\nNo hardware IDs saved, skipping hardware ID check.')
             return True          
-        print('Checking hardware IDs...  ', end = '')
+        print('\nChecking hardware IDs...  ', end = '')
         IDs_OK = True
         for box_ID in self.boxes.keys():
             if unique_IDs[box_ID] != self.unique_IDs[box_ID]:
