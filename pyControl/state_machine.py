@@ -48,6 +48,7 @@ class State_machine():
         # goto('state_1') in the task description to access State_machine goto function. 
         sm.goto      = self.goto
         sm.set_timer = self.set_timer
+        sm.disarm_timer = self.disarm_timer
         sm.print     = self.print 
         sm.stop_framework = self.stop_framework  
 
@@ -65,6 +66,10 @@ class State_machine():
     def set_timer(self, event, interval):
         # Set a timer to return specified event afterinterval milliseconds.
         fw.timer.set(self.events[event], int(interval), self.ID)
+
+    def disarm_timer(self, event):
+        # Disable all active timers with specified event.
+        fw.timer.disarm(self.events[event], self.ID)
 
     def print(self, print_string):
         # Used to output data 'print_string', along with ID of originating machine and timestamp.
