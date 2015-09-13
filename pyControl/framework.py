@@ -78,6 +78,11 @@ class Timer():
                                    output_data = False) # Timer events are not output to serial line.
                 self.active_timers.pop(i)
 
+    def disarm(self,event_ID, machine_ID):
+        # Remove all active timers with specified machine and event IDs.
+        self.active_timers = [t for t in self.active_timers if not
+                              (t[1] == machine_ID and t[2] == event_ID)]
+
 # ----------------------------------------------------------------------------------------
 # Framework variables and objects
 # ----------------------------------------------------------------------------------------

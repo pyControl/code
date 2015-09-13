@@ -211,7 +211,7 @@ class Pycboard(Pyboard):
                     elif ((type(set_value) == float) and 
                           ((abs(set_value - v_value) / v_value) < 0.01)):
                         return # Variable set within floating point accuracy.
-                    elif prev_set_value == set_value:  
+                    elif (set_value is not None) and (prev_set_value == set_value):  
                         return # Variable set consistently twice.
                     prev_set_value = deepcopy(set_value)  
                 except PyboardError as e:
