@@ -182,101 +182,84 @@ exp_main_7 = Experiment(
 #           persistent_variables = ['outcome_generator.state']
 #           )
 
-exp_FOXp2_1 = Experiment(
-          name = 'FOXp2_group_1',    
-          start_date = '2015-08-05',
-          subjects = {1 : 'm313',
-                      2 : 'm314',
-                      3 : 'm315',
-                      4 : 'm316',
-                      5 : 'm317',
-                      6 : 'm318',
-                      7 : 'm319',
-                      8 : 'm320',
-                      9 : 'm321',
-                      10: 'm322',
-                      11: 'm323',
-                      12: 'm324',
-                      13: 'm325',
-                      14: 'm326'},
-          task = 'two_step_full',
-          hardware = "hw.Box('bkb')",
-          set_variables = {'outcome_generator.settings': {'first_session'       :  False,
-                                                          'high_trans_contrast' :  False,
-                                                          'high_reward_contrast':  False},
-                           'reward_delivery_durations':calibration['small'],
-                           'session_duration':5400000,
-                           'outcome_generator.mean_neutral_block_length': 65},
-          persistent_variables = ['outcome_generator.state']
-          )
+# exp_FOXp2_1 = Experiment(
+#           name = 'FOXp2_group_1',    
+#           start_date = '2015-08-05',
+#           subjects = {1 : 'm313',
+#                       2 : 'm314',
+#                       3 : 'm315',
+#                       4 : 'm316',
+#                       5 : 'm317',
+#                       6 : 'm318',
+#                       7 : 'm319',
+#                       8 : 'm320',
+#                       9 : 'm321',
+#                       10: 'm322',
+#                       11: 'm323',
+#                       12: 'm324',
+#                       13: 'm325',
+#                       14: 'm326'},
+#           task = 'two_step_full',
+#           hardware = "hw.Box('bkb')",
+#           set_variables = {'outcome_generator.settings': {'first_session'       :  False,
+#                                                           'high_trans_contrast' :  False,
+#                                                           'high_reward_contrast':  False},
+#                            'reward_delivery_durations':calibration['small'],
+#                            'session_duration':5400000,
+#                            'outcome_generator.mean_neutral_block_length': 65},
+#           persistent_variables = ['outcome_generator.state']
+#           )
 
-exp_FOXp2_2 = Experiment(
-          name = 'FOXp2_group_2',    
-          start_date = '2015-08-05',
-          subjects = {1 : 'm327',
-                      2 : 'm328',
-                      3 : 'm329',
-                      4 : 'm330',
-                      5 : 'm331',
-                      6 : 'm332',
-                      7 : 'm333',
-                      8 : 'm334',
-                      9 : 'm335',
-                      10: 'm336',
-                      11: 'm337',
-                      12: 'm338',
-                      13: 'm339',
-                      14: 'm340'},
-          task = 'two_step_full',
-          hardware = "hw.Box('bkb')",
-          set_variables = {'outcome_generator.settings': {'first_session'       :  False,
-                                                          'high_trans_contrast' :  False,
-                                                          'high_reward_contrast':  False},
-                           'reward_delivery_durations':calibration['small'],
-                           'session_duration':5400000,
-                           'outcome_generator.mean_neutral_block_length': 65},
-          persistent_variables = ['outcome_generator.state']
-          )
+# exp_FOXp2_2 = Experiment(
+#           name = 'FOXp2_group_2',    
+#           start_date = '2015-08-05',
+#           subjects = {1 : 'm327',
+#                       2 : 'm328',
+#                       3 : 'm329',
+#                       4 : 'm330',
+#                       5 : 'm331',
+#                       6 : 'm332',
+#                       7 : 'm333',
+#                       8 : 'm334',
+#                       9 : 'm335',
+#                       10: 'm336',
+#                       11: 'm337',
+#                       12: 'm338',
+#                       13: 'm339',
+#                       14: 'm340'},
+#           task = 'two_step_full',
+#           hardware = "hw.Box('bkb')",
+#           set_variables = {'outcome_generator.settings': {'first_session'       :  False,
+#                                                           'high_trans_contrast' :  False,
+#                                                           'high_reward_contrast':  False},
+#                            'reward_delivery_durations':calibration['small'],
+#                            'session_duration':5400000,
+#                            'outcome_generator.mean_neutral_block_length': 65},
+#           persistent_variables = ['outcome_generator.state']
+#           )
 
-exp_FOXp2_3 = Experiment(
-          name = 'FOXp2_group_3',    
-          start_date = '2015-08-05',
-          subjects = {7 : 'm341',
-                      8 : 'm342',
-                      9 : 'm343',
-                      10: 'm344',
-                      11: 'm345',
-                      12: 'm346',
-                      13: 'm347',
-                      14: 'm348'},
-          task = 'two_step_full',
-          hardware = "hw.Box('bkb')",
-          set_variables = {'outcome_generator.settings': {'first_session'       :  False,
-                                                          'high_trans_contrast' :  False,
-                                                          'high_reward_contrast':  False},
-                           'reward_delivery_durations':calibration['small'],
-                           'session_duration':5400000,
-                           'outcome_generator.mean_neutral_block_length': 65},
-          persistent_variables = ['outcome_generator.state']
-          )
+# exp_FOXp2_3 = Experiment(
+#           name = 'FOXp2_group_3',    
+#           start_date = '2015-08-05',
+#           subjects = {7 : 'm341',
+#                       8 : 'm342',
+#                       9 : 'm343',
+#                       10: 'm344',
+#                       11: 'm345',
+#                       12: 'm346',
+#                       13: 'm347',
+#                       14: 'm348'},
+#           task = 'two_step_full',
+#           hardware = "hw.Box('bkb')",
+#           set_variables = {'outcome_generator.settings': {'first_session'       :  False,
+#                                                           'high_trans_contrast' :  False,
+#                                                           'high_reward_contrast':  False},
+#                            'reward_delivery_durations':calibration['small'],
+#                            'session_duration':5400000,
+#                            'outcome_generator.mean_neutral_block_length': 65},
+#           persistent_variables = ['outcome_generator.state']
+#           )
 
-exp_one_step_pilot = Experiment(
-          name = 'One_step',    
-          start_date = '2015-08-15',
-          subjects = {1 : 'm349',
-                      2 : 'm350',
-                      3 : 'm351',
-                      4 : 'm352',
-                      5 : 'm353',
-                      6 : 'm354'},
-          task = 'one_step',
-          hardware = "hw.Box('bkb')",
-          set_variables = {'outcome_generator.first_session': False,
-                           'reward_delivery_durations':calibration['medium']},
-          persistent_variables = ['outcome_generator.reward_state',
-                                  'hold_generator.hold_dur',
-                                  'hold_generator.mov_ave.ave']
-          )
 
 exp_one_step_main = Experiment(
           name = 'One_step_main',    
@@ -298,24 +281,35 @@ exp_one_step_main = Experiment(
           task = 'one_step',
           hardware = "hw.Box('bkb')",
           set_variables = {'outcome_generator.first_session': False,
-                           'reward_delivery_durations':calibration['large']},
-          persistent_variables = ['outcome_generator.reward_state',
-                                  'hold_generator.hold_dur',
-                                  'hold_generator.mov_ave.ave']
+                           'reward_delivery_durations':calibration['small']},
+          persistent_variables = ['outcome_generator.reward_state']
           )
+
+# exp_one_step_main_hc = Experiment(
+#           name = 'One_step_main_hc',    
+#           start_date = '2015-08-15',
+#           subjects = {#4 : 'm362',
+#                       5 : 'm358'},
+#           task = 'one_step_hc',
+#           hardware = "hw.Box('bkb')",
+#           set_variables = {'outcome_generator.first_session': False,
+#                            'reward_delivery_durations':calibration['small']},
+#           persistent_variables = ['outcome_generator.reward_state']
+#           )
+
 
 exp_test = Experiment(
           name = 'Test',    
           start_date = '2015-00-00',
-          subjects = {1: 'm353'},
+          subjects = {1: 'm001'},
                       #14: 'm354'},
-          task = 'one_step',
+          task = 'two_step_full_opto_II',
           hardware = "hw.Box('bkb')",
-          set_variables = {'outcome_generator.first_session': False,
-                           'reward_delivery_durations':calibration['large']},
-          persistent_variables = ['outcome_generator.reward_state',
-                                  'hold_generator.hold_dur',
-                                  'hold_generator.mov_ave.ave']
+          set_variables = {'outcome_generator.settings': {'first_session'       :  False,
+                                                          'high_trans_contrast' :  False,
+                                                          'high_reward_contrast':  False},
+                           'reward_delivery_durations':calibration['main']},
+          persistent_variables = ['outcome_generator.state']
           )
 
 

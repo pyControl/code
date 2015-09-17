@@ -232,7 +232,9 @@ class Pycboard(Pyboard):
                     print(e) 
                 if v_string is not None:
                     try:
-                        return(eval(v_string))
+                        v_value = eval(v_string)
+                        if v_value is not None:
+                            return v_value
                     except:
                         if attempt_n == 5:
                             print('Get variable error; unable to eval string: ' + v_string)
