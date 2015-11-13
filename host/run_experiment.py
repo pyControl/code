@@ -7,6 +7,11 @@ from pprint import pformat
 from sys import exit
 import os
 
+# ----------------------------------------------------------------------------------------
+# Helper functions.
+# ----------------------------------------------------------------------------------------
+
+
 def config_menu():
     print('\n\nOpening connection to all boxes listed in config.py.\n\n')
     boxes = Boxes(box_serials.keys())
@@ -25,6 +30,20 @@ def config_menu():
             boxes.close()
             exit()
     boxes.close()
+
+
+def run_with_data_output(boxes):
+    boxes.start_framework(dur = None, verbose = False)
+    try:
+        boxes_running = True
+        while boxes_running:  # Read data untill interupted by user.
+            boxes_running = boxes.process_data()
+    except KeyboardInterrupt:
+        boxes.stop_framework()
+
+# ----------------------------------------------------------------------------------------
+# Main program code.
+# ----------------------------------------------------------------------------------------
 
 # Create list of available experiments
 
@@ -65,9 +84,13 @@ if not boxes.check_unique_IDs():
 if input('\nRun hardware test? (y / n) ') == 'y':
     print('\nUploading hardware test.\n')
     boxes.setup_state_machine('hardware_test')
-    boxes.start_framework(data_output = False)
-    input('\nPress any key when finished with hardware test.')
-    boxes.stop_framework()
+    if ('hardware_test_display_output' in locals()) and hardware_test_display_output:
+        print('\nPress CTRL + C when finished with hardware test.\n')
+        run_with_data_output(boxes)
+    else: 
+        boxes.start_framework(data_output = False)
+        input('\nPress any key when finished with hardware test.')
+        boxes.stop_framework()
 else:
     print('\nSkipping hardware test.')
 
@@ -99,15 +122,7 @@ input('\nHit enter to start experiment. To quit at any time, hit ctrl + c.\n\n')
 
 boxes.write_to_file('Run started at: ' + datetime.datetime.now().strftime('%H:%M:%S') + '\n\n')
 
-boxes.start_framework(dur = None, verbose = False)
-
-try:
-    boxes_running = True
-    while boxes_running:  # Read data untill interupted by user.
-        boxes_running = boxes.process_data()
-    
-except KeyboardInterrupt:
-    boxes.stop_framework()
+run_with_data_output(boxes)
 
 boxes.close_data_file(copy_to_transfer = True)
 

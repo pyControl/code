@@ -31,3 +31,9 @@ box_serials={1:'COM1',    #Dictionary of box numbers with respective serial port
              13:'COM13',
              14:'COM14'}
 
+
+# ----------------------------------------------------------------------------------------
+# Other configuration options.
+# ----------------------------------------------------------------------------------------
+
+hardware_test_display_output = False
