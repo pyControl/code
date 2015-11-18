@@ -186,10 +186,10 @@ def run(duration = None):
         hwo.reset()
     start_time =  pyb.millis()
     current_time = 0
-    for state_machine in state_machines:
-        state_machine._start()
     # Run--------------------------------
     running = True
+    for state_machine in state_machines:
+        state_machine._start()
     if duration: # Run for finite time.
         end_time = current_time + duration * second
         while ((current_time - end_time) < 0) and running:            
