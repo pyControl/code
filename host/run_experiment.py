@@ -16,17 +16,20 @@ def config_menu():
     print('\n\nOpening connection to all boxes listed in config.py.\n\n')
     boxes = Boxes(box_serials.keys())
     selection = None
-    while selection != 3:
+    while selection != 4:
         selection = int(input('''\n\nConfig menu:
                                  \n\n 1. Reload framwork.
-                                 \n\n 2. Save hardware IDs.
-                                 \n\n 3. Exit config menu.
-                                 \n\n 4. Close program.\n\n'''))
+                                 \n\n 2. Reload hardware definition.
+                                 \n\n 3. Save hardware IDs.
+                                 \n\n 4. Exit config menu.
+                                 \n\n 5. Close program.\n\n'''))
         if selection == 1:
             boxes.load_framework()
         elif selection == 2:
+            boxes.load_hardware_definition()
+        elif selection == 3:
             boxes.save_unique_IDs()
-        elif selection == 4:
+        elif selection == 5:
             boxes.close()
             exit()
     boxes.close()
@@ -96,7 +99,7 @@ else:
 
 print('\nUploading task.\n')
 
-boxes.setup_state_machine(experiment.task, tasks_dir)
+boxes.setup_state_machine(experiment.task)
 
 if experiment.set_variables: # Set state machine variables from experiment specification.
     print('\nSetting state machine variables.')

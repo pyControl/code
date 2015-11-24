@@ -32,18 +32,6 @@ class Pycboard(Pyboard):
         self.framework_running = False
         self.data = None
 
-    # def disable_flash_drive(self):
-    #     'Disable micropython board appearing as USB flash drive.'
-    #     self.exec("pyb.usb_mode('VCP')")
-    #     self.write_file('boot.py', "import pyb; pyb.usb_mode('VCP')")
-
-
-    # def enable_flash_drive(self):
-    #     'Enable micropython board appearing as USB flash drive.'
-    #     self.exec("pyb.usb_mode('CDC+MSC')")
-    #     self.write_file('boot.py', "import pyb; pyb.usb_mode('CDC+MSC')")
-
-
     # ------------------------------------------------------------------------------------
     # File transfer
     # ------------------------------------------------------------------------------------
@@ -85,11 +73,16 @@ class Pycboard(Pyboard):
             target_path = target_folder + '/' + f
             self.transfer_file(file_path, target_path)
 
-
     def load_framework(self):
         'Copy the pyControl framework folder to the board.'
         print('Transfering pyControl framework to pyboard.')
         self.transfer_folder(pyControl_dir, file_type = 'py')
+
+
+    def load_hardware_definition(self):
+        'Copy the file hardware_definition.py from config folder to pyboard.'
+        print('Transfering hardware definition to pyboard.')
+        self.transfer_file(os.path.join(config_dir, 'hardware_definition.py'))
 
     def remove_file(self, file_path):
         'Remove a file from the pyboard.'
@@ -99,7 +92,7 @@ class Pycboard(Pyboard):
     # pyControl operations.
     # ------------------------------------------------------------------------------------
 
-    def setup_state_machine(self, sm_name, hardware = None, sm_dir = None):
+    def setup_state_machine(self, sm_name, sm_dir = None):
         ''' Transfer state machine descriptor file sm_name.py from folder sm_dir
         (defaults to tasks_dir then examples_dir) to board. Instantiate state machine object as 
         sm_name_instance. Hardware obects can be instantiated and passed to the 
@@ -118,11 +111,7 @@ class Pycboard(Pyboard):
         self.transfer_file(sm_path)
         self.exec('import {}'.format(sm_name)) 
         self.remove_file(sm_name + '.py')
-        if hardware:
-            self.exec('hwo = ' + hardware) # Instantiate a hardware object.
-        else:
-            self.exec('hwo = None')
-        self.exec(sm_name + '_instance = sm.State_machine({}, hwo)'.format(sm_name))
+        self.exec(sm_name + '_instance = sm.State_machine({})'.format(sm_name))
 
     def print_IDs(self):
         'Print state and event IDs.'
@@ -175,15 +164,11 @@ class Pycboard(Pyboard):
         except KeyboardInterrupt:
             self.stop_framework()
 
-        
-    def run_state_machine(self, sm_name, dur, hardware = None, sm_dir = None,
-                          verbose = False):
+    def run_state_machine(self, sm_name, dur, sm_dir = None, verbose = False):
         '''Run the state machine sm_name from directory sm_dir for the specified 
-        duration (seconds). Usage examples:
-            board.run_state_machine('blinker', 5) 
-            board.run_state_machine('two_step', 20, 'hw.Box()', verbose = True)
+        duration (seconds).
         '''
-        self.setup_state_machine(sm_name, hardware, sm_dir)
+        self.setup_state_machine(sm_name, sm_dir)
         self.run_framework(dur, verbose)
 
     # ------------------------------------------------------------------------------------
