@@ -23,7 +23,7 @@ initial_state = 'init_state'
 
 def run_start():  # 
     hw.houselight.on()
-    hw.house_red.on()
+    hw.houselight_red.on()
 
 def run_end():  
     hw.off()

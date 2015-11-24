@@ -16,6 +16,10 @@ class Boxes():
         self.unique_IDs = {box_ID: self.boxes[box_ID].unique_ID
                                    for box_ID in self.boxes}
 
+    def reset(self):
+        for box in self.boxes.values():
+            box.reset()        
+
     def setup_state_machine(self, sm_name, sm_dir = None):
         for box in self.boxes.values():
             box.setup_state_machine(sm_name, self.hw, sm_dir)
@@ -27,6 +31,10 @@ class Boxes():
     def load_framework(self):
         for box in self.boxes.values():
             box.load_framework()
+
+    def load_hardware_definition(self):
+        for box in self.boxes.values():
+            box.load_hardware_definition()            
 
     def process_data(self):
         for box in self.boxes.values():
