@@ -221,7 +221,7 @@ def run(duration = None):
     timer.reset()
     event_queue.reset()
     data_output_queue.reset()
-    if not hw.initialised:
+    if not hw.hardware_definition:
         hw.initialise()
     hw.reset()
     start_time =  pyb.millis()

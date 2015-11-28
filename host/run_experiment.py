@@ -77,7 +77,7 @@ file_names = {box_n: experiment.subjects[box_n] + date + '.txt' for box_n in box
 
 print('')
 
-boxes = Boxes(boxes_to_use, experiment.hardware)
+boxes = Boxes(boxes_to_use)
 
 if not boxes.check_unique_IDs():
     input('Hardware ID check failed, press any key to close program.')

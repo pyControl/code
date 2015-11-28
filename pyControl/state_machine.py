@@ -9,7 +9,7 @@ from .utility import *
 
 class State_machine():
     # State machine behaviour is defined by passing state machine description object smd to 
-    # State_machine constructor. smd is a module which defines the states, events and  
+    # State_machine __init__(). smd is a module which defines the states, events and  
     # functionality of the state machine object that is created (see examples). 
 
     def __init__(self, smd):
