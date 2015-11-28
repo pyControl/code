@@ -9,17 +9,18 @@ digital_inputs  = []  # List of all Digital_input objects.
 
 digital_outputs = []  # List of all Digital_output objects.
 
-initialised = False   # Set to True once hardware has been initialised.
+hardware_definition = None  # Hardware definition object.
 
 # ----------------------------------------------------------------------------------------
 # Functions
 # ----------------------------------------------------------------------------------------
 
-def initialise(hardware_definition = None):
+def initialise(hwd = None):
     # Attempt to import hardware_definition if not supplied as argument. 
     # Insert hardware_definition module into state machine definition namespaces.
     # Set event IDs on digital inputs from framework events dictionary.    
-    global initialised
+    print('importing hardware_definition')
+    global hardware_definition
     if not hardware_definition:
         try:
             import hardware_definition
@@ -29,7 +30,6 @@ def initialise(hardware_definition = None):
         state_machine.smd.hw = hardware_definition
     for digital_input in digital_inputs:
         digital_input._set_event_IDs()
-    initialised = True
 
 def reset():
     # Called before each run to reset digital inputs.

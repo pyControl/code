@@ -79,10 +79,16 @@ class Pycboard(Pyboard):
         self.transfer_folder(pyControl_dir, file_type = 'py')
 
 
-    def load_hardware_definition(self):
-        'Copy the file hardware_definition.py from config folder to pyboard.'
-        print('Transfering hardware definition to pyboard.')
-        self.transfer_file(os.path.join(config_dir, 'hardware_definition.py'))
+    def load_hardware_definition(self, hwd_name = 'hardware_definition', hwd_dir = config_dir):
+        '''Transfer a hardware definition file to pyboard.  Defaults to transfering file
+        hardware_definition.py from config folder.  If annother file is specified, that
+        file is transferred and given name hardware_definition.py in pyboard filesystem.'''
+        hwd_path = os.path.join(hwd_dir, hwd_name + '.py')
+        if os.path.exists(hwd_path):
+            print('Transfering hardware definition to pyboard.')
+            self.transfer_file(hwd_path, target_path = 'hardware_definition.py')
+        else:
+            print('Hardware definition file ' + hwd_name + '.py not found.')    
 
     def remove_file(self, file_path):
         'Remove a file from the pyboard.'
@@ -95,10 +101,7 @@ class Pycboard(Pyboard):
     def setup_state_machine(self, sm_name, sm_dir = None):
         ''' Transfer state machine descriptor file sm_name.py from folder sm_dir
         (defaults to tasks_dir then examples_dir) to board. Instantiate state machine object as 
-        sm_name_instance. Hardware obects can be instantiated and passed to the 
-        state machine constructor by setting the hardware argument to a string which
-        instantiates a hardware object. 
-        '''
+        sm_name_instance.'''
         self.reset()
         if not sm_dir:
             if os.path.exists(os.path.join(tasks_dir, sm_name + '.py')):
@@ -150,7 +153,7 @@ class Pycboard(Pyboard):
                     print('Box {}: '.format(self.ID_number), end = '')
                 print(data_string[:-1]) 
                 if self.data_file:
-                    if data_string.split(' ')[2][0] != '#': # Output not a coment, write to file.
+                    if data_string.split(' ')[1][0] != '#': # Output not a coment, write to file.
                         self.data_file.write(data_string)
                         self.data_file.flush()
                 self.data = b''
@@ -189,7 +192,7 @@ class Pycboard(Pyboard):
             while attempt_n < 5:
                 attempt_n += 1
                 try:
-                    self.exec(sm_name + '_instance.sm.v.' + v_name + '=' + repr(v_value))
+                    self.exec(sm_name + '_instance.smd.v.' + v_name + '=' + repr(v_value))
                     set_value = self.get_variable(sm_name, v_name, pre_checked = True)
                     if set_value == v_value: 
                         return # Variable set exactly.
@@ -212,7 +215,7 @@ class Pycboard(Pyboard):
                 attempt_n += 1
                 try:
                     self.serial.flushInput()
-                    v_string = self.eval(sm_name + '_instance.sm.v.' + v_name).decode()
+                    v_string = self.eval(sm_name + '_instance.smd.v.' + v_name).decode()
                 except PyboardError as e:
                     print(e) 
                 if v_string is not None:
@@ -238,7 +241,7 @@ class Pycboard(Pyboard):
                     err_message = e
             else:
                 try: 
-                    self.exec(sm_name + '_instance.sm.v.' + v_name)
+                    self.exec(sm_name + '_instance.smd.v.' + v_name)
                     return True # State machine and variable both exist.
                 except PyboardError as e: 
                     err_message = e
