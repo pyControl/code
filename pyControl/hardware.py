@@ -41,8 +41,8 @@ def off():
     for digital_output in digital_outputs:
         digital_output.off()
 
-def connect_device(device, connector, pull = pyb.Pin.PULL_NONE):
-    device.connect(connector, pull)
+def connect_device(device, connector):
+    device.connect(connector)
 
 # ----------------------------------------------------------------------------------------
 # Digital Input
@@ -75,7 +75,6 @@ class Digital_input():
         # Specify the Digital_input pin and optional pullup or pulldown resistor.  
         self.pin = pyb.Pin(pin, pyb.Pin.IN, pull = pull)
         self.pull = pull
-        self.reset()
 
     def _set_event_IDs(self):
         # Set event codes for rising and falling events.  If neither rising or falling event 
@@ -90,6 +89,7 @@ class Digital_input():
             self.falling_event_ID = None
         if self.rising_event_ID or self.falling_event_ID:
             pyb.ExtInt(self.pin, pyb.ExtInt.IRQ_RISING_FALLING, self.pull, self._ISR)
+            self.reset()
 
     def _ISR(self, line):
         # Interrupt service routine called on pin change.
@@ -144,11 +144,11 @@ class Digital_input():
 class Digital_output():
     def __init__(self, inverted = False):
         self.inverted = inverted # Set True for inverted output.
-        digital_outputs.append(self)
 
     def connect(self, pin):
         self.pin = pyb.Pin(pin, pyb.Pin.OUT_PP)  # Micropython pin object.
         self.state = False
+        digital_outputs.append(self)
         self.off()
 
     def on(self):
@@ -166,23 +166,28 @@ class Digital_output():
             self.on()    
 
 # ----------------------------------------------------------------------------------------
-# Double_poke
+# Poke
 # ----------------------------------------------------------------------------------------
 
 class Poke():
-    
+  
     def __init__(self, rising_event = None, falling_event = None, debounce = 5):
         self.SOL   = Digital_output()
         self.LED   = Digital_output()
         self.input = Digital_input(rising_event, falling_event, debounce)
 
-    def connect(self, port, pull = pyb.Pin.PULL_NONE):
-        self.SOL.connect(port['POW_A'])
-        self.LED.connect(port['POW_B'])
-        self.input.connect(port['DIO_A'], pull)
+    def connect(self, port = None, pull = pyb.Pin.PULL_NONE,
+                input_pin = None, SOL_pin = None, LED_pin = None):
+        if port: 
+            self.SOL.connect(port['POW_A'])
+            self.LED.connect(port['POW_B'])
+            self.input.connect(port['DIO_A'], pull)
+        else:
+            self.input.connect(input_pin, pull)
+            if LED_pin: self.LED.connect(LED_pin)
+            if SOL_pin: self.SOL.connect(SOL_pin)
 
     def value(self):
-        # Return the state of input A.
         return self.input.value()
 
 
@@ -208,6 +213,9 @@ class Double_poke():
     def value(self):
         # Return the state of input A.
         return self.input_A.value()
+
+
+
 
 # ----------------------------------------------------------------------------------------
 # Board pin mapping dictionaries.
