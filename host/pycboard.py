@@ -20,7 +20,6 @@ class Pycboard(Pyboard):
             self.reset() 
         except PyboardError:
             self.load_framework()
-            self.reset()
         self.unique_ID = eval(self.eval('pyb.unique_id()').decode())
         self.data_file = None
         self.ID_number = ID_number
@@ -77,6 +76,7 @@ class Pycboard(Pyboard):
         'Copy the pyControl framework folder to the board.'
         print('Transfering pyControl framework to pyboard.')
         self.transfer_folder(pyControl_dir, file_type = 'py')
+        self.reset()
 
 
     def load_hardware_definition(self, hwd_name = 'hardware_definition', hwd_dir = config_dir):
@@ -87,6 +87,7 @@ class Pycboard(Pyboard):
         if os.path.exists(hwd_path):
             print('Transfering hardware definition to pyboard.')
             self.transfer_file(hwd_path, target_path = 'hardware_definition.py')
+            self.reset()
         else:
             print('Hardware definition file ' + hwd_name + '.py not found.')    
 
