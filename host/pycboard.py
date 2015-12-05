@@ -136,8 +136,8 @@ class Pycboard(Pyboard):
     def stop_framework(self):
         'Stop framework running on pyboard by sending stop command.'
         self.serial.write(b'E')
-        self.framework_running = False
-        data_err = self.read_until(2, b'\x04>', timeout=10) 
+        time.sleep(0.5)
+        self.process_data()
 
     def process_data(self):
         'Process data output from the pyboard to the serial line.'
@@ -146,7 +146,8 @@ class Pycboard(Pyboard):
             if self.data.endswith(b'\x04'): # End of framework run.
                 self.framework_running = False
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
-                print(data_err)
+                if len(data_err) > 2:
+                    print(data_err)
                 break
             elif self.data.endswith(b'\n'):  # End of data line.
                 data_string = self.data.decode() 
