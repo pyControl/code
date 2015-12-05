@@ -17,19 +17,20 @@ hardware_definition = None  # Hardware definition object.
 
 def initialise(hwd = None):
     # Attempt to import hardware_definition if not supplied as argument. 
-    # Insert hardware_definition module into state machine definition namespaces.
-    # Set event IDs on digital inputs from framework events dictionary.    
-    print('importing hardware_definition')
-    global hardware_definition
+    # Inserts hardware_definition module into state machine definition namespaces.
+    # Sets event IDs on digital inputs from framework events dictionary and remove digital 
+    # inputs that are not used by state machine to reduce overheads.
+    global hardware_definition, digital_inputs
     if not hardware_definition:
         try:
             import hardware_definition
+            print('importing hardware_definition')
         except ImportError:
             hardware_definition = None
     for state_machine in fw.state_machines:
         state_machine.smd.hw = hardware_definition
-    for digital_input in digital_inputs:
-        digital_input._set_event_IDs()
+    digital_inputs = [digital_input for digital_input in digital_inputs
+                      if digital_input._set_event_IDs()]
 
 def reset():
     # Called before each run to reset digital inputs.
@@ -41,8 +42,11 @@ def off():
     for digital_output in digital_outputs:
         digital_output.off()
 
-def connect_device(device, connector):
-    device.connect(connector)
+def connect_device(device, connector, pull = None):
+    if pull:
+        device.connect(connector, pull)
+    else:
+        device.connect(connector)
 
 # ----------------------------------------------------------------------------------------
 # Digital Input
@@ -78,7 +82,8 @@ class Digital_input():
 
     def _set_event_IDs(self):
         # Set event codes for rising and falling events.  If neither rising or falling event 
-        # is used by framework, the interrupt is not activated.
+        # is used by framework, the interrupt is not activated. Returns boolean indicating
+        # whether input is active.
         if self.rising_event in fw.events:
             self.rising_event_ID  = fw.events[self.rising_event]
         else:
@@ -90,6 +95,9 @@ class Digital_input():
         if self.rising_event_ID or self.falling_event_ID:
             pyb.ExtInt(self.pin, pyb.ExtInt.IRQ_RISING_FALLING, self.pull, self._ISR)
             self.reset()
+            return True
+        else:
+            return False
 
     def _ISR(self, line):
         # Interrupt service routine called on pin change.
@@ -170,32 +178,35 @@ class Digital_output():
 # ----------------------------------------------------------------------------------------
 
 class Poke():
+    # Single IR beam, LED and Solenoid.
   
     def __init__(self, rising_event = None, falling_event = None, debounce = 5):
-        self.SOL   = Digital_output()
-        self.LED   = Digital_output()
         self.input = Digital_input(rising_event, falling_event, debounce)
 
     def connect(self, port = None, pull = pyb.Pin.PULL_NONE,
                 input_pin = None, SOL_pin = None, LED_pin = None):
-        if port: 
-            self.SOL.connect(port['POW_A'])
-            self.LED.connect(port['POW_B'])
-            self.input.connect(port['DIO_A'], pull)
-        else:
-            self.input.connect(input_pin, pull)
-            if LED_pin: self.LED.connect(LED_pin)
-            if SOL_pin: self.SOL.connect(SOL_pin)
+        if port:
+            input_pin = port['DIO_A']
+            LED_pin   = port['POW_A']
+            SOL_pin   = port['POW_B']
+
+        self.input.connect(input_pin, pull)
+        if LED_pin: 
+            self.LED = Digital_output()
+            self.LED.connect(LED_pin)
+        if SOL_pin:
+            self.SOL = Digital_output()
+            self.SOL.connect(SOL_pin)
 
     def value(self):
         return self.input.value()
-
 
 # ----------------------------------------------------------------------------------------
 # Double_poke
 # ----------------------------------------------------------------------------------------
 
 class Double_poke():
+    # Two IR beams, single LED and Solenoid.
     
     def __init__(self, rising_event_A = None, falling_event_A = None,
                        rising_event_B = None, falling_event_B = None, debounce = 5):
@@ -205,17 +216,54 @@ class Double_poke():
         self.input_B = Digital_input(rising_event_B, falling_event_B, debounce)
 
     def connect(self, port, pull = pyb.Pin.PULL_NONE):
-        self.SOL.connect(port['POW_A'])
-        self.LED.connect(port['POW_B'])
         self.input_A.connect(port['DIO_A'], pull)
         self.input_B.connect(port['DIO_B'], pull)
+        self.LED.connect(port['POW_A'])
+        self.SOL.connect(port['POW_B'])
 
     def value(self):
         # Return the state of input A.
         return self.input_A.value()
 
+# ----------------------------------------------------------------------------------------
+# Twin_poke
+# ----------------------------------------------------------------------------------------
 
+class Twin_poke():
+    # Two IR beams, each with their own LED.
+    def __init__(self, rising_event_A = None, falling_event_A = None,
+                       rising_event_B = None, falling_event_B = None, debounce = 5):
+        self.poke_A = Poke(rising_event_A, falling_event_A, debounce)
+        self.poke_B = Poke(rising_event_B, falling_event_B, debounce)
 
+    def connect(self, port, pull = pyb.Pin.PULL_NONE):
+        self.poke_A.connect(input_pin = port['DIO_A'], LED_pin = port['POW_A'], pull = pull)
+        self.poke_B.connect(input_pin = port['DIO_B'], LED_pin = port['POW_B'], pull = pull)
+
+# ----------------------------------------------------------------------------------------
+# Quad_poke
+# ----------------------------------------------------------------------------------------
+
+class Quad_poke():
+    # 4 IR beams, 3 of which have
+    def __init__(self, rising_event_A = None, falling_event_A = None,
+                       rising_event_B = None, falling_event_B = None, 
+                       rising_event_C = None, falling_event_C = None, 
+                       rising_event_D = None, falling_event_D = None, 
+                       debounce = 5):
+        self.poke_A = Poke(rising_event_A, falling_event_A, debounce)
+        self.poke_B = Poke(rising_event_B, falling_event_B, debounce)
+        self.poke_C = Poke(rising_event_C, falling_event_C, debounce)
+        self.poke_D = Poke(rising_event_D, falling_event_D, debounce)
+        self.SOL = Digital_output()
+
+    def connect(self, two_ports, pull = pyb.Pin.PULL_NONE):
+        port_1, port_2 = two_ports
+        self.poke_A.connect(input_pin = port_1['DIO_A'], LED_pin = port_1['POW_A'], pull = pull)
+        self.poke_B.connect(input_pin = port_1['DIO_B'], LED_pin = port_1['POW_B'], pull = pull)
+        self.poke_C.connect(input_pin = port_2['DIO_A'], LED_pin = port_2['POW_A'], pull = pull)
+        self.poke_D.connect(input_pin = port_2['DIO_B'], pull = pull)
+        self.SOL.connect(port_2['POW_B'])
 
 # ----------------------------------------------------------------------------------------
 # Board pin mapping dictionaries.
@@ -226,23 +274,23 @@ class Double_poke():
 
 breakout_1_0 = {'ports': {1: {'DIO_A': 'X1',   # RJ45 connector port pin mappings.
                               'DIO_B': 'X2',
-                              'POW_A': 'Y4',
-                              'POW_B': 'Y8'},
+                              'POW_A': 'Y8',
+                              'POW_B': 'Y4'},
          
                           2: {'DIO_A': 'X3',
                               'DIO_B': 'X4',
-                              'POW_A': 'Y3',
-                              'POW_B': 'Y7'},
+                              'POW_A': 'Y7',
+                              'POW_B': 'Y3'},
          
                           3: {'DIO_A': 'X7',
                               'DIO_B': 'X8',
-                              'POW_A': 'Y2',
-                              'POW_B': 'Y6'},
+                              'POW_A': 'Y6',
+                              'POW_B': 'Y2'},
          
                           4: {'DIO_A': 'X12',
                               'DIO_B': 'X11',
-                              'POW_A': 'Y1',
-                              'POW_B': 'Y5'}},
+                              'POW_A': 'Y5',
+                              'POW_B': 'Y1'}},
                 'BNC_1': 'Y11',      # BNC connector pins.
                 'BNC_2': 'Y12',
                 'DAC_1': 'X5',
@@ -252,18 +300,18 @@ breakout_1_0 = {'ports': {1: {'DIO_A': 'X1',   # RJ45 connector port pin mapping
 
 devboard_1_0 = {'ports': {1: {'DIO_A': 'Y1',   # Use buttons and LEDs to emulate breakout board ports.
                               'DIO_B': 'Y4',
-                              'POW_A': 'Y8',
-                              'POW_B': 'Y7'},
+                              'POW_A': 'Y7',
+                              'POW_B': 'Y8'},
 
                           2: {'DIO_A': 'Y2',
                               'DIO_B': 'Y5',
-                              'POW_A': 'Y10',
-                              'POW_B': 'Y9'},
+                              'POW_A': 'Y9',
+                              'POW_B': 'Y10'},
 
                           3: {'DIO_A': 'Y3',
                               'DIO_B': 'Y6',
-                              'POW_A': 'Y12',
-                              'POW_B': 'Y11'}},
+                              'POW_A': 'Y11',
+                              'POW_B': 'Y12'}},
                 'button_1': 'Y1',  # Access buttons and pins directly. 
                 'button_2': 'Y2',
                 'button_3': 'Y3',
