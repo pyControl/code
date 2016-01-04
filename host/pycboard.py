@@ -136,7 +136,8 @@ class Pycboard(Pyboard):
     def stop_framework(self):
         'Stop framework running on pyboard by sending stop command.'
         self.serial.write(b'E')
-        time.sleep(0.5)
+        self.framework_running = False
+        time.sleep(0.1)
         self.process_data()
 
     def process_data(self):
