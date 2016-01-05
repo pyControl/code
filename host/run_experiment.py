@@ -86,7 +86,9 @@ if not boxes.check_unique_IDs():
 
 if input('\nRun hardware test? (y / n) ') == 'y':
     print('\nUploading hardware test.\n')
-    boxes.setup_state_machine('hardware_test')
+    if not 'hardware_test' in locals():   # Test if hardware test program name is specified in config.
+        hardware_test = 'hardware_test'   # default name of hardware test program.
+    boxes.setup_state_machine(hardware_test)
     if ('hardware_test_display_output' in locals()) and hardware_test_display_output:
         print('\nPress CTRL + C when finished with hardware test.\n')
         run_with_data_output(boxes)
