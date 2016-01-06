@@ -18,7 +18,7 @@ class Event_queue():
     def reset(self):
         # Empty queue, set IDs to null value.
         self.ID_buffer = array('i', [ID_null_value] * self.buffer_length)
-        self.TS_buffer = array('L', [0]  * self.buffer_length)
+        self.TS_buffer = array('l', [0]  * self.buffer_length)
         self.read_index  = 0
         self.write_index = 0
 
@@ -73,7 +73,8 @@ class Timer():
                     # Event IDs <= 0 are used to index digital inputs for debounce timing.
                     hw.digital_inputs[-active_timer[0]]._deactivate_debounce() 
                 else:
-                    publish_event((active_timer[0], current_time), output_data = False) 
+                    event_queue.put((active_timer[0], -1)) 
+                    # Timestamp of -1 indictates not to put timer events in to output queue.
                 self.active_timers.pop(i)
 
     def disarm(self,event_ID):
@@ -173,11 +174,6 @@ def print_IDs():
     for event_ID in sorted(events.values()):
         print(ID2name[event_ID]  + ': ' +  str(event_ID))
 
-def publish_event(event, output_data = True):    
-    event_queue.put(event) # Publish to state machines.
-    if output_data and data_output:  # Publish to serial output.
-        data_output_queue.put(event)
-
 def output_data(event):
     # Output data to serial line.
     if event[0] == -1: # Print user generated output string.
@@ -204,6 +200,8 @@ def _update():
                 digital_input._process_interrupt()
     elif event_queue.available():  # Priority 2: Process events in queue.
         event = event_queue.get()       
+        if event[1] >= 0 and data_output: # Not timer event -> place in output queue.
+            data_output_queue.put(event)
         for state_machine in state_machines:
             state_machine._process_event(ID2name[event[0]])
     elif usb_serial.any():        # Priority 3: Check for serial input from computer.

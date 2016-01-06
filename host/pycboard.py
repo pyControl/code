@@ -148,7 +148,7 @@ class Pycboard(Pyboard):
                 self.framework_running = False
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
                 if len(data_err) > 2:
-                    print(data_err)
+                    print(data_err.decode())
                 break
             elif self.data.endswith(b'\n'):  # End of data line.
                 data_string = self.data.decode() 
