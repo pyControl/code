@@ -131,9 +131,9 @@ class Digital_input():
     def _publish_if_edge_has_event(self, timestamp):
         # Publish event if detected edge has event ID assigned.
         if self.pin_state and self.rising_event_ID:          # Rising edge.
-            fw.publish_event((self.rising_event_ID, timestamp))
+            fw.event_queue.put((self.rising_event_ID, timestamp))
         elif (not self.pin_state) and self.falling_event_ID: # Falling edge.
-            fw.publish_event((self.falling_event_ID, timestamp))
+            fw.event_queue.put((self.falling_event_ID, timestamp))
 
     def value(self):
         # Return state of the input. 
