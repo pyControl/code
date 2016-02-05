@@ -66,13 +66,14 @@ class Twin_poke():
     def connect(self, port, pull = pyb.Pin.PULL_NONE):
         self.poke_A.connect(input_pin = port['DIO_A'], LED_pin = port['POW_A'], pull = pull)
         self.poke_B.connect(input_pin = port['DIO_B'], LED_pin = port['POW_B'], pull = pull)
+        self.LED = Digital_output_group([self.poke_A.LED, self.poke_B.LED])
 
 # ----------------------------------------------------------------------------------------
 # Quad_poke
 # ----------------------------------------------------------------------------------------
 
 class Quad_poke():
-    # 4 IR beams, 3 of which have
+    # 4 IR beams, 3 of which have LEDs, 1 solenoid,
     def __init__(self, rising_event_A = None, falling_event_A = None,
                        rising_event_B = None, falling_event_B = None, 
                        rising_event_C = None, falling_event_C = None, 
