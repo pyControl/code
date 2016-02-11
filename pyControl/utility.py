@@ -18,6 +18,10 @@ def mean(x):
     # Return the mean value of x.
     return(sum(x)/len(x))
 
+def shuffled(L):
+    # Return a shuffled copy of list L.
+    return sorted(L, key = lambda l: pyb.rng())
+
 # ----------------------------------------------------------------------------------------
 # Utility classes
 # ----------------------------------------------------------------------------------------
