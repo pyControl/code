@@ -5,7 +5,6 @@ import math
 # Utility functions.
 # ----------------------------------------------------------------------------------------
 
-
 def random():
     #Return a random float between 0 and 1.
     return pyb.rng()/1073741824.
@@ -17,6 +16,10 @@ def withprob(p):
 def mean(x):
     # Return the mean value of x.
     return(sum(x)/len(x))
+
+def shuffled(L):
+    # Return a shuffled copy of list L.
+    return sorted(L, key = lambda l: pyb.rng())
 
 # ----------------------------------------------------------------------------------------
 # Utility classes
