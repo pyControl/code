@@ -12,6 +12,8 @@ tasks_dir = os.path.join('..', 'tasks')         # Path to task scripts.
 
 data_dir = os.path.join('..', 'data')           # Path to data storage folder 
 
+transfer_dir = None                             # Folder to copy data files to at end of run.
+
 config_dir = os.path.join('.', 'config')        # Path to config folder.
 
 # ----------------------------------------------------------------------------------------

@@ -50,8 +50,11 @@ def run_with_data_output(boxes):
 
 # Create list of available experiments
 
-experiments = [e for e in [getattr(exps, c) for c in dir(exps)]
-               if isinstance(e, Experiment)] # Construct list of available experiments.
+if hasattr(exps,'experiments'):
+    experiments = exps.experiments # List of experiments specified in experiments.py
+else:
+    experiments = [e for e in [getattr(exps, c) for c in dir(exps)]
+                   if isinstance(e, Experiment)] # Construct list of available experiments.
 
 date = datetime.date.today().strftime('-%Y-%m-%d')
 
