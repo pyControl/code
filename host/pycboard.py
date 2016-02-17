@@ -272,7 +272,7 @@ class Pycboard(Pyboard):
 
     def close_data_file(self, copy_to_transfer = False):
         self.data_file.close()
-        if copy_to_transfer: # Copy data file to transfer folder.
-            shutil.copy2(self.file_path, os.path.join(data_dir, 'transfer'))
+        if copy_to_transfer and transfer_dir: # Copy data file to transfer folder.
+            shutil.copy2(self.file_path, transfer_dir)
         self.data_file = None
         self.file_path = None
