@@ -5,7 +5,6 @@ import math
 # Utility functions.
 # ----------------------------------------------------------------------------------------
 
-
 def random():
     #Return a random float between 0 and 1.
     return pyb.rng()/1073741824.

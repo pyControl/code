@@ -10,30 +10,22 @@ examples_dir = os.path.join('..', 'examples')   # Path to folder of example scri
 
 tasks_dir = os.path.join('..', 'tasks')         # Path to task scripts.
 
-data_dir = os.path.join('..', 'data')           # Path to data storage folder
+data_dir = os.path.join('..', 'data')           # Path to data storage folder 
+
+transfer_dir = None                             # Folder to copy data files to at end of run.
+
+config_dir = os.path.join('.', 'config')        # Path to config folder.
 
 # ----------------------------------------------------------------------------------------
 # Hardware serial ports
 # ----------------------------------------------------------------------------------------
 
-box_serials={1:'COM1',    #Dictionary of box numbers with respective serial port addresses.
-             2:'COM2',
-             3:'COM3',
-             4:'COM4',
-             5:'COM5',
-             6:'COM6',
-             7:'COM7',
-             8:'COM8',
-             9:'COM9',
-             10:'COM10',
-             11:'COM11',
-             12:'COM12',
-             13:'COM13',
-             14:'COM14'}
-
+box_serials={1:'COM1'}    #Dictionary of box numbers with respective serial port addresses.
 
 # ----------------------------------------------------------------------------------------
 # Other configuration options.
 # ----------------------------------------------------------------------------------------
 
-hardware_test_display_output = False
+hardware_test = 'hardware_test'         # Script to use for hardware test.
+
+hardware_test_display_output = False 

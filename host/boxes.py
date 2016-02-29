@@ -7,8 +7,7 @@ class Boxes():
     '''Provides functionallity for doing operations on a group of Pycboards.
     Most methods are a thin wrapper around the corresponding pycboard method.'''
 
-    def __init__(self, box_numbers, hardware = None): 
-        self.hw = hardware
+    def __init__(self, box_numbers): 
         self.boxes = {}
         for box_ID in box_numbers:
             print('Opening connection to box {}'.format(box_ID))
@@ -16,9 +15,13 @@ class Boxes():
         self.unique_IDs = {box_ID: self.boxes[box_ID].unique_ID
                                    for box_ID in self.boxes}
 
+    def reset(self):
+        for box in self.boxes.values():
+            box.reset()        
+
     def setup_state_machine(self, sm_name, sm_dir = None):
         for box in self.boxes.values():
-            box.setup_state_machine(sm_name, self.hw, sm_dir)
+            box.setup_state_machine(sm_name, sm_dir)
 
     def start_framework(self, dur = None, verbose = False, data_output = True):
         for box in self.boxes.values():
@@ -28,6 +31,10 @@ class Boxes():
         for box in self.boxes.values():
             box.load_framework()
 
+    def load_hardware_definition(self, hwd_name = 'hardware_definition', hwd_dir = config.config_dir):
+        for box in self.boxes.values():
+            box.load_hardware_definition(hwd_name, hwd_dir)            
+
     def process_data(self):
         for box in self.boxes.values():
             n_boxes_running = 0
@@ -35,6 +42,14 @@ class Boxes():
                 box.process_data()
                 n_boxes_running += 1
         return n_boxes_running > 0
+
+    def run_framework(self, dur = None, verbose = False):
+        self.start_framework(dur, verbose)
+        try:
+            while self.process_data():
+                pass
+        except KeyboardInterrupt:
+            self.stop_framework()
 
     def stop_framework(self):
         for box in self.boxes.values():
