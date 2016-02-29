@@ -5,6 +5,20 @@ import shutil
 import time
 from copy import deepcopy
 
+def djb2(string):  # djb2 hashing algorithm used to check file transfer integrity.
+    h = 5381
+    for c in string:
+        h = ((h * 33) + ord(c)) & 0xFFFFFFFF
+    return h
+
+djb2_exec = ''' 
+def djb2(string):
+    h = 5381
+    for c in string:
+        h = ((h * 33) + ord(c)) & 0xFFFFFFFF
+    return h
+''' # String used to define djb2 function on pyboard.
+
 # ----------------------------------------------------------------------------------------
 #  Pycboard class.
 # ----------------------------------------------------------------------------------------
@@ -28,13 +42,13 @@ class Pycboard(Pyboard):
         'Enter raw repl (soft reboots pyboard), import modules.'
         self.enter_raw_repl()
         self.exec('from pyControl import *;import os')
+        self.exec(djb2_exec)  # define djb2 hashing function.
         self.framework_running = False
         self.data = None
 
     # ------------------------------------------------------------------------------------
     # File transfer
     # ------------------------------------------------------------------------------------
-
 
     def write_file(self, target_path, data):
         '''Write data to file at specified path on pyboard, any data already
@@ -44,15 +58,24 @@ class Pycboard(Pyboard):
         self.exec("tmpfile.write({data})".format(data=repr(data)))
         self.exec('tmpfile.close()')
 
-
     def transfer_file(self, file_path, target_path = None):
         '''Copy a file into the root directory of the pyboard.'''
         if not target_path:
             target_path = os.path.split(file_path)[-1]
-        transfer_file = open(file_path) 
-        self.write_file(target_path, transfer_file.read())
-        transfer_file.close()
+        with open(file_path) as transfer_file:
+            file_contents = transfer_file.read()  
+        while not djb2(file_contents) == self.get_file_hash(target_path):
+            self.write_file(target_path, file_contents) 
 
+    def get_file_hash(self, target_path):
+        'Get the djb2 hash of a file on the pyboard.'
+        try:
+            self.exec("tmpfile = open('{}','r')".format(target_path))
+            file_hash = int(self.eval('djb2(tmpfile.read())').decode())
+            self.exec('tmpfile.close()')
+        except PyboardError: # File does not exist.
+            return -1  
+        return file_hash
 
     def transfer_folder(self, folder_path, target_folder = None, file_type = 'all'):
         '''Copy a folder into the root directory of the pyboard.  Folders that
@@ -77,7 +100,6 @@ class Pycboard(Pyboard):
         print('Transfering pyControl framework to pyboard.')
         self.transfer_folder(pyControl_dir, file_type = 'py')
         self.reset()
-
 
     def load_hardware_definition(self, hwd_name = 'hardware_definition', hwd_dir = config_dir):
         '''Transfer a hardware definition file to pyboard.  Defaults to transfering file
