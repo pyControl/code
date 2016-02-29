@@ -120,8 +120,8 @@ if experiment.persistent_variables:
             persistent_variables = eval(pv_file.read())
         for v_name in experiment.persistent_variables:
             pv_values_by_subject = persistent_variables[v_name]
-            pv_values_by_box = {box_n:pv_values_by_subject[exp.subjects[box_n]] for 
-                                box_n in boxes_to_use}
+            pv_values_by_box = {box_n:pv_values_by_subject[experiment.subjects[box_n]] 
+                                for box_n in boxes_to_use}
             boxes.set_variable(experiment.task, v_name, pv_values_by_box)
     else:
         print('\nPersistent variables not set as persistent_variables.txt does not exist.\n')
@@ -142,7 +142,7 @@ if experiment.persistent_variables:
     persistent_variables = {}
     for v_name in experiment.persistent_variables:
         pv_values_by_box = boxes.get_variable(experiment.task, v_name)
-        pv_values_by_subject = {exp.subjects[box_n]:pv_values_by_box[box_n] for 
+        pv_values_by_subject = {experiment.subjects[box_n]:pv_values_by_box[box_n] for 
                                 box_n in boxes_to_use}
         persistent_variables[v_name] = pv_values_by_subject
     with open(pv_file_path, 'w') as pv_file:

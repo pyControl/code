@@ -9,7 +9,7 @@ example_exp = Experiment(
           set_variables = {'outcome_generator.settings': {'first_session'       :  False,
                                                           'high_trans_contrast' :  False,
                                                           'high_reward_contrast':  False},
-                           'reward_delivery_durations':calibration['main']},
+                           'reward_delivery_durations':calibration['large']},
           persistent_variables = ['outcome_generator.state']
           )
 

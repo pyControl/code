@@ -26,4 +26,6 @@ box_serials={1:'COM1'}    #Dictionary of box numbers with respective serial port
 # Other configuration options.
 # ----------------------------------------------------------------------------------------
 
-hardware_test_display_output = False
+hardware_test = 'hardware_test'         # Script to use for hardware test.
+
+hardware_test_display_output = False 
