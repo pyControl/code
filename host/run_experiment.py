@@ -16,17 +16,20 @@ def config_menu():
     print('\n\nOpening connection to all boxes listed in config.py.\n\n')
     boxes = Boxes(box_serials.keys())
     selection = None
-    while selection != 3:
+    while selection != 4:
         selection = int(input('''\n\nConfig menu:
                                  \n\n 1. Reload framwork.
-                                 \n\n 2. Save hardware IDs.
-                                 \n\n 3. Exit config menu.
-                                 \n\n 4. Close program.\n\n'''))
+                                 \n\n 2. Reload hardware definition.
+                                 \n\n 3. Save hardware IDs.
+                                 \n\n 4. Exit config menu.
+                                 \n\n 5. Close program.\n\n'''))
         if selection == 1:
             boxes.load_framework()
         elif selection == 2:
+            boxes.load_hardware_definition()
+        elif selection == 3:
             boxes.save_unique_IDs()
-        elif selection == 4:
+        elif selection == 5:
             boxes.close()
             exit()
     boxes.close()
@@ -47,8 +50,11 @@ def run_with_data_output(boxes):
 
 # Create list of available experiments
 
-experiments = [e for e in [getattr(exps, c) for c in dir(exps)]
-               if isinstance(e, Experiment)] # Construct list of available experiments.
+if hasattr(exps,'experiments'):
+    experiments = exps.experiments # List of experiments specified in experiments.py
+else:
+    experiments = [e for e in [getattr(exps, c) for c in dir(exps)]
+                   if isinstance(e, Experiment)] # Construct list of available experiments.
 
 date = datetime.date.today().strftime('-%Y-%m-%d')
 
@@ -74,7 +80,7 @@ file_names = {box_n: experiment.subjects[box_n] + date + '.txt' for box_n in box
 
 print('')
 
-boxes = Boxes(boxes_to_use, experiment.hardware)
+boxes = Boxes(boxes_to_use)
 
 if not boxes.check_unique_IDs():
     input('Hardware ID check failed, press any key to close program.')
@@ -83,7 +89,9 @@ if not boxes.check_unique_IDs():
 
 if input('\nRun hardware test? (y / n) ') == 'y':
     print('\nUploading hardware test.\n')
-    boxes.setup_state_machine('hardware_test')
+    if not 'hardware_test' in locals():   # Test if hardware test program name is specified in config.
+        hardware_test = 'hardware_test'   # default name of hardware test program.
+    boxes.setup_state_machine(hardware_test)
     if ('hardware_test_display_output' in locals()) and hardware_test_display_output:
         print('\nPress CTRL + C when finished with hardware test.\n')
         run_with_data_output(boxes)
@@ -96,7 +104,7 @@ else:
 
 print('\nUploading task.\n')
 
-boxes.setup_state_machine(experiment.task, tasks_dir)
+boxes.setup_state_machine(experiment.task)
 
 if experiment.set_variables: # Set state machine variables from experiment specification.
     print('\nSetting state machine variables.')
@@ -109,9 +117,12 @@ if experiment.persistent_variables:
     if os.path.exists(pv_file_path):
         print('\nSetting persistent variables.')
         with open(pv_file_path, 'r') as pv_file:
-            persistent_v_values = eval(pv_file.read())
-        for v_name in persistent_v_values.keys():
-            boxes.set_variable(experiment.task, v_name, persistent_v_values[v_name])
+            persistent_variables = eval(pv_file.read())
+        for v_name in experiment.persistent_variables:
+            pv_values_by_subject = persistent_variables[v_name]
+            pv_values_by_box = {box_n:pv_values_by_subject[experiment.subjects[box_n]] 
+                                for box_n in boxes_to_use}
+            boxes.set_variable(experiment.task, v_name, pv_values_by_box)
     else:
         print('\nPersistent variables not set as persistent_variables.txt does not exist.\n')
 
@@ -128,11 +139,14 @@ boxes.close_data_file(copy_to_transfer = True)
 
 if experiment.persistent_variables:
     print('\nStoring persistent variables.')
-    persistent_v_values = {}
+    persistent_variables = {}
     for v_name in experiment.persistent_variables:
-        persistent_v_values[v_name] = boxes.get_variable(experiment.task, v_name)
-        with open(pv_file_path, 'w') as pv_file:
-            pv_file.write(pformat(persistent_v_values))
+        pv_values_by_box = boxes.get_variable(experiment.task, v_name)
+        pv_values_by_subject = {experiment.subjects[box_n]:pv_values_by_box[box_n] for 
+                                box_n in boxes_to_use}
+        persistent_variables[v_name] = pv_values_by_subject
+    with open(pv_file_path, 'w') as pv_file:
+        pv_file.write(pformat(persistent_variables))
 
 boxes.close()
 

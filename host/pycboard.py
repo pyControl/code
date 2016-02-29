@@ -5,6 +5,20 @@ import shutil
 import time
 from copy import deepcopy
 
+def djb2(string):  # djb2 hashing algorithm used to check file transfer integrity.
+    h = 5381
+    for c in string:
+        h = ((h * 33) + ord(c)) & 0xFFFFFFFF
+    return h
+
+djb2_exec = ''' 
+def djb2(string):
+    h = 5381
+    for c in string:
+        h = ((h * 33) + ord(c)) & 0xFFFFFFFF
+    return h
+''' # String used to define djb2 function on pyboard.
+
 # ----------------------------------------------------------------------------------------
 #  Pycboard class.
 # ----------------------------------------------------------------------------------------
@@ -20,7 +34,6 @@ class Pycboard(Pyboard):
             self.reset() 
         except PyboardError:
             self.load_framework()
-            self.reset()
         self.unique_ID = eval(self.eval('pyb.unique_id()').decode())
         self.data_file = None
         self.ID_number = ID_number
@@ -29,25 +42,13 @@ class Pycboard(Pyboard):
         'Enter raw repl (soft reboots pyboard), import modules.'
         self.enter_raw_repl()
         self.exec('from pyControl import *;import os')
+        self.exec(djb2_exec)  # define djb2 hashing function.
         self.framework_running = False
         self.data = None
-
-    # def disable_flash_drive(self):
-    #     'Disable micropython board appearing as USB flash drive.'
-    #     self.exec("pyb.usb_mode('VCP')")
-    #     self.write_file('boot.py', "import pyb; pyb.usb_mode('VCP')")
-
-
-    # def enable_flash_drive(self):
-    #     'Enable micropython board appearing as USB flash drive.'
-    #     self.exec("pyb.usb_mode('CDC+MSC')")
-    #     self.write_file('boot.py', "import pyb; pyb.usb_mode('CDC+MSC')")
-
 
     # ------------------------------------------------------------------------------------
     # File transfer
     # ------------------------------------------------------------------------------------
-
 
     def write_file(self, target_path, data):
         '''Write data to file at specified path on pyboard, any data already
@@ -57,15 +58,24 @@ class Pycboard(Pyboard):
         self.exec("tmpfile.write({data})".format(data=repr(data)))
         self.exec('tmpfile.close()')
 
-
     def transfer_file(self, file_path, target_path = None):
         '''Copy a file into the root directory of the pyboard.'''
         if not target_path:
             target_path = os.path.split(file_path)[-1]
-        transfer_file = open(file_path) 
-        self.write_file(target_path, transfer_file.read())
-        transfer_file.close()
+        with open(file_path) as transfer_file:
+            file_contents = transfer_file.read()  
+        while not djb2(file_contents) == self.get_file_hash(target_path):
+            self.write_file(target_path, file_contents) 
 
+    def get_file_hash(self, target_path):
+        'Get the djb2 hash of a file on the pyboard.'
+        try:
+            self.exec("tmpfile = open('{}','r')".format(target_path))
+            file_hash = int(self.eval('djb2(tmpfile.read())').decode())
+            self.exec('tmpfile.close()')
+        except PyboardError: # File does not exist.
+            return -1  
+        return file_hash
 
     def transfer_folder(self, folder_path, target_folder = None, file_type = 'all'):
         '''Copy a folder into the root directory of the pyboard.  Folders that
@@ -85,11 +95,23 @@ class Pycboard(Pyboard):
             target_path = target_folder + '/' + f
             self.transfer_file(file_path, target_path)
 
-
     def load_framework(self):
         'Copy the pyControl framework folder to the board.'
         print('Transfering pyControl framework to pyboard.')
         self.transfer_folder(pyControl_dir, file_type = 'py')
+        self.reset()
+
+    def load_hardware_definition(self, hwd_name = 'hardware_definition', hwd_dir = config_dir):
+        '''Transfer a hardware definition file to pyboard.  Defaults to transfering file
+        hardware_definition.py from config folder.  If annother file is specified, that
+        file is transferred and given name hardware_definition.py in pyboard filesystem.'''
+        hwd_path = os.path.join(hwd_dir, hwd_name + '.py')
+        if os.path.exists(hwd_path):
+            print('Transfering hardware definition to pyboard.')
+            self.transfer_file(hwd_path, target_path = 'hardware_definition.py')
+            self.reset()
+        else:
+            print('Hardware definition file ' + hwd_name + '.py not found.')    
 
     def remove_file(self, file_path):
         'Remove a file from the pyboard.'
@@ -99,13 +121,10 @@ class Pycboard(Pyboard):
     # pyControl operations.
     # ------------------------------------------------------------------------------------
 
-    def setup_state_machine(self, sm_name, hardware = None, sm_dir = None):
+    def setup_state_machine(self, sm_name, sm_dir = None):
         ''' Transfer state machine descriptor file sm_name.py from folder sm_dir
         (defaults to tasks_dir then examples_dir) to board. Instantiate state machine object as 
-        sm_name_instance. Hardware obects can be instantiated and passed to the 
-        state machine constructor by setting the hardware argument to a string which
-        instantiates a hardware object. 
-        '''
+        sm_name_instance.'''
         self.reset()
         if not sm_dir:
             if os.path.exists(os.path.join(tasks_dir, sm_name + '.py')):
@@ -116,13 +135,12 @@ class Pycboard(Pyboard):
         assert os.path.exists(sm_path), 'State machine file not found at: ' + sm_path
         print('Transfering state machine {} to pyboard.'.format(repr(sm_name)))
         self.transfer_file(sm_path)
-        self.exec('import {}'.format(sm_name)) 
+        try:
+            self.exec('import {}'.format(sm_name)) 
+        except PyboardError as e:
+            raise PyboardError('Unable to import state machine definition.', e.args[2])
         self.remove_file(sm_name + '.py')
-        if hardware:
-            self.exec('hwo = ' + hardware) # Instantiate a hardware object.
-        else:
-            self.exec('hwo = None')
-        self.exec(sm_name + '_instance = sm.State_machine({}, hwo)'.format(sm_name))
+        self.exec(sm_name + '_instance = sm.State_machine({})'.format(sm_name))
 
     def print_IDs(self):
         'Print state and event IDs.'
@@ -144,7 +162,8 @@ class Pycboard(Pyboard):
         'Stop framework running on pyboard by sending stop command.'
         self.serial.write(b'E')
         self.framework_running = False
-        data_err = self.read_until(2, b'\x04>', timeout=10) 
+        time.sleep(0.1)
+        self.process_data()
 
     def process_data(self):
         'Process data output from the pyboard to the serial line.'
@@ -153,7 +172,8 @@ class Pycboard(Pyboard):
             if self.data.endswith(b'\x04'): # End of framework run.
                 self.framework_running = False
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
-                print(data_err)
+                if len(data_err) > 2:
+                    print(data_err.decode())
                 break
             elif self.data.endswith(b'\n'):  # End of data line.
                 data_string = self.data.decode() 
@@ -161,7 +181,7 @@ class Pycboard(Pyboard):
                     print('Box {}: '.format(self.ID_number), end = '')
                 print(data_string[:-1]) 
                 if self.data_file:
-                    if data_string.split(' ')[2][0] != '#': # Output not a coment, write to file.
+                    if data_string.split(' ')[1][0] != '#': # Output not a coment, write to file.
                         self.data_file.write(data_string)
                         self.data_file.flush()
                 self.data = b''
@@ -175,15 +195,11 @@ class Pycboard(Pyboard):
         except KeyboardInterrupt:
             self.stop_framework()
 
-        
-    def run_state_machine(self, sm_name, dur, hardware = None, sm_dir = None,
-                          verbose = False):
+    def run_state_machine(self, sm_name, dur, sm_dir = None, verbose = False):
         '''Run the state machine sm_name from directory sm_dir for the specified 
-        duration (seconds). Usage examples:
-            board.run_state_machine('blinker', 5) 
-            board.run_state_machine('two_step', 20, 'hw.Box()', verbose = True)
+        duration (seconds).
         '''
-        self.setup_state_machine(sm_name, hardware, sm_dir)
+        self.setup_state_machine(sm_name, sm_dir)
         self.run_framework(dur, verbose)
 
     # ------------------------------------------------------------------------------------
@@ -194,17 +210,20 @@ class Pycboard(Pyboard):
     def set_variable(self, sm_name, v_name, v_value, verbose = False):
         '''Set state machine variable when framework not running, some checking is 
         performed to verify variable has not got corrupted during setting.'''
+        if v_value == None:
+            print('Set variable error: cannot set variable to \'None\'.')
+            return
         try:
             eval(repr(v_value))
         except:
-            print('Set variable error, unable to eval(repr(v_value)).')
+            print('Set variable error: unable to eval(repr(v_value)).')
             return
         if self._check_variable_exits(sm_name, v_name):
             attempt_n, prev_set_value = (0, None)
             while attempt_n < 5:
                 attempt_n += 1
                 try:
-                    self.exec(sm_name + '_instance.sm.v.' + v_name + '=' + repr(v_value))
+                    self.exec(sm_name + '_instance.smd.v.' + v_name + '=' + repr(v_value))
                     set_value = self.get_variable(sm_name, v_name, pre_checked = True)
                     if set_value == v_value: 
                         return # Variable set exactly.
@@ -227,7 +246,7 @@ class Pycboard(Pyboard):
                 attempt_n += 1
                 try:
                     self.serial.flushInput()
-                    v_string = self.eval(sm_name + '_instance.sm.v.' + v_name).decode()
+                    v_string = self.eval(sm_name + '_instance.smd.v.' + v_name).decode()
                 except PyboardError as e:
                     print(e) 
                 if v_string is not None:
@@ -237,7 +256,7 @@ class Pycboard(Pyboard):
                             return v_value
                     except:
                         if attempt_n == 5:
-                            print('Get variable error; unable to eval string: ' + v_string)
+                            print('Get variable error: unable to eval string: ' + v_string)
             print('Unable to get variable: ' + v_name)
 
     def _check_variable_exits(self, sm_name, v_name):
@@ -253,7 +272,7 @@ class Pycboard(Pyboard):
                     err_message = e
             else:
                 try: 
-                    self.exec(sm_name + '_instance.sm.v.' + v_name)
+                    self.exec(sm_name + '_instance.smd.v.' + v_name)
                     return True # State machine and variable both exist.
                 except PyboardError as e: 
                     err_message = e
@@ -281,7 +300,7 @@ class Pycboard(Pyboard):
 
     def close_data_file(self, copy_to_transfer = False):
         self.data_file.close()
-        if copy_to_transfer: # Copy data file to transfer folder.
-            shutil.copy2(self.file_path, os.path.join(data_dir, 'transfer'))
+        if copy_to_transfer and transfer_dir: # Copy data file to transfer folder.
+            shutil.copy2(self.file_path, transfer_dir)
         self.data_file = None
         self.file_path = None

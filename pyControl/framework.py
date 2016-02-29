@@ -1,15 +1,16 @@
 from array import array
 import pyb
 from .utility import second
-
-ID_null_value =  0  # Event ID null value, no event may have this ID.
+from . import hardware as hw
 
 # ----------------------------------------------------------------------------------------
 # Event Que
 # ----------------------------------------------------------------------------------------
 
+ID_null_value =  0  # Event ID null value, no event may have this ID.
+
 class Event_queue():
-    #  Queue for holding event tuples: (machine_ID, event_ID, timestamp)
+    #  Queue for holding event tuples: (event_ID, timestamp)
     def __init__(self, buffer_length = 20):
         self.buffer_length = buffer_length
         self.reset()
@@ -17,33 +18,30 @@ class Event_queue():
     def reset(self):
         # Empty queue, set IDs to null value.
         self.ID_buffer = array('i', [ID_null_value] * self.buffer_length)
-        self.TS_buffer = array('L', [0]  * self.buffer_length)
-        self.SM_buffer = array('i', [-1] * self.buffer_length)
+        self.TS_buffer = array('l', [0]  * self.buffer_length)
         self.read_index  = 0
         self.write_index = 0
 
     def put(self, event):
         # Put event in que.  
-        assert self.ID_buffer[self.write_index] == ID_null_value, 'Buffer full'
-        self.SM_buffer[self.write_index] = event[0] 
-        self.ID_buffer[self.write_index] = event[1]
-        self.TS_buffer[self.write_index] = event[2]      
+        assert self.ID_buffer[self.write_index] == ID_null_value, 'Event queue buffer full'
+        self.ID_buffer[self.write_index] = event[0]
+        self.TS_buffer[self.write_index] = event[1]  
         self.write_index = (self.write_index + 1) % self.buffer_length
 
     def get(self):
         # Get event from buffer.  If no events are available return None.
         event_ID   = self.ID_buffer[self.read_index]
         timestamp  = self.TS_buffer[self.read_index] 
-        machine_ID = self.SM_buffer[self.read_index] 
         self.ID_buffer[self.read_index] = ID_null_value
         if event_ID != ID_null_value:
             self.read_index = (self.read_index + 1) % self.buffer_length
-            return (machine_ID, event_ID, timestamp)
+            return (event_ID, timestamp)
         else:
             return None
 
     def available(self):
-        # Return true if buffer contains events.
+        # Return True if buffer contains events.
         return self.ID_buffer[self.read_index] != ID_null_value
 
 # ----------------------------------------------------------------------------------------
@@ -57,31 +55,31 @@ class Timer():
         self.reset()
 
     def reset(self):
-        self.active_timers = [] # list of tuples: (trigger_time, machine_ID, event_ID)
+        self.active_timers = [] # list of tuples: (event_ID, trigger_time)
 
-    def set(self, event_ID, interval, machine_ID):
+    def set(self, event_ID, interval):
         # Set a timer to trigger with specified event ID after 'interval' ms has elapsed.
         global current_time
         trigger_time = current_time + interval
-        self.active_timers.append((trigger_time, machine_ID, event_ID))
+        self.active_timers.append((event_ID, trigger_time))
 
     def check(self):
         #Check whether any timers have triggered and place corresponding events into 
         # event que.
         global current_time
         for i,active_timer in enumerate(self.active_timers):
-            if current_time - active_timer[0] >= 0: # Timer has elapsed.
-                if active_timer[1] == -2: # Hardware debounce timer.
-                    hardware[active_timer[2]]._deactivate_debounce() # Event ID is used to index hardware objects.
+            if current_time - active_timer[1] >= 0: # Timer has elapsed.
+                if active_timer[0] <= 0: # Digital_input debounce timer.
+                    # Event IDs <= 0 are used to index digital inputs for debounce timing.
+                    hw.digital_inputs[-active_timer[0]]._deactivate_debounce() 
                 else:
-                    publish_event((active_timer[1], active_timer[2], current_time),
-                                   output_data = False) # Timer events are not output to serial line.
+                    event_queue.put((active_timer[0], -1)) 
+                    # Timestamp of -1 indictates not to put timer events in to output queue.
                 self.active_timers.pop(i)
 
-    def disarm(self,event_ID, machine_ID):
+    def disarm(self,event_ID):
         # Remove all active timers with specified machine and event IDs.
-        self.active_timers = [t for t in self.active_timers if not
-                              (t[1] == machine_ID and t[2] == event_ID)]
+        self.active_timers = [t for t in self.active_timers if not t[0] == event_ID]
 
 # ----------------------------------------------------------------------------------------
 # Framework variables and objects
@@ -89,8 +87,6 @@ class Timer():
 
 state_machines = []  # List to hold state machines.
 
-hardware = []          # List to hold hardware objects.
- 
 timer = Timer()  # Instantiate timer_array object.
 
 event_queue = Event_queue() # Instantiate event que object.
@@ -98,6 +94,8 @@ event_queue = Event_queue() # Instantiate event que object.
 interrupts_waiting = False # Set true if interrupt waiting to be processed.
 
 data_output_queue = Event_queue() # Queue used for outputing events to serial line.
+
+print_queue = [] # Queue for strings output using print function. 
 
 data_output = True  # Whether to output data to the serial line.
 
@@ -111,44 +109,84 @@ start_time = 0      # Time when run was started.
 
 usb_serial = pyb.USB_VCP()  # USB serial port object.
 
+states = {} # Dictionary of {state_name: state_ID}
+
+events = {} # Dictionary of {event_name: event_ID}
+
+ID2name = {} # Dictionary of {ID: state_or_event_name}
+
 # ----------------------------------------------------------------------------------------
 # Framework functions.
 # ----------------------------------------------------------------------------------------
 
 def register_machine(state_machine):
-        machine_ID = len(state_machines)
-        state_machines.append(state_machine)
-        return machine_ID
+    # Adds state machine states and events to framework states and events dicts,
+    # if IDs are provided, checks these are valid, otherwise asigns valid ID automatically.
+    # No two state machines can have states with the same name.  Two state machines can
+    # share the same event, but the event must have the same ID if ID is specified.
 
-def register_hardware(hwo):
-    hardware_ID = len(hardware)
-    hardware.append(hwo)
-    return hardware_ID
+    next_ID = 1
 
-def publish_event(event, output_data = True):    
-    event_queue.put(event) # Publish to state machines.
-    if output_data and data_output:  # Publish to serial output.
-        data_output_queue.put(event)
+    def assign_IDs(name_list):
+        # Assign lowest available positive integer IDs to list of state or event names.
+        name_dict = {}
+        for name in name_list:
+            if name in events.keys(): # Events shared by multiple state machines have same ID.
+                name_dict[name] = events[name]
+            else:
+                while next_ID in ID2name.keys():
+                    next_ID += 1
+                name_dict[name] = next_ID
+                next_ID += 1
+        return name_dict
+
+    if type(state_machine.smd.states) == list:
+        state_machine.smd.states = assign_IDs(state_machine.smd.states)
+
+    if type(state_machine.smd.events) == list:
+        state_machine.smd.events = assign_IDs(state_machine.smd.events)
+
+    for state_name, ID in state_machine.smd.states.items():
+        assert state_name not in states.keys(), 'State names cannot be repeated.'
+        assert type(ID) == int and ID > 0,      'State and event IDs must be positive integers.'
+        assert ID not in ID2name.keys(),        'Different states or events cannot have same ID'
+
+    for event_name, ID in state_machine.smd.events.items():
+        if event_name in events.keys():
+            assert ID == events[event_name], 'Events with same name must have same ID. ' 
+        else:
+            assert ID not in ID2name.keys(), 'Different states or events cannot have same ID'
+        assert type(ID) == int and ID > 0,   'State and event IDs must be positive integers.'
+
+    states.update(state_machine.smd.states)
+    events.update(state_machine.smd.events)
+    ID2name.update({ID:name for name, ID in list(state_machine.smd.states.items()) +
+                                            list(state_machine.smd.events.items())})
+
+    state_machines.append(state_machine)
 
 def print_IDs():
-    # Print event and state ID for all state machines.
-    for i, state_machine in enumerate(state_machines):
-        print('State machine: ' + str(i) + '\n')
-        state_machine._print_IDs()
+    # Print event and state IDs
+    print('States:')
+    for state_ID in sorted(states.values()):
+        print(ID2name[state_ID] + ': ' + str(state_ID))
+    print('Events:')
+    for event_ID in sorted(events.values()):
+        print(ID2name[event_ID]  + ': ' +  str(event_ID))
 
 def output_data(event):
     # Output data to serial line.
-    event_name = state_machines[event[0]]._ID2name[event[1]]
-    if event_name == 'print': # Print user generated output string.
-        print_string = state_machines[event[0]].print_queue.pop(0)
+    if event[0] == -1: # Print user generated output string.
+        print_string = print_queue.pop(0)
         if type(print_string) != str:
             print_string = repr(print_string)
-        print('{} {} '.format(event[2], event[0]) + print_string)
+        print('{} '.format(event[1]) + print_string)
     else:  # Print event or state change.
         if verbose: # Print event/state name.
-            print('{} {} '.format(event[2], event[0]) + event_name)
+            event_name = ID2name[event[0]]
+            print('{} '.format(event[1]) + event_name)
         else: # Print event/state ID.
-            print('{} {} {}'.format(event[2], event[0], event[1]))
+            print('{} {}'.format(event[1], event[0]))
 
 def _update():
     # Perform framework update functions in order of priority.
@@ -157,19 +195,18 @@ def _update():
     timer.check() 
     if interrupts_waiting:         # Priority 1: Process interrupts.
         interrupts_waiting = False
-        for hwo in hardware:
-            if hwo.interrupt_triggered:
-                hwo._process_interrupt()
+        for digital_input in hw.digital_inputs:
+            if digital_input.interrupt_triggered:
+                digital_input._process_interrupt()
     elif event_queue.available():  # Priority 2: Process events in queue.
         event = event_queue.get()       
-        if event[0] == -1: # Publish event to all machines.
-            for state_machine in state_machines:
-                state_machine._process_event_ID(event[1])
-        else: # Publish event to single machine.
-            state_machines[event[0]]._process_event_ID(event[1])
+        if event[1] >= 0 and data_output: # Not timer event -> place in output queue.
+            data_output_queue.put(event)
+        for state_machine in state_machines:
+            state_machine._process_event(ID2name[event[0]])
     elif usb_serial.any():        # Priority 3: Check for serial input from computer.
         bytes_recieved = usb_serial.readall()
-        if bytes_recieved == b'E': # code to stop run over serial.
+        if bytes_recieved == b'E': # Code to stop run over serial.
             running = False
     elif data_output_queue.available(): # Priority 4: Output data.
         output_data(data_output_queue.get())
@@ -182,8 +219,9 @@ def run(duration = None):
     timer.reset()
     event_queue.reset()
     data_output_queue.reset()
-    for hwo in hardware:
-        hwo.reset()
+    if not hw.hardware_definition:
+        hw.initialise()
+    hw.reset()
     start_time =  pyb.millis()
     current_time = 0
     # Run--------------------------------
@@ -200,7 +238,7 @@ def run(duration = None):
     # Post run---------------------------
     running = False
     for state_machine in state_machines:
-        state_machine.stop()  
+        state_machine._stop()  
     while data_output_queue.available():
         output_data(data_output_queue.get())
 
