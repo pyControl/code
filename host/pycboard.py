@@ -113,7 +113,10 @@ class Pycboard(Pyboard):
         assert os.path.exists(sm_path), 'State machine file not found at: ' + sm_path
         print('Transfering state machine {} to pyboard.'.format(repr(sm_name)))
         self.transfer_file(sm_path)
-        self.exec('import {}'.format(sm_name)) 
+        try:
+            self.exec('import {}'.format(sm_name)) 
+        except PyboardError as e:
+            raise PyboardError('Unable to import state machine definition.', e.args[2])
         self.remove_file(sm_name + '.py')
         self.exec(sm_name + '_instance = sm.State_machine({})'.format(sm_name))
 
@@ -185,10 +188,13 @@ class Pycboard(Pyboard):
     def set_variable(self, sm_name, v_name, v_value, verbose = False):
         '''Set state machine variable when framework not running, some checking is 
         performed to verify variable has not got corrupted during setting.'''
+        if v_value == None:
+            print('Set variable error: cannot set variable to \'None\'.')
+            return
         try:
             eval(repr(v_value))
         except:
-            print('Set variable error, unable to eval(repr(v_value)).')
+            print('Set variable error: unable to eval(repr(v_value)).')
             return
         if self._check_variable_exits(sm_name, v_name):
             attempt_n, prev_set_value = (0, None)
@@ -228,7 +234,7 @@ class Pycboard(Pyboard):
                             return v_value
                     except:
                         if attempt_n == 5:
-                            print('Get variable error; unable to eval string: ' + v_string)
+                            print('Get variable error: unable to eval string: ' + v_string)
             print('Unable to get variable: ' + v_name)
 
     def _check_variable_exits(self, sm_name, v_name):
