@@ -1,5 +1,5 @@
 from pyboard import Pyboard, PyboardError
-from config.config import *
+import config.config as cf
 import os
 import shutil
 import time
@@ -45,6 +45,7 @@ class Pycboard(Pyboard):
         self.exec(djb2_exec)  # define djb2 hashing function.
         self.framework_running = False
         self.data = None
+        self.state_machines = [] # List to hold name of instantiated state machines.
 
     # ------------------------------------------------------------------------------------
     # File transfer
@@ -98,10 +99,10 @@ class Pycboard(Pyboard):
     def load_framework(self):
         'Copy the pyControl framework folder to the board.'
         print('Transfering pyControl framework to pyboard.')
-        self.transfer_folder(pyControl_dir, file_type = 'py')
+        self.transfer_folder(cf.pyControl_dir, file_type = 'py')
         self.reset()
 
-    def load_hardware_definition(self, hwd_name = 'hardware_definition', hwd_dir = config_dir):
+    def load_hardware_definition(self, hwd_name = 'hardware_definition', hwd_dir = cf.config_dir):
         '''Transfer a hardware definition file to pyboard.  Defaults to transfering file
         hardware_definition.py from config folder.  If annother file is specified, that
         file is transferred and given name hardware_definition.py in pyboard filesystem.'''
@@ -123,24 +124,25 @@ class Pycboard(Pyboard):
 
     def setup_state_machine(self, sm_name, sm_dir = None):
         ''' Transfer state machine descriptor file sm_name.py from folder sm_dir
-        (defaults to tasks_dir then examples_dir) to board. Instantiate state machine object as 
-        sm_name_instance.'''
+        (defaults to cf.tasks_dir then cf.examples_dir) to board. Instantiate state machine object
+        as sm_name'''
         self.reset()
         if not sm_dir:
-            if os.path.exists(os.path.join(tasks_dir, sm_name + '.py')):
-                sm_dir = tasks_dir
+            if os.path.exists(os.path.join(cf.tasks_dir, sm_name + '.py')):
+                sm_dir = cf.tasks_dir
             else:
-                sm_dir = examples_dir
+                sm_dir = cf.examples_dir
         sm_path = os.path.join(sm_dir, sm_name + '.py')
         assert os.path.exists(sm_path), 'State machine file not found at: ' + sm_path
         print('Transfering state machine {} to pyboard.'.format(repr(sm_name)))
         self.transfer_file(sm_path)
         try:
-            self.exec('import {}'.format(sm_name)) 
+            self.exec('import ' + sm_name + ' as ' + sm_name + '_smd') 
         except PyboardError as e:
             raise PyboardError('Unable to import state machine definition.', e.args[2])
         self.remove_file(sm_name + '.py')
-        self.exec(sm_name + '_instance = sm.State_machine({})'.format(sm_name))
+        self.exec(sm_name + ' = sm.State_machine({})'.format(sm_name + '_smd'))
+        self.state_machines.append(sm_name)
 
     def print_IDs(self):
         'Print state and event IDs.'
@@ -206,10 +208,12 @@ class Pycboard(Pyboard):
     # Getting and setting variables.
     # ------------------------------------------------------------------------------------
 
-
-    def set_variable(self, sm_name, v_name, v_value, verbose = False):
+    def set_variable(self, v_name, v_value, sm_name = None):
         '''Set state machine variable when framework not running, some checking is 
-        performed to verify variable has not got corrupted during setting.'''
+        performed to verify variable has not got corrupted during setting. If state
+        machine name argument is not provided, default to the first created state machine.'''
+        if not sm_name:
+            sm_name = self.state_machines[0]
         if v_value == None:
             print('Set variable error: cannot set variable to \'None\'.')
             return
@@ -223,8 +227,8 @@ class Pycboard(Pyboard):
             while attempt_n < 5:
                 attempt_n += 1
                 try:
-                    self.exec(sm_name + '_instance.smd.v.' + v_name + '=' + repr(v_value))
-                    set_value = self.get_variable(sm_name, v_name, pre_checked = True)
+                    self.exec(sm_name + '.smd.v.' + v_name + '=' + repr(v_value))
+                    set_value = self.get_variable(v_name, sm_name, pre_checked = True)
                     if set_value == v_value: 
                         return # Variable set exactly.
                     elif ((type(set_value) == float) and 
@@ -238,15 +242,18 @@ class Pycboard(Pyboard):
             print('Unable to set variable: ' + v_name)
 
 
-    def get_variable(self, sm_name, v_name, pre_checked = False):
-        'Get value of state machine variable when framework not running.'
+    def get_variable(self, v_name, sm_name = None, pre_checked = False):
+        '''Get value of state machine variable when framework not running. If state
+        machine name argument is not provided, default to the first created state machine.'''
+        if not sm_name:
+            sm_name = self.state_machines[0]
         if pre_checked or self._check_variable_exits(sm_name, v_name):
             attempt_n, v_string, v_value = (0, None, None)
             while attempt_n < 5:
                 attempt_n += 1
                 try:
                     self.serial.flushInput()
-                    v_string = self.eval(sm_name + '_instance.smd.v.' + v_name).decode()
+                    v_string = self.eval(sm_name + '.smd.v.' + v_name).decode()
                 except PyboardError as e:
                     print(e) 
                 if v_string is not None:
@@ -266,13 +273,13 @@ class Pycboard(Pyboard):
             attempt_n += 1
             if not sm_exists: 
                 try:
-                    self.exec(sm_name + '_instance')
+                    self.exec(sm_name)
                     sm_exists = True
                 except PyboardError as e:
                     err_message = e
             else:
                 try: 
-                    self.exec(sm_name + '_instance.smd.v.' + v_name)
+                    self.exec(sm_name + '.smd.v.' + v_name)
                     return True # State machine and variable both exist.
                 except PyboardError as e: 
                     err_message = e
@@ -290,17 +297,17 @@ class Pycboard(Pyboard):
     def open_data_file(self, file_name, sub_dir = None):
         'Open a file to write pyControl data to.'
         if sub_dir:
-            d_dir = os.path.join(data_dir, sub_dir)
+            d_dir = os.path.join(cf.data_dir, sub_dir)
         else:
-            d_dir = data_dir
+            d_dir = cf.data_dir
         if not os.path.exists(d_dir):
             os.mkdir(d_dir)
         self.file_path = os.path.join(d_dir, file_name)
         self.data_file = open(self.file_path, 'a+', newline = '\n')
 
-    def close_data_file(self, copy_to_transfer = False):
+    def close_data_file(self):
         self.data_file.close()
-        if copy_to_transfer and transfer_dir: # Copy data file to transfer folder.
-            shutil.copy2(self.file_path, transfer_dir)
+        if cf.transfer_dir: # Copy data file to transfer folder.
+            shutil.copy2(self.file_path, cf.transfer_dir)
         self.data_file = None
         self.file_path = None

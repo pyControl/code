@@ -19,6 +19,7 @@ class Experiment:
       self.hardware = hardware
       self.set_variables = set_variables
       self.persistent_variables = persistent_variables
+      self.n_subjects = len(self.subjects.keys())
       if folder:
         self.folder = folder
       else:
