@@ -28,21 +28,21 @@ class Pycboard(Pyboard):
     and pyControl operations.
     '''
 
-    def __init__(self, serial_device, ID_number = None, baudrate=115200):
+    def __init__(self, serial_device, number = None, baudrate=115200):
         super().__init__(serial_device, baudrate=115200)
-        try:
-            self.reset() 
-        except PyboardError:
-            self.load_framework()
+        self.reset() 
         self.unique_ID = eval(self.eval('pyb.unique_id()').decode())
         self.data_file = None
-        self.ID_number = ID_number
+        self.number = number
 
     def reset(self):
         'Enter raw repl (soft reboots pyboard), import modules.'
-        self.enter_raw_repl()
-        self.exec('from pyControl import *;import os')
+        self.enter_raw_repl() # Soft resets pyboard.
         self.exec(djb2_exec)  # define djb2 hashing function.
+        try:
+            self.exec('from pyControl import *;import os')
+        except PyboardError:
+            self.load_framework()
         self.framework_running = False
         self.data = None
         self.state_machines = [] # List to hold name of instantiated state machines.
@@ -65,7 +65,7 @@ class Pycboard(Pyboard):
             target_path = os.path.split(file_path)[-1]
         with open(file_path) as transfer_file:
             file_contents = transfer_file.read()  
-        while not djb2(file_contents) == self.get_file_hash(target_path):
+        while not (djb2(file_contents) == self.get_file_hash(target_path)):
             self.write_file(target_path, file_contents) 
 
     def get_file_hash(self, target_path):
@@ -74,7 +74,7 @@ class Pycboard(Pyboard):
             self.exec("tmpfile = open('{}','r')".format(target_path))
             file_hash = int(self.eval('djb2(tmpfile.read())').decode())
             self.exec('tmpfile.close()')
-        except PyboardError: # File does not exist.
+        except PyboardError as e: # File does not exist.
             return -1  
         return file_hash
 
@@ -98,7 +98,7 @@ class Pycboard(Pyboard):
 
     def load_framework(self):
         'Copy the pyControl framework folder to the board.'
-        print('Transfering pyControl framework to pyboard.')
+        print('Transfering pyControl framework to pyboard.', end = '')
         self.transfer_folder(cf.pyControl_dir, file_type = 'py')
         self.reset()
 
@@ -179,8 +179,8 @@ class Pycboard(Pyboard):
                 break
             elif self.data.endswith(b'\n'):  # End of data line.
                 data_string = self.data.decode() 
-                if self.ID_number:
-                    print('Box {}: '.format(self.ID_number), end = '')
+                if self.number:
+                    print('Box {}: '.format(self.number), end = '')
                 print(data_string[:-1]) 
                 if self.data_file:
                     if data_string.split(' ')[1][0] != '#': # Output not a coment, write to file.

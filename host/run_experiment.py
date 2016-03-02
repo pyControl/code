@@ -11,7 +11,6 @@ import os
 # Helper functions.
 # ----------------------------------------------------------------------------------------
 
-
 def config_menu():
     print('\n\nOpening connection to all boxes listed in config.py.\n\n')
     boxes = Boxes(cf.box_serials.keys())
@@ -139,7 +138,7 @@ if exp.persistent_variables:
         pv_dict = {}
         for v_name in exp.persistent_variables:
             pv_dict[v_name] = boxes.boxes[box_n].get_variable(v_name, exp.task)
-        subject_pv_path = os.path.join(pv_folder, '{}.txt'.format(exp.subjects[box_n]))
+        subject_pv_path = os.path.join(pv_folder, '{}.txt'.format(subject_ID))
         with open(subject_pv_path, 'w') as pv_file:
             pv_file.write(pformat(pv_dict))
 
