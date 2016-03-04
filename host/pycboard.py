@@ -1,11 +1,17 @@
 from pyboard import Pyboard, PyboardError
-import config.config as cf
 import os
 import shutil
 import time
-from copy import deepcopy
+try:
+    import config.config as cf
+except ImportError: # User created config file not present.
+    import example_config.config as cf
+   
+# ----------------------------------------------------------------------------------------
+#  # djb2 hashing algorithm used to check file transfer integrity.
+# ----------------------------------------------------------------------------------------
 
-def djb2(string):  # djb2 hashing algorithm used to check file transfer integrity.
+def djb2(string):  
     h = 5381
     for c in string:
         h = ((h * 33) + ord(c)) & 0xFFFFFFFF
@@ -209,48 +215,36 @@ class Pycboard(Pyboard):
     # ------------------------------------------------------------------------------------
 
     def set_variable(self, v_name, v_value, sm_name = None):
-        '''Set state machine variable when framework not running, some checking is 
-        performed to verify variable has not got corrupted during setting. If state
-        machine name argument is not provided, default to the first created state machine.'''
-        if not sm_name:
-            sm_name = self.state_machines[0]
+        '''Set state machine variable when framework not running, check  variable
+        has not got corrupted during setting. If state machine name argument is not
+        provided, default to the first created state machine.'''
+        if not sm_name: sm_name = self.state_machines[0]
+        if not self._check_variable_exits(sm_name, v_name): return
         if v_value == None:
-            print('Set variable error: cannot set variable to \'None\'.')
+            print('Set variable aborted: value \'None\' not allowed.')
             return
         try:
             eval(repr(v_value))
         except:
-            print('Set variable error: unable to eval(repr(v_value)).')
+            print('Set variable aborted: invalid variable value: ' + repr(v_value))
             return
-        if self._check_variable_exits(sm_name, v_name):
-            attempt_n, prev_set_value = (0, None)
-            while attempt_n < 5:
-                attempt_n += 1
-                try:
-                    self.exec(sm_name + '.smd.v.' + v_name + '=' + repr(v_value))
-                    set_value = self.get_variable(v_name, sm_name, pre_checked = True)
-                    if set_value == v_value: 
-                        return # Variable set exactly.
-                    elif ((type(set_value) == float) and 
-                          ((abs(set_value - v_value) / v_value) < 0.01)):
-                        return # Variable set within floating point accuracy.
-                    elif (set_value is not None) and (prev_set_value == set_value):  
-                        return # Variable set consistently twice.
-                    prev_set_value = deepcopy(set_value)  
-                except PyboardError as e:
-                    print(e) 
-            print('Unable to set variable: ' + v_name)
-
+        for attempt_n in range(5):
+            try:
+                self.exec(sm_name + '.smd.v.' + v_name + '=' + repr(v_value))
+            except PyboardError as e:
+                print(e) 
+            set_value = self.get_variable(v_name, sm_name, pre_checked = True)
+            if self._approx_equal(set_value, v_value):
+                return
+        print('Set variable error: could not set variable: ' + v_name)
 
     def get_variable(self, v_name, sm_name = None, pre_checked = False):
         '''Get value of state machine variable when framework not running. If state
         machine name argument is not provided, default to the first created state machine.'''
-        if not sm_name:
-            sm_name = self.state_machines[0]
-        if pre_checked or self._check_variable_exits(sm_name, v_name):
+        if not sm_name: sm_name = self.state_machines[0]
+        if pre_checked or self._check_variable_exits(sm_name, v_name, op = 'Get'):
             attempt_n, v_string, v_value = (0, None, None)
-            while attempt_n < 5:
-                attempt_n += 1
+            for attempt_n in range(5):
                 try:
                     self.serial.flushInput()
                     v_string = self.eval(sm_name + '.smd.v.' + v_name).decode()
@@ -264,32 +258,44 @@ class Pycboard(Pyboard):
                     except:
                         if attempt_n == 5:
                             print('Get variable error: unable to eval string: ' + v_string)
-            print('Unable to get variable: ' + v_name)
+            print('Get variable error: could not get variable: ' + v_name)
 
-    def _check_variable_exits(self, sm_name, v_name):
-        attempt_n = 0
-        sm_exists = False
-        while attempt_n < 5:
-            attempt_n += 1
-            if not sm_exists: 
-                try:
-                    self.exec(sm_name)
-                    sm_exists = True
-                except PyboardError as e:
-                    err_message = e
-            else:
+    def _check_variable_exits(self, sm_name, v_name, op = 'Set'):
+        sm_found = False
+        for attempt_n in range(5):
+            if sm_found: # Check if variable exists.
                 try: 
                     self.exec(sm_name + '.smd.v.' + v_name)
-                    return True # State machine and variable both exist.
-                except PyboardError as e: 
-                    err_message = e
-        if sm_exists:
-            print('Variable not set: invalid variable name.\n')
+                    return True
+                except PyboardError:
+                    pass
+            else: # Check if state machine exists. 
+                try:
+                    self.exec(sm_name)
+                    sm_found = True
+                except PyboardError:
+                    pass
+        if sm_found:
+            print(op + ' variable aborted: invalid variable name.\n')
         else:
-            print('Variable not set: invalid state machine name.\n')
-        print('Pyboard error message: \n\n' + str(err_message))
+            print(op + ' variable aborted: invalid state machine name.\n')
         return False
 
+    def _approx_equal(self, v, t): # Check for equality given floating point rounding.
+        if v == t: 
+            return True
+        elif ((type(t) == float) or (type(v) == float) 
+                    and ((abs(t - v) / max(t,v,0.01) < 0.0001))):
+            return True # Variable set within floating point accuracy.
+        elif type(t) in (list, tuple) and all([_approx_equal(vi, ti) 
+                                               for vi, ti in zip(v,t)]):
+            return True
+        elif type(t) == dict and all([_approx_equal(vi, ti)
+                                      for vi, ti in zip(v.items(),t.items())]):
+            return True
+        else:
+            return False
+            
     # ------------------------------------------------------------------------------------
     # Data logging
     # ------------------------------------------------------------------------------------
