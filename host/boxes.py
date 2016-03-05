@@ -9,6 +9,7 @@ class Boxes():
 
     def __init__(self, box_numbers): 
         self.boxes = {}
+        self.box_numbers = sorted(box_numbers)
         for box_n in box_numbers:
             print('Opening connection to box {}'.format(box_n))
             self.boxes[box_n] = Pycboard(cf.box_serials[box_n], box_n)
@@ -24,10 +25,9 @@ class Boxes():
             box.setup_state_machine(sm_name, sm_dir)
 
     def start_framework(self, dur = None, verbose = False, data_output = True, ISI = 0.1):
-        for box in self.boxes.values():
-            box.start_framework(dur, verbose, data_output)
-            if ISI:sleep(ISI)  # Stagger start times by ISI seconds.   
-            box.process_data()       
+        for box_n in self.box_numbers:
+            self.boxes[box_n].start_framework(dur, verbose, data_output)
+            if ISI:sleep(ISI)  # Stagger start times by ISI seconds.       
 
     def load_framework(self):
         for box in self.boxes.values():
@@ -68,7 +68,7 @@ class Boxes():
          the variable on all boxes is set to v_value.
         '''
         if type(v_value) == dict and set(self.boxes.keys()) <= set(v_value.keys()): 
-            for box_n in self.boxes.keys():
+            for box_n in self.box_numbers:
                 self.boxes[box_n].set_variable(v_name, v_value[box_n], sm_name)
         else:
             for box in self.boxes.values():
@@ -78,12 +78,12 @@ class Boxes():
         '''Get value of specified variable from all boxes and return as dict with 
         box numbers as keys.'''
         v_values = {}
-        for box_n in self.boxes.keys():
+        for box_n in self.box_numbers:
             v_values[box_n] = self.boxes[box_n].get_variable(v_name, sm_name)
         return v_values
 
     def open_data_file(self, file_paths):
-        for box_n in self.boxes.keys():
+        for box_n in self.box_numbers:
             self.boxes[box_n].open_data_file(file_paths[box_n])
 
     def close_data_file(self):
@@ -114,7 +114,7 @@ class Boxes():
             return True          
         print('\nChecking hardware IDs...  ', end = '')
         IDs_OK = True
-        for box_n in self.boxes.keys():
+        for box_n in self.box_numbers:
             if unique_IDs[box_n] != self.unique_IDs[box_n]:
                 print('\nBox number {} does not match saved unique ID.'.format(box_n))
                 IDs_OK = False

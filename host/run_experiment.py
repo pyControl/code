@@ -5,6 +5,7 @@ from boxes import Boxes
 import datetime
 from pprint import pformat
 from sys import exit
+import shutil
 import os
 
 # ----------------------------------------------------------------------------------------

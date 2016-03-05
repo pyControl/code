@@ -1,6 +1,5 @@
 from pyboard import Pyboard, PyboardError
 import os
-import shutil
 import time
 
 # ----------------------------------------------------------------------------------------
