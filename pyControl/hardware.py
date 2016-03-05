@@ -24,11 +24,10 @@ def initialise(hwd = None):
     if not hardware_definition:
         try:
             import hardware_definition
+            for state_machine in fw.state_machines:
+                state_machine.smd.hw = hardware_definition
         except ImportError:
             hardware_definition = None
-            print('Unable to import hardware definition.')
-    for state_machine in fw.state_machines:
-        state_machine.smd.hw = hardware_definition
     digital_inputs = [digital_input for digital_input in digital_inputs
                       if digital_input._set_event_IDs()]
 

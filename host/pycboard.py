@@ -120,6 +120,10 @@ class Pycboard(Pyboard):
             print('Transfering hardware definition to pyboard.')
             self.transfer_file(hwd_path, target_path = 'hardware_definition.py')
             self.reset()
+            try:
+                self.exec('import hardware_definition')
+            except PyboardError as e:
+                print('Error: Unable to import hardware definition.\n' + e.args[2].decode())
         else:
             print('Hardware definition file not found.')    
 
@@ -131,10 +135,10 @@ class Pycboard(Pyboard):
     # pyControl operations.
     # ------------------------------------------------------------------------------------
 
-    def setup_state_machine(self, sm_name, sm_dir = None):
+    def setup_state_machine(self, sm_name, sm_dir = None, raise_exception = False):
         ''' Transfer state machine descriptor file sm_name.py from folder sm_dir
-        (defaults to tasks_dir then examples_dir) to board. Instantiate state machine object
-        as sm_name'''
+        (defaults to tasks_dir then examples_dir) to board. Instantiate state machine
+        object as sm_name'''
         self.reset()
         if not sm_dir:
             if os.path.exists(os.path.join(tasks_dir, sm_name + '.py')):
@@ -146,12 +150,13 @@ class Pycboard(Pyboard):
         print('Transfering state machine {} to pyboard.'.format(repr(sm_name)))
         self.transfer_file(sm_path)
         try:
-            self.exec('import ' + sm_name + ' as ' + sm_name + '_smd') 
+            self.exec('import {} as smd'.format(sm_name))
+            self.exec(sm_name + ' = sm.State_machine(smd)')
+            self.state_machines.append(sm_name)  
         except PyboardError as e:
-            raise PyboardError('Unable to import state machine definition.', e.args[2])
-        self.remove_file(sm_name + '.py')
-        self.exec(sm_name + ' = sm.State_machine({})'.format(sm_name + '_smd'))
-        self.state_machines.append(sm_name)
+            print('Error: Unable to setup state machine.\n' + e.args[2].decode())
+            if raise_exception:
+                raise PyboardError('Unable to setup state machine.', e.args[2])
 
     def print_IDs(self):
         'Print state and event IDs.'
@@ -184,7 +189,7 @@ class Pycboard(Pyboard):
                 self.framework_running = False
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
                 if len(data_err) > 2:
-                    print(data_err.decode())
+                    print(data_err[:-3].decode())
                 break
             elif self.data.endswith(b'\n'):  # End of data line.
                 data_string = self.data.decode() 
