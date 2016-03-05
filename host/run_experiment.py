@@ -174,6 +174,6 @@ if transfer_folder:
     if not os.path.exists(transfer_folder):
         os.mkdir(transfer_folder)
     for file_path in file_paths.values():
-        shutil.copy2(self.file_path, transfer_folder)
+        shutil.copy2(file_path, transfer_folder)
 
 input('\nHit any key to close program.')
