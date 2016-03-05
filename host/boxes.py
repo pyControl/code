@@ -2,10 +2,10 @@ from pycboard import Pycboard
 from pprint import pformat
 import os
 import config.config as cf
+from time import sleep
 
 class Boxes():
-    '''Provides functionallity for doing operations on a group of Pycboards.
-    Most methods are a thin wrapper around the corresponding pycboard method.'''
+    'Provides functionallity for doing operations on a group of Pycboards.'
 
     def __init__(self, box_numbers): 
         self.boxes = {}
@@ -23,17 +23,19 @@ class Boxes():
         for box in self.boxes.values():
             box.setup_state_machine(sm_name, sm_dir)
 
-    def start_framework(self, dur = None, verbose = False, data_output = True):
+    def start_framework(self, dur = None, verbose = False, data_output = True, ISI = 0.1):
         for box in self.boxes.values():
-            box.start_framework(dur, verbose, data_output)        
+            box.start_framework(dur, verbose, data_output)
+            if ISI:sleep(ISI)  # Stagger start times by ISI seconds.   
+            box.process_data()       
 
     def load_framework(self):
         for box in self.boxes.values():
             box.load_framework()
 
-    def load_hardware_definition(self, hwd_name = 'hardware_definition', hwd_dir = cf.config_dir):
+    def load_hardware_definition(self):
         for box in self.boxes.values():
-            box.load_hardware_definition(hwd_name, hwd_dir)            
+            box.load_hardware_definition()            
 
     def process_data(self):
         for box in self.boxes.values():
@@ -80,9 +82,9 @@ class Boxes():
             v_values[box_n] = self.boxes[box_n].get_variable(v_name, sm_name)
         return v_values
 
-    def open_data_file(self, file_names, sub_dir = None):
+    def open_data_file(self, file_paths):
         for box_n in self.boxes.keys():
-            self.boxes[box_n].open_data_file(file_names[box_n], sub_dir)
+            self.boxes[box_n].open_data_file(file_paths[box_n])
 
     def close_data_file(self):
         for box in self.boxes.values():
@@ -103,7 +105,7 @@ class Boxes():
 
     def check_unique_IDs(self):
         '''Check whether hardware unique IDs of pyboards match those saved in 
-        cf.hardware_unique_IDs, if file not available no checking is performed.'''
+        config/hardware_unique_IDs.txt, if file not available no checking is performed.'''
         try:
             with open(os.path.join('config', 'hardware_unique_IDs.txt'), 'r') as id_file:        
                 unique_IDs = eval(id_file.read())

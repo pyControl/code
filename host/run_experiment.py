@@ -63,13 +63,14 @@ while selection == 0:
 
 exp = experiments[selection - 1] # The selected experiment.
 
-boxes_to_use = list(exp.subjects.keys())
-
-file_names = {box_n: exp.subjects[box_n] + date + '.txt' for box_n in boxes_to_use}
+boxes_in_use = sorted(list(exp.subjects.keys()))
+data_dir     = os.path.join(cf.data_dir, exp.folder)
+file_paths   = {box_n: os.path.join(data_dir, exp.subjects[box_n] + date + '.txt')
+                       for box_n in boxes_in_use}
 
 print('')
 
-boxes = Boxes(boxes_to_use)
+boxes = Boxes(boxes_in_use)
 
 if not boxes.check_unique_IDs():
     input('Hardware ID check failed, press any key to close program.')
@@ -78,10 +79,8 @@ if not boxes.check_unique_IDs():
 
 if input('\nRun hardware test? (y / n) ') == 'y':
     print('\nUploading hardware test.\n')
-    if not hasattr(cf, 'hardware_test'):
-        cf.hardware_test = 'hardware_test' # default name of hardware test program.
     boxes.setup_state_machine(cf.hardware_test)
-    if hasattr(cf, 'hardware_test_display_output') and cf.hardware_test_display_output:
+    if cf.hardware_test_display_output:
         print('\nPress CTRL + C when finished with hardware test.\n')
         boxes.run_framework()
     else: 
@@ -102,7 +101,7 @@ if exp.set_variables: # Set state machine variables from experiment specificatio
 
 if exp.persistent_variables:
     print('\nPersistent variables ', end = '')
-    pv_folder = os.path.join(cf.data_dir, exp.folder, 'persistent_variables')
+    pv_folder = os.path.join(data_dir, 'persistent_variables')
     set_pv = [] # Subjects whose persistant variables have been set.
     for box_n, subject_ID in exp.subjects.items():
         subject_pv_path = os.path.join(pv_folder, '{}.txt'.format(subject_ID))
@@ -119,7 +118,9 @@ if exp.persistent_variables:
     else:
         print('not found for subjects: {}'.format(set(exp.subjects.values()) - set(set_pv)))
 
-boxes.open_data_file(file_names, sub_dir = exp.folder)
+if not os.path.exists(data_dir):
+    os.mkdir(data_dir)
+boxes.open_data_file(file_paths)
 boxes.print_IDs() # Print state and event information to file.
 
 input('\nHit enter to start exp. To quit at any time, hit ctrl + c.\n\n')
@@ -142,6 +143,36 @@ if exp.persistent_variables:
         with open(subject_pv_path, 'w') as pv_file:
             pv_file.write(pformat(pv_dict))
 
+if exp.summary_data:
+    try:
+        import pyperclip
+        print('\nCopying summary data to clipboard.')
+        spacing = 1 # Number of lines between summary data lines.
+        if type(exp.summary_data[-1]) == int: # Use user defined spacing.
+            spacing = exp.summary_data[-1]
+            exp.summary_data = exp.summary_data[:-1]
+        summary_string = ''
+        for v_name in exp.summary_data:
+            v_values = [str(boxes.boxes[box_n].get_variable(v_name, exp.task)) + '\n'
+                        for box_n in boxes_in_use]   
+            v_values[0] = v_values[0].replace('\n','\t{}\n'.format(v_name.split('.')[-1]))
+            v_values.append('\n' * spacing) # Add empty lines between variables.
+            summary_string += ''.join(v_values) 
+        pyperclip.copy(summary_string.strip()) # Copy to clipboard.
+    except ImportError:
+        print('Summary data not copied to clipboad as pyperclip not installed')
+
 boxes.close()
+
+if exp.transfer_folder: 
+    transfer_folder = exp.transfer_folder
+else:
+    transfer_folder = cf.transfer_dir
+if transfer_folder:
+    print('\nCopying files to transfer folder.')
+    if not os.path.exists(transfer_folder):
+        os.mkdir(transfer_folder)
+    for file_path in file_paths.values():
+        shutil.copy2(self.file_path, transfer_folder)
 
 input('\nHit any key to close program.')

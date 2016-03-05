@@ -2,11 +2,16 @@ from pyboard import Pyboard, PyboardError
 import os
 import shutil
 import time
-try:
-    import config.config as cf
-except ImportError: # User created config file not present.
-    import example_config.config as cf
-   
+
+# ----------------------------------------------------------------------------------------
+#  Default paths.
+# ----------------------------------------------------------------------------------------
+
+framework_dir = os.path.join('..', 'pyControl')
+examples_dir  = os.path.join('..', 'examples')
+tasks_dir     = os.path.join('..', 'tasks')
+hwd_path      = os.path.join('.', 'config', 'hardware_definition.py')
+
 # ----------------------------------------------------------------------------------------
 #  # djb2 hashing algorithm used to check file transfer integrity.
 # ----------------------------------------------------------------------------------------
@@ -102,23 +107,22 @@ class Pycboard(Pyboard):
             target_path = target_folder + '/' + f
             self.transfer_file(file_path, target_path)
 
-    def load_framework(self):
+    def load_framework(self, framework_dir = framework_dir):
         'Copy the pyControl framework folder to the board.'
         print('Transfering pyControl framework to pyboard.', end = '')
-        self.transfer_folder(cf.pyControl_dir, file_type = 'py')
+        self.transfer_folder(framework_dir, file_type = 'py')
         self.reset()
 
-    def load_hardware_definition(self, hwd_name = 'hardware_definition', hwd_dir = cf.config_dir):
-        '''Transfer a hardware definition file to pyboard.  Defaults to transfering file
-        hardware_definition.py from config folder.  If annother file is specified, that
-        file is transferred and given name hardware_definition.py in pyboard filesystem.'''
-        hwd_path = os.path.join(hwd_dir, hwd_name + '.py')
+    def load_hardware_definition(self, hwd_path = hwd_path):
+        '''Transfer a hardware definition file to pyboard.  Defaults to transfering 
+        file hardware_definition.py from config folder.  File is renamed 
+        hardware_definition.py in pyboard filesystem.'''
         if os.path.exists(hwd_path):
             print('Transfering hardware definition to pyboard.')
             self.transfer_file(hwd_path, target_path = 'hardware_definition.py')
             self.reset()
         else:
-            print('Hardware definition file ' + hwd_name + '.py not found.')    
+            print('Hardware definition file not found.')    
 
     def remove_file(self, file_path):
         'Remove a file from the pyboard.'
@@ -130,14 +134,14 @@ class Pycboard(Pyboard):
 
     def setup_state_machine(self, sm_name, sm_dir = None):
         ''' Transfer state machine descriptor file sm_name.py from folder sm_dir
-        (defaults to cf.tasks_dir then cf.examples_dir) to board. Instantiate state machine object
+        (defaults to tasks_dir then examples_dir) to board. Instantiate state machine object
         as sm_name'''
         self.reset()
         if not sm_dir:
-            if os.path.exists(os.path.join(cf.tasks_dir, sm_name + '.py')):
-                sm_dir = cf.tasks_dir
+            if os.path.exists(os.path.join(tasks_dir, sm_name + '.py')):
+                sm_dir = tasks_dir
             else:
-                sm_dir = cf.examples_dir
+                sm_dir = examples_dir
         sm_path = os.path.join(sm_dir, sm_name + '.py')
         assert os.path.exists(sm_path), 'State machine file not found at: ' + sm_path
         print('Transfering state machine {} to pyboard.'.format(repr(sm_name)))
@@ -215,9 +219,9 @@ class Pycboard(Pyboard):
     # ------------------------------------------------------------------------------------
 
     def set_variable(self, v_name, v_value, sm_name = None):
-        '''Set state machine variable when framework not running, check  variable
-        has not got corrupted during setting. If state machine name argument is not
-        provided, default to the first created state machine.'''
+        '''Set state machine variable with check that variable has not got corrupted 
+        during transfer. If state machine name argument is not provided, default to
+        the first instantiated state machine.'''
         if not sm_name: sm_name = self.state_machines[0]
         if not self._check_variable_exits(sm_name, v_name): return
         if v_value == None:
@@ -228,64 +232,63 @@ class Pycboard(Pyboard):
         except:
             print('Set variable aborted: invalid variable value: ' + repr(v_value))
             return
-        for attempt_n in range(5):
+        for i in range(10):
             try:
                 self.exec(sm_name + '.smd.v.' + v_name + '=' + repr(v_value))
-            except PyboardError as e:
-                print(e) 
+            except:
+                pass 
             set_value = self.get_variable(v_name, sm_name, pre_checked = True)
             if self._approx_equal(set_value, v_value):
                 return
         print('Set variable error: could not set variable: ' + v_name)
 
     def get_variable(self, v_name, sm_name = None, pre_checked = False):
-        '''Get value of state machine variable when framework not running. If state
-        machine name argument is not provided, default to the first created state machine.'''
+        '''Get value of state machine variable.  To minimise risk of variable
+        corruption during transfer, process is repeated until two consistent
+        values are obtained. If state machine name argument is not provided, 
+        default to the first instantiated  state machine.'''
         if not sm_name: sm_name = self.state_machines[0]
         if pre_checked or self._check_variable_exits(sm_name, v_name, op = 'Get'):
-            attempt_n, v_string, v_value = (0, None, None)
-            for attempt_n in range(5):
+            v_value = None
+            for i in range(10):
+                prev_value = v_value
                 try:
                     self.serial.flushInput()
-                    v_string = self.eval(sm_name + '.smd.v.' + v_name).decode()
-                except PyboardError as e:
-                    print(e) 
-                if v_string is not None:
-                    try:
-                        v_value = eval(v_string)
-                        if v_value is not None:
-                            return v_value
-                    except:
-                        if attempt_n == 5:
-                            print('Get variable error: unable to eval string: ' + v_string)
-            print('Get variable error: could not get variable: ' + v_name)
+                    v_value = eval(self.eval(sm_name + '.smd.v.' + v_name).decode())
+                except:
+                    pass
+                if v_value != None and prev_value == v_value:
+                    return v_value
+        print('Get variable error: could not get variable: ' + v_name)
 
     def _check_variable_exits(self, sm_name, v_name, op = 'Set'):
+        'Check if specified state machine has variable with specified name.'
         sm_found = False
-        for attempt_n in range(5):
-            if sm_found: # Check if variable exists.
+        for i in range(10):
+            if not sm_found: # Check if state machine exists.
+                try: 
+                    self.exec(sm_name)
+                    sm_found = True
+                except PyboardError:
+                    pass
+            else: # Check if variable exists.
                 try: 
                     self.exec(sm_name + '.smd.v.' + v_name)
                     return True
                 except PyboardError:
                     pass
-            else: # Check if state machine exists. 
-                try:
-                    self.exec(sm_name)
-                    sm_found = True
-                except PyboardError:
-                    pass
         if sm_found:
-            print(op + ' variable aborted: invalid variable name.\n')
+            print(op + ' variable aborted: invalid variable name:' + v_name)
         else:
-            print(op + ' variable aborted: invalid state machine name.\n')
+            print(op + ' variable aborted: invalid state machine name:' + sm_name)
         return False
 
-    def _approx_equal(self, v, t): # Check for equality given floating point rounding.
+    def _approx_equal(self, v, t):
+        'Check two variables are the same up to floating point rounding errors.'
         if v == t: 
             return True
-        elif ((type(t) == float) or (type(v) == float) 
-                    and ((abs(t - v) / max(t,v,0.01) < 0.0001))):
+        elif (((type(t) == float) or (type(v) == float)) 
+                and (abs(t - v) < (1e-5 + 1e-3 * abs(v)))):
             return True # Variable set within floating point accuracy.
         elif type(t) in (list, tuple) and all([_approx_equal(vi, ti) 
                                                for vi, ti in zip(v,t)]):
@@ -300,20 +303,12 @@ class Pycboard(Pyboard):
     # Data logging
     # ------------------------------------------------------------------------------------
 
-    def open_data_file(self, file_name, sub_dir = None):
+    def open_data_file(self, file_path):
         'Open a file to write pyControl data to.'
-        if sub_dir:
-            d_dir = os.path.join(cf.data_dir, sub_dir)
-        else:
-            d_dir = cf.data_dir
-        if not os.path.exists(d_dir):
-            os.mkdir(d_dir)
-        self.file_path = os.path.join(d_dir, file_name)
+        self.file_path = file_path
         self.data_file = open(self.file_path, 'a+', newline = '\n')
 
     def close_data_file(self):
         self.data_file.close()
-        if cf.transfer_dir: # Copy data file to transfer folder.
-            shutil.copy2(self.file_path, cf.transfer_dir)
         self.data_file = None
         self.file_path = None
