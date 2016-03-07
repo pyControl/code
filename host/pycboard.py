@@ -1,6 +1,7 @@
 from pyboard import Pyboard, PyboardError
 import os
 import time
+import inspect
 
 # ----------------------------------------------------------------------------------------
 #  Default paths.
@@ -12,34 +13,39 @@ tasks_dir     = os.path.join('..', 'tasks')
 hwd_path      = os.path.join('.', 'config', 'hardware_definition.py')
 
 # ----------------------------------------------------------------------------------------
-#  # djb2 hashing algorithm used to check file transfer integrity.
+#  Helper functions.
 # ----------------------------------------------------------------------------------------
 
-def djb2(string):  
-    h = 5381
-    for c in string:
-        h = ((h * 33) + ord(c)) & 0xFFFFFFFF
-    return h
-
-djb2_exec = ''' 
+# djb2 hash algorithm used on pyboard and host to check integrity of transfered files.
 def djb2(string):
     h = 5381
     for c in string:
         h = ((h * 33) + ord(c)) & 0xFFFFFFFF
     return h
-''' # String used to define djb2 function on pyboard.
+
+# Function used on pyboard to remove directories or files.
+def rm_dir_or_file(i):
+    try:
+        os.remove(i)
+    except OSError:
+        os.chdir(i)
+        for j in os.listdir():
+            rm_dir_or_file(j)
+        os.chdir('..')
+        os.rmdir(i)
 
 # ----------------------------------------------------------------------------------------
 #  Pycboard class.
 # ----------------------------------------------------------------------------------------
 
 class Pycboard(Pyboard):
-    '''Pycontrol board inherits from Pyboard and adds functionallity for file transfer
+    '''Pycontrol board inherits from Pyboard and adds functionality for file transfer
     and pyControl operations.
     '''
 
-    def __init__(self, serial_device, number = None, baudrate=115200):
-        super().__init__(serial_device, baudrate=115200)
+    def __init__(self, serial_port, number = None, baudrate=115200):
+        self.serial_port = serial_port
+        super().__init__(self.serial_port, baudrate=115200)
         self.reset() 
         self.unique_ID = eval(self.eval('pyb.unique_id()').decode())
         self.data_file = None
@@ -48,17 +54,30 @@ class Pycboard(Pyboard):
     def reset(self):
         'Enter raw repl (soft reboots pyboard), import modules.'
         self.enter_raw_repl() # Soft resets pyboard.
-        self.exec(djb2_exec)  # define djb2 hashing function.
+        self.exec(inspect.getsource(djb2))  # define djb2 hashing function.
+        self.exec('import os; import gc')
         try:
-            self.exec('from pyControl import *;import os')
+            self.exec('from pyControl import *')
         except PyboardError:
             self.load_framework()
         self.framework_running = False
         self.data = None
         self.state_machines = [] # List to hold name of instantiated state machines.
 
+    def gc_collect(self): 
+        'Run a garbage collection on pyboard to free up memory.'
+        self.eval('gc.collect()')
+
+    def hard_reset(self):
+        print('Hard resetting pyboard.')
+        self.serial.write(b'pyb.hard_reset()')
+        self.close()     # Close serial connection.
+        time.sleep(0.1)  # Wait 100 ms. 
+        super().__init__(self.serial_port, baudrate=115200) # Reopen serial conection.
+        self.reset()
+
     # ------------------------------------------------------------------------------------
-    # File transfer
+    # Pyboard filesystem operations.
     # ------------------------------------------------------------------------------------
 
     def write_file(self, target_path, data):
@@ -68,15 +87,7 @@ class Pycboard(Pyboard):
         self.exec("tmpfile = open('{}','w')".format(target_path))
         self.exec("tmpfile.write({data})".format(data=repr(data)))
         self.exec('tmpfile.close()')
-
-    def transfer_file(self, file_path, target_path = None):
-        '''Copy a file into the root directory of the pyboard.'''
-        if not target_path:
-            target_path = os.path.split(file_path)[-1]
-        with open(file_path) as transfer_file:
-            file_contents = transfer_file.read()  
-        while not (djb2(file_contents) == self.get_file_hash(target_path)):
-            self.write_file(target_path, file_contents) 
+        self.gc_collect()
 
     def get_file_hash(self, target_path):
         'Get the djb2 hash of a file on the pyboard.'
@@ -84,9 +95,20 @@ class Pycboard(Pyboard):
             self.exec("tmpfile = open('{}','r')".format(target_path))
             file_hash = int(self.eval('djb2(tmpfile.read())').decode())
             self.exec('tmpfile.close()')
+            self.gc_collect()
         except PyboardError as e: # File does not exist.
             return -1  
         return file_hash
+
+    def transfer_file(self, file_path, target_path = None):
+        '''Copy a file into the root directory of the pyboard.'''
+        self.gc_collect()
+        if not target_path:
+            target_path = os.path.split(file_path)[-1]
+        with open(file_path) as transfer_file:
+            file_contents = transfer_file.read()  
+        while not (djb2(file_contents) == self.get_file_hash(target_path)):
+            self.write_file(target_path, file_contents) 
 
     def transfer_folder(self, folder_path, target_folder = None, file_type = 'all'):
         '''Copy a folder into the root directory of the pyboard.  Folders that
@@ -104,11 +126,30 @@ class Pycboard(Pyboard):
         for f in files:
             file_path = os.path.join(folder_path, f)
             target_path = target_folder + '/' + f
-            self.transfer_file(file_path, target_path)
+            self.transfer_file(file_path, target_path)  
+
+    def remove_file(self, file_path):
+        'Remove a file from the pyboard.'
+        self.exec('os.remove({})'.format(repr(file_path)))
+
+    def reset_filesystem(self):
+        '''Delete all files in the flash drive apart from boot.py, 
+        then reload framework.'''
+        print('Resetting filesystem.')
+        self.exec(inspect.getsource(rm_dir_or_file)) 
+        self.exec("os.chdir('/flash')\n"
+                  'for i in os.listdir():\n'
+                  "    if i not in ['System Volume Information', 'boot.py']:\n"
+                  '        rm_dir_or_file(i)')
+        self.reset() 
+        
+    # ------------------------------------------------------------------------------------
+    # pyControl operations.
+    # ------------------------------------------------------------------------------------
 
     def load_framework(self, framework_dir = framework_dir):
         'Copy the pyControl framework folder to the board.'
-        print('Transfering pyControl framework to pyboard.', end = '')
+        print('Transfering pyControl framework to pyboard.')
         self.transfer_folder(framework_dir, file_type = 'py')
         self.reset()
 
@@ -125,15 +166,7 @@ class Pycboard(Pyboard):
             except PyboardError as e:
                 print('Error: Unable to import hardware definition.\n' + e.args[2].decode())
         else:
-            print('Hardware definition file not found.')    
-
-    def remove_file(self, file_path):
-        'Remove a file from the pyboard.'
-        self.exec('os.remove({})'.format(repr(file_path)))
-
-    # ------------------------------------------------------------------------------------
-    # pyControl operations.
-    # ------------------------------------------------------------------------------------
+            print('Hardware definition file not found.')  
 
     def setup_state_machine(self, sm_name, sm_dir = None, raise_exception = False):
         ''' Transfer state machine descriptor file sm_name.py from folder sm_dir
@@ -157,6 +190,7 @@ class Pycboard(Pyboard):
             print('Error: Unable to setup state machine.\n' + e.args[2].decode())
             if raise_exception:
                 raise PyboardError('Unable to setup state machine.', e.args[2])
+        self.remove_file(sm_name + '.py')
 
     def print_IDs(self):
         'Print state and event IDs.'

@@ -16,20 +16,27 @@ def config_menu():
     print('\n\nOpening connection to all boxes listed in config.py.\n\n')
     boxes = Boxes(cf.box_serials.keys())
     selection = None
-    while selection != 4:
+    while selection != 7:
         selection = int(input('''\n\nConfig menu:
                                  \n\n 1. Reload framwork.
                                  \n\n 2. Reload hardware definition.
                                  \n\n 3. Save hardware IDs.
-                                 \n\n 4. Exit config menu.
-                                 \n\n 5. Close program.\n\n'''))
+                                 \n\n 4. Hard reset boxes.
+                                 \n\n 5. Reset filesystems.
+                                 \n\n 6. Close program.
+                                 \n\n 7. Exit config menu.\n\n'''))
+                                 
         if selection == 1:
             boxes.load_framework()
         elif selection == 2:
             boxes.load_hardware_definition()
         elif selection == 3:
             boxes.save_unique_IDs()
+        elif selection == 4:
+            boxes.hard_reset()
         elif selection == 5:
+            boxes.reset_filesystem()
+        elif selection == 6:
             boxes.close()
             exit()
     boxes.close()
@@ -147,7 +154,6 @@ if exp.persistent_variables:
 if exp.summary_data:
     try:
         import pyperclip
-        print('\nCopying summary data to clipboard.')
         spacing = 1 # Number of lines between summary data lines.
         if type(exp.summary_data[-1]) == int: # Use user defined spacing.
             spacing = exp.summary_data[-1]
@@ -159,11 +165,13 @@ if exp.summary_data:
             v_values[0] = v_values[0].replace('\n','\t{}\n'.format(v_name.split('.')[-1]))
             v_values.append('\n' * spacing) # Add empty lines between variables.
             summary_string += ''.join(v_values) 
+        boxes.close()
+        input('\nPress any key to copy summary data to clipboard.')
         pyperclip.copy(summary_string.strip()) # Copy to clipboard.
     except ImportError:
         print('Summary data not copied to clipboad as pyperclip not installed')
-
-boxes.close()
+else:
+    boxes.close()
 
 if exp.transfer_folder: 
     transfer_folder = exp.transfer_folder
