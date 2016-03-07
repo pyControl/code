@@ -18,7 +18,15 @@ class Boxes():
 
     def reset(self):
         for box in self.boxes.values():
-            box.reset()        
+            box.reset()       
+
+    def hard_reset(self):
+        for box in self.boxes.values():
+            box.hard_reset()   
+
+    def reset_filesystem(self):
+        for box in self.boxes.values():
+            box.reset_filesystem()
 
     def setup_state_machine(self, sm_name, sm_dir = None):
         for box in self.boxes.values():
