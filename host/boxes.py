@@ -35,7 +35,9 @@ class Boxes():
     def start_framework(self, dur = None, verbose = False, data_output = True, ISI = 0.1):
         for box_n in self.box_numbers:
             self.boxes[box_n].start_framework(dur, verbose, data_output)
-            if ISI:sleep(ISI)  # Stagger start times by ISI seconds.       
+            if ISI:
+                sleep(ISI)  # Stagger start times by ISI seconds.       
+                self.boxes[box_n].process_data()
 
     def load_framework(self):
         for box in self.boxes.values():

@@ -67,6 +67,7 @@ class Pycboard(Pyboard):
     def gc_collect(self): 
         'Run a garbage collection on pyboard to free up memory.'
         self.eval('gc.collect()')
+        time.sleep(0.02)       
 
     def hard_reset(self):
         print('Hard resetting pyboard.')
@@ -87,7 +88,6 @@ class Pycboard(Pyboard):
         self.exec("tmpfile = open('{}','w')".format(target_path))
         self.exec("tmpfile.write({data})".format(data=repr(data)))
         self.exec('tmpfile.close()')
-        self.gc_collect()
 
     def get_file_hash(self, target_path):
         'Get the djb2 hash of a file on the pyboard.'
@@ -95,20 +95,19 @@ class Pycboard(Pyboard):
             self.exec("tmpfile = open('{}','r')".format(target_path))
             file_hash = int(self.eval('djb2(tmpfile.read())').decode())
             self.exec('tmpfile.close()')
-            self.gc_collect()
         except PyboardError as e: # File does not exist.
             return -1  
         return file_hash
 
     def transfer_file(self, file_path, target_path = None):
         '''Copy a file into the root directory of the pyboard.'''
-        self.gc_collect()
         if not target_path:
             target_path = os.path.split(file_path)[-1]
         with open(file_path) as transfer_file:
             file_contents = transfer_file.read()  
         while not (djb2(file_contents) == self.get_file_hash(target_path)):
             self.write_file(target_path, file_contents) 
+        self.gc_collect()
 
     def transfer_folder(self, folder_path, target_folder = None, file_type = 'all'):
         '''Copy a folder into the root directory of the pyboard.  Folders that
@@ -141,7 +140,7 @@ class Pycboard(Pyboard):
                   'for i in os.listdir():\n'
                   "    if i not in ['System Volume Information', 'boot.py']:\n"
                   '        rm_dir_or_file(i)')
-        self.reset() 
+        self.hard_reset() 
         
     # ------------------------------------------------------------------------------------
     # pyControl operations.
