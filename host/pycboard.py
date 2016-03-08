@@ -15,24 +15,44 @@ hwd_path      = os.path.join('.', 'config', 'hardware_definition.py')
 # ----------------------------------------------------------------------------------------
 #  Helper functions.
 # ----------------------------------------------------------------------------------------
+# Helper functions whose names start with an underscore are used on the pyboard not
+# the host computer.  inspect.getsource is used to extract the function sourcecode.
 
-# djb2 hash algorithm used on pyboard and host to check integrity of transfered files.
+# djb2 hashing algorithm used to check integrity of transfered files.
+
 def djb2(string):
     h = 5381
     for c in string:
         h = ((h * 33) + ord(c)) & 0xFFFFFFFF
     return h
 
-# Function used on pyboard to remove directories or files.
-def rm_dir_or_file(i):
+def _djb2_file(file_path):
+    with open(file_path, 'r') as f:
+        h = 5381
+        while True:
+            c = f.read(1)
+            if not c:
+                break
+            h = ((h * 33) + ord(c)) & 0xFFFFFFFF           
+    return h
+
+# Used on pyboard to remove directories or files.
+def _rm_dir_or_file(i):
     try:
         os.remove(i)
     except OSError:
         os.chdir(i)
         for j in os.listdir():
-            rm_dir_or_file(j)
+            _rm_dir_or_file(j)
         os.chdir('..')
         os.rmdir(i)
+
+# Used on pyboard to clear filesystem.
+def _reset_pyb_filesystem():
+    os.chdir('/flash')
+    for i in os.listdir():
+        if i not in ['System Volume Information', 'boot.py']:
+            _rm_dir_or_file(i)
 
 # ----------------------------------------------------------------------------------------
 #  Pycboard class.
@@ -54,7 +74,7 @@ class Pycboard(Pyboard):
     def reset(self):
         'Enter raw repl (soft reboots pyboard), import modules.'
         self.enter_raw_repl() # Soft resets pyboard.
-        self.exec(inspect.getsource(djb2))  # define djb2 hashing function.
+        self.exec(inspect.getsource(_djb2_file))  # define djb2 hashing function.
         self.exec('import os; import gc')
         try:
             self.exec('from pyControl import *')
@@ -64,11 +84,6 @@ class Pycboard(Pyboard):
         self.data = None
         self.state_machines = [] # List to hold name of instantiated state machines.
 
-    def gc_collect(self): 
-        'Run a garbage collection on pyboard to free up memory.'
-        self.eval('gc.collect()')
-        time.sleep(0.02)       
-
     def hard_reset(self):
         print('Hard resetting pyboard.')
         self.serial.write(b'pyb.hard_reset()')
@@ -76,6 +91,10 @@ class Pycboard(Pyboard):
         time.sleep(0.1)  # Wait 100 ms. 
         super().__init__(self.serial_port, baudrate=115200) # Reopen serial conection.
         self.reset()
+
+    def gc_collect(self): 
+        'Run a garbage collection on pyboard to free up memory.'
+        self.exec('gc.collect()')
 
     # ------------------------------------------------------------------------------------
     # Pyboard filesystem operations.
@@ -92,9 +111,7 @@ class Pycboard(Pyboard):
     def get_file_hash(self, target_path):
         'Get the djb2 hash of a file on the pyboard.'
         try:
-            self.exec("tmpfile = open('{}','r')".format(target_path))
-            file_hash = int(self.eval('djb2(tmpfile.read())').decode())
-            self.exec('tmpfile.close()')
+            file_hash = int(self.eval("_djb2_file('{}')".format(target_path)).decode())
         except PyboardError as e: # File does not exist.
             return -1  
         return file_hash
@@ -108,7 +125,7 @@ class Pycboard(Pyboard):
         while not (djb2(file_contents) == self.get_file_hash(target_path)):
             self.write_file(target_path, file_contents) 
         self.gc_collect()
-
+            
     def transfer_folder(self, folder_path, target_folder = None, file_type = 'all'):
         '''Copy a folder into the root directory of the pyboard.  Folders that
         contain subfolders will not be copied successfully.  To copy only files of
@@ -135,11 +152,10 @@ class Pycboard(Pyboard):
         '''Delete all files in the flash drive apart from boot.py, 
         then reload framework.'''
         print('Resetting filesystem.')
-        self.exec(inspect.getsource(rm_dir_or_file)) 
-        self.exec("os.chdir('/flash')\n"
-                  'for i in os.listdir():\n'
-                  "    if i not in ['System Volume Information', 'boot.py']:\n"
-                  '        rm_dir_or_file(i)')
+        self.reset()
+        self.exec(inspect.getsource(_rm_dir_or_file))
+        self.exec(inspect.getsource(_reset_pyb_filesystem)) 
+        self.exec('_reset_pyb_filesystem()')
         self.hard_reset() 
         
     # ------------------------------------------------------------------------------------
