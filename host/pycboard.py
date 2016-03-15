@@ -15,17 +15,8 @@ hwd_path      = os.path.join('.', 'config', 'hardware_definition.py')
 # ----------------------------------------------------------------------------------------
 #  Helper functions.
 # ----------------------------------------------------------------------------------------
-# Helper functions whose names start with an underscore are used on the pyboard not
-# the host computer.  inspect.getsource is used to extract the function sourcecode.
 
 # djb2 hashing algorithm used to check integrity of transfered files.
-
-def djb2(string):
-    h = 5381
-    for c in string:
-        h = ((h * 33) + ord(c)) & 0xFFFFFFFF
-    return h
-
 def _djb2_file(file_path):
     with open(file_path, 'r') as f:
         h = 5381
@@ -105,7 +96,10 @@ class Pycboard(Pyboard):
         in the file will be deleted.
         '''
         self.exec("tmpfile = open('{}','w')".format(target_path))
-        self.exec("tmpfile.write({data})".format(data=repr(data)))
+        try:
+            self.exec("tmpfile.write({})".format(repr(data)))
+        except PyboardError:
+            print('Write file error.')
         self.exec('tmpfile.close()')
 
     def get_file_hash(self, target_path):
@@ -120,9 +114,10 @@ class Pycboard(Pyboard):
         '''Copy a file into the root directory of the pyboard.'''
         if not target_path:
             target_path = os.path.split(file_path)[-1]
-        with open(file_path) as transfer_file:
+        file_hash = _djb2_file(file_path)
+        with open(file_path, 'r') as transfer_file:
             file_contents = transfer_file.read()  
-        while not (djb2(file_contents) == self.get_file_hash(target_path)):
+        while not file_hash == self.get_file_hash(target_path):
             self.write_file(target_path, file_contents) 
         self.gc_collect()
             
