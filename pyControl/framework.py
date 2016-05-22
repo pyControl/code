@@ -48,10 +48,10 @@ class Event_queue():
 # Timer
 # ----------------------------------------------------------------------------------------
 
-class Timer():
+class Timer_orig():
+    # Timer which uses a list which expands and contracts as timers are set and elapse.
 
     def __init__(self):
-        self.timer_set = False # Variable used in set() fuction.
         self.reset()
 
     def reset(self):
@@ -78,8 +78,111 @@ class Timer():
                 self.active_timers.pop(i)
 
     def disarm(self,event_ID):
-        # Remove all active timers with specified machine and event IDs.
+        # Remove all active timers with specified event ID.
         self.active_timers = [t for t in self.active_timers if not t[0] == event_ID]
+
+
+class Timer_sorted():
+    # Timer which uses a list which expands and contracts as timers are set and elapse.
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.active_timers = [] # list of tuples: (event_ID, trigger_time)
+    
+    def set(self, event_ID, interval):
+        # Set a timer to trigger with specified event ID after 'interval' ms has elapsed.
+        global current_time
+        self.active_timers.append((current_time + interval, event_ID))
+        self.active_timers.sort(reverse = True)
+
+    def check(self):
+        #Check whether any timers have triggered, place events in event que.
+        global current_time, check_timers
+        while self.active_timers and self.active_timers[-1][0] < current_time:
+            ID = self.active_timers.pop()[1]
+            if ID <= 0: # IDs <= 0 are used to index digital inputs for debounce timing. 
+                hw.digital_inputs[-ID]._deactivate_debounce() 
+            else:
+                event_queue.put((ID, -1)) # Timestamp-1 indictates not to put timer events in to output queue.
+        check_timers = False
+
+    def disarm(self,event_ID):
+        # Remove all active timers with specified event ID.
+        self.active_timers = [t for t in self.active_timers if not t[1] == event_ID]
+
+
+class Timer_array():
+    # Timer which uses a linked list structure so that checking should be O(1) but
+    # setting is slower.
+
+    def __init__(self, n_timers = 20):
+        self.n_timers = n_timers
+        self.reset()
+
+    def reset(self):
+        self.ID_array = array('i', [-1] * self.n_timers) # Event ID array.
+        self.TT_array = array('i', [-1] * self.n_timers) # Trigger time array.
+        self.NT_array = array('i', [-1] * self.n_timers) # Next timer index array.
+        self.first_timer = -1 # Index of first timer to trigger.
+
+    def set(self, event_ID, interval):
+        # Set a timer to trigger with specified event ID after 'interval' ms has elapsed.
+        global current_time
+        i=0 # Index to store new timer.
+        while not self.TT_array[i] == -1: # Find first empty slot.
+            i+=1
+            if i >= self.n_timers:
+                print('Warning, timer array full.')
+        trigger_time = current_time + interval 
+        self.ID_array[i] = event_ID
+        self.TT_array[i] = trigger_time
+        # Update linked list.
+        next_timer = self.first_timer
+        prev_timer = -1
+        timer_set = False
+        while not timer_set:
+            if self.TT_array[next_timer] == -1: # New timer is last timer.
+                timer_set = True
+                self.NT_array[i] = -1
+            elif self.TT_array[next_timer] > trigger_time:
+                timer_set = True
+                self.NT_array[i] = next_timer
+            if timer_set:
+                if prev_timer == -1:
+                    self.first_timer = i
+                else:
+                    self.NT_array[prev_timer] = i
+            else:
+                prev_timer = next_timer
+                next_timer = self.NT_array[next_timer]
+
+    def check(self):
+        global current_time
+        while ((not self.first_timer == -1) and 
+               (current_time-self.TT_array[self.first_timer] >= 0)): # Timer has elapsed.
+            if self.ID_array[self.first_timer] <= 0: # Digital_input debounce timer.
+                # Event IDs <= 0 are used to index digital inputs for debounce timing.
+                hw.digital_inputs[
+                    -self.ID_array[self.first_timer]]._deactivate_debounce() 
+            else:
+                event_queue.put((self.ID_array[self.first_timer], -1)) 
+                # Timestamp of -1 indictates not to put timer events in to output queue.
+            self.TT_array[self.first_timer] = -1
+            self.first_timer = self.NT_array[self.first_timer]
+
+    def disarm(self,event_ID):
+        # Remove all active timers with specified event ID.
+        next_timer = self.first_timer
+        prev_timer = -1
+        while not next_timer == -1:
+            if self.ID_array[next_timer] == event_ID:
+                self.TT_array[next_timer] = -1
+                if not prev_timer == -1:
+                    self.NT_array[prev_timer] = self.NT_array[next_timer]
+                prev_timer = next_timer
+                next_timer = self.NT_array[next_timer]
 
 # ----------------------------------------------------------------------------------------
 # Framework variables and objects
@@ -87,7 +190,7 @@ class Timer():
 
 state_machines = []  # List to hold state machines.
 
-timer = Timer()  # Instantiate timer_array object.
+timer = Timer_sorted()  # Instantiate timer_array object.
 
 event_queue = Event_queue() # Instantiate event que object.
 
@@ -115,9 +218,18 @@ events = {} # Dictionary of {event_name: event_ID}
 
 ID2name = {} # Dictionary of {ID: state_or_event_name}
 
+clock = pyb.Timer(1)
+
+check_timers = False # Flag to say timers need to be checked, set True by clock tick.
+
 # ----------------------------------------------------------------------------------------
 # Framework functions.
 # ----------------------------------------------------------------------------------------
+
+def _clock_tick(timer):
+    global check_timers, current_time
+    check_timers = True
+    current_time += 1
 
 def register_machine(state_machine):
     # Adds state machine states and events to framework states and events dicts,
@@ -188,11 +300,14 @@ def output_data(event):
         else: # Print event/state ID.
             print('{} {}'.format(event[1], event[0]))
 
+n_cycles = 0
+
 def _update():
     # Perform framework update functions in order of priority.
-    global current_time, interrupts_waiting, start_time, running
-    current_time = pyb.elapsed_millis(start_time)
-    timer.check() 
+    global current_time, interrupts_waiting, start_time, running, n_cycles
+    #current_time = pyb.elapsed_millis(start_time)
+    if check_timers:
+        timer.check() 
     if interrupts_waiting:         # Priority 1: Process interrupts.
         interrupts_waiting = False
         for digital_input in hw.digital_inputs:
@@ -210,20 +325,24 @@ def _update():
             running = False
     elif data_output_queue.available(): # Priority 4: Output data.
         output_data(data_output_queue.get())
-        
+    n_cycles += 1
+
 
 def run(duration = None):
     # Run framework for specified number of seconds.
     # Pre run----------------------------
-    global current_time, start_time, running
+    global current_time, start_time, running, n_cycles
     timer.reset()
     event_queue.reset()
     data_output_queue.reset()
     if not hw.hardware_definition:
         hw.initialise()
     hw.reset()
-    start_time =  pyb.millis()
+    #start_time =  pyb.millis()
     current_time = 0
+    n_cycles = 0
+    clock.init(freq=1000)
+    clock.callback(_clock_tick)
     # Run--------------------------------
     running = True
     for state_machine in state_machines:
@@ -237,17 +356,9 @@ def run(duration = None):
             _update()
     # Post run---------------------------
     running = False
+    clock.deinit()
     for state_machine in state_machines:
         state_machine._stop()  
     while data_output_queue.available():
         output_data(data_output_queue.get())
-
-
-
-
-
-
-
-
-
-
+    print('N cycles: {}'.format(n_cycles))
