@@ -102,7 +102,6 @@ class Digital_input():
         # Interrupt service routine called on pin change.
         if self.debounce_active:
                 return # Ignore interrupt as too soon after previous interrupt.
-        #self.interrupt_timestamp = pyb.millis()
         self.interrupt_timestamp = fw.current_time
         if self.debounce: # Digitial input uses debouncing.
             self.pin_state = not self.pin_state
@@ -114,7 +113,7 @@ class Digital_input():
 
     def _process_interrupt(self):
         # Put apropriate event for interrupt in event queue.
-        timestamp = self.interrupt_timestamp # - fw.start_time
+        timestamp = self.interrupt_timestamp
         self.interrupt_triggered = False
         self._publish_if_edge_has_event(timestamp)
         if self.debounce: # Set timer to deactivate debounce in self.debounce milliseconds.
