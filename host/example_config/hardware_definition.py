@@ -13,13 +13,9 @@ center_poke = Double_poke(rising_event_A  = 'high_poke',
                           falling_event_B = 'low_poke_out')
 
 houselight = center_poke.SOL
-houselight_red = Digital_input()
 
 # Connect devices to control board.
 
 connect_device(left_poke  , board['ports'][1], pull)
 connect_device(center_poke, board['ports'][2], pull)
 connect_device(right_poke , board['ports'][3], pull)
-connect_device(houselight_red, 'Y1')
-
-
