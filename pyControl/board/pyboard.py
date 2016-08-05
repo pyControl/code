@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# !/usr/bin/python3
+# -*- coding: utf-8 -*-
+
 """
 pyboard interface
 This module provides the Pyboard class, used to communicate with and
@@ -23,19 +26,47 @@ import sys
 import time
 import serial
 
+
 def stdout_write_bytes(b):
     sys.stdout.buffer.write(b)
     sys.stdout.buffer.flush()
 
-class PyboardError(BaseException):
-    pass
+
+class PyboardError(Exception):
+    def __init__(self, value, board_exception=None):
+        self.value = value
+        self.board_exception = board_exception
+
+    def __str__(self):
+        return self.board_exception.decode('utf-8') if self.board_exception else self.value
+
 
 class Pyboard:
-    def __init__(self, serial_device, baudrate=115200):
-        self.serial = serial.Serial(serial_device, baudrate=baudrate, interCharTimeout=1)
+    def __init__(self, serial_port, baudrate=115200):
+        self.serial_port = serial_port  # useful for hard reset
+        self.baudrate = baudrate  # useful for hard reset
+        self.serial = serial.Serial()
+
+    @property
+    def serial(self):
+        if not self._serial:
+            raise PyboardError("Board is not connected!")
+        return self._serial
+
+    @serial.setter
+    def serial(self, value):
+        self._serial = value
 
     def close(self):
         self.serial.close()
+
+    def open_connection(self):
+        self.serial.port = self.serial_port
+        self.baudrate = self.baudrate
+        self.serial.open()
+
+    def is_connected(self):
+        return self.serial.is_open
 
     def read_until(self, min_num_bytes, ending, timeout=10, data_consumer=None):
         data = self.serial.read(min_num_bytes)
@@ -50,7 +81,7 @@ class Pyboard:
                 data = data + new_data
                 if data_consumer:
                     data_consumer(new_data)
-                #time.sleep(0.01)
+                # time.sleep(0.01)
                 timeout_count = 0
             else:
                 timeout_count += 1
@@ -60,20 +91,20 @@ class Pyboard:
         return data
 
     def enter_raw_repl(self):
-        self.serial.write(b'\r\x03\x03') # ctrl-C twice: interrupt any running program
-        self.serial.write(b'\r\x01') # ctrl-A: enter raw REPL
+        self.serial.write(b'\r\x03\x03')  # ctrl-C twice: interrupt any running program
+        self.serial.write(b'\r\x01')  # ctrl-A: enter raw REPL
         data = self.read_until(1, b'to exit\r\n>')
         if not data.endswith(b'raw REPL; CTRL-B to exit\r\n>'):
             print(data)
             raise PyboardError('could not enter raw repl')
-        self.serial.write(b'\x04') # ctrl-D: soft reset
+        self.serial.write(b'\x04')  # ctrl-D: soft reset
         data = self.read_until(1, b'to exit\r\n>')
         if not data.endswith(b'raw REPL; CTRL-B to exit\r\n>'):
             print(data)
             raise PyboardError('could not enter raw repl')
 
     def exit_raw_repl(self):
-        self.serial.write(b'\r\x02') # ctrl-B: enter friendly REPL
+        self.serial.write(b'\r\x02')  # ctrl-B: enter friendly REPL
 
     def follow(self, timeout, data_consumer=None):
         # wait for normal output
@@ -120,7 +151,7 @@ class Pyboard:
     def exec(self, command):
         ret, ret_err = self.exec_raw(command)
         if ret_err:
-            raise PyboardError('exception', ret, ret_err)
+            raise PyboardError('board error', ret_err)
         return ret
 
     def execfile(self, filename):
@@ -132,6 +163,7 @@ class Pyboard:
         t = str(self.eval('pyb.RTC().datetime()'), encoding='utf8')[1:-1].split(', ')
         return int(t[4]) * 3600 + int(t[5]) * 60 + int(t[6])
 
+
 def execfile(filename, device='/dev/ttyACM0'):
     pyb = Pyboard(device)
     pyb.enter_raw_repl()
@@ -139,6 +171,7 @@ def execfile(filename, device='/dev/ttyACM0'):
     stdout_write_bytes(output)
     pyb.exit_raw_repl()
     pyb.close()
+
 
 def run_test(device):
     pyb = Pyboard(device)
@@ -196,11 +229,13 @@ def run_test(device):
     pyb.exit_raw_repl()
     pyb.close()
 
+
 def main():
     import argparse
     cmd_parser = argparse.ArgumentParser(description='Run scripts on the pyboard.')
     cmd_parser.add_argument('--device', default='/dev/ttyACM0', help='the serial device of the pyboard')
-    cmd_parser.add_argument('--follow', action='store_true', help='follow the output after running the scripts [default if no scripts given]')
+    cmd_parser.add_argument('--follow', action='store_true',
+                            help='follow the output after running the scripts [default if no scripts given]')
     cmd_parser.add_argument('--test', action='store_true', help='run a small test suite on the pyboard')
     cmd_parser.add_argument('files', nargs='*', help='input files')
     args = cmd_parser.parse_args()
@@ -239,6 +274,7 @@ def main():
         if ret_err:
             stdout_write_bytes(ret_err)
             sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

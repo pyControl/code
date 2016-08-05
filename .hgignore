@@ -1,0 +1,9 @@
+syntax: glob
+host/config
+data
+.idea
+*.log
+tasks
+pycontrol/config
+user_settings.py
+*.pyc

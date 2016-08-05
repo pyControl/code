@@ -23,7 +23,7 @@ class Event_queue():
         self.write_index = 0
 
     def put(self, event):
-        # Put event in que.  
+        # Put event in que.
         assert self.ID_buffer[self.write_index] == ID_null_value, 'Event queue buffer full'
         self.ID_buffer[self.write_index] = event[0]
         self.TS_buffer[self.write_index] = event[1]  
@@ -174,19 +174,33 @@ def print_IDs():
     for event_ID in sorted(events.values()):
         print(ID2name[event_ID]  + ': ' +  str(event_ID))
 
+
+def print_events():
+    """ Print events as a dictionary"""
+    user_events = {}
+    for event_id, event_value in events.items():
+        if event_value > 0:  # Print only user defined events.
+            user_events[event_id] = events[event_id]
+    print("? E {0}".format(user_events))
+
+
+def print_states():
+    """ Print states as a dictionary"""
+    print("? S {0}".format(states))
+
 def output_data(event):
     # Output data to serial line.
     if event[0] == -1: # Print user generated output string.
         print_string = print_queue.pop(0)
         if type(print_string) != str:
             print_string = repr(print_string)
-        print('{} '.format(event[1]) + print_string)
+        print('? D {0} '.format(event[1]) + print_string)
     else:  # Print event or state change.
         if verbose: # Print event/state name.
             event_name = ID2name[event[0]]
-            print('{} '.format(event[1]) + event_name)
+            print('? D {} '.format(event[1]) + event_name)
         else: # Print event/state ID.
-            print('{} {}'.format(event[1], event[0]))
+            print('? D {} {}'.format(event[1], event[0]))
 
 def _update():
     # Perform framework update functions in order of priority.
