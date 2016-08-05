@@ -168,7 +168,7 @@ class PyboardPlus(Pyboard):
         logger.debug("Transfering folder to board: %s", folder_path)
         if not target_folder:
             target_folder = os.path.split(folder_path)[-1]
-        files = os.listdir(folder_path)
+        files = [f for f in os.listdir(folder_path) if not f.startswith('.')] # ignore hidden files
         if file_type != 'all':
             files = [f for f in files if f.split('.')[-1] == file_type]
         logger.debug("Files to upload: %s", str(files))

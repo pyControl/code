@@ -15,8 +15,8 @@ LOG_HANDLER_CONSOLE_LEVEL = logging.INFO
 
 # UNIT TESTING SETTINGS
 TEST_SERIAL_PORT = ""
-TEST_FRAMEWORK_PATH = ""
-TEST_TASK_PATH = ""
+TEST_FRAMEWORK_PATH = "" # path must end with pyControl
+TEST_TASK_PATH = "" # tests are expecting blinker.py
 TEST_HW_DEF_PATH = ""
 
 try:

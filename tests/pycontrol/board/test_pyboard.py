@@ -4,7 +4,7 @@ import loggingbootstrap
 from unittest import TestCase
 
 from pycontrol.board.pyboard_plus import PyboardPlus
-import pycontrol.conf as settings
+import pycontrol.settings as settings
 
 settings.LOG_HANDLER_CONSOLE_LEVEL = logging.DEBUG
 loggingbootstrap.create_console_logger("pycontrol-tests", settings.LOG_HANDLER_CONSOLE_LEVEL)

@@ -1,16 +1,18 @@
 import logging
+import loggingbootstrap
 
 from unittest import TestCase
 
 from serial.serialutil import SerialException
 
-import pycontrol.conf as settings
+import pycontrol.settings as settings
 from pycontrol.board.pycboard import Pycboard
 from pycontrol.board.pycboard import PycboardError
 
 settings.LOG_HANDLER_CONSOLE_LEVEL = logging.DEBUG
-settings.setup_default_logger(__name__, file_handler=False)
-settings.setup_default_logger("pycontrol", file_handler=False)
+loggingbootstrap.create_console_logger("pycontrol-tests", settings.LOG_HANDLER_CONSOLE_LEVEL)
+loggingbootstrap.create_console_logger("pycontrol", settings.LOG_HANDLER_CONSOLE_LEVEL)
+
 
 class TestUploadFramework(TestCase):
     def test_upload_hw_definition_not_found(self):
