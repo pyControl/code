@@ -15,8 +15,10 @@ import loggingbootstrap
 
 import pycontrol
 
+import pycontrol.settings as settings
+
 try:
-    import pycontrol.settings as settings
+    import pycontrol.config
 except:
     exit("Config package not found. You can create this by copying the example_config and rename it to config.")
 
