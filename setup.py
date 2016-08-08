@@ -25,12 +25,13 @@ setup(
     packages=find_packages(exclude=['contrib', 'docs', 'tests', 'examples', 'deploy', 'reports']),
 
     install_requires=[
-        "pyserial >= 3.1.1"
+        "pyserial >= 3.1.1",
+        "logging-bootstrap >= 0.1"
     ],
 
     entry_points={
-        'gui_scripts': [
-            'pycontrol=pycontrol.__main__',
+        'console_scripts': [
+            'pycontrol-cli=pycontrol.__main__:start',
         ],
     }
 )
