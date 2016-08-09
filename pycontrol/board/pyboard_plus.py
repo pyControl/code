@@ -3,12 +3,13 @@
 
 """ pycontrol.board.pyboard_plus"""
 
-import pycontrol
-from pycontrol.board.pyboard import Pyboard, PyboardError
 import os
 import time
-import inspect
 import logging
+
+import pycontrol
+from pycontrol.board.pyboard import Pyboard, PyboardError
+from pycontrol.board import utils
 
 __version__ = pycontrol.__version__
 __author__ = pycontrol.__author__
@@ -19,47 +20,6 @@ __email__ = pycontrol.__email__
 __status__ = pycontrol.__status__
 
 logger = logging.getLogger(__name__)
-
-
-# ----------------------------------------------------------------------------------------
-#  Helper functions.
-# ----------------------------------------------------------------------------------------
-
-# djb2 hashing algorithm used to check integrity of transfered files.
-
-def _djb2_file(file_path):
-    with open(file_path, 'r') as f:
-        h = 5381
-        while True:
-            c = f.read(1)
-            if not c:
-                break
-            h = ((h * 33) + ord(c)) & 0xFFFFFFFF
-    return h
-
-
-# Used on pyboard to remove directories or files.
-
-
-def _rm_dir_or_file(i):
-    try:
-        os.remove(i)
-    except OSError:
-        os.chdir(i)
-        for j in os.listdir():
-            _rm_dir_or_file(j)
-        os.chdir('..')
-        os.rmdir(i)
-
-
-# Used on pyboard to clear filesystem.
-
-
-def _reset_pyb_filesystem():
-    os.chdir('/flash')
-    for i in os.listdir():
-        if i not in ['System Volume Information', 'boot.py']:
-            _rm_dir_or_file(i)
 
 
 # ----------------------------------------------------------------------------------------
@@ -89,7 +49,7 @@ class PyboardPlus(Pyboard):
         'Enter raw repl (soft reboots pyboard), import modules.'
         logger.debug("Soft resetting board...")
         self.enter_raw_repl()  # Soft resets pyboard.
-        self.exec(inspect.getsource(_djb2_file))  # define djb2 hashing function.
+        self.exec(utils.djb2_file_source_code)  # define djb2 hashing function.
         self.exec('import os; import gc; import pyb')
 
     def hard_reset(self):
@@ -124,7 +84,7 @@ class PyboardPlus(Pyboard):
 
     def get_file_hash(self, target_path):
         'Get the djb2 hash of a file on the pyboard.'
-        return int(self.eval("_djb2_file('{}')".format(target_path)).decode())
+        return int(self.eval("djb2_file('{}')".format(target_path)).decode())
 
     def transfer_file(self, file_path, target_path=None):
         """
@@ -135,7 +95,7 @@ class PyboardPlus(Pyboard):
         logger.debug("Transfering file: %s", file_path)
         if not target_path:
             target_path = os.path.split(file_path)[-1]
-        file_hash = _djb2_file(file_path)
+        file_hash = utils.djb2_file(file_path)
 
         with open(file_path, 'r') as transfer_file:
             file_contents = transfer_file.read()
@@ -150,7 +110,7 @@ class PyboardPlus(Pyboard):
         if not hash_verification:
             raise PyboardError("File transfer hash doesn't match")
 
-        logger.debug("Hash verification: %s. Number of tries: %s", hash_verification, i+1)
+        logger.debug("Hash verification: %s. Number of tries: %s", hash_verification, i + 1)
 
         self.gc_collect()
 
@@ -168,7 +128,7 @@ class PyboardPlus(Pyboard):
         logger.debug("Transfering folder to board: %s", folder_path)
         if not target_folder:
             target_folder = os.path.split(folder_path)[-1]
-        files = [f for f in os.listdir(folder_path) if not f.startswith('.')] # ignore hidden files
+        files = [f for f in os.listdir(folder_path) if not f.startswith('.')]  # ignore hidden files
         if file_type != 'all':
             files = [f for f in files if f.split('.')[-1] == file_type]
         logger.debug("Files to upload: %s", str(files))
@@ -210,9 +170,9 @@ class PyboardPlus(Pyboard):
         """
         logger.debug('Resetting filesystem...')
         self.reset()
-        self.exec(inspect.getsource(_rm_dir_or_file))
-        self.exec(inspect.getsource(_reset_pyb_filesystem))
-        self.exec('_reset_pyb_filesystem()')
+        self.exec(utils.rm_dir_or_file_source_code)
+        self.exec(utils.reset_pyb_filesystem_source_code)
+        self.exec('reset_pyb_filesystem()')
         self.hard_reset()
 
     def folder_exists(self, folder_path):
