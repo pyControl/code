@@ -51,35 +51,32 @@ class Event_queue():
 class Timer():
 
     def __init__(self):
-        self.timer_set = False # Variable used in set() fuction.
         self.reset()
 
     def reset(self):
         self.active_timers = [] # list of tuples: (event_ID, trigger_time)
-
+    
     def set(self, event_ID, interval):
         # Set a timer to trigger with specified event ID after 'interval' ms has elapsed.
         global current_time
-        trigger_time = current_time + interval
-        self.active_timers.append((event_ID, trigger_time))
+        self.active_timers.append((current_time + interval, event_ID))
+        self.active_timers.sort(reverse = True)
 
     def check(self):
-        #Check whether any timers have triggered and place corresponding events into 
-        # event que.
-        global current_time
-        for i,active_timer in enumerate(self.active_timers):
-            if current_time - active_timer[1] >= 0: # Timer has elapsed.
-                if active_timer[0] <= 0: # Digital_input debounce timer.
-                    # Event IDs <= 0 are used to index digital inputs for debounce timing.
-                    hw.digital_inputs[-active_timer[0]]._deactivate_debounce() 
-                else:
-                    event_queue.put((active_timer[0], -1)) 
-                    # Timestamp of -1 indictates not to put timer events in to output queue.
-                self.active_timers.pop(i)
+        #Check whether any timers have triggered, place events in event que.
+        global current_time, start_time, check_timers
+        current_time = pyb.millis() - start_time
+        while self.active_timers and self.active_timers[-1][0] <= current_time:
+            ID = self.active_timers.pop()[1]
+            if ID <= 0: # IDs <= 0 are used to index digital inputs for debounce timing. 
+                hw.digital_inputs[-ID]._deactivate_debounce() 
+            else:
+                event_queue.put((ID, -1)) # Timestamp-1 indictates not to put timer events in to output queue.
+        check_timers = False
 
     def disarm(self,event_ID):
-        # Remove all active timers with specified machine and event IDs.
-        self.active_timers = [t for t in self.active_timers if not t[0] == event_ID]
+        # Remove all active timers with specified event ID.
+        self.active_timers = [t for t in self.active_timers if not t[1] == event_ID]
 
 # ----------------------------------------------------------------------------------------
 # Framework variables and objects
@@ -105,8 +102,6 @@ current_time = None # Time since run started (milliseconds).
 
 running = False     # Set to True when framework is running, set to False to stop run.
 
-start_time = 0      # Time when run was started.
-
 usb_serial = pyb.USB_VCP()  # USB serial port object.
 
 states = {} # Dictionary of {state_name: state_ID}
@@ -115,9 +110,20 @@ events = {} # Dictionary of {event_name: event_ID}
 
 ID2name = {} # Dictionary of {ID: state_or_event_name}
 
+clock = pyb.Timer(4) # Timer which generates clock tick.
+
+check_timers = False # Flag to say timers need to be checked, set True by clock tick.
+
+start_time = 0 # Time at which framework run is started.
+
 # ----------------------------------------------------------------------------------------
 # Framework functions.
 # ----------------------------------------------------------------------------------------
+
+def _clock_tick(timer):
+    # Set flag to check timers, called by hardware timer once each millisecond.
+    global check_timers
+    check_timers = True
 
 def register_machine(state_machine):
     # Adds state machine states and events to framework states and events dicts,
@@ -190,27 +196,26 @@ def output_data(event):
 
 def _update():
     # Perform framework update functions in order of priority.
-    global current_time, interrupts_waiting, start_time, running
-    current_time = pyb.elapsed_millis(start_time)
-    timer.check() 
-    if interrupts_waiting:         # Priority 1: Process interrupts.
+    global current_time, interrupts_waiting, running
+    if interrupts_waiting: # Priority 1: Process hardware interrupts.
         interrupts_waiting = False
         for digital_input in hw.digital_inputs:
             if digital_input.interrupt_triggered:
                 digital_input._process_interrupt()
-    elif event_queue.available():  # Priority 2: Process events in queue.
+    elif check_timers: # Priority 2: Check for elapsed timers.
+        timer.check() 
+    elif event_queue.available(): # Priority 3: Process events in queue.
         event = event_queue.get()       
         if event[1] >= 0 and data_output: # Not timer event -> place in output queue.
             data_output_queue.put(event)
         for state_machine in state_machines:
             state_machine._process_event(ID2name[event[0]])
-    elif usb_serial.any():        # Priority 3: Check for serial input from computer.
+    elif usb_serial.any(): # Priority 4: Check for serial input from computer.
         bytes_recieved = usb_serial.readall()
-        if bytes_recieved == b'E': # Code to stop run over serial.
+        if bytes_recieved == b'E':      # Serial command to stop run.
             running = False
-    elif data_output_queue.available(): # Priority 4: Output data.
+    elif data_output_queue.available(): # Priority 5: Output data.
         output_data(data_output_queue.get())
-        
 
 def run(duration = None):
     # Run framework for specified number of seconds.
@@ -222,8 +227,10 @@ def run(duration = None):
     if not hw.hardware_definition:
         hw.initialise()
     hw.reset()
-    start_time =  pyb.millis()
     current_time = 0
+    start_time = pyb.millis()
+    clock.init(freq=1000)
+    clock.callback(_clock_tick)
     # Run--------------------------------
     running = True
     for state_machine in state_machines:
@@ -237,17 +244,8 @@ def run(duration = None):
             _update()
     # Post run---------------------------
     running = False
+    clock.deinit()
     for state_machine in state_machines:
         state_machine._stop()  
     while data_output_queue.available():
         output_data(data_output_queue.get())
-
-
-
-
-
-
-
-
-
-
