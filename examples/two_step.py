@@ -1,5 +1,4 @@
 from pyControl.utility import *
-import array
 
 #-------------------------------------------------------------------------------------
 # Outcome generator.

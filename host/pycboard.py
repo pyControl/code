@@ -8,6 +8,7 @@ import inspect
 # ----------------------------------------------------------------------------------------
 
 framework_dir = os.path.join('..', 'pyControl')
+devices_dir   = os.path.join('..', 'devices')
 examples_dir  = os.path.join('..', 'examples')
 tasks_dir     = os.path.join('..', 'tasks')
 hwd_path      = os.path.join('.', 'config', 'hardware_definition.py')
@@ -87,6 +88,13 @@ class Pycboard(Pyboard):
         'Run a garbage collection on pyboard to free up memory.'
         self.exec('gc.collect()')
 
+    def DFU_mode(self):
+        'Put the pyboard into device firmware update mode.'
+        self.exec('import pyb')
+        self.exec_raw_no_follow('pyb.bootloader()')
+        print('Entered DFU mode, closing serial connection.')
+        self.close()
+
     # ------------------------------------------------------------------------------------
     # Pyboard filesystem operations.
     # ------------------------------------------------------------------------------------
@@ -161,6 +169,7 @@ class Pycboard(Pyboard):
         'Copy the pyControl framework folder to the board.'
         print('Transfering pyControl framework to pyboard.')
         self.transfer_folder(framework_dir, file_type = 'py')
+        self.transfer_folder(devices_dir  , file_type = 'py')
         self.reset()
 
     def load_hardware_definition(self, hwd_path = hwd_path):
