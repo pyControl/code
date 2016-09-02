@@ -34,6 +34,8 @@ def initialise(hwd = None):
             hardware_definition = None
     digital_inputs = [digital_input for digital_input in digital_inputs
                       if digital_input._set_event_IDs()]
+    for i, digital_input in enumerate(digital_inputs):
+        digital_input.ID = i
 
 def reset():
     # Called before each run to reset digital inputs.
@@ -83,7 +85,6 @@ class Digital_input():
         self.falling_event = falling_event
         self.debounce = debounce     
         self.decimate = decimate
-        self.ID = len(digital_inputs) # Index in digital inputs list.
         digital_inputs.append(self)
 
     def _set_event_IDs(self):
