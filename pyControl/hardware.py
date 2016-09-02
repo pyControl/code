@@ -9,6 +9,10 @@ digital_inputs  = []  # List of all Digital_input objects.
 
 digital_outputs = []  # List of all Digital_output objects.
 
+available_timers = [7,8,9,10,11,12,13,14] # Hardware timers not in use by other fuctions.
+
+default_pulls = {} # Used when boards are initialised to specify default pullup or pulldown resistors.
+
 hardware_definition = None  # Hardware definition object.
 
 # ----------------------------------------------------------------------------------------
@@ -30,6 +34,8 @@ def initialise(hwd = None):
             hardware_definition = None
     digital_inputs = [digital_input for digital_input in digital_inputs
                       if digital_input._set_event_IDs()]
+    for i, digital_input in enumerate(digital_inputs):
+        digital_input.ID = i
 
 def reset():
     # Called before each run to reset digital inputs.
@@ -41,43 +47,45 @@ def off():
     for digital_output in digital_outputs:
         digital_output.off()
 
-def connect_device(device, connector, pull = None):
-    if pull:
-        device.connect(connector, pull)
-    else:
-        device.connect(connector)
-
 # ----------------------------------------------------------------------------------------
 # Digital Input
 # ----------------------------------------------------------------------------------------
 
 class Digital_input():
-    def __init__(self, rising_event = None, falling_event = None, debounce = 5):
+    def __init__(self, pin, rising_event = None, falling_event = None, debounce = 5,
+                 decimate = False, pull = None):
         # Digital_input class provides functionallity to generate framework events when a
         # specified pin on the Micropython board changes state. Seperate events can be
-        # specified for rising and falling pin changes. The event names associated with
-        # rising and falling edges are specified when Digital_input is initialised using 
-        # the rising and falling arguments.  These are converted to the appropriate event
-        # IDs when the Digital_input is registered with the framework.
+        # specified for rising and falling edges. 
         # By defalt debouncing is used to prevent multiple events being triggered very 
         # close together in time if the edges are not clean.  The debouncing method used
         # ensures that transient inputs shorter than the debounce duration still generate 
-        # rising and faling edges.  
+        # rising and faling edges.  Debouncing incurs some overheads so should be turned
+        # off for inputs with clean edges and high event rates.
+        # Setting the decimate argument to an integer n causes only every n'th input to 
+        # generate an event.  Decimate can be used only with debouncing off and an event 
+        # specified for a single edge.
         # Arguments:
+        # pin           - micropython pin to use
         # rising_event  - Name of event triggered on rising edges.
         # falling_event - Name of event triggered on falling edges.
         # debounce      - Minimum time interval between events (ms), 
         #                 set to False to deactive debouncing.
+        # decimate      - set to n to only generate 1 event for every n input pulses.
+        # pull          - used to enable internal pullup or pulldown resitors. 
+        if decimate:
+            assert isinstance(decimate, int), 'Decimate argument must be integer or False'
+            assert not (rising_event and falling_event), 'Decimate can only be used with single edge'
+            debounce = False
+        if pull is None: # No pullup or pulldown resistor specified, use default.
+            pull = default_pulls[pin] if pin in default_pulls.keys() else pyb.Pin.PULL_NONE
+        self.pull = pull
+        self.pin = pyb.Pin(pin, pyb.Pin.IN, pull = pull)
         self.rising_event = rising_event
         self.falling_event = falling_event
         self.debounce = debounce     
-        self.ID = len(digital_inputs) # Index in digital inputs list.
+        self.decimate = decimate
         digital_inputs.append(self)
-
-    def connect(self, pin, pull = pyb.Pin.PULL_NONE): 
-        # Specify the Digital_input pin and optional pullup or pulldown resistor.  
-        self.pin = pyb.Pin(pin, pyb.Pin.IN, pull = pull)
-        self.pull = pull
 
     def _set_event_IDs(self):
         # Set event codes for rising and falling events.  If neither rising or falling event 
@@ -91,48 +99,63 @@ class Digital_input():
             self.falling_event_ID = fw.events[self.falling_event]
         else:
             self.falling_event_ID = None
-        if self.rising_event_ID or self.falling_event_ID:
+        if not (self.rising_event_ID or self.falling_event_ID):
+            return False # Input not used by current state machines.
+        elif self.rising_event_ID and self.falling_event_ID:
             pyb.ExtInt(self.pin, pyb.ExtInt.IRQ_RISING_FALLING, self.pull, self._ISR)
-            self.reset()
-            return True
+            self.use_both_edges = True
         else:
-            return False
+            self.use_both_edges = False
+            if self.rising_event_ID:
+                pyb.ExtInt(self.pin, pyb.ExtInt.IRQ_RISING, self.pull, self._ISR)
+                self.event_ID = self.rising_event_ID
+            else:
+                pyb.ExtInt(self.pin, pyb.ExtInt.IRQ_FALLING, self.pull, self._ISR)
+                self.event_ID = self.falling_event_ID
+        return True
 
     def _ISR(self, line):
         # Interrupt service routine called on pin change.
         if self.debounce_active:
                 return # Ignore interrupt as too soon after previous interrupt.
-        self.interrupt_timestamp = pyb.millis()
+        if self.decimate:
+            self.decimate_counter = (self.decimate_counter+1) % self.decimate
+            if not self.decimate_counter == 0:
+                return
+        self.interrupt_timestamp = fw.current_time
         if self.debounce: # Digitial input uses debouncing.
-            self.pin_state = not self.pin_state
             self.debounce_active = True
-        else:
-            self.pin_state = self.pin.value()
+            if self.use_both_edges:
+                self.pin_state = not self.pin_state
+        elif self.use_both_edges:
+                self.pin_state = self.pin.value()
         self.interrupt_triggered = True # Set tag on Digital_input.
         fw.interrupts_waiting    = True # Set tag on framework (common to all Digital_inputs).
 
     def _process_interrupt(self):
         # Put apropriate event for interrupt in event queue.
-        timestamp = self.interrupt_timestamp - fw.start_time
         self.interrupt_triggered = False
-        self._publish_if_edge_has_event(timestamp)
+        self._publish_event(self.interrupt_timestamp)
         if self.debounce: # Set timer to deactivate debounce in self.debounce milliseconds.
             fw.timer.set(-self.ID, self.debounce) 
 
     def _deactivate_debounce(self):
         # Called when debounce timer elapses, deactivates debounce and 
         # if necessary publishes event for edge missed during debounce.
-        if not (self.pin_state == self.pin.value()):  # An edge has been missed.
-            self.pin_state = not self.pin_state
-            self._publish_if_edge_has_event(fw.current_time)
+        if self.use_both_edges and not (self.pin_state == self.pin.value()):  
+            self.pin_state = not self.pin_state  # An edge has been missed.
+            self._publish_event(fw.current_time)
         self.debounce_active = False
 
-    def _publish_if_edge_has_event(self, timestamp):
-        # Publish event if detected edge has event ID assigned.
-        if self.pin_state and self.rising_event_ID:          # Rising edge.
-            fw.event_queue.put((self.rising_event_ID, timestamp))
-        elif (not self.pin_state) and self.falling_event_ID: # Falling edge.
-            fw.event_queue.put((self.falling_event_ID, timestamp))
+    def _publish_event(self, timestamp):
+        # Publish event for detected edge.
+        if self.use_both_edges:
+            if self.pin_state: # Rising edge.
+                fw.event_queue.put((self.rising_event_ID, timestamp))
+            else: # Falling edge.
+                fw.event_queue.put((self.falling_event_ID, timestamp))
+        else:
+            fw.event_queue.put((self.event_ID, timestamp))
 
     def value(self):
         # Return state of the input. 
@@ -143,34 +166,47 @@ class Digital_input():
         self.debounce_active = False      # Set True when pin is ignoring inputs due to debounce.
         self.pin_state = self.pin.value()
         self.interrupt_timestamp = 0
+        self.decimate_counter = -1
 
 # ----------------------------------------------------------------------------------------
 # Digital Output.
 # ----------------------------------------------------------------------------------------
 
 class Digital_output():
-    def __init__(self, inverted = False):
-        self.inverted = inverted # Set True for inverted output.
 
-    def connect(self, pin):
+    def __init__(self, pin, inverted=False, pulse_enabled=False):
         self.pin = pyb.Pin(pin, pyb.Pin.OUT_PP)  # Micropython pin object.
-        self.state = False
-        digital_outputs.append(self)
+        self.inverted = inverted # Set True for inverted output.
+        self.timer = False # Replaced by timer object if pulse enabled.
         self.off()
+        if pulse_enabled:
+            self.enable_pulse()
+        digital_outputs.append(self)
 
     def on(self):
-         self.pin.value(not self.inverted)
-         self.state = True
+        self.pin.value(not self.inverted)
+        self.state = True
 
     def off(self):
-         self.pin.value(self.inverted)
-         self.state = False
+        if self.timer:
+            self.timer.deinit()
+        self.pin.value(self.inverted)
+        self.state = False
 
-    def toggle(self):
+    def toggle(self, t=None): # Unused argument is for compatibility with timer callback.
         if self.state:
-            self.off()
+            self.pin.value(self.inverted)
         else:
-            self.on()    
+            self.pin.value(not self.inverted)
+        self.state = not self.state  
+
+    def enable_pulse(self): # Setup a hardware timer to allow pulsed output  
+        self.timer = pyb.Timer(available_timers.pop())
+
+    def pulse(self, freq): # Turn on squarewave output with specified frequency. 
+        self.on()
+        self.timer.init(freq=freq*2)
+        self.timer.callback(self.toggle)
 
 # ----------------------------------------------------------------------------------------
 # Digital Outputs.
@@ -178,7 +214,6 @@ class Digital_output():
 
 class Digital_output_group():
     # Grouping of Digital_output objects with methods for turning on or off together.
-
     def __init__(self, digital_outputs):
         self.digital_outputs = digital_outputs
 
@@ -190,3 +225,15 @@ class Digital_output_group():
         for digital_output in self.digital_outputs:
             digital_output.off()
 
+# ----------------------------------------------------------------------------------------
+# Port
+# ----------------------------------------------------------------------------------------
+
+class Port():
+    # Class representing one RJ45 behavioural hardware port.
+    def __init__(self, DIO_A, DIO_B, POW_A, POW_B, C = None):
+        self.DIO_A = DIO_A
+        self.DIO_B = DIO_B
+        self.POW_A = POW_A
+        self.POW_B = POW_B
+        self.C     = C
