@@ -1,11 +1,23 @@
 from .hardware import *
 
+
+class ExternalDevice(object):
+
+    counter = 1
+
+    def get_uid(self):
+      ExternalDevice.counter += 1
+      return ExternalDevice.counter
+
+    def connect(self, port, pull=pyb.Pin.PULL_NONE):
+        pass
+
 # ----------------------------------------------------------------------------------------
 # Poke
 # ----------------------------------------------------------------------------------------
 
 
-class Poke():
+class Poke(ExternalDevice):
     # Single IR beam, LED and Solenoid.
 
     def __init__(self, rising_event=None, falling_event=None, debounce=5):
@@ -34,32 +46,43 @@ class Poke():
 # ----------------------------------------------------------------------------------------
 
 
-class Double_poke():
+class Double_poke(ExternalDevice):
     # Two IR beams, single LED and Solenoid.
 
-    def __init__(self, rising_event_A=None, falling_event_A=None,
-                 rising_event_B=None, falling_event_B=None, debounce=5):
+    def __init__(self, board_poke_port, pull=pyb.Pin.PULL_NONE, debounce=5):
         self.SOL = Digital_output()
         self.LED = Digital_output()
-        self.input_A = Digital_input(rising_event_A, falling_event_A, debounce)
-        self.input_B = Digital_input(rising_event_B, falling_event_B, debounce)
+        
+        self.high_in = self.get_uid()
+        self.high_out = self.get_uid()
+        self.low_in = self.get_uid()
+        self.low_out = self.get_uid()
 
-    def connect(self, port, pull=pyb.Pin.PULL_NONE):
-        self.input_A.connect(port['DIO_A'], pull)
-        self.input_B.connect(port['DIO_B'], pull)
-        self.LED.connect(port['POW_A'])
-        self.SOL.connect(port['POW_B'])
+        self.IR_high = Digital_input(self.high_in, self.high_out, debounce)
+        self.IR_low = Digital_input(self.low_in, self.low_out, debounce)
+
+        self.IR_high.connect(board_poke_port.DIO_A, pull)
+        self.IR_low.connect(board_poke_port.DIO_B, pull)
+        self.LED.connect(board_poke_port.POW_A)
+        self.SOL.connect(board_poke_port.POW_B)
+
+
+#    def connect(self, board_poke_port, pull=pyb.Pin.PULL_NONE):
+#        self.IR_high.connect(board_poke_port.DIO_A, pull)
+#        self.IR_low.connect(board_poke_port.DIO_B, pull)
+#        self.LED.connect(board_poke_port.POW_A)
+#        self.SOL.connect(board_poke_port.POW_B)
 
     def value(self):
         # Return the state of input A.
-        return self.input_A.value()
+        return self.IR_high.value()
 
 # ----------------------------------------------------------------------------------------
 # Twin_poke
 # ----------------------------------------------------------------------------------------
 
 
-class Twin_poke():
+class Twin_poke(ExternalDevice):
     # Two IR beams, each with their own LED.
 
     def __init__(self, rising_event_A=None, falling_event_A=None,
@@ -105,6 +128,26 @@ class Quad_poke():
 
 # These dictionaries provide pin mappings for specific boards whose schematics are
 # provided in the pyControl/schematics folder.
+
+class Connector():
+  pass
+
+class RJ45Connector(Connector):
+  def __init__(self, dio_a, dio_b, pow_a, pow_b):
+    self.DIO_A = dio_a
+    self.DIO_B = dio_b
+    self.POW_A = pow_a
+    self.POW_B = pow_b
+
+class BaseBoard(object):
+  pass
+
+class InesBoard(BaseBoard):
+  def __init__(self):
+    self.rj45_port4 = RJ45Connector('X12','X11','Y5','Y1')
+    self.do1 = Digital_output()
+    self.do1.connect('X1')
+
 
 breakout_1_0 = {'ports': {1: {'DIO_A': 'X1',   # RJ45 connector port pin mappings.
                               'DIO_B': 'X2',
