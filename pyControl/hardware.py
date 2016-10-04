@@ -11,7 +11,8 @@ digital_outputs = []  # List of all Digital_output objects.
 
 available_timers = [7,8,9,10,11,12,13,14] # Hardware timers not in use by other fuctions.
 
-default_pulls = {} # Used when boards are initialised to specify default pullup or pulldown resistors.
+default_pull = {'down': [], # Used when Mainboards are initialised to specify 
+                'up'  : []} # default pullup or pulldown resistors for pins.
 
 hardware_definition = None  # Hardware definition object.
 
@@ -78,7 +79,12 @@ class Digital_input():
             assert not (rising_event and falling_event), 'Decimate can only be used with single edge'
             debounce = False
         if pull is None: # No pullup or pulldown resistor specified, use default.
-            pull = default_pulls[pin] if pin in default_pulls.keys() else pyb.Pin.PULL_NONE
+            if pin in default_pull['up']:
+                pull = pyb.Pin.PULL_UP
+            elif pin in default_pull['down']:
+                pull = pyb.Pin.PULL_DOWN
+            else:
+                pull = pyb.Pin.PULL_NONE
         self.pull = pull
         self.pin = pyb.Pin(pin, pyb.Pin.IN, pull = pull)
         self.rising_event = rising_event
@@ -91,27 +97,22 @@ class Digital_input():
         # Set event codes for rising and falling events.  If neither rising or falling event 
         # is used by framework, the interrupt is not activated. Returns boolean indicating
         # whether input is active.
-        if self.rising_event in fw.events:
-            self.rising_event_ID  = fw.events[self.rising_event]
-        else:
-            self.rising_event_ID = None
-        if self.falling_event in fw.events:
-            self.falling_event_ID = fw.events[self.falling_event]
-        else:
-            self.falling_event_ID = None
+        self.rising_event_ID  = fw.events[self.rising_event ] if self.rising_event  in fw.events else False
+        self.falling_event_ID = fw.events[self.falling_event] if self.falling_event in fw.events else False
         if not (self.rising_event_ID or self.falling_event_ID):
             return False # Input not used by current state machines.
-        elif self.rising_event_ID and self.falling_event_ID:
+        # Setup interrupts.
+        if self.debounce or (self.rising_event_ID and self.falling_event_ID):
             pyb.ExtInt(self.pin, pyb.ExtInt.IRQ_RISING_FALLING, self.pull, self._ISR)
             self.use_both_edges = True
         else:
             self.use_both_edges = False
             if self.rising_event_ID:
                 pyb.ExtInt(self.pin, pyb.ExtInt.IRQ_RISING, self.pull, self._ISR)
-                self.event_ID = self.rising_event_ID
+                self.pin_state = True
             else:
                 pyb.ExtInt(self.pin, pyb.ExtInt.IRQ_FALLING, self.pull, self._ISR)
-                self.event_ID = self.falling_event_ID
+                self.pin_state = False
         return True
 
     def _ISR(self, line):
@@ -121,41 +122,37 @@ class Digital_input():
         if self.decimate:
             self.decimate_counter = (self.decimate_counter+1) % self.decimate
             if not self.decimate_counter == 0:
-                return
+                return # Ignore input due to decimation.
         self.interrupt_timestamp = fw.current_time
         if self.debounce: # Digitial input uses debouncing.
             self.debounce_active = True
-            if self.use_both_edges:
-                self.pin_state = not self.pin_state
+            self.pin_state = not self.pin_state
         elif self.use_both_edges:
-                self.pin_state = self.pin.value()
+            self.pin_state = self.pin.value()
         self.interrupt_triggered = True # Set tag on Digital_input.
         fw.interrupts_waiting    = True # Set tag on framework (common to all Digital_inputs).
 
     def _process_interrupt(self):
         # Put apropriate event for interrupt in event queue.
         self.interrupt_triggered = False
-        self._publish_event(self.interrupt_timestamp)
+        self._publish_if_edge_has_event(self.interrupt_timestamp)
         if self.debounce: # Set timer to deactivate debounce in self.debounce milliseconds.
             fw.timer.set(-self.ID, self.debounce) 
 
     def _deactivate_debounce(self):
         # Called when debounce timer elapses, deactivates debounce and 
         # if necessary publishes event for edge missed during debounce.
-        if self.use_both_edges and not (self.pin_state == self.pin.value()):  
-            self.pin_state = not self.pin_state  # An edge has been missed.
-            self._publish_event(fw.current_time)
+        if not self.pin_state == self.pin.value(): # An edge has been missed.  
+            self.pin_state = not self.pin_state  
+            self._publish_if_edge_has_event(fw.current_time)
         self.debounce_active = False
 
-    def _publish_event(self, timestamp):
-        # Publish event for detected edge.
-        if self.use_both_edges:
-            if self.pin_state: # Rising edge.
-                fw.event_queue.put((self.rising_event_ID, timestamp))
-            else: # Falling edge.
-                fw.event_queue.put((self.falling_event_ID, timestamp))
-        else:
-            fw.event_queue.put((self.event_ID, timestamp))
+    def _publish_if_edge_has_event(self, timestamp):
+        # Publish event if detected edge has event ID assigned.
+        if self.pin_state and self.rising_event_ID:          # Rising edge.
+            fw.event_queue.put((self.rising_event_ID, timestamp))
+        elif (not self.pin_state) and self.falling_event_ID: # Falling edge.
+            fw.event_queue.put((self.falling_event_ID, timestamp))
 
     def value(self):
         # Return state of the input. 
@@ -164,7 +161,8 @@ class Digital_input():
     def reset(self): # Reset state of input, called at beginning of run.
         self.interrupt_triggered = False  # Flag to tell framework to run _process_interrupt.
         self.debounce_active = False      # Set True when pin is ignoring inputs due to debounce.
-        self.pin_state = self.pin.value()
+        if self.use_both_edges:
+            self.pin_state = self.pin.value()
         self.interrupt_timestamp = 0
         self.decimate_counter = -1
 
@@ -237,3 +235,13 @@ class Port():
         self.POW_A = POW_A
         self.POW_B = POW_B
         self.C     = C
+
+# ----------------------------------------------------------------------------------------
+# Mainboard
+# ----------------------------------------------------------------------------------------
+
+class Mainboard():
+    # Parent class for devboard and breakout boards.
+    
+    def set_pull_updown(self, pull): # Set default pullup/pulldown resistors.
+        default_pull.update(pull)

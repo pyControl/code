@@ -63,15 +63,27 @@ class Pycboard(Pyboard):
         self.data_file = None
         self.number = number
 
-    def reset(self):
+    def reset(self, _after_FW_load=False, _after_HD_load=False):
         'Enter raw repl (soft reboots pyboard), import modules.'
         self.enter_raw_repl() # Soft resets pyboard.
         self.exec(inspect.getsource(_djb2_file))  # define djb2 hashing function.
         self.exec('import os; import gc')
         try:
-            self.exec('from pyControl import *')
-        except PyboardError:
-            self.load_framework()
+            self.exec('from pyControl import *; import devices')
+        except PyboardError as e:
+            if _after_FW_load: # Already tried load_framework()
+                print('Error: Unable to import framework.\n' + e.args[2].decode())
+            else:
+                self.load_framework()
+            return
+        try:
+            self.exec('import hardware_definition')
+        except PyboardError as e:
+            if _after_HD_load: # Already tried load_hardware_definition()
+                print('Error: Unable to import hardware definition.\n' + e.args[2].decode())
+            else:
+                self.load_hardware_definition()
+            return
         self.framework_running = False
         self.data = None
         self.state_machines = [] # List to hold name of instantiated state machines.
@@ -87,6 +99,7 @@ class Pycboard(Pyboard):
     def gc_collect(self): 
         'Run a garbage collection on pyboard to free up memory.'
         self.exec('gc.collect()')
+        time.sleep(0.01)
 
     def DFU_mode(self):
         'Put the pyboard into device firmware update mode.'
@@ -101,8 +114,7 @@ class Pycboard(Pyboard):
 
     def write_file(self, target_path, data):
         '''Write data to file at specified path on pyboard, any data already
-        in the file will be deleted.
-        '''
+        in the file will be deleted.'''
         self.exec("tmpfile = open('{}','w')".format(target_path))
         try:
             self.exec("tmpfile.write({})".format(repr(data)))
@@ -128,7 +140,7 @@ class Pycboard(Pyboard):
         while not file_hash == self.get_file_hash(target_path):
             self.write_file(target_path, file_contents) 
         self.gc_collect()
-            
+
     def transfer_folder(self, folder_path, target_folder = None, file_type = 'all'):
         '''Copy a folder into the root directory of the pyboard.  Folders that
         contain subfolders will not be copied successfully.  To copy only files of
@@ -170,22 +182,17 @@ class Pycboard(Pyboard):
         print('Transfering pyControl framework to pyboard.')
         self.transfer_folder(framework_dir, file_type = 'py')
         self.transfer_folder(devices_dir  , file_type = 'py')
-        self.reset()
+        return self.reset(_after_FW_load=True)
 
     def load_hardware_definition(self, hwd_path = hwd_path):
         '''Transfer a hardware definition file to pyboard.  Defaults to transfering 
-        file hardware_definition.py from config folder.  File is renamed 
-        hardware_definition.py in pyboard filesystem.'''
+        file hardware_definition.py from config folder. '''
         if os.path.exists(hwd_path):
             print('Transfering hardware definition to pyboard.')
             self.transfer_file(hwd_path, target_path = 'hardware_definition.py')
-            self.reset()
-            try:
-                self.exec('import hardware_definition')
-            except PyboardError as e:
-                print('Error: Unable to import hardware definition.\n' + e.args[2].decode())
+            return self.reset(_after_HD_load=True)
         else:
-            print('Hardware definition file not found.')  
+            print('Hardware definition file not found.') 
 
     def setup_state_machine(self, sm_name, sm_dir = None, raise_exception = False):
         ''' Transfer state machine descriptor file sm_name.py from folder sm_dir
