@@ -56,7 +56,14 @@ def connect_device(device, connector, pull=None):
 # ----------------------------------------------------------------------------------------
 
 
-class Digital_input():
+class Digital_input(object):
+
+    counter = 3 # do not interfer with built-in events
+
+    def get_uid(self):
+      Digital_input.counter += 1
+      print("next_uid: ", Digital_input.counter)
+      return Digital_input.counter
 
     def __init__(self, rising_event=None, falling_event=None, debounce=5):
         # Digital_input class provides functionallity to generate framework events when a
@@ -74,8 +81,16 @@ class Digital_input():
         # falling_event - Name of event triggered on falling edges.
         # debounce      - Minimum time interval between events (ms),
         #                 set to False to deactive debouncing.
-        self.rising_event = rising_event
-        self.falling_event = falling_event
+        if rising_event:
+            self.rising_event = rising_event
+        else:
+            self.rising_event = self.get_uid()
+
+        if falling_event:
+            self.falling_event = falling_event
+        else:
+            self.falling_event = self.get_uid()
+
         self.debounce = debounce
         self.ID = len(digital_inputs)  # Index in digital inputs list.
         digital_inputs.append(self)
@@ -98,6 +113,9 @@ class Digital_input():
         else:
             self.falling_event_ID = None
         if self.rising_event_ID or self.falling_event_ID:
+            print('rising_event_ID: ', self.rising_event_ID)
+            print('falling_event_ID: ', self.falling_event_ID)
+            print('pin: ', self.pin)
             pyb.ExtInt(self.pin, pyb.ExtInt.IRQ_RISING_FALLING, self.pull, self._ISR)
             self.reset()
             return True
@@ -155,7 +173,7 @@ class Digital_input():
 # ----------------------------------------------------------------------------------------
 
 
-class Digital_output():
+class Digital_output(object):
 
     def __init__(self, inverted=False):
         self.inverted = inverted  # Set True for inverted output.
@@ -185,7 +203,7 @@ class Digital_output():
 # ----------------------------------------------------------------------------------------
 
 
-class Digital_output_group():
+class Digital_output_group(object):
     # Grouping of Digital_output objects with methods for turning on or off together.
 
     def __init__(self, digital_outputs):

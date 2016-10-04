@@ -46,36 +46,7 @@ class Poke(ExternalDevice):
 # ----------------------------------------------------------------------------------------
 
 
-class Double_poke(ExternalDevice):
-    # Two IR beams, single LED and Solenoid.
 
-    def __init__(self, board_poke_port, pull=pyb.Pin.PULL_NONE, debounce=5):
-        self.SOL = Digital_output()
-        self.LED = Digital_output()
-        
-        self.high_in = self.get_uid()
-        self.high_out = self.get_uid()
-        self.low_in = self.get_uid()
-        self.low_out = self.get_uid()
-
-        self.IR_high = Digital_input(self.high_in, self.high_out, debounce)
-        self.IR_low = Digital_input(self.low_in, self.low_out, debounce)
-
-        self.IR_high.connect(board_poke_port.DIO_A, pull)
-        self.IR_low.connect(board_poke_port.DIO_B, pull)
-        self.LED.connect(board_poke_port.POW_A)
-        self.SOL.connect(board_poke_port.POW_B)
-
-
-#    def connect(self, board_poke_port, pull=pyb.Pin.PULL_NONE):
-#        self.IR_high.connect(board_poke_port.DIO_A, pull)
-#        self.IR_low.connect(board_poke_port.DIO_B, pull)
-#        self.LED.connect(board_poke_port.POW_A)
-#        self.SOL.connect(board_poke_port.POW_B)
-
-    def value(self):
-        # Return the state of input A.
-        return self.IR_high.value()
 
 # ----------------------------------------------------------------------------------------
 # Twin_poke
@@ -129,6 +100,132 @@ class Quad_poke():
 # These dictionaries provide pin mappings for specific boards whose schematics are
 # provided in the pyControl/schematics folder.
 
+# EXTERNAL DEVICES
+
+class ExternalDevice(object):
+  pass
+
+class DoublePokeDevice(ExternalDevice):
+  # Two IR beams, single LED and Solenoid.
+
+  def __init__(self, board, pull=pyb.Pin.PULL_NONE, debounce=5):
+
+    self.IR_high = Digital_input(debounce=debounce)
+    self.IR_high.connect(board.rj45_port4.DIO_A, pull)
+    
+    self.IR_low = Digital_input(debounce=debounce)
+    self.IR_low.connect(board.rj45_port4.DIO_B, pull)
+
+    self.LED = Digital_output()
+    self.LED.connect(board.rj45_port4.POW_A)
+    
+    self.SOL = Digital_output()
+    self.SOL.connect(board.rj45_port4.POW_B)
+
+  def value(self):
+    # Return the state of input A.
+    return self.IR_high.value()
+
+class ScyBoardDevice(ExternalDevice):
+   def __init__(self, board, pull=pyb.Pin.PULL_NONE, debounce=5):
+
+    self.input1 = Digital_input(debounce=debounce)
+    self.input1.connect(board.generic_io1.DIO_pin, pull)
+
+    self.input2 = Digital_input(debounce=debounce)
+    self.input2.connect(board.generic_io2.DIO_pin, pull)
+
+    self.input3 = Digital_input(debounce=debounce)
+    self.input3.connect(board.generic_io3.DIO_pin, pull)
+
+    self.input4 = Digital_input(debounce=debounce)
+    self.input4.connect(board.generic_io4.DIO_pin, pull)
+
+    self.input5 = Digital_input(debounce=debounce)
+    self.input5.connect(board.generic_io5.DIO_pin, pull)
+
+    self.input6 = Digital_input(debounce=debounce)
+    self.input6.connect(board.generic_io6.DIO_pin, pull)
+
+    self.input7 = Digital_input(debounce=debounce)
+    self.input7.connect(board.generic_io7.DIO_pin, pull)                                        
+
+    self.input8 = Digital_input(debounce=debounce)
+    self.input8.connect(board.generic_io8.DIO_pin, pull)
+
+    self.output1 = Digital_output()
+    self.output1.connect(board.generic_io9.DIO_pin)
+
+    self.output2 = Digital_output()
+    self.output2.connect(board.generic_io10.DIO_pin)
+
+    self.output3 = Digital_output()
+    self.output3.connect(board.generic_io11.DIO_pin)
+
+    self.output4 = Digital_output()
+    self.output4.connect(board.generic_io12.DIO_pin)
+
+class LoadCellsDevice(ScyBoardDevice):
+  def __init__(self, board, pull=pyb.Pin.PULL_NONE, debounce=5):
+    super().__init__(board, pull, debounce)
+
+    # events aliases (we only care for rising events)
+    self.cell1_threshold_low = self.input1.rising_event
+    self.cell1_threshold_high = self.input2.rising_event
+
+    self.cell2_threshold_low = self.input3.rising_event
+    self.cell2_threshold_high = self.input4.rising_event
+
+    self.cell3_threshold_low = self.input5.rising_event
+    self.cell3_threshold_high = self.input6.rising_event
+
+    self.cell4_threshold_low = self.input7.rising_event
+    self.cell4_threshold_high = self.input8.rising_event
+
+
+  def start_stop_task(self):
+    self.output1.on()
+
+  def solenoid_opening(self):
+    self.output2.on()
+    
+  def infrafred_cross(self):
+    self.output3.on()
+
+
+class LedDevice(ExternalDevice):
+  def __init__(self, board_pin):
+
+    self.led = Digital_output()
+    self.led.connect(board_pin)
+
+  def turn_on(self):
+    self.led.on()
+
+  def turn_off(self):
+    self.led.off()
+
+class LedMatrixDevice(ExternalDevice):
+  def __init__(self, board):
+    self.led1 = LedDevice(board.generic_io13.DIO_pin)
+    self.led2 = LedDevice(board.generic_io14.DIO_pin)
+    self.led3 = LedDevice(board.generic_io15.DIO_pin)
+    self.led4 = LedDevice(board.generic_io16.DIO_pin)
+    self.led5 = LedDevice(board.generic_io17.DIO_pin)
+    self.led6 = LedDevice(board.generic_io18.DIO_pin)
+
+
+# class PushButtonDevice(ExternalDevice):
+#   def __init__(self, board_pin, pull=pyb.Pin.PULL_NONE, debounce=5):
+#     # events
+#     self.pressed = self.get_uid()
+#     self.released = self.get_uid()
+
+#     self.button = Digital_input(self.pressed, self.released, debounce)
+#     self.button.connect(board_pin, pull)    
+
+# CONNECTORS
+
 class Connector():
   pass
 
@@ -139,14 +236,43 @@ class RJ45Connector(Connector):
     self.POW_A = pow_a
     self.POW_B = pow_b
 
+class GenericIOConnector(Connector):
+  def __init__(self, pin):
+    self.DIO_pin = pin
+
+# BOARDS
+
 class BaseBoard(object):
   pass
 
 class InesBoard(BaseBoard):
   def __init__(self):
+        
     self.rj45_port4 = RJ45Connector('X12','X11','Y5','Y1')
-    self.do1 = Digital_output()
-    self.do1.connect('X1')
+    
+    self.generic_io1 = GenericIOConnector('X1')
+    self.generic_io2 = GenericIOConnector('X2')
+    self.generic_io3 = GenericIOConnector('X3')
+    self.generic_io4 = GenericIOConnector('X4')
+    self.generic_io5 = GenericIOConnector('X5')
+    self.generic_io6 = GenericIOConnector('X6')
+    self.generic_io7 = GenericIOConnector('X7')
+    self.generic_io8 = GenericIOConnector('X8')
+    self.generic_io9 = GenericIOConnector('Y9')
+    self.generic_io10 = GenericIOConnector('Y10')
+    self.generic_io11 = GenericIOConnector('Y11')
+    self.generic_io12 = GenericIOConnector('Y12')
+
+    # connectors with a resistor 330R
+    self.generic_io13 = GenericIOConnector('Y2')
+    self.generic_io14 = GenericIOConnector('Y3')
+    self.generic_io15 = GenericIOConnector('Y4')
+    self.generic_io16 = GenericIOConnector('Y6')
+    self.generic_io17 = GenericIOConnector('Y7')
+    self.generic_io18 = GenericIOConnector('Y8')
+
+
+
 
 
 breakout_1_0 = {'ports': {1: {'DIO_A': 'X1',   # RJ45 connector port pin mappings.
@@ -157,14 +283,14 @@ breakout_1_0 = {'ports': {1: {'DIO_A': 'X1',   # RJ45 connector port pin mapping
                           2: {'DIO_A': 'X3',
                               'DIO_B': 'X4',
                               'POW_A': 'Y7',
-                              'POW_B': 'Y3'},
+                               'POW_B': 'Y3'},
 
                           3: {'DIO_A': 'X7',
                               'DIO_B': 'X8',
                               'POW_A': 'Y6',
                               'POW_B': 'Y2'},
 
-                          4: {'DIO_A': 'X12',
+                            4: {'DIO_A': 'X12',
                               'DIO_B': 'X11',
                               'POW_A': 'Y5',
                               'POW_B': 'Y1'}},
