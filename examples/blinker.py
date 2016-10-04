@@ -2,10 +2,10 @@ from pyControl.utility import *
 
 # States and events.
 
-states = {'LED_on'  :  1,
-          'LED_off' :  2}
+states = ['LED_on',
+          'LED_off']
 
-events = {'timer_evt' :  3}
+events = ['timer_evt']
 
 initial_state = 'LED_off'
 
