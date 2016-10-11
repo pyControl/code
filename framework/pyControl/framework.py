@@ -234,8 +234,10 @@ def run(duration = None):
     event_queue.reset()
     data_output_queue.reset()
     if not hw.hardware_definition:
+        #print(events)
         hw.initialise()
     hw.reset()
+    #print(events)
     start_time =  pyb.millis()
     current_time = 0
     # Run--------------------------------

@@ -58,11 +58,11 @@ def connect_device(device, connector, pull=None):
 
 class Digital_input(object):
 
-    counter = 3 # do not interfer with built-in events
+    counter = -1 # do not interfer with built-in events
 
     def get_uid(self):
       Digital_input.counter += 1
-      print("next_uid: ", Digital_input.counter)
+      #print("next_uid: ", Digital_input.counter)
       return Digital_input.counter
 
     def __init__(self, rising_event=None, falling_event=None, debounce=5):
@@ -113,9 +113,9 @@ class Digital_input(object):
         else:
             self.falling_event_ID = None
         if self.rising_event_ID or self.falling_event_ID:
-            print('rising_event_ID: ', self.rising_event_ID)
-            print('falling_event_ID: ', self.falling_event_ID)
-            print('pin: ', self.pin)
+            #print('rising_event_ID: ', self.rising_event_ID)
+            #print('falling_event_ID: ', self.falling_event_ID)
+            #print('pin: ', self.pin)
             pyb.ExtInt(self.pin, pyb.ExtInt.IRQ_RISING_FALLING, self.pull, self._ISR)
             self.reset()
             return True
