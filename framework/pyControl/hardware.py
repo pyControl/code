@@ -98,6 +98,7 @@ class Digital_input():
         else:
             self.falling_event_ID = None
         if self.rising_event_ID or self.falling_event_ID:
+            # print("Setting id: ", self.rising_event, self.falling_event, self.pin)
             pyb.ExtInt(self.pin, pyb.ExtInt.IRQ_RISING_FALLING, self.pull, self._ISR)
             self.reset()
             return True
