@@ -13,13 +13,17 @@ def withprob(p):
     # Return a random boolean that is True with probability p.
     return pyb.rng()<(1073741824. * p)
 
-def mean(x):
-    # Return the mean value of x.
-    return(sum(x)/len(x))
-
 def shuffled(L):
     # Return a shuffled copy of list L.
     return sorted(L, key = lambda l: pyb.rng())
+
+def randint(a,b):  
+  # Return a random integer N such that a <= N <= b.
+    return int(a+(b+1-a)*random())
+
+def mean(x):
+    # Return the mean value of x.
+    return(sum(x)/len(x))
 
 # ----------------------------------------------------------------------------------------
 # Utility classes

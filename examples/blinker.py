@@ -13,7 +13,7 @@ initial_state = 'LED_off'
 
 v.LED_n  = 1 # Number of LED to use.
         
-# Define behaviour.
+# Define behaviour. 
 
 def LED_on(event):
     if event == 'entry':
