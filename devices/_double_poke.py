@@ -8,3 +8,5 @@ class Double_poke():
         self.input_B = Digital_input(port.DIO_B, rising_event_B, falling_event_B, debounce)
         self.LED     = Digital_output(port.POW_A)
         self.SOL     = Digital_output(port.POW_B)
+        if port.POW_C is not None:
+            self.POW_C = Digital_output(port.POW_C)

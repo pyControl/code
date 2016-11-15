@@ -3,8 +3,8 @@ import math
 
 _sine_len = 100 # Number of points in sine wave.
 _sine_buf = bytearray([128+int(127*math.sin(2*math.pi*i/_sine_len)) for i in range(_sine_len)])
-
 _sqr_buf = bytearray([255,0])
+_off_buf = bytearray([0])
 
 #-----------------------------------------------------------------------------------
 # Audio output
@@ -19,11 +19,12 @@ class Audio_output():
         self._func = None # Function currently being used for sweeped sound (sine, square or noise)
         self._freq = 0
         self._freq_ind = 0
+        self.click_freq = 10000 # Frequency of square wave cycle used to generate click.
 
     # User functions-------------------------------------------------------------------
 
     def off(self):
-            self._DAC.write(127)
+            self._DAC.write_timed(_off_buf, 10000, mode=pyb.DAC.NORMAL)
             self._timer.deinit()
             self._playing = False
 
@@ -35,6 +36,10 @@ class Audio_output():
 
     def noise(self, freq=10000): # Play white noise with specified maximum frequency.
         self._DAC.noise(freq*2)
+
+    def clicks(self, rate): # Play clicks at specified rate, f controls click frequency content. 
+        self._timer.init(freq=rate)
+        self._timer.callback(self._click)
 
     def pulsed_sine(self, freq, pulse_rate):
         self._pulsed_sound(freq, pulse_rate, self.sine)
@@ -55,6 +60,9 @@ class Audio_output():
         self._sound_sweep(start_freq, end_freq, n_steps, step_rate, self.noise)
 
     # Support functions-----------------------------------------------------------------
+
+    def _click(self, timer=None): # Play a single click.
+        self._DAC.write_timed(_sqr_buf, self.click_freq, mode=pyb.DAC.NORMAL)  
 
     def _pulsed_sound(self, freq, pulse_rate, func):
         self._freq = freq

@@ -6,6 +6,8 @@ class Poke():
         self.input = Digital_input(port.DIO_A, rising_event, falling_event, debounce)
         self.LED = Digital_output(port.POW_A)
         self.SOL = Digital_output(port.POW_B)
+        if port.POW_C is not None:
+            self.POW_C = Digital_output(port.POW_C)
 
     def value(self):
         return self.input.value()

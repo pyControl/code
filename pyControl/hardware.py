@@ -229,12 +229,16 @@ class Digital_output_group():
 
 class Port():
     # Class representing one RJ45 behavioural hardware port.
-    def __init__(self, DIO_A, DIO_B, POW_A, POW_B, C = None):
+    def __init__(self, DIO_A, DIO_B, POW_A, POW_B, 
+                 DIO_C=None, POW_C=None, DAC=None, I2C=None):
         self.DIO_A = DIO_A
         self.DIO_B = DIO_B
+        self.DIO_C = DIO_C
         self.POW_A = POW_A
         self.POW_B = POW_B
-        self.C     = C
+        self.POW_C = POW_C
+        self.DAC   = DAC
+        self.I2C   = I2C
 
 # ----------------------------------------------------------------------------------------
 # Mainboard
