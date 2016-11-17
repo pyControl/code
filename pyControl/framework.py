@@ -224,7 +224,8 @@ def run(duration = None):
     timer.reset()
     event_queue.reset()
     data_output_queue.reset()
-    hw.initialise()
+    if not hw.initialised: hw.initialise()
+    hw.reset()
     current_time = 0
     start_time = pyb.millis()
     clock.init(freq=1000)

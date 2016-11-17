@@ -16,19 +16,27 @@ available_timers = [7,8,9,10,11,12,13,14] # Hardware timers not in use by other 
 default_pull = {'down': [], # Used when Mainboards are initialised to specify 
                 'up'  : []} # default pullup or pulldown resistors for pins.
 
+initialised = False # Set to True once hardware has been intiialised.
+
 # ----------------------------------------------------------------------------------------
 # Functions
 # ----------------------------------------------------------------------------------------
 
 def initialise():
-    global active_inputs
     # Puts those Digital_inputs that are used by current state machines
-    # into active_inputs list, assigns their IDs and resets them.
+    # into active_inputs list and assigns their IDs.
+    global active_inputs, initialised
     active_inputs = [digital_input for digital_input in digital_inputs
                      if digital_input._set_event_IDs()]
     for i, digital_input in enumerate(active_inputs):
-        digital_input.ID = i
-        digital_input.reset()        
+        digital_input.ID = i  
+    initialised = True   
+
+def reset():
+    # Reset state of inputs and turn off outputs.
+    for digital_input in active_inputs:
+        digital_input.reset()  
+    off()
 
 def off():
     # Turn of all digital outputs.
