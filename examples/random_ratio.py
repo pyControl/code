@@ -3,6 +3,7 @@
 # at the right poke.
 
 from pyControl.utility import *
+import hardware_definition as hw
 
 #-------------------------------------------------------------------------
 # States and events.

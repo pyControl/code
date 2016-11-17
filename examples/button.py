@@ -1,11 +1,16 @@
 from pyControl.utility import *
+from devices import Digital_input
+
+# Define hardware (normally done in seperate hardware definition file).
+
+pyboard_button = Digital_input('X17', falling_event='button_press', pull='up')
 
 # States and events.
   
 states= ['LED_on',
          'LED_off']
 
-events = ['button_event']
+events = ['button_press']
 
 initial_state = 'LED_off'
 
@@ -13,16 +18,16 @@ initial_state = 'LED_off'
 
 def LED_on(event):
         if event == 'entry':
-            hw.LED.on()
+            pyb.LED(4).on()
         elif event == 'exit':
-            hw.LED.off()
-        elif event == 'button_event':
+            pyb.LED(4).off()
+        elif event == 'button_press':
             goto('LED_off')
 
 def LED_off(event):
-        if event == 'button_event':
+        if event == 'button_press':
             goto('LED_on')
 
 def run_end():  # Turn off hardware at end of run.
-    hw.LED.off()
+    pyb.LED(4).off()
 

@@ -5,43 +5,30 @@ from . import framework as fw
 # Variables.
 # ----------------------------------------------------------------------------------------
 
-digital_inputs  = []  # List of all Digital_input objects.
+digital_inputs  = []  # All Digital_input objects.
 
-digital_outputs = []  # List of all Digital_output objects.
+active_inputs = [] # Digital input objects used by current state machines.
+
+digital_outputs = []  # All Digital_output objects.
 
 available_timers = [7,8,9,10,11,12,13,14] # Hardware timers not in use by other fuctions.
 
 default_pull = {'down': [], # Used when Mainboards are initialised to specify 
                 'up'  : []} # default pullup or pulldown resistors for pins.
 
-hardware_definition = None  # Hardware definition object.
-
 # ----------------------------------------------------------------------------------------
 # Functions
 # ----------------------------------------------------------------------------------------
 
-def initialise(hwd = None):
-    # Attempt to import hardware_definition if not supplied as argument. 
-    # Inserts hardware_definition module into state machine definition namespaces.
-    # Sets event IDs on digital inputs from framework events dictionary and remove digital 
-    # inputs that are not used by state machine to reduce overheads.
-    global hardware_definition, digital_inputs
-    if not hardware_definition:
-        try:
-            import hardware_definition
-            for state_machine in fw.state_machines:
-                state_machine.smd.hw = hardware_definition
-        except ImportError:
-            hardware_definition = None
-    digital_inputs = [digital_input for digital_input in digital_inputs
-                      if digital_input._set_event_IDs()]
-    for i, digital_input in enumerate(digital_inputs):
+def initialise():
+    global active_inputs
+    # Puts those Digital_inputs that are used by current state machines
+    # into active_inputs list, assigns their IDs and resets them.
+    active_inputs = [digital_input for digital_input in digital_inputs
+                     if digital_input._set_event_IDs()]
+    for i, digital_input in enumerate(active_inputs):
         digital_input.ID = i
-
-def reset():
-    # Called before each run to reset digital inputs.
-    for digital_input in digital_inputs:
-        digital_input.reset()
+        digital_input.reset()        
 
 def off():
     # Turn of all digital outputs.
@@ -85,6 +72,10 @@ class Digital_input():
                 pull = pyb.Pin.PULL_DOWN
             else:
                 pull = pyb.Pin.PULL_NONE
+        elif pull == 'up':
+            pull = pyb.Pin.PULL_UP
+        elif pull == 'down':
+            pull = pyb.Pin.PULL_DOWN
         self.pull = pull
         self.pin = pyb.Pin(pin, pyb.Pin.IN, pull = pull)
         self.rising_event = rising_event

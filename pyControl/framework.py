@@ -69,7 +69,7 @@ class Timer():
         while self.active_timers and self.active_timers[-1][0] <= current_time:
             ID = self.active_timers.pop()[1]
             if ID <= 0: # IDs <= 0 are used to index digital inputs for debounce timing. 
-                hw.digital_inputs[-ID]._deactivate_debounce() 
+                hw.active_inputs[-ID]._deactivate_debounce() 
             else:
                 event_queue.put((ID, -1)) # Timestamp-1 indictates not to put timer events in to output queue.
         check_timers = False
@@ -199,7 +199,7 @@ def _update():
     global current_time, interrupts_waiting, running
     if interrupts_waiting: # Priority 1: Process hardware interrupts.
         interrupts_waiting = False
-        for digital_input in hw.digital_inputs:
+        for digital_input in hw.active_inputs:
             if digital_input.interrupt_triggered:
                 digital_input._process_interrupt()
     elif check_timers: # Priority 2: Check for elapsed timers.
@@ -224,9 +224,7 @@ def run(duration = None):
     timer.reset()
     event_queue.reset()
     data_output_queue.reset()
-    if not hw.hardware_definition:
-        hw.initialise()
-    hw.reset()
+    hw.initialise()
     current_time = 0
     start_time = pyb.millis()
     clock.init(freq=1000)
