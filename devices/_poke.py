@@ -11,3 +11,11 @@ class Poke():
 
     def value(self):
         return self.input.value()
+
+    @property
+    def rising(self):
+        return self._input.rising_event
+
+    @property
+    def falling(self):
+        return self._input.falling_event        

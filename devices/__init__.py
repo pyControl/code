@@ -1,4 +1,5 @@
 from pyControl.hardware import Digital_input, Digital_output, off
+from devices._load_cells import LoadCellsTriggers, LoadCell
 from devices._poke import Poke
 from devices._double_poke import Double_poke
 from devices._twin_poke import Twin_poke
