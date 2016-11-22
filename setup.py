@@ -2,15 +2,15 @@
 # -*- coding: utf-8 -*-
 
 from setuptools import setup, find_packages
-import re
+#import re
 
-version = ''
-with open('pycontrol/__init__.py', 'r') as fd:
-    version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]',
-                        fd.read(), re.MULTILINE).group(1)
+version = '1.0'
+#with open('pycontrol/__init__.py', 'r') as fd:
+#    version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]',
+#                        fd.read(), re.MULTILINE).group(1)
 
-if not version:
-    raise RuntimeError('Cannot find version information')
+#if not version:
+#    raise RuntimeError('Cannot find version information')
 
 setup(
     name='pycontrol',
