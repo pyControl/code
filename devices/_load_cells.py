@@ -1,6 +1,7 @@
-class LoadCell()
-	def __init__(self, port1, port2, rising_event_A = None, falling_event_A = None,
-                rising_event_B = None, falling_event_B = None, debounce = 5):
+from pyControl.hardware import *
+
+class LoadCell():
+    def __init__(self, port1, port2, rising_event_A = None, falling_event_A = None, rising_event_B = None, falling_event_B = None, debounce = 5):        
         self._cell_threshold_high = Digital_input(port1, rising_event_A, falling_event_A, debounce)
         self._cell_threshold_low = Digital_input(port2, rising_event_B, falling_event_B, debounce)
 
