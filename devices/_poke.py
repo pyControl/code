@@ -14,8 +14,8 @@ class Poke():
 
     @property
     def rising(self):
-        return self._input.rising_event
+        return self.input.rising_event
 
     @property
     def falling(self):
-        return self._input.falling_event        
+        return self.input.falling_event        
