@@ -186,11 +186,11 @@ def print_events():
     for event_id, event_value in events.items():
         if event_value > 0:  # Print only user defined events.
             user_events[event_id] = events[event_id]
-    print("? E {0}".format(user_events))
+    print("E {0}".format(user_events))
 
 def print_states():
     """ Print states as a dictionary"""
-    print("? S {0}".format(states))
+    print("S {0}".format(states))
 
 def output_data(event):
     # Output data to serial line.
@@ -198,13 +198,13 @@ def output_data(event):
         print_string = print_queue.pop(0)
         if type(print_string) != str:
             print_string = repr(print_string)
-        print('? D {0} '.format(event[1]) + print_string)
+        print('D {0} '.format(event[1]) + print_string)
     else:  # Print event or state change.
         if verbose: # Print event/state name.
             event_name = ID2name[event[0]]
-            print('? D {} '.format(event[1]) + event_name)
+            print('D {} '.format(event[1]) + event_name)
         else: # Print event/state ID.
-            print('? D {} {}'.format(event[1], event[0]))            
+            print('D {} {}'.format(event[1], event[0]))            
 
 def _update():
     # Perform framework update functions in order of priority.
