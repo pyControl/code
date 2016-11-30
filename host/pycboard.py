@@ -10,7 +10,7 @@ import inspect
 framework_dir = os.path.join('..', 'pyControl')
 devices_dir   = os.path.join('..', 'devices')
 examples_dir  = os.path.join('..', 'examples')
-tasks_dir     = os.path.join('..', 'tasks')
+tasks_dir     = 'C:\\Users\\Thomas\\Dropbox\\Hardware development\\pyControl\\tasks' #os.path.join('..', 'tasks')
 hwd_path      = os.path.join('.', 'config', 'hardware_definition.py')
 
 # ----------------------------------------------------------------------------------------
@@ -225,6 +225,19 @@ class Pycboard(Pyboard):
             self.data_file.write(ID_info)
         else: # Print to screen.
             print(ID_info)
+
+    def get_states(self):
+        """
+        Return states as a dictionary
+        """
+        return self.exec('fw.print_states()').decode().strip()
+
+    def get_events(self):
+        """
+        Return events as a dictionary
+        """
+        return self.exec('fw.print_events()').decode().strip()
+
 
     def start_framework(self, dur = None, verbose = False, data_output = True):
         'Start pyControl framwork running on pyboard.'

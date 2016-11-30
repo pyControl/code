@@ -12,7 +12,7 @@ _off_buf = bytearray([0])
 
 class Audio_output():
     def __init__(self, channel=1):
-        assert channel in [1,2], 'channel number invalid, must be 1 or 2.'
+        assert channel in [1,2], '! Channel number invalid, must be 1 or 2.'
         self._DAC = pyb.DAC(channel) 
         self._timer = pyb.Timer(channel)
         self._playing = False
