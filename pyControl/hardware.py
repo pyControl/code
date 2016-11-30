@@ -70,8 +70,8 @@ class Digital_input():
         # decimate      - set to n to only generate 1 event for every n input pulses.
         # pull          - used to enable internal pullup or pulldown resitors. 
         if decimate:
-            assert isinstance(decimate, int), 'Decimate argument must be integer or False'
-            assert not (rising_event and falling_event), 'Decimate can only be used with single edge'
+            assert isinstance(decimate, int), '! Decimate argument must be integer or False'
+            assert not (rising_event and falling_event), '! Decimate can only be used with single edge'
             debounce = False
         if pull is None: # No pullup or pulldown resistor specified, use default.
             if pin in default_pull['up']:
@@ -90,6 +90,7 @@ class Digital_input():
         self.falling_event = falling_event
         self.debounce = debounce     
         self.decimate = decimate
+        self.ID = None # Overwritten by initialise()
         digital_inputs.append(self)
 
     def _set_event_IDs(self):
@@ -123,7 +124,7 @@ class Digital_input():
             if not self.decimate_counter == 0:
                 return # Ignore input due to decimation.
         self.interrupt_timestamp = fw.current_time
-        if self.debounce: # Digitial input uses debouncing.
+        if self.debounce: # Digital input uses debouncing.
             self.debounce_active = True
             self.pin_state = not self.pin_state
         elif self.use_both_edges:
@@ -136,7 +137,7 @@ class Digital_input():
         self.interrupt_triggered = False
         self._publish_if_edge_has_event(self.interrupt_timestamp)
         if self.debounce: # Set timer to deactivate debounce in self.debounce milliseconds.
-            fw.timer.set(-self.ID, self.debounce) 
+            fw.timer.set(self.debounce, (fw.debounce_evt, self.ID))
 
     def _deactivate_debounce(self):
         # Called when debounce timer elapses, deactivates debounce and 

@@ -5,7 +5,7 @@ from pyControl.utility import *
 states = ['LED_on',
           'LED_off']
 
-events = ['timer_evt']
+events = []
 
 initial_state = 'LED_off'
 
@@ -17,18 +17,14 @@ v.LED_n  = 1 # Number of LED to use.
 
 def LED_on(event):
     if event == 'entry':
-        set_timer('timer_evt', 0.5 * second)
+        timed_goto('LED_off', 0.5 * second)
         pyb.LED(v.LED_n).on()
     elif event == 'exit':
         pyb.LED(v.LED_n).off()
-    elif event == 'timer_evt':
-        goto('LED_off')
 
 def LED_off(event):
     if event == 'entry':
-        set_timer('timer_evt', 0.5 * second)
-    elif event == 'timer_evt':
-        goto('LED_on')
+        timed_goto('LED_on', 0.5 * second)
 
 def run_end():  # Turn off hardware at end of run.
     pyb.LED(v.LED_n).off()

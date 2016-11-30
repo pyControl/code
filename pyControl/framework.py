@@ -3,46 +3,49 @@ import pyb
 from .utility import second
 from . import hardware as hw
 
+# Constants used to indicate special event types:
+
+timer_evt    = const(-1) # Timer generated event.
+debounce_evt = const(-2) # Digital_input debounce timer event.
+goto_evt     = const(-3) # timed_goto event.
+print_evt    = const(-4) # User print event.
+stop_fw_evt  = const(-5) # Stop framework event.
+
+# The Event_queue and Timer classes store events for future processing
+# as lists of tuples.  The following event tuple types are in use:
+
+# (event_ID, timestamp) # External event, ID is positive integer.
+# (state_ID, timestamp) # State transition, ID is a positive integer.
+# (event_ID, timer_evt) # Timer generated event, ID is a positive integer.
+# (print_evt, timestamp, 'print_string') # User print event.
+# (goto_evt, State_machine_ID)     # timed_goto event.
+# (debounce_evt, Digital_input_ID) # Digital_input debouce timer.
+# (stop_fw_evt, None)   # Stop framework event.
+
 # ----------------------------------------------------------------------------------------
-# Event Que
+# Event_queue
 # ----------------------------------------------------------------------------------------
 
-ID_null_value =  0  # Event ID null value, no event may have this ID.
-
-class Event_queue():
-    #  Queue for holding event tuples: (event_ID, timestamp)
-    def __init__(self, buffer_length = 20):
-        self.buffer_length = buffer_length
+class Event_queue():  
+    # First-in first-out event queue.
+    def __init__(self):
         self.reset()
 
     def reset(self):
-        # Empty queue, set IDs to null value.
-        self.ID_buffer = array('i', [ID_null_value] * self.buffer_length)
-        self.TS_buffer = array('l', [0]  * self.buffer_length)
-        self.read_index  = 0
-        self.write_index = 0
+        # Empty queue.
+        self.Q = []
 
     def put(self, event):
-        # Put event in que.  
-        assert self.ID_buffer[self.write_index] == ID_null_value, 'Event queue buffer full'
-        self.ID_buffer[self.write_index] = event[0]
-        self.TS_buffer[self.write_index] = event[1]  
-        self.write_index = (self.write_index + 1) % self.buffer_length
+        # Put event in queue.  
+        self.Q.append(event)
 
     def get(self):
-        # Get event from buffer.  If no events are available return None.
-        event_ID   = self.ID_buffer[self.read_index]
-        timestamp  = self.TS_buffer[self.read_index] 
-        self.ID_buffer[self.read_index] = ID_null_value
-        if event_ID != ID_null_value:
-            self.read_index = (self.read_index + 1) % self.buffer_length
-            return (event_ID, timestamp)
-        else:
-            return None
+        # Get event from queue
+        return(self.Q.pop(0))
 
     def available(self):
-        # Return True if buffer contains events.
-        return self.ID_buffer[self.read_index] != ID_null_value
+        # Return True if queue contains events.
+        return len(self.Q) > 0
 
 # ----------------------------------------------------------------------------------------
 # Timer
@@ -54,29 +57,24 @@ class Timer():
         self.reset()
 
     def reset(self):
-        self.active_timers = [] # list of tuples: (event_ID, trigger_time)
+        self.active_timers = [] # list of tuples: (trigger_time, event)
     
-    def set(self, event_ID, interval):
-        # Set a timer to trigger with specified event ID after 'interval' ms has elapsed.
+    def set(self, interval, event):
+        # Set a timer to trigger specified event after 'interval' ms has elapsed.
         global current_time
-        self.active_timers.append((current_time + interval, event_ID))
+        self.active_timers.append((current_time+interval, event))
         self.active_timers.sort(reverse = True)
 
     def check(self):
         #Check whether any timers have triggered, place events in event que.
         global current_time, start_time, check_timers
-        current_time = pyb.millis() - start_time
         while self.active_timers and self.active_timers[-1][0] <= current_time:
-            ID = self.active_timers.pop()[1]
-            if ID <= 0: # IDs <= 0 are used to index digital inputs for debounce timing. 
-                hw.active_inputs[-ID]._deactivate_debounce() 
-            else:
-                event_queue.put((ID, -1)) # Timestamp-1 indictates not to put timer events in to output queue.
+            event_queue.put(self.active_timers.pop()[1])
         check_timers = False
 
-    def disarm(self,event_ID):
-        # Remove all active timers with specified event ID.
-        self.active_timers = [t for t in self.active_timers if not t[1] == event_ID]
+    def disarm(self, event):
+        # Remove all active timers with specified event.
+        self.active_timers = [t for t in self.active_timers if not t[1] == event]
 
 # ----------------------------------------------------------------------------------------
 # Framework variables and objects
@@ -88,11 +86,7 @@ timer = Timer()  # Instantiate timer_array object.
 
 event_queue = Event_queue() # Instantiate event que object.
 
-interrupts_waiting = False # Set true if interrupt waiting to be processed.
-
 data_output_queue = Event_queue() # Queue used for outputing events to serial line.
-
-print_queue = [] # Queue for strings output using print function. 
 
 data_output = True  # Whether to output data to the serial line.
 
@@ -114,6 +108,8 @@ clock = pyb.Timer(4) # Timer which generates clock tick.
 
 check_timers = False # Flag to say timers need to be checked, set True by clock tick.
 
+interrupts_waiting = False # Flag to say external interrupt waiting to be processed.
+
 start_time = 0 # Time at which framework run is started.
 
 # ----------------------------------------------------------------------------------------
@@ -122,7 +118,8 @@ start_time = 0 # Time at which framework run is started.
 
 def _clock_tick(timer):
     # Set flag to check timers, called by hardware timer once each millisecond.
-    global check_timers
+    global check_timers, current_time, start_time
+    current_time = pyb.millis() - start_time
     check_timers = True
 
 def register_machine(state_machine):
@@ -153,37 +150,27 @@ def register_machine(state_machine):
         state_machine.smd.events = assign_IDs(state_machine.smd.events)
 
     for state_name, ID in state_machine.smd.states.items():
-        assert state_name not in states.keys(), 'State names cannot be repeated.'
-        assert type(ID) == int and ID > 0,      'State and event IDs must be positive integers.'
-        assert ID not in ID2name.keys(),        'Different states or events cannot have same ID'
+        assert state_name not in states.keys(), '! State names cannot be repeated.'
+        assert type(ID) == int and ID > 0,      '! State and event IDs must be positive integers.'
+        assert ID not in ID2name.keys(),        '! Different states or events cannot have same ID'
 
     for event_name, ID in state_machine.smd.events.items():
         if event_name in events.keys():
-            assert ID == events[event_name], 'Events with same name must have same ID. ' 
+            assert ID == events[event_name], '! Events with same name must have same ID. ' 
         else:
-            assert ID not in ID2name.keys(), 'Different states or events cannot have same ID'
-        assert type(ID) == int and ID > 0,   'State and event IDs must be positive integers.'
+            assert ID not in ID2name.keys(), '! Different states or events cannot have same ID'
+        assert type(ID) == int and ID > 0,   '! State and event IDs must be positive integers.'
 
     states.update(state_machine.smd.states)
     events.update(state_machine.smd.events)
     ID2name.update({ID:name for name, ID in list(state_machine.smd.states.items()) +
                                             list(state_machine.smd.events.items())})
-
+    state_machine.ID = len(state_machines)
     state_machines.append(state_machine)
 
-def print_IDs():
-    # Print event and state IDs
-    print('States:')
-    for state_ID in sorted(states.values()):
-        print(ID2name[state_ID] + ': ' + str(state_ID))
-    print('Events:')
-    for event_ID in sorted(events.values()):
-        print(ID2name[event_ID]  + ': ' +  str(event_ID))
-
 def print_events():
-    """ Print user defined events as a dictionary"""
-    user_events = {event_name: event_ID for event_name, event_ID in events.items() if event_ID > 0}
-    print("E {}".format(user_events))
+    """ Print  events as a dictionary"""
+    print("E {}".format(events))
 
 def print_states():
     """ Print states as a dictionary"""
@@ -191,15 +178,11 @@ def print_states():
 
 def output_data(event):
     # Output data to serial line.
-    if event[0] == -1: # Print user generated output string.
-        print_string = print_queue.pop(0)
-        if type(print_string) != str:
-            print_string = repr(print_string)
-        print('P {} '.format(event[1]) + print_string)
+    if event[0] == print_evt: # Print user generated output string.
+        print('P {} {}'.format(event[1], event[2]))
     else:  # Print event or state change.
         if verbose: # Print event/state name.
-            event_name = ID2name[event[0]]
-            print('D {} '.format(event[1]) + event_name)
+            print('D {} {}'.format(event[1], ID2name[event[0]]))
         else: # Print event/state ID.
             print('D {} {}'.format(event[1], event[0]))            
 
@@ -213,12 +196,19 @@ def _update():
                 digital_input._process_interrupt()
     elif check_timers: # Priority 2: Check for elapsed timers.
         timer.check() 
-    elif event_queue.available(): # Priority 3: Process events in queue.
-        event = event_queue.get()       
-        if event[1] >= 0 and data_output: # Not timer event -> place in output queue.
-            data_output_queue.put(event)
-        for state_machine in state_machines:
-            state_machine._process_event(ID2name[event[0]])
+    elif event_queue.available(): # Priority 3: Process event from queue.
+        event = event_queue.get()   
+        if event[0] > 0: # State machine event.
+            if event[1] != timer_evt and data_output: # External event -> place in output queue.
+                data_output_queue.put(event)
+            for state_machine in state_machines:
+                state_machine._process_event(ID2name[event[0]])
+        elif event[0] == debounce_evt:
+            hw.active_inputs[event[1]]._deactivate_debounce()
+        elif event[0] == goto_evt:
+            state_machines[event[1]]._process_timed_goto()
+        elif event[0] == stop_fw_evt:
+            running = False
     elif usb_serial.any(): # Priority 4: Check for serial input from computer.
         bytes_recieved = usb_serial.readall()
         if bytes_recieved == b'E':      # Serial command to stop run.
@@ -243,15 +233,11 @@ def run(duration = None):
     running = True
     for state_machine in state_machines:
         state_machine._start()
-    if duration: # Run for finite time.
-        end_time = current_time + duration * second
-        while ((current_time - end_time) < 0) and running:            
-            _update()
-    else:
-        while running:
-            _update()
+    if duration: # Set timer to stop framework.
+        timer.set(duration*second, (stop_fw_evt, None))
+    while running:
+        _update()
     # Post run---------------------------
-    running = False
     clock.deinit()
     for state_machine in state_machines:
         state_machine._stop()  

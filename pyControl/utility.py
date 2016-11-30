@@ -41,12 +41,24 @@ class exp_mov_ave:
             self.tau = tau
         if init_value:
             self.init_value = init_value
-        self.ave = self.init_value
+        self.value = self.init_value
         self._m = math.exp(-1./self.tau)
         self._i = 1 - self._m
 
     def update(self, sample):
-        self.ave = (self.ave * self._m) + (self._i * sample)
+        self.value = (self.value * self._m) + (self._i * sample)
+
+
+class sample_without_replacement:
+    # Repeatedly sample elements from items list without replacement.
+    def __init__(self, items):
+        self._all_items = items
+        self._next_items = [] + shuffled(items)
+
+    def next(self):
+        if len(self._next_items) == 0:
+            self._next_items += shuffled(self._all_items)
+        return self._next_items.pop()
 
 # ----------------------------------------------------------------------------------------
 # Units.
@@ -62,10 +74,8 @@ hour = 60 * minute
 # ----------------------------------------------------------------------------------------
 
 class variables():
-    # Class for holding task variables.  Main purpose is to create single scope shared 
-    # across state behaviour functions to ensure that when variables are created or 
-    # modified in one state this persists to other states. Will eventually have functionality
-    # for outputting and modifying variables over serial.
+    # Class for holding task variables.  Acts as single namespace used by all
+    # state behaviour functions.  Also lets GUI know where variables are for setting/getting.
     def __init__(self):
         pass
 

@@ -15,8 +15,7 @@ states = ['wait_for_poke',
 
 events = ['left_poke',
           'right_poke',
-          'session_timer',
-          'reward_timer']
+          'session_timer']
 
 initial_state = 'wait_for_poke'
 
@@ -62,12 +61,10 @@ def reward(event):
     # On entry turn on solenoid and set timer, when timer elapses goto
     # 'wait_for_poke' state, on exit turn of solenoid. 
     if event == 'entry':
+        timed_goto('wait_for_poke', v.reward_duration)
         hw.right_poke.SOL.on()
-        set_timer('reward_timer', v.reward_duration)
         v.rewards_obtained += 1
         print('Rewards obtained: {}'.format(v.rewards_obtained))
-    elif event == 'reward_timer':
-        goto('wait_for_poke')
     elif event == 'exit':
         hw.right_poke.SOL.off()
 
