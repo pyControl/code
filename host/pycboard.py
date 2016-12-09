@@ -63,30 +63,30 @@ class Pycboard(Pyboard):
         self.data_file = None
         self.number = number
 
-    def reset(self, _after_FW_load=False, _after_HD_load=False):
+    def reset(self):
         'Enter raw repl (soft reboots pyboard), import modules.'
         self.enter_raw_repl() # Soft resets pyboard.
         self.exec(inspect.getsource(_djb2_file))  # define djb2 hashing function.
         self.exec('import os; import gc')
-        try:
-            self.exec('from pyControl import *; import devices')
-        except PyboardError as e:
-            if _after_FW_load: # Already tried load_framework()
-                print('Error: Unable to import framework.\n' + e.args[2].decode())
-            else:
-                self.load_framework()
-            return
-        try:
-            self.exec('import hardware_definition')
-        except PyboardError as e:
-            if _after_HD_load: # Already tried load_hardware_definition()
-                print('Error: Unable to import hardware definition.\n' + e.args[2].decode())
-            else:
-                self.load_hardware_definition()
-            return
         self.framework_running = False
         self.data = None
         self.state_machines = [] # List to hold name of instantiated state machines.
+        try:
+            self.exec('from pyControl import *; import devices')
+        except PyboardError as e:
+            error_message = e.args[2].decode()
+            if "ImportError: no module named 'pyControl'" in error_message:
+                print('Framework not present, please load framework.')
+            else:
+                print('Error: Unable to import framework.\n' + e.args[2].decode())
+        try:
+            self.exec('import hardware_definition')
+        except PyboardError as e:
+            error_message = e.args[2].decode()
+            if "ImportError: no module named 'hardware_definition'" in error_message:
+                print('Hardware definition not present.')
+            else:
+                print('Error: Unable to import hardware definition.\n' + e.args[2].decode())
 
     def hard_reset(self):
         print('Hard resetting pyboard.')
@@ -182,7 +182,8 @@ class Pycboard(Pyboard):
         print('Transfering pyControl framework to pyboard.')
         self.transfer_folder(framework_dir, file_type = 'py')
         self.transfer_folder(devices_dir  , file_type = 'py')
-        return self.reset(_after_FW_load=True)
+        self.reset()
+        return 
 
     def load_hardware_definition(self, hwd_path = hwd_path):
         '''Transfer a hardware definition file to pyboard.  Defaults to transfering 
@@ -190,7 +191,7 @@ class Pycboard(Pyboard):
         if os.path.exists(hwd_path):
             print('Transfering hardware definition to pyboard.')
             self.transfer_file(hwd_path, target_path = 'hardware_definition.py')
-            return self.reset(_after_HD_load=True)
+            return self.reset()
         else:
             print('Hardware definition file not found.') 
 
