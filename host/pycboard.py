@@ -10,7 +10,7 @@ import inspect
 framework_dir = os.path.join('..', 'pyControl')
 devices_dir   = os.path.join('..', 'devices')
 examples_dir  = os.path.join('..', 'examples')
-tasks_dir     = 'C:\\Users\\Thomas\\Dropbox\\Hardware development\\pyControl\\tasks' #os.path.join('..', 'tasks')
+tasks_dir     = os.path.join('..', 'tasks')
 hwd_path      = os.path.join('.', 'config', 'hardware_definition.py')
 
 # ----------------------------------------------------------------------------------------

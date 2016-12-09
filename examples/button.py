@@ -3,7 +3,7 @@ from devices import Digital_input
 
 # Define hardware (normally done in seperate hardware definition file).
 
-pyboard_button = Digital_input('X17', falling_event='button_press', pull='up')
+pyboard_button = Digital_input('X17', falling_event='button_press', pull='up')  # USR button on pyboard.
 
 # States and events.
   

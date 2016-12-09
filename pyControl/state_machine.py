@@ -46,12 +46,12 @@ class State_machine():
         # Transition to next state, calling exit action of old state
         # and entry action of next state.
         self._process_event('exit')
-        self.current_state = next_state
         if self.timed_goto_state: # Cancel timed_goto.
             self.timed_goto_state = None
             fw.timer.disarm((fw.goto_evt, self.ID))    
         if fw.data_output:
             fw.data_output_queue.put((fw.states[next_state], fw.current_time))
+        self.current_state = next_state
         self._process_event('entry')
 
     def timed_goto(self, next_state, interval):
