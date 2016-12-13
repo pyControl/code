@@ -75,7 +75,8 @@ class Pycboard(Pyboard):
             self.exec('from pyControl import *; import devices')
         except PyboardError as e:
             error_message = e.args[2].decode()
-            if "ImportError: no module named 'pyControl'" in error_message:
+            if (("ImportError: no module named 'pyControl'" in error_message) or
+                ("ImportError: no module named 'devices'"   in error_message)):
                 print('Framework not present, please load framework.')
             else:
                 print('Error: Unable to import framework.\n' + e.args[2].decode())
@@ -104,7 +105,10 @@ class Pycboard(Pyboard):
     def DFU_mode(self):
         'Put the pyboard into device firmware update mode.'
         self.exec('import pyb')
-        self.exec_raw_no_follow('pyb.bootloader()')
+        try:
+            self.exec_raw_no_follow('pyb.bootloader()')
+        except PyboardError as e:
+            pass # Error occurs on older versions of micropython but DFU is entered OK.
         print('Entered DFU mode, closing serial connection.')
         self.close()
 
