@@ -133,7 +133,7 @@ boxes.print_IDs() # Print state and event information to file.
 
 input('\nHit enter to start exp. To quit at any time, hit ctrl + c.\n\n')
 
-boxes.write_to_file('Run started at: ' + datetime.datetime.now().strftime('%H:%M:%S') + '\n\n')
+boxes.write_to_file('\nI Run started at: ' + datetime.datetime.now().strftime('%H:%M:%S') + '\n\n')
 
 boxes.run_framework()
 
