@@ -22,11 +22,11 @@ def LED_on(event):
         elif event == 'exit':
             pyb.LED(4).off()
         elif event == 'button_press':
-            goto('LED_off')
+            goto_state('LED_off')
 
 def LED_off(event):
         if event == 'button_press':
-            goto('LED_on')
+            goto_state('LED_on')
 
 def run_end():  # Turn off hardware at end of run.
     pyb.LED(4).off()
