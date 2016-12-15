@@ -50,18 +50,18 @@ def wait_for_poke(event):
     # with probability 1/v.ratio.
     if event == 'left_poke':
         if withprob(1/v.ratio):
-            goto('reward_available')
+            goto_state('reward_available')
 
 def reward_available(event):
     # 'right_poke' event causes transition to 'reward' state.
     if event == 'right_poke':
-        goto('reward')
+        goto_state('reward')
 
 def reward(event):
-    # On entry turn on solenoid and set timer, when timer elapses goto
+    # On entry turn on solenoid and set timer, when timer elapses goto_state
     # 'wait_for_poke' state, on exit turn of solenoid. 
     if event == 'entry':
-        timed_goto('wait_for_poke', v.reward_duration)
+        timed_goto_state('wait_for_poke', v.reward_duration)
         hw.right_poke.SOL.on()
         v.rewards_obtained += 1
         print('Rewards obtained: {}'.format(v.rewards_obtained))

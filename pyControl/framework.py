@@ -7,7 +7,7 @@ from . import hardware as hw
 
 timer_evt    = const(-1) # Timer generated event.
 debounce_evt = const(-2) # Digital_input debounce timer event.
-goto_evt     = const(-3) # timed_goto event.
+goto_evt     = const(-3) # timed_goto_state event.
 print_evt    = const(-4) # User print event.
 stop_fw_evt  = const(-5) # Stop framework event.
 
@@ -18,7 +18,7 @@ stop_fw_evt  = const(-5) # Stop framework event.
 # (state_ID, timestamp) # State transition, ID is a positive integer.
 # (event_ID, timer_evt) # Timer generated event, ID is a positive integer.
 # (print_evt, timestamp, 'print_string') # User print event.
-# (goto_evt, State_machine_ID)     # timed_goto event.
+# (goto_evt, State_machine_ID)     # timed_goto_state event.
 # (debounce_evt, Digital_input_ID) # Digital_input debouce timer.
 # (stop_fw_evt, None)   # Stop framework event.
 
@@ -206,7 +206,7 @@ def _update():
         elif event[0] == debounce_evt:
             hw.active_inputs[event[1]]._deactivate_debounce()
         elif event[0] == goto_evt:
-            state_machines[event[1]]._process_timed_goto()
+            state_machines[event[1]]._process_timed_goto_state()
         elif event[0] == stop_fw_evt:
             running = False
     elif usb_serial.any(): # Priority 4: Check for serial input from computer.
