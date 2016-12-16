@@ -2,7 +2,7 @@ import pyb
 import math
 
 # ----------------------------------------------------------------------------------------
-# Utility functions.
+#  Random functions and classes.
 # ----------------------------------------------------------------------------------------
 
 def random():
@@ -21,34 +21,6 @@ def randint(a,b):
   # Return a random integer N such that a <= N <= b.
     return int(a+(b+1-a)*random())
 
-def mean(x):
-    # Return the mean value of x.
-    return(sum(x)/len(x))
-
-# ----------------------------------------------------------------------------------------
-# Utility classes
-# ----------------------------------------------------------------------------------------
-
-class exp_mov_ave:
-    # Exponential moving average class.
-    def __init__(self, tau, init_value):
-        self.tau = tau
-        self.init_value = init_value
-        self.reset()
-
-    def reset(self, init_value = None, tau = None):
-        if tau:
-            self.tau = tau
-        if init_value:
-            self.init_value = init_value
-        self.value = self.init_value
-        self._m = math.exp(-1./self.tau)
-        self._i = 1 - self._m
-
-    def update(self, sample):
-        self.value = (self.value * self._m) + (self._i * sample)
-
-
 class sample_without_replacement:
     # Repeatedly sample elements from items list without replacement.
     def __init__(self, items):
@@ -61,13 +33,40 @@ class sample_without_replacement:
         return self._next_items.pop()
 
 # ----------------------------------------------------------------------------------------
+#  Math functions and classes
+# ----------------------------------------------------------------------------------------
+
+def mean(x):
+    # Return the mean value of x.
+    return(sum(x)/len(x))
+
+class exp_mov_ave:
+    # Exponential moving average class.
+    def __init__(self, tau, init_value=0):
+        self.tau = tau
+        self.init_value = init_value
+        self.reset()
+
+    def reset(self, init_value=None, tau=None):
+        if tau:
+            self.tau = tau
+        if init_value:
+            self.init_value = init_value
+        self.value = self.init_value
+        self._m = math.exp(-1./self.tau)
+        self._i = 1 - self._m
+
+    def update(self, sample):
+        self.value = (self.value * self._m) + (self._i * sample)
+
+# ----------------------------------------------------------------------------------------
 # Units.
 # ----------------------------------------------------------------------------------------
 
-ms = 1
-second = 1000
-minute = 60 * second
-hour = 60 * minute
+ms     = const(1)
+second = const(1000*ms)
+minute = const(60*second)
+hour   = const(60*minute)
 
 # ----------------------------------------------------------------------------------------
 # Variables class.
