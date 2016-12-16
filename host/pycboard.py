@@ -285,13 +285,6 @@ class Pycboard(Pyboard):
         except KeyboardInterrupt:
             self.stop_framework()
 
-    def run_state_machine(self, sm_name, dur, sm_dir = None, verbose = False):
-        '''Run the state machine sm_name from directory sm_dir for the specified 
-        duration (seconds).
-        '''
-        self.setup_state_machine(sm_name, sm_dir)
-        self.run_framework(dur, verbose)
-
     # ------------------------------------------------------------------------------------
     # Getting and setting variables.
     # ------------------------------------------------------------------------------------
