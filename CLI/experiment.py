@@ -1,14 +1,16 @@
+# Experiment class and constants used in specifying experiments.
+
 class Experiment:
     'Class used to hold information about an experiment'
     def __init__(self, name, start_date, subjects, task, set_variables = None,
                  persistent_variables = None, folder = None, transfer_folder = None,
                  summary_data = None):
       ''' Arguments:
-      subjects : dict specifying the ID of the subject run in each box.
+      subjects : dict specifying the ID of the subject run on each board.
       set_variables:  dict specifying variables whose values should be 
-                      modified from defaults in script.  A dict of box numbers
+                      modified from defaults in script.  A dict of board numbers
                       and values can be provided as a variable to set variable 
-                      differently for each box.
+                      differently for each board.
       persistant_variables:  list of variables whose values should be persistant
                              from session to session. 
       folder:  name of data folder, defaults to start_date + name.
@@ -26,3 +28,12 @@ class Experiment:
         self.folder = folder
       else:
         self.folder = start_date + '-' + name
+
+# ----------------------------------------------------------------------------------------
+# Constants.
+# ----------------------------------------------------------------------------------------
+
+ms     = 1
+second = 1000*ms
+minute = 60*second
+hour   = 60*minute

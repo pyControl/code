@@ -1,4 +1,4 @@
-from pyboard import Pyboard, PyboardError
+from .pyboard import Pyboard, PyboardError
 import os
 import time
 import inspect
