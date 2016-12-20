@@ -1,3 +1,6 @@
+# A simple state machine which turns the blue LED on the pyboard on and off when the usr pushbutton
+# on the pyboard is pressed.  Does not require any hardware except micropython board.
+
 from pyControl.utility import *
 from devices import Digital_input
 
