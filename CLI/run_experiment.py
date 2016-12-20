@@ -2,6 +2,7 @@ from config import experiments
 from config import config
 from .experiment import Experiment
 from .pycboards import Pycboards
+from .default_paths import data_dir
 import datetime
 from pprint import pformat
 from sys import exit
@@ -77,8 +78,8 @@ def run_experiment():
     exp = exp_list[selection - 1] # The selected experiment.
 
     boards_in_use = sorted(list(exp.subjects.keys()))
-    data_dir     = os.path.join(config.data_dir, exp.folder)
-    file_paths   = {board_n: os.path.join(data_dir, exp.subjects[board_n] + date + '.txt')
+    exp_dir     = os.path.join(data_dir, exp.folder)
+    file_paths   = {board_n: os.path.join(exp_dir, exp.subjects[board_n] + date + '.txt')
                            for board_n in boards_in_use}
 
     print('')
@@ -114,7 +115,7 @@ def run_experiment():
 
     if exp.persistent_variables:
         print('\nPersistent variables ', end = '')
-        pv_folder = os.path.join(data_dir, 'persistent_variables')
+        pv_folder = os.path.join(exp_dir, 'persistent_variables')
         set_pv = [] # Subjects whose persistant variables have been set.
         for board_n, subject_ID in exp.subjects.items():
             subject_pv_path = os.path.join(pv_folder, '{}.txt'.format(subject_ID))
@@ -131,8 +132,8 @@ def run_experiment():
         else:
             print('not found for subjects: {}'.format(set(exp.subjects.values()) - set(set_pv)))
 
-    if not os.path.exists(data_dir):
-        os.mkdir(data_dir)
+    if not os.path.exists(exp_dir):
+        os.mkdir(exp_dir)
     boards.open_data_file(file_paths)
     boards.print_IDs() # Print state and event information to file.
 
