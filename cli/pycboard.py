@@ -46,7 +46,7 @@ class Pycboard(Pyboard):
     and pyControl operations.
     '''
 
-    def __init__(self, serial_port, number = None, baudrate=115200):
+    def __init__(self, serial_port, number=None, baudrate=115200):
         self.serial_port = serial_port
         super().__init__(self.serial_port, baudrate=115200)
         self.reset() 
@@ -125,7 +125,7 @@ class Pycboard(Pyboard):
             return -1  
         return file_hash
 
-    def transfer_file(self, file_path, target_path = None):
+    def transfer_file(self, file_path, target_path=None):
         '''Copy a file into the root directory of the pyboard.'''
         if not target_path:
             target_path = os.path.split(file_path)[-1]
@@ -136,7 +136,7 @@ class Pycboard(Pyboard):
             self.write_file(target_path, file_contents) 
         self.gc_collect()
 
-    def transfer_folder(self, folder_path, target_folder = None, file_type = 'all'):
+    def transfer_folder(self, folder_path, target_folder=None, file_type='all'):
         '''Copy a folder into the root directory of the pyboard.  Folders that
         contain subfolders will not be copied successfully.  To copy only files of
         a specific type, change the file_type argument to the file suffix (e.g. 'py').'''
@@ -171,20 +171,20 @@ class Pycboard(Pyboard):
     # pyControl operations.
     # ------------------------------------------------------------------------------------
 
-    def load_framework(self, framework_dir = framework_dir):
+    def load_framework(self, framework_dir=framework_dir):
         'Copy the pyControl framework folder to the board.'
         print('Transfering pyControl framework to pyboard.')
-        self.transfer_folder(framework_dir, file_type = 'py')
-        self.transfer_folder(devices_dir  , file_type = 'py')
+        self.transfer_folder(framework_dir, file_type='py')
+        self.transfer_folder(devices_dir  , file_type='py')
         self.reset()
         return 
 
-    def load_hardware_definition(self, hwd_path = hwd_path):
+    def load_hardware_definition(self, hwd_path=hwd_path):
         '''Transfer a hardware definition file to pyboard.  Defaults to transfering 
         file hardware_definition.py from config folder. '''
         if os.path.exists(hwd_path):
             print('Transfering hardware definition to pyboard.')
-            self.transfer_file(hwd_path, target_path = 'hardware_definition.py')
+            self.transfer_file(hwd_path, target_path='hardware_definition.py')
             return self.reset()
         else:
             print('Hardware definition file not found.') 
@@ -224,7 +224,7 @@ class Pycboard(Pyboard):
         return self.exec('fw.print_events()').decode().strip()
 
 
-    def start_framework(self, dur = None, verbose = False, data_output = True):
+    def start_framework(self, dur=None, verbose=False, data_output=True):
         'Start pyControl framwork running on pyboard.'
         self.exec('fw.verbose = ' + repr(verbose))
         self.exec('fw.data_output = ' + repr(data_output))
@@ -260,7 +260,7 @@ class Pycboard(Pyboard):
                         self.data_file.flush()
                 self.data = b''
 
-    def run_framework(self, dur = None, verbose = False):
+    def run_framework(self, dur=None, verbose=False):
         '''Run framework for specified duration (seconds).'''
         self.start_framework(dur, verbose)
         try:
@@ -273,7 +273,7 @@ class Pycboard(Pyboard):
     # Getting and setting variables.
     # ------------------------------------------------------------------------------------
 
-    def set_variable(self, v_name, v_value, sm_name = None):
+    def set_variable(self, v_name, v_value, sm_name=None):
         '''Set state machine variable with check that variable has not got corrupted 
         during transfer. If state machine name argument is not provided, default to
         the first instantiated state machine.'''
@@ -297,7 +297,7 @@ class Pycboard(Pyboard):
                 return
         print('Set variable error: could not set variable: ' + v_name)
 
-    def get_variable(self, v_name, sm_name = None, pre_checked = False):
+    def get_variable(self, v_name, sm_name=None, pre_checked=False):
         '''Get value of state machine variable.  To minimise risk of variable
         corruption during transfer, process is repeated until two consistent
         values are obtained. If state machine name argument is not provided, 
@@ -316,7 +316,7 @@ class Pycboard(Pyboard):
                     return v_value
         print('Get variable error: could not get variable: ' + v_name)
 
-    def _check_variable_exits(self, sm_name, v_name, op = 'Set'):
+    def _check_variable_exits(self, sm_name, v_name, op='Set'):
         'Check if specified state machine has variable with specified name.'
         sm_found = False
         for i in range(10):

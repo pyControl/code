@@ -1,4 +1,4 @@
-from CLI.experiment  import *
+from cli.experiment  import *
 
 # A simple example showing the minimal set of arguments needed to define an experiment.
 simple_exp = Experiment(
