@@ -12,7 +12,8 @@ transfer_dir = None                    # Folder to copy data files to at end of 
 # Hardware serial ports
 # ----------------------------------------------------------------------------------------
 
-box_serials={1:'COM1'}    #Dictionary of box numbers with respective serial port addresses.
+board_serials={1:'COM1',  # Dictionary of board numbers with respective serial port addresses.
+               2:'COM2'}    
 
 # ----------------------------------------------------------------------------------------
 # Other configuration options.
