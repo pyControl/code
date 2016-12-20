@@ -1,13 +1,16 @@
+import os
+import sys
+if __name__ == "__main__":
+    # Add parent directory to path to allow imports.
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)) ) 
 from config import experiments
 from config import config
-from .experiment import Experiment
-from .pycboards import Pycboards
-from .default_paths import data_dir
+from cli.experiment import Experiment
+from cli.pycboards import Pycboards
+from cli.default_paths import data_dir
 import datetime
 from pprint import pformat
-from sys import exit
 import shutil
-import os
 from imp import reload
 
 # ----------------------------------------------------------------------------------------
@@ -40,7 +43,7 @@ def config_menu():
             boards.reset_filesystem()
         elif selection == 6:
             boards.close()
-            exit()
+            sys.exit()
     boards.close()
 
 # ----------------------------------------------------------------------------------------
@@ -89,7 +92,7 @@ def run_experiment():
     if not boards.check_unique_IDs():
         input('Hardware ID check failed, press any key to close program.')
         boards.close()
-        exit()
+        sys.exit()
 
     if input('\nRun hardware test? (y / n) ') == 'y':
         print('\nUploading hardware test.\n')
@@ -191,3 +194,11 @@ def run_experiment():
             shutil.copy2(file_path, transfer_folder)
 
     input('\nHit any key to close program.')
+
+if __name__ == "__main__":
+    try:
+        run_experiment()
+    except Exception as e:
+        print('\nError:\n')
+        print(str(e))
+        input('\nUnable to run experiment, press any key to close.')
