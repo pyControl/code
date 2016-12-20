@@ -2,16 +2,7 @@ from .pyboard import Pyboard, PyboardError
 import os
 import time
 import inspect
-
-# ----------------------------------------------------------------------------------------
-#  Default paths.
-# ----------------------------------------------------------------------------------------
-
-framework_dir = os.path.join('..', 'pyControl')
-devices_dir   = os.path.join('..', 'devices')
-examples_dir  = os.path.join('..', 'examples')
-tasks_dir     = os.path.join('..', 'tasks')
-hwd_path      = os.path.join('.', 'config', 'hardware_definition.py')
+from .default_paths import *
 
 # ----------------------------------------------------------------------------------------
 #  Helper functions.
@@ -198,16 +189,10 @@ class Pycboard(Pyboard):
         else:
             print('Hardware definition file not found.') 
 
-    def setup_state_machine(self, sm_name, sm_dir = None, raise_exception = False):
+    def setup_state_machine(self, sm_name, sm_dir=tasks_dir, raise_exception=False):
         ''' Transfer state machine descriptor file sm_name.py from folder sm_dir
-        (defaults to tasks_dir then examples_dir) to board. Instantiate state machine
-        object as sm_name'''
+        to board. Instantiate state machine object as sm_name'''
         self.reset()
-        if not sm_dir:
-            if os.path.exists(os.path.join(tasks_dir, sm_name + '.py')):
-                sm_dir = tasks_dir
-            else:
-                sm_dir = examples_dir
         sm_path = os.path.join(sm_dir, sm_name + '.py')
         assert os.path.exists(sm_path), 'State machine file not found at: ' + sm_path
         print('Transfering state machine {} to pyboard.'.format(repr(sm_name)))
