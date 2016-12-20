@@ -1,4 +1,4 @@
-# A script for testing the hardware, optionally run by the CLI.run_experiment() before running the experiment
+# A script for testing the hardware, optionally run by the cli.run_experiment() before running the experiment
 # so the user can check the hardware is all working as expected.
 
 from pyControl.utility import *
