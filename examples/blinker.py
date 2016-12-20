@@ -1,3 +1,6 @@
+# A simple state machine which flashes the blue LED on the pyboard on and off.
+# Does not require any hardware except micropython board.
+
 from pyControl.utility import *
 
 # States and events.

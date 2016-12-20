@@ -168,8 +168,7 @@ class Pycboard(Pyboard):
         self.exec('os.remove({})'.format(repr(file_path)))
 
     def reset_filesystem(self):
-        '''Delete all files in the flash drive apart from boot.py, 
-        then reload framework.'''
+        '''Delete all files in the flash drive apart from boot.py'''
         print('Resetting filesystem.')
         self.reset()
         self.exec(inspect.getsource(_rm_dir_or_file))

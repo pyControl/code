@@ -42,23 +42,20 @@ class Audio_output():
         self._timer.init(freq=rate)
         self._timer.callback(self._click)
 
-    def pulsed_sine(self, freq, pulse_rate):
+    def pulsed_sine(self, freq, pulse_rate): # Play a sine wave pulsed at the specified rate.
         self._pulsed_sound(freq, pulse_rate, self.sine)
 
-    def pulsed_square(self, freq, pulse_rate):
+    def pulsed_square(self, freq, pulse_rate): # Play a square wave pulsed at the specified rate.
         self._pulsed_sound(freq, pulse_rate, self.square)
 
-    def pulsed_noise(self, freq=10000, pulse_rate=10):
+    def pulsed_noise(self, freq, pulse_rate):
         self._pulsed_sound(freq, pulse_rate, self.noise)
 
-    def sweeped_sine(self, start_freq, end_freq, n_steps, step_rate):
-        self._sound_sweep(start_freq, end_freq, n_steps, step_rate, self.sine)
+    def stepped_sine(self, start_freq, end_freq, n_steps, step_rate):
+        self._sound_step(start_freq, end_freq, n_steps, step_rate, self.sine)
 
-    def sweeped_square(self, start_freq, end_freq, n_steps, step_rate):
-        self._sound_sweep(start_freq, end_freq, n_steps, step_rate, self.square)
-
-    def sweeped_noise(self, start_freq, end_freq, n_steps, step_rate):
-        self._sound_sweep(start_freq, end_freq, n_steps, step_rate, self.noise)
+    def stepped_square(self, start_freq, end_freq, n_steps, step_rate):
+        self._sound_step(start_freq, end_freq, n_steps, step_rate, self.square)
 
     # Support functions-----------------------------------------------------------------
 
@@ -79,7 +76,7 @@ class Audio_output():
             self._func(self._freq)
             self._playing = True
 
-    def _sound_sweep(self, start_freq, end_freq, n_steps, step_rate, func):
+    def _sound_step(self, start_freq, end_freq, n_steps, step_rate, func):
         freq_ratio = (end_freq/start_freq)**(1./(n_steps-1))
         self._freq = [int(start_freq * (freq_ratio**i)) for i in range(n_steps)]
         self._freq_ind = 0
