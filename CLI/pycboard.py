@@ -1,7 +1,9 @@
-from .pyboard import Pyboard, PyboardError
 import os
 import time
 import inspect
+from collections import namedtuple
+from serial import SerialException
+from .pyboard import Pyboard, PyboardError
 from .default_paths import *
 
 # ----------------------------------------------------------------------------------------
@@ -46,13 +48,41 @@ class Pycboard(Pyboard):
     and pyControl operations.
     '''
 
-    def __init__(self, serial_port, number = None, baudrate=115200):
+    def __init__(self, serial_port, number=None, baudrate=115200, verbose=True):
         self.serial_port = serial_port
-        super().__init__(self.serial_port, baudrate=115200)
-        self.reset() 
-        self.unique_ID = eval(self.eval('pyb.unique_id()').decode())
         self.data_file = None
         self.number = number
+        self.status = {'serial': None, 'framework':None, 'hardware':None}
+        try:    
+            super().__init__(self.serial_port, baudrate=115200)
+            self.status['serial'] = True
+            self.reset() 
+            self.unique_ID = eval(self.eval('pyb.unique_id()').decode())
+        except SerialException:
+            self.status['serial'] = False
+        if verbose: # Print status.
+            if self.status['serial']:
+                print('Serial connection  : OK')
+            else:
+                print('Error: Unable to open serial connection.')
+                return
+            if self.status['framework']:
+                print('Framework          : OK')
+            else:
+                if self.status['framework'] is None:
+                    print('Framework          : Not loaded')
+                else:
+                    print('Framework          : Import error')
+                return
+            if self.status['hardware']:
+                print('Hardware definition: OK')
+            else:
+                if self.status['hardware'] is None:
+                    print('Hardware definition: Not loaded')
+                else:
+                    print('Hardware definition: Import error')
+        else:
+            return self.status
 
     def reset(self):
         'Enter raw repl (soft reboots pyboard), import modules.'
@@ -62,23 +92,28 @@ class Pycboard(Pyboard):
         self.framework_running = False
         self.data = None
         self.state_machines = [] # List to hold name of instantiated state machines.
+        error_message = None
         try:
             self.exec('from pyControl import *; import devices')
+            self.status['framework'] = True # Framework imported OK.
         except PyboardError as e:
             error_message = e.args[2].decode()
             if (("ImportError: no module named 'pyControl'" in error_message) or
                 ("ImportError: no module named 'devices'"   in error_message)):
-                print('Framework not present, please load framework.')
+                self.status['framework'] = None # Framework not installed.
             else:
-                print('Error: Unable to import framework.\n' + e.args[2].decode())
-        try:
-            self.exec('import hardware_definition')
-        except PyboardError as e:
-            error_message = e.args[2].decode()
-            if "ImportError: no module named 'hardware_definition'" in error_message:
-                print('Hardware definition not present.')
-            else:
-                print('Error: Unable to import hardware definition.\n' + e.args[2].decode())
+                self.status['framework'] = False # Framework import error.
+        if self.status['framework']:
+            try:
+                self.exec('import hardware_definition')
+                self.status['hardware'] = True # Hardware definition imported OK.
+            except PyboardError as e:
+                error_message = e.args[2].decode()
+                if "ImportError: no module named 'hardware_definition'" in error_message:
+                    self.status['hardware'] = None # Hardware definition not installed.
+                else:
+                    self.status['hardware'] = False # Hardware definition import error.
+        return error_message
 
     def hard_reset(self):
         print('Hard resetting pyboard.')
@@ -176,7 +211,10 @@ class Pycboard(Pyboard):
         print('Transfering pyControl framework to pyboard.')
         self.transfer_folder(framework_dir, file_type = 'py')
         self.transfer_folder(devices_dir  , file_type = 'py')
-        self.reset()
+        error_message = self.reset()
+        if not self.status['framework']:
+            print('Error importing framework:')
+            print(error_message)
         return 
 
     def load_hardware_definition(self, hwd_path = hwd_path):
@@ -185,7 +223,10 @@ class Pycboard(Pyboard):
         if os.path.exists(hwd_path):
             print('Transfering hardware definition to pyboard.')
             self.transfer_file(hwd_path, target_path = 'hardware_definition.py')
-            return self.reset()
+            error_message = self.reset()
+            if not self.status['hardware']:
+                print('Error importing hardware definition:')
+                print(error_message)
         else:
             print('Hardware definition file not found.') 
 
