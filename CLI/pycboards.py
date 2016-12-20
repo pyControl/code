@@ -2,6 +2,7 @@ from .pycboard import Pycboard
 from pprint import pformat
 import os
 import config.config as config
+from .default_paths import tasks_dir
 from time import sleep
 
 class Pycboards():
@@ -28,7 +29,7 @@ class Pycboards():
         for board in self.boards.values():
             board.reset_filesystem()
 
-    def setup_state_machine(self, sm_name, sm_dir = None):
+    def setup_state_machine(self, sm_name, sm_dir=tasks_dir):
         for board in self.boards.values():
             board.setup_state_machine(sm_name, sm_dir)
 

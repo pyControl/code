@@ -31,8 +31,8 @@ v.session_duration = 1*hour
 v.reward_durations = [100,100] # Reward delivery duration (ms) [left, right]
 v.ITI_duration = 1*second # Inter trial interval duration.
 v.n_rewards = 0 # Number of rewards obtained.
-v.n_trials  =   # Number of trials recieved.
-v.mean_block_length = 20 # Average block length between reversals.
+v.n_trials = 0 # Number of trials recieved.
+v.mean_block_length = 10 # Average block length between reversals.
 v.state = withprob(0.5) # Which side is currently good: True: left, False: right
 v.good_prob = 0.8 # Reward probabilities on the good side.
 v.bad_prob  = 0.2 # Reward probabilities on the bad side.
@@ -87,26 +87,27 @@ def left_reward(event):
     # Deliver reward to left poke, increment reward counter.
     if event == 'entry':
         timed_goto_state('inter_trial_interval', v.reward_durations[0])
-        v.left_poke.SOL.on()
+        hw.left_poke.SOL.on()
         v.n_rewards += 1
     elif event == 'exit':
-        v.left_poke.sol.off()
+        hw.left_poke.SOL.off()
 
 def right_reward(event):
     # Deliver reward to right poke, increment reward counter.
     if event == 'entry':
         timed_goto_state('inter_trial_interval', v.reward_durations[1])
-        v.right_poke.SOL.on()
+        hw.right_poke.SOL.on()
         v.n_rewards += 1
     elif event == 'exit':
-        v.right_poke.sol.off()
+        hw.right_poke.SOL.off()
 
 def inter_trial_interval(event):
     # Increment trial counter, check for reversal transition.
     if event == 'entry':
         timed_goto_state('init_trial', v.ITI_duration)
         v.n_trials += 1
-        withprob(1/v.mean_block_length): 
+        if withprob(1/v.mean_block_length): 
+            print('Block transition')
             v.state = not v.state # Reversal has occured.
 
 # State independent behaviour.
