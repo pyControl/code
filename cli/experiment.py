@@ -4,7 +4,7 @@ class Experiment:
     'Class used to hold information about an experiment'
     def __init__(self, name, start_date, subjects, task, set_variables = None,
                  persistent_variables = None, folder = None, transfer_folder = None,
-                 summary_data = None):
+                 summary_variables = None):
       ''' Arguments:
       subjects : dict specifying the ID of the subject run on each board.
       set_variables:  dict specifying variables whose values should be 
@@ -23,7 +23,7 @@ class Experiment:
       self.persistent_variables = persistent_variables
       self.n_subjects = len(self.subjects.keys())
       self.transfer_folder = transfer_folder
-      self.summary_data = summary_data
+      self.summary_variables = summary_variables
       if folder:
         self.folder = folder
       else:

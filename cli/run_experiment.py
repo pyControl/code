@@ -1,17 +1,33 @@
 import os
 import sys
-if __name__ == "__main__":
-    # Add parent directory to path to allow imports.
-    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)) ) 
-from config import experiments
-from config import config
-from cli.experiment import Experiment
-from cli.pycboards import Pycboards
-from cli.default_paths import data_dir
 import datetime
 from pprint import pformat
 import shutil
 from imp import reload
+
+if __name__ == "__main__": # Add parent directory to path to allow imports.
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)) ) 
+
+# Catch errors importing user created config files.
+try: 
+    from config import config
+except Exception as e:
+    print('Unable to import file config.py\n')
+    print(str(e))
+    input('\nPress any key to close.')
+    sys.exit()
+
+try: 
+    from config import experiments
+except Exception as e:
+    print('Unable to import file experiments.py\n')
+    print(str(e))
+    input('\nPress any key to close.')
+    sys.exit()
+
+from cli.experiment import Experiment
+from cli.pycboards import Pycboards
+from cli.default_paths import data_dir
 
 # ----------------------------------------------------------------------------------------
 # Config menu.
@@ -140,7 +156,7 @@ def run_experiment():
     boards.open_data_file(file_paths)
     boards.print_IDs() # Print state and event information to file.
 
-    input('\nHit enter to start exp. To quit at any time, hit ctrl + c.\n\n')
+    input('\nHit enter to start exp. To stop experiment when running, hit ctrl + c.\n\n')
 
     boards.write_to_file('\nI Run started at: ' + datetime.datetime.now().strftime('%H:%M:%S') + '\n\n')
 
@@ -160,25 +176,26 @@ def run_experiment():
             with open(subject_pv_path, 'w') as pv_file:
                 pv_file.write(pformat(pv_dict))
 
-    if exp.summary_data:
+    if exp.summary_variables:        
+        spacing = exp.summary_variables.pop() if isinstance(exp.summary_variables[-1], int) else 1
+        summary_string = ''
+        print('\nSummary variables:')
+        for v_name in exp.summary_variables:
+            print('\n' + v_name + ':')
+            v_strings = [v_name + ':\n']
+            for board_n in boards_in_use:
+                v_value = boards.boards[board_n].get_variable(v_name, exp.task)
+                print(exp.subjects[board_n] + ': {}'.format(v_value))
+                v_strings.append(str(v_value) +'\t' + exp.subjects[board_n] + '\n')
+            v_strings.append('\n' * spacing) # Add empty lines between variables.
+            summary_string += ''.join(v_strings) 
+        boards.close()
         try:
             import pyperclip
-            spacing = 1 # Number of lines between summary data lines.
-            if type(exp.summary_data[-1]) == int: # Use user defined spacing.
-                spacing = exp.summary_data[-1]
-                exp.summary_data = exp.summary_data[:-1]
-            summary_string = ''
-            for v_name in exp.summary_data:
-                v_values = [str(boards.boards[board_n].get_variable(v_name, exp.task)) + '\n'
-                            for board_n in boards_in_use]   
-                v_values[0] = v_values[0].replace('\n','\t{}\n'.format(v_name.split('.')[-1]))
-                v_values.append('\n' * spacing) # Add empty lines between variables.
-                summary_string += ''.join(v_values) 
-            boards.close()
-            input('\nPress any key to copy summary data to clipboard.')
             pyperclip.copy(summary_string.strip()) # Copy to clipboard.
+            print('\nSummary data copied to clipboad.')
         except ImportError:
-            print('Summary data not copied to clipboad as pyperclip not installed')
+            print('\nSummary data not copied to clipboad as pyperclip not installed.')
     else:
         boards.close()
 
