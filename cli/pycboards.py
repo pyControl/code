@@ -2,7 +2,7 @@ from .pycboard import Pycboard
 from pprint import pformat
 import os
 import config.config as config
-from .default_paths import tasks_dir
+from .default_paths import tasks_dir, config_dir
 from time import sleep
 
 class Pycboards():
@@ -13,7 +13,8 @@ class Pycboards():
         self.board_numbers = sorted(board_numbers)
         for board_n in board_numbers:
             print('Opening connection to board {}'.format(board_n))
-            self.boards[board_n] = Pycboard(config.board_serials[board_n], board_n)
+            self.boards[board_n] = Pycboard(config.board_serials[board_n], board_n,
+                                            raise_exception=True)
         self.unique_IDs = {board_n: self.boards[board_n].unique_ID
                                    for board_n in self.boards}
 
@@ -111,14 +112,14 @@ class Pycboards():
 
     def save_unique_IDs(self):
         print('Saving hardware unique IDs.')
-        with open(os.path.join('config', 'hardware_unique_IDs.txt'), 'w') as id_file:        
+        with open(os.path.join(config_dir, 'hardware_unique_IDs.txt'), 'w') as id_file:        
                 id_file.write(pformat(self.unique_IDs))
 
     def check_unique_IDs(self):
         '''Check whether hardware unique IDs of pyboards match those saved in 
         config/hardware_unique_IDs.txt, if file not available no checking is performed.'''
         try:
-            with open(os.path.join('config', 'hardware_unique_IDs.txt'), 'r') as id_file:        
+            with open(os.path.join(config_dir, 'hardware_unique_IDs.txt'), 'r') as id_file:        
                 unique_IDs = eval(id_file.read())
         except FileNotFoundError:
             print('\nNo hardware IDs saved, skipping hardware ID check.')

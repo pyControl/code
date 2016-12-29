@@ -48,7 +48,8 @@ class Pycboard(Pyboard):
     and pyControl operations.
     '''
 
-    def __init__(self, serial_port, number=None, baudrate=115200, verbose=True):
+    def __init__(self, serial_port, number=None, baudrate=115200, verbose=True,
+                 raise_exception=False):
         self.serial_port = serial_port
         self.data_file = None
         self.number = number
@@ -58,21 +59,26 @@ class Pycboard(Pyboard):
             self.status['serial'] = True
             self.reset() 
             self.unique_ID = eval(self.eval('pyb.unique_id()').decode())
-        except SerialException:
+            v_tuple = eval(self.eval(
+            "sys.implementation.version if hasattr(sys, 'implementation') else (0,0,0)").decode())
+            self.micropython_version = float('{}.{}{}'.format(*v_tuple))
+        except SerialException as e:
+            if raise_exception:
+                raise(e)
             self.status['serial'] = False
         if verbose: # Print status.
             if self.status['serial']:
-                print('Serial connection  : OK')
+                print('Micropython version: {}'.format(self.micropython_version))
             else:
                 print('Error: Unable to open serial connection.')
                 return
             if self.status['framework']:
-                print('Framework          : OK')
+                print('pyControl Framework: OK')
             else:
                 if self.status['framework'] is None:
-                    print('Framework          : Not loaded')
+                    print('pyControl Framework: Not loaded')
                 else:
-                    print('Framework          : Import error')
+                    print('pyControl Framework: Import error')
                 return
             if self.status['hardware']:
                 print('Hardware definition: OK')
@@ -81,14 +87,12 @@ class Pycboard(Pyboard):
                     print('Hardware definition: Not loaded')
                 else:
                     print('Hardware definition: Import error')
-        else:
-            return self.status
 
     def reset(self):
         'Enter raw repl (soft reboots pyboard), import modules.'
         self.enter_raw_repl() # Soft resets pyboard.
         self.exec(inspect.getsource(_djb2_file))  # define djb2 hashing function.
-        self.exec('import os; import gc')
+        self.exec('import os; import gc; import sys')
         self.framework_running = False
         self.data = None
         self.state_machines = [] # List to hold name of instantiated state machines.
@@ -199,7 +203,7 @@ class Pycboard(Pyboard):
         self.reset()
         self.exec(inspect.getsource(_rm_dir_or_file))
         self.exec(inspect.getsource(_reset_pyb_filesystem)) 
-        self.exec('_reset_pyb_filesystem()')
+        self.exec_raw('_reset_pyb_filesystem()', timeout=60)
         self.hard_reset() 
         
     # ------------------------------------------------------------------------------------
