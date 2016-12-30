@@ -27,7 +27,7 @@ except Exception as e:
 
 from cli.experiment import Experiment
 from cli.pycboards import Pycboards
-from cli.default_paths import data_dir
+from cli.default_paths import data_dir, tasks_dir
 
 # ----------------------------------------------------------------------------------------
 # Config menu.
@@ -96,6 +96,11 @@ def run_experiment():
 
     exp = exp_list[selection - 1] # The selected experiment.
 
+    if not os.path.exists(os.path.join(tasks_dir, exp.task + '.py')):
+        print('\nError: State machine file {} not found.'.format(exp.task))
+        input('\nPress any key to close program.')
+        sys.exit()
+
     boards_in_use = sorted(list(exp.subjects.keys()))
     exp_dir     = os.path.join(data_dir, exp.folder)
     file_paths   = {board_n: os.path.join(exp_dir, exp.subjects[board_n] + date + '.txt')
@@ -154,6 +159,9 @@ def run_experiment():
     if not os.path.exists(exp_dir):
         os.mkdir(exp_dir)
     boards.open_data_file(file_paths)
+
+    boards.write_to_file('I Task: ' + exp.task + '\n')
+
     boards.print_IDs() # Print state and event information to file.
 
     input('\nHit enter to start exp. To stop experiment when running, hit ctrl + c.\n\n')

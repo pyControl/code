@@ -239,7 +239,11 @@ class Pycboard(Pyboard):
         to board. Instantiate state machine object as sm_name'''
         self.reset()
         sm_path = os.path.join(sm_dir, sm_name + '.py')
-        assert os.path.exists(sm_path), 'State machine file not found at: ' + sm_path
+        if not os.path.exists(sm_path):
+            print('Error: State machine file not found at: ' + sm_path)
+            if raise_exception:
+                raise PyboardError('State machine file not found at: ' + sm_path)
+            return
         print('Transfering state machine {} to pyboard.'.format(repr(sm_name)))
         self.transfer_file(sm_path)
         try:
