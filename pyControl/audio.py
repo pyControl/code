@@ -43,9 +43,12 @@ class Audio_output():
     def noise(self, freq=10000): # Play white noise with specified maximum frequency.
         self._DAC.noise(freq*2)
 
+    def click(self, timer=None): # Play a single click.
+        self._DAC.write_timed(_click_buf, 40000, mode=pyb.DAC.NORMAL)  
+
     def clicks(self, rate): # Play clicks at specified rate.
         self._timer.init(freq=rate)
-        self._timer.callback(self._click)
+        self._timer.callback(self.click)
 
     def pulsed_sine(self, freq, pulse_rate): # Play a sine wave pulsed at the specified rate.
         self._pulsed_sound(freq, pulse_rate, self.sine)
@@ -69,9 +72,6 @@ class Audio_output():
         if gc_collect: gc.collect()
 
     # Support functions-----------------------------------------------------------------
-
-    def _click(self, timer=None): # Play a single click.
-        self._DAC.write_timed(_click_buf, 40000, mode=pyb.DAC.NORMAL)  
 
     def _pulsed_sound(self, freq, pulse_rate, func):
         self._freq = freq
