@@ -88,6 +88,8 @@ def run_task():
             print('\nUnable to open serial connection, Check serial port is correct.\n' 
                   'If port is correct, try resetting pyboard with reset button.\n')
 
+    print('\nSerial connection OK. Micropython version: {}'.format(board.micropython_version))
+
     if not board.status['framework']:
         print('\nFramework not loaded, uploading framework..')
         board.load_framework()
