@@ -92,7 +92,7 @@ class Pycboard(Pyboard):
         'Enter raw repl (soft reboots pyboard), import modules.'
         self.enter_raw_repl() # Soft resets pyboard.
         self.exec(inspect.getsource(_djb2_file))  # define djb2 hashing function.
-        self.exec('import os; import gc; import sys')
+        self.exec('import os; import gc; import sys; import pyb')
         self.framework_running = False
         self.data = None
         self.state_machines = [] # List to hold name of instantiated state machines.

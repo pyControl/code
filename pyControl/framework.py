@@ -1,6 +1,5 @@
 from array import array
 import pyb
-from .utility import second
 from . import hardware as hw
 
 # Constants used to indicate special event types:
@@ -234,7 +233,7 @@ def run(duration = None):
     for state_machine in state_machines:
         state_machine._start()
     if duration: # Set timer to stop framework.
-        timer.set(duration*second, (stop_fw_evt, None))
+        timer.set(duration*1000, (stop_fw_evt, None))
     while running:
         _update()
     # Post run---------------------------
@@ -243,3 +242,8 @@ def run(duration = None):
         state_machine._stop()  
     while data_output_queue.available():
         output_data(data_output_queue.get())
+
+def get_current_time():
+    # Get the current framework time.
+    global current_time
+    return current_time
