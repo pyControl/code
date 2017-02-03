@@ -330,12 +330,12 @@ class Pycboard(Pyboard):
         if not sm_name: sm_name = self.state_machines[0]
         if not self._check_variable_exits(sm_name, v_name): return
         if v_value == None:
-            print('\nSet variable aborted: value \'None\' not allowed.')
+            print('\nSet variable aborted - value \'None\' not allowed.')
             return
         try:
             eval(repr(v_value))
         except:
-            print('\nSet variable aborted: invalid variable value: ' + repr(v_value))
+            print('\nSet variable aborted - invalid variable value: ' + repr(v_value))
             return
         for i in range(10):
             try:
@@ -345,7 +345,7 @@ class Pycboard(Pyboard):
             set_value = self.get_variable(v_name, sm_name, pre_checked = True)
             if self._approx_equal(set_value, v_value):
                 return True
-        print('\nSet variable error: could not set variable: ' + v_name)
+        print('\nSet variable error - could not set variable: ' + v_name)
         return
 
     def get_variable(self, v_name, sm_name = None, pre_checked = False):
@@ -365,7 +365,7 @@ class Pycboard(Pyboard):
                     pass
                 if v_value != None and prev_value == v_value:
                     return v_value
-            print('\nGet variable error: could not get variable: ' + v_name)
+            print('\nGet variable error - could not get variable: ' + v_name)
 
     def _check_variable_exits(self, sm_name, v_name, op = 'Set'):
         'Check if specified state machine has variable with specified name.'
