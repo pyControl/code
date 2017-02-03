@@ -14,17 +14,57 @@ from cli.pyboard import PyboardError
 # Config menus.
 # ----------------------------------------------------------------------------------------
 
-def configure_board(board):
-    selection = None
-    while selection != 7:
-        selection = int(input('''\n\nConfig menu:
-                                 \n\n 1. Reload framwork.
-                                 \n\n 2. Reload hardware definition.
-                                 \n\n 3. Hard reset board.
-                                 \n\n 4. Reset filesystems.
-                                 \n\n 5. Enter device firmware update (DFU) mode.
-                                 \n\n 6. Close program.
-                                 \n\n 7. Exit config menu.\n\n'''))                        
+def task_select_menu(board):
+    available_tasks = {i+1: t.split('.')[0] for i, t in enumerate([ f for f in 
+                       os.listdir(tasks_dir) if f[-3:] == '.py'])}
+    while True:
+        print('\nAvailable tasks:\n')
+        for t in available_tasks.keys():
+            print('{}: {}\n'.format(t, available_tasks[t]))
+        i = input('Select task number, [b] for board config menu, [c] to close program:')
+        if i == 'c':
+            close_program(board)
+        elif i == 'b':
+            board_config_menu(board)
+        else:
+            try:
+                task = available_tasks[int(i)]
+                print('')
+                task_menu(board, task)
+            except (KeyError, ValueError):
+                print('\nInput not recognised.')
+
+def task_menu(board, task):
+    board.setup_state_machine(task, raise_exception=True)
+    while True:
+        i = input('\nPress [enter] to run task, [v] to configure variables, [c] to close program or [t] to select a new task:')
+        if i == '':
+            print('\nRunning task, press ctrl+c to stop.\n')
+            board.run_framework(verbose=True)
+        elif i == 'v':
+            configure_variables(board, task)
+        elif i == 'c':
+            close_program(board)
+        elif i == 't':
+            return
+        else:
+            print('\nInput not recognised.')
+
+
+def board_config_menu(board):
+    while True:
+        i = input('''\nConfig menu:
+                         \n 1. Reload framwork.
+                         \n 2. Reload hardware definition.
+                         \n 3. Hard reset board.
+                         \n 4. Reset filesystems.
+                         \n 5. Enter device firmware update (DFU) mode.
+                         \n 6. Close program.
+                         \n 7. Exit config menu.\n''')
+        try:
+            selection = int(i)
+        except:
+            selection = None
         if selection == 1:
             board.load_framework()
         elif selection == 2:
@@ -40,7 +80,11 @@ def configure_board(board):
             sys.exit()
         elif selection == 6:
             board.close()
-            sys.exit()  
+            sys.exit()
+        elif selection == 7:
+            return
+        else:
+            print('\nInput not recognised.')  
 
 def configure_variables(board, task):
     # Get task variables by reading file.
@@ -54,7 +98,8 @@ def configure_variables(board, task):
     task_variables = {i+1: v for i, v in enumerate(task_variables)}
     while True:
         i = input('\nEnter [g] to get variables value, [s] to set variables value, [x] to exit menu:')
-        if i == 'x': break
+        if i == 'x':
+            return
         if i in ['g','s']:
             print('\nVariables found:\n')
             for j, v_name in task_variables.items():
@@ -73,6 +118,12 @@ def configure_variables(board, task):
                 set_OK = board.set_variable(v_name, v_value)
                 if set_OK:
                     print('\nVariable {} set to: {}'.format(v_name, v_value))
+        else:
+            print('\nInput not recognised.')
+
+def close_program(board):
+    board.close()
+    sys.exit()
 
 # ----------------------------------------------------------------------------------------
 # Run experiment
@@ -98,33 +149,7 @@ def run_task():
         print('\nHardware definition not loaded, uploading hardware definition..')
         board.load_hardware_definition()
 
-    available_tasks = {i+1: t.split('.')[0] for i, t in enumerate([ f for f in 
-                       os.listdir(tasks_dir) if f[-3:] == '.py'])}
-
-    task_n = None
-    while task_n not in available_tasks.keys():
-        print('\nAvailable tasks:\n')
-        for i in available_tasks.keys():
-            print('{}: {}\n'.format(i, available_tasks[i]))
-        task_n = int(input('Select task number, or [0] for board config menu:'))
-        if task_n == 0: 
-            configure_board(board)
-        else:
-            task = available_tasks[task_n]
-            print('')
-
-    board.setup_state_machine(task, raise_exception=True)
-
-    i = None
-    while i is not 'c':
-        i = input('\nPress [enter] to run task, [v] to configure variables, or [c] to close program:')
-        if i == '':
-            print('\nRunning task, press ctrl+c to stop.\n')
-            board.run_framework(verbose=True)
-        elif i == 'v':
-            configure_variables(board, task)
-
-    board.close()
+    task_select_menu(board)
 
 if __name__ == "__main__":
     try:
