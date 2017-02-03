@@ -69,7 +69,7 @@ def configure_variables(board, task):
                 if v_value is not None:
                     print('\n{}: {}'.format(v_name, v_value))
             elif i == 's':
-                v_value = eval(input('\nEnter variable value: '))
+                v_value = eval(input('\nEnter value for variable {}: '.format(v_name)))
                 set_OK = board.set_variable(v_name, v_value)
                 if set_OK:
                     print('\nVariable {} set to: {}'.format(v_name, v_value))

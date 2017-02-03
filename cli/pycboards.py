@@ -34,7 +34,7 @@ class Pycboards():
         for board in self.boards.values():
             board.setup_state_machine(sm_name, sm_dir)
 
-    def start_framework(self, dur = None, verbose = False, data_output = True, ISI = 0.1):
+    def start_framework(self, dur = None, verbose = False, data_output = True, ISI = False):
         for board_n in self.board_numbers:
             self.boards[board_n].start_framework(dur, verbose, data_output)
             if ISI:

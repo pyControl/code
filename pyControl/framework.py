@@ -209,7 +209,7 @@ def _update():
         elif event[0] == stop_fw_evt:
             running = False
     elif usb_serial.any(): # Priority 4: Check for serial input from computer.
-        bytes_recieved = usb_serial.readall()
+        bytes_recieved = usb_serial.read()
         if bytes_recieved == b'E':      # Serial command to stop run.
             running = False
     elif data_output_queue.available(): # Priority 5: Output data.
