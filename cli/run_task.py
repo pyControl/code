@@ -57,7 +57,7 @@ def board_config_menu(board):
                          \n 1. Reload framwork.
                          \n 2. Reload hardware definition.
                          \n 3. Hard reset board.
-                         \n 4. Reset filesystems.
+                         \n 4. Reset filesystem.
                          \n 5. Enter device firmware update (DFU) mode.
                          \n 6. Close program.
                          \n 7. Exit config menu.\n''')

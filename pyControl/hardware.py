@@ -9,7 +9,7 @@ digital_inputs  = []  # All Digital_input objects.
 
 active_inputs = [] # Digital input objects used by current state machines.
 
-digital_outputs = []  # All Digital_output objects.
+all_outputs = []  # All output objects, used to turn of all outputs with hardware.off()
 
 available_timers = [7,8,9,10,11,12,13,14] # Hardware timers not in use by other fuctions.
 
@@ -39,9 +39,9 @@ def reset():
     off()
 
 def off():
-    # Turn of all digital outputs.
-    for digital_output in digital_outputs:
-        digital_output.off()
+    # Turn of all outputs.
+    for output in all_outputs:
+        output.off()
 
 # ----------------------------------------------------------------------------------------
 # Digital Input
@@ -179,7 +179,7 @@ class Digital_output():
         self.off()
         if pulse_enabled:
             self.enable_pulse()
-        digital_outputs.append(self)
+        all_outputs.append(self)
 
     def on(self):
         self.pin.value(not self.inverted)
