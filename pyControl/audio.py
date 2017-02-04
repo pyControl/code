@@ -5,6 +5,7 @@ import struct
 import sys
 import gc
 from ucollections import namedtuple
+from . import hardware as hw
 
 _sine_len = 100 # Number of points in sine wave.
 _sine_buf = bytearray([128+int(127*math.sin(2*math.pi*i/_sine_len)) for i in range(_sine_len)])
@@ -26,6 +27,7 @@ class Audio_output():
         self._func = None # Function currently being used for sweeped sound (sine, square or noise)
         self._freq = 0
         self._freq_ind = 0
+        hw.all_outputs.append(self)
 
     # User functions-------------------------------------------------------------------
 
