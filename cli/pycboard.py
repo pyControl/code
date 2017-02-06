@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import inspect
 from collections import namedtuple
@@ -92,7 +93,7 @@ class Pycboard(Pyboard):
         'Enter raw repl (soft reboots pyboard), import modules.'
         self.enter_raw_repl() # Soft resets pyboard.
         self.exec(inspect.getsource(_djb2_file))  # define djb2 hashing function.
-        self.exec('import os; import gc; import sys')
+        self.exec('import os; import gc; import sys; import pyb')
         self.framework_running = False
         self.data = None
         self.state_machines = [] # List to hold name of instantiated state machines.
@@ -146,14 +147,16 @@ class Pycboard(Pyboard):
     # Pyboard filesystem operations.
     # ------------------------------------------------------------------------------------
 
-    def write_file(self, target_path, data):
+    def write_file(self, target_path, data, raise_exception=False):
         '''Write data to file at specified path on pyboard, any data already
         in the file will be deleted.'''
         self.exec("tmpfile = open('{}','w')".format(target_path))
         try:
             self.exec("tmpfile.write({})".format(repr(data)))
         except PyboardError:
-            print('Write file error.')
+            if raise_exception:
+                self.exec('tmpfile.close()')
+                raise PyboardError
         self.exec('tmpfile.close()')
 
     def get_file_hash(self, target_path):
@@ -164,18 +167,23 @@ class Pycboard(Pyboard):
             return -1  
         return file_hash
 
-    def transfer_file(self, file_path, target_path = None):
+    def transfer_file(self, file_path, target_path=None):
         '''Copy a file into the root directory of the pyboard.'''
         if not target_path:
             target_path = os.path.split(file_path)[-1]
         file_hash = _djb2_file(file_path)
         with open(file_path, 'r') as transfer_file:
-            file_contents = transfer_file.read()  
-        while not file_hash == self.get_file_hash(target_path):
-            self.write_file(target_path, file_contents) 
-        self.gc_collect()
+            file_contents = transfer_file.read() 
+        for i in range(10):
+            self.write_file(target_path, file_contents)
+            self.gc_collect()
+            if file_hash == self.get_file_hash(target_path):
+                self.gc_collect()
+                return
+        print('Error: Unable to transfer file: ' + file_path)
 
-    def transfer_folder(self, folder_path, target_folder = None, file_type = 'all'):
+    def transfer_folder(self, folder_path, target_folder=None, file_type='all',
+                        show_progress=False):
         '''Copy a folder into the root directory of the pyboard.  Folders that
         contain subfolders will not be copied successfully.  To copy only files of
         a specific type, change the file_type argument to the file suffix (e.g. 'py').'''
@@ -191,7 +199,10 @@ class Pycboard(Pyboard):
         for f in files:
             file_path = os.path.join(folder_path, f)
             target_path = target_folder + '/' + f
-            self.transfer_file(file_path, target_path)  
+            self.transfer_file(file_path, target_path)
+            if show_progress:
+                print('.', end='')
+                sys.stdout.flush()
 
     def remove_file(self, file_path):
         'Remove a file from the pyboard.'
@@ -212,9 +223,10 @@ class Pycboard(Pyboard):
 
     def load_framework(self, framework_dir = framework_dir):
         'Copy the pyControl framework folder to the board.'
-        print('Transfering pyControl framework to pyboard.')
-        self.transfer_folder(framework_dir, file_type = 'py')
-        self.transfer_folder(devices_dir  , file_type = 'py')
+        print('Transfering pyControl framework to pyboard.', end='')
+        self.transfer_folder(framework_dir, file_type='py', show_progress=True)
+        self.transfer_folder(devices_dir  , file_type='py', show_progress=True)
+        print('')
         error_message = self.reset()
         if not self.status['framework']:
             print('Error importing framework:')
@@ -272,7 +284,6 @@ class Pycboard(Pyboard):
         'Return events as a dictionary'
         return self.exec('fw.print_events()').decode().strip()
 
-
     def start_framework(self, dur = None, verbose = False, data_output = True):
         'Start pyControl framwork running on pyboard.'
         self.exec('fw.verbose = ' + repr(verbose))
@@ -288,7 +299,7 @@ class Pycboard(Pyboard):
         time.sleep(0.1)
         self.process_data()
 
-    def process_data(self):
+    def process_data(self, raise_exception=False):
         'Process data output from the pyboard to the serial line.'
         while self.serial.inWaiting() > 0:
             self.data = self.data + self.serial.read(1)  
@@ -297,6 +308,8 @@ class Pycboard(Pyboard):
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
                 if len(data_err) > 2:
                     print(data_err[:-3].decode())
+                    if raise_exception:
+                        raise PyboardError
                 break
             elif self.data.endswith(b'\n'):  # End of data line.
                 data_string = self.data.decode() 
@@ -309,12 +322,12 @@ class Pycboard(Pyboard):
                         self.data_file.flush()
                 self.data = b''
 
-    def run_framework(self, dur = None, verbose = False):
+    def run_framework(self, dur=None, verbose=False, raise_exception=False):
         '''Run framework for specified duration (seconds).'''
         self.start_framework(dur, verbose)
         try:
             while self.framework_running:
-                self.process_data()     
+                self.process_data(raise_exception=False)     
         except KeyboardInterrupt:
             self.stop_framework()
 
@@ -329,12 +342,12 @@ class Pycboard(Pyboard):
         if not sm_name: sm_name = self.state_machines[0]
         if not self._check_variable_exits(sm_name, v_name): return
         if v_value == None:
-            print('Set variable aborted: value \'None\' not allowed.')
+            print('\nSet variable aborted - value \'None\' not allowed.')
             return
         try:
             eval(repr(v_value))
         except:
-            print('Set variable aborted: invalid variable value: ' + repr(v_value))
+            print('\nSet variable aborted - invalid variable value: ' + repr(v_value))
             return
         for i in range(10):
             try:
@@ -343,8 +356,9 @@ class Pycboard(Pyboard):
                 pass 
             set_value = self.get_variable(v_name, sm_name, pre_checked = True)
             if self._approx_equal(set_value, v_value):
-                return
-        print('Set variable error: could not set variable: ' + v_name)
+                return True
+        print('\nSet variable error - could not set variable: ' + v_name)
+        return
 
     def get_variable(self, v_name, sm_name = None, pre_checked = False):
         '''Get value of state machine variable.  To minimise risk of variable
@@ -363,7 +377,7 @@ class Pycboard(Pyboard):
                     pass
                 if v_value != None and prev_value == v_value:
                     return v_value
-        print('Get variable error: could not get variable: ' + v_name)
+            print('\nGet variable error - could not get variable: ' + v_name)
 
     def _check_variable_exits(self, sm_name, v_name, op = 'Set'):
         'Check if specified state machine has variable with specified name.'
@@ -382,9 +396,9 @@ class Pycboard(Pyboard):
                 except PyboardError:
                     pass
         if sm_found:
-            print(op + ' variable aborted: invalid variable name:' + v_name)
+            print('\n'+ op + ' variable aborted: invalid variable name:' + v_name)
         else:
-            print(op + ' variable aborted: invalid state machine name:' + sm_name)
+            print('\n'+ op + ' variable aborted: invalid state machine name:' + sm_name)
         return False
 
     def _approx_equal(self, v, t):

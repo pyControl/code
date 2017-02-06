@@ -1,0 +1,12 @@
+Version 1.1 06/02/2017
+
+Framework:
+- Added get_current_time function which returns current time in ms.
+- Added support for playing .wav files to Audio_output class.
+CLI:
+- Added run_task.py, a script for configuring and running tasks on 
+  individual pyboards.
+
+Version 1.0 30/12/2016
+
+- Initial release of pyControl CLI
