@@ -186,6 +186,7 @@ def run_experiment():
 
     if exp.summary_variables:        
         spacing = exp.summary_variables.pop() if isinstance(exp.summary_variables[-1], int) else 1
+        if spacing < 1: spacing = 1
         summary_string = ''
         print('\nSummary variables:')
         for v_name in exp.summary_variables:
@@ -195,7 +196,7 @@ def run_experiment():
                 v_value = boards.boards[board_n].get_variable(v_name, exp.task)
                 print(exp.subjects[board_n] + ': {}'.format(v_value))
                 v_strings.append(str(v_value) +'\t' + exp.subjects[board_n] + '\n')
-            v_strings.append('\n' * spacing) # Add empty lines between variables.
+            v_strings.append('\n' * (spacing-1)) # Add empty lines between variables.
             summary_string += ''.join(v_strings) 
         boards.close()
         try:
