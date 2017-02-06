@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import inspect
 from collections import namedtuple
@@ -146,14 +147,16 @@ class Pycboard(Pyboard):
     # Pyboard filesystem operations.
     # ------------------------------------------------------------------------------------
 
-    def write_file(self, target_path, data):
+    def write_file(self, target_path, data, raise_exception=False):
         '''Write data to file at specified path on pyboard, any data already
         in the file will be deleted.'''
         self.exec("tmpfile = open('{}','w')".format(target_path))
         try:
             self.exec("tmpfile.write({})".format(repr(data)))
         except PyboardError:
-            print('Write file error.')
+            if raise_exception:
+                self.exec('tmpfile.close()')
+                raise PyboardError
         self.exec('tmpfile.close()')
 
     def get_file_hash(self, target_path):
@@ -164,18 +167,23 @@ class Pycboard(Pyboard):
             return -1  
         return file_hash
 
-    def transfer_file(self, file_path, target_path = None):
+    def transfer_file(self, file_path, target_path=None):
         '''Copy a file into the root directory of the pyboard.'''
         if not target_path:
             target_path = os.path.split(file_path)[-1]
         file_hash = _djb2_file(file_path)
         with open(file_path, 'r') as transfer_file:
-            file_contents = transfer_file.read()  
-        while not file_hash == self.get_file_hash(target_path):
-            self.write_file(target_path, file_contents) 
-        self.gc_collect()
+            file_contents = transfer_file.read() 
+        for i in range(10):
+            self.write_file(target_path, file_contents)
+            self.gc_collect()
+            if file_hash == self.get_file_hash(target_path):
+                self.gc_collect()
+                return
+        print('Error: Unable to transfer file: ' + file_path)
 
-    def transfer_folder(self, folder_path, target_folder = None, file_type = 'all'):
+    def transfer_folder(self, folder_path, target_folder=None, file_type='all',
+                        show_progress=False):
         '''Copy a folder into the root directory of the pyboard.  Folders that
         contain subfolders will not be copied successfully.  To copy only files of
         a specific type, change the file_type argument to the file suffix (e.g. 'py').'''
@@ -191,7 +199,10 @@ class Pycboard(Pyboard):
         for f in files:
             file_path = os.path.join(folder_path, f)
             target_path = target_folder + '/' + f
-            self.transfer_file(file_path, target_path)  
+            self.transfer_file(file_path, target_path)
+            if show_progress:
+                print('.', end='')
+                sys.stdout.flush()
 
     def remove_file(self, file_path):
         'Remove a file from the pyboard.'
@@ -212,9 +223,10 @@ class Pycboard(Pyboard):
 
     def load_framework(self, framework_dir = framework_dir):
         'Copy the pyControl framework folder to the board.'
-        print('Transfering pyControl framework to pyboard.')
-        self.transfer_folder(framework_dir, file_type = 'py')
-        self.transfer_folder(devices_dir  , file_type = 'py')
+        print('Transfering pyControl framework to pyboard.', end='')
+        self.transfer_folder(framework_dir, file_type='py', show_progress=True)
+        self.transfer_folder(devices_dir  , file_type='py', show_progress=True)
+        print('')
         error_message = self.reset()
         if not self.status['framework']:
             print('Error importing framework:')
