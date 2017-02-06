@@ -1,9 +1,11 @@
-Version 1.1 30/01/2017
+Version 1.1 06/02/2017
 
+Framework:
 - Added get_current_time function which returns current time in ms.
+- Added support for playing .wav files to Audio_output class.
+CLI:
 - Added run_task.py, a script for configuring and running tasks on 
   individual pyboards.
-- Added support for playing .wav files to Audio_output class.
 
 Version 1.0 30/12/2016
 
