@@ -50,12 +50,12 @@ class Pycboards():
             board.load_hardware_definition()            
 
     def process_data(self):
+        boards_running = False
         for board in self.boards.values():
-            n_boards_running = 0
             if board.framework_running:
                 board.process_data()
-                n_boards_running += 1
-        return n_boards_running > 0
+                boards_running = True
+        return boards_running
 
     def run_framework(self, dur = None, verbose = False):
         self.start_framework(dur, verbose)
