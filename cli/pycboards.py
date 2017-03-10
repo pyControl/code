@@ -75,11 +75,11 @@ class Pycboards():
 
     def set_variable(self, v_name, v_value, sm_name = None):
         '''Set specified variable on a all pycboards. If v_value is a
-         dict whose keys include all the board ID numbers, the variable on each
+         dict whose keys are the board ID numbers, the variable on each
          board is set to the corresponding value from the dictionary.  Otherwise
          the variable on all boards is set to v_value.
         '''
-        if type(v_value) == dict and set(self.boards.keys()) <= set(v_value.keys()): 
+        if type(v_value) == dict and set(self.boards.keys()) == set(v_value.keys()): 
             for board_n in self.board_numbers:
                 self.boards[board_n].set_variable(v_name, v_value[board_n], sm_name)
         else:
@@ -106,9 +106,16 @@ class Pycboards():
         for board in self.boards.values():
             board.close()
 
-    def write_to_file(self, write_string):
-        for board in self.boards.values():
-            board.data_file.write(write_string)
+    def write_to_file(self, write_string, end='\n'):
+        '''Write write_string to each boards data file.  If write_string is a dict
+        whose keys include all the board ID numbers, the corresponding values are
+        written to each board.'''
+        if type(write_string) == dict and set(self.boards.keys()) == set(write_string.keys()): 
+            for board_n in self.board_numbers:
+                self.boards[board_n].data_file.write(write_string[board_n]+end)
+        else:
+            for board in self.boards.values():
+                board.data_file.write(write_string+end)
 
     def save_unique_IDs(self):
         print('Saving hardware unique IDs.')

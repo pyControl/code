@@ -1,6 +1,6 @@
 import os
 import sys
-import datetime
+from datetime import datetime
 from pprint import pformat
 import shutil
 from imp import reload
@@ -78,7 +78,7 @@ def run_experiment():
         exp_list = [e for e in [getattr(experiments, c) for c in dir(experiments)]
                        if isinstance(e, Experiment)] # Construct list of available experiments.
 
-    date = datetime.date.today().strftime('-%Y-%m-%d')
+    date_time = datetime.now.strftime('-%Y-%m-%d-%H%M%S')
 
     selection = 0
     while selection == 0: 
@@ -103,7 +103,7 @@ def run_experiment():
 
     boards_in_use = sorted(list(exp.subjects.keys()))
     exp_dir     = os.path.join(data_dir, exp.folder)
-    file_paths   = {board_n: os.path.join(exp_dir, exp.subjects[board_n] + date + '.txt')
+    file_paths   = {board_n: os.path.join(exp_dir, exp.subjects[board_n] + date_time + '.txt')
                            for board_n in boards_in_use}
 
     print('')
@@ -160,13 +160,16 @@ def run_experiment():
         os.mkdir(exp_dir)
     boards.open_data_file(file_paths)
 
-    boards.write_to_file('I Task: ' + exp.task + '\n')
-
-    boards.print_IDs() # Print state and event information to file.
-
     input('\nHit enter to start exp. To stop experiment when running, hit ctrl + c.\n\n')
 
-    boards.write_to_file('\nI Run started at: ' + datetime.datetime.now().strftime('%H:%M:%S') + '\n\n')
+    boards.write_to_file('I Experiment name  : ' + exp.name)
+    boards.write_to_file('I Task name : ' + exp.task)
+    boards.write_to_file({board_n: 'I Subject ID : ' + subject_ID  
+                          for board_n, subject_ID in exp.subjects.items()})
+    boards.write_to_file('I Start date : ' + 
+                         datetime.now().strftime('%Y/%m/%d %H:%M:%S') + '\n')
+
+    boards.print_IDs() # Print state and event information to file.
 
     boards.run_framework()
 
@@ -208,11 +211,8 @@ def run_experiment():
     else:
         boards.close()
 
-    if exp.transfer_folder: 
-        transfer_folder = exp.transfer_folder
-    else:
-        transfer_folder = config.transfer_dir
-    if transfer_folder:
+    if config.transfer_dir:
+        transfer_folder = os.path.join(config.transfer_dir, exp.folder)
         print('\nCopying files to transfer folder.')
         if not os.path.exists(transfer_folder):
             os.mkdir(transfer_folder)
