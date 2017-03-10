@@ -270,7 +270,7 @@ class Pycboard(Pyboard):
 
     def print_IDs(self):
         'Print state and event IDs.'
-        ID_info = '\n' + self.get_states() + '\n\n' + self.get_events() + '\n'
+        ID_info = self.get_states() + '\n\n' + self.get_events() + '\n'
         if self.data_file: # Print IDs to file.
             self.data_file.write(ID_info)
         else: # Print to screen.
