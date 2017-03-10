@@ -78,7 +78,7 @@ def run_experiment():
         exp_list = [e for e in [getattr(experiments, c) for c in dir(experiments)]
                        if isinstance(e, Experiment)] # Construct list of available experiments.
 
-    date_time = datetime.now.strftime('-%Y-%m-%d-%H%M%S')
+    date_time = datetime.now().strftime('-%Y-%m-%d-%H%M%S')
 
     selection = 0
     while selection == 0: 
@@ -168,8 +168,8 @@ def run_experiment():
                           for board_n, subject_ID in exp.subjects.items()})
     boards.write_to_file('I Start date : ' + 
                          datetime.now().strftime('%Y/%m/%d %H:%M:%S') + '\n')
-
     boards.print_IDs() # Print state and event information to file.
+    boards.write_to_file('')
 
     boards.run_framework()
 
