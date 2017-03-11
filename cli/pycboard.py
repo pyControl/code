@@ -296,8 +296,6 @@ class Pycboard(Pyboard):
         'Stop framework running on pyboard by sending stop command.'
         self.serial.write(b'E')
         self.framework_running = False
-        time.sleep(0.1)
-        self.process_data()
 
     def process_data(self, raise_exception=False):
         'Process data output from the pyboard to the serial line.'
@@ -307,7 +305,12 @@ class Pycboard(Pyboard):
                 self.framework_running = False
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
                 if len(data_err) > 2:
-                    print(data_err[:-3].decode())
+                    error_string = data_err[:-3].decode()
+                    print(error_string)
+                    if self.data_file:
+                        self.data_file.write('! Error during framework run.\n')
+                        self.data_file.write('! ' + error_string.replace('\n', '\n! '))
+                        self.data_file.flush()                        
                     if raise_exception:
                         raise PyboardError
                 break
@@ -327,9 +330,11 @@ class Pycboard(Pyboard):
         self.start_framework(dur, verbose)
         try:
             while self.framework_running:
-                self.process_data(raise_exception=False)     
+                self.process_data(raise_exception=raise_exception)     
         except KeyboardInterrupt:
             self.stop_framework()
+        time.sleep(0.1)
+        self.process_data(raise_exception=raise_exception)
 
     # ------------------------------------------------------------------------------------
     # Getting and setting variables.
