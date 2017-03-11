@@ -219,6 +219,9 @@ def run_experiment():
         for file_path in file_paths.values():
             shutil.copy2(file_path, transfer_folder)
 
+    if len(boards.board_errors):
+        print('\nWarning:  Errors occured on boards {}, please check data files for traceback.'.format(boards.board_errors))
+
     input('\nHit any key to close program.')
 
 if __name__ == "__main__":

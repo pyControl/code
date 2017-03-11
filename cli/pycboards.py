@@ -3,6 +3,7 @@ from pprint import pformat
 import os
 import config.config as config
 from .default_paths import tasks_dir, config_dir
+from .pyboard import PyboardError
 from time import sleep
 
 class Pycboards():
@@ -53,17 +54,23 @@ class Pycboards():
         boards_running = False
         for board in self.boards.values():
             if board.framework_running:
-                board.process_data()
                 boards_running = True
+            try:
+                board.process_data(raise_exception=True)
+            except PyboardError:
+                self.board_errors.append(board.number)
         return boards_running
 
     def run_framework(self, dur = None, verbose = False):
+        self.board_errors = []
         self.start_framework(dur, verbose)
         try:
             while self.process_data():
                 pass
         except KeyboardInterrupt:
             self.stop_framework()
+        sleep(0.1)
+        self.process_data()
 
     def stop_framework(self):
         for board in self.boards.values():
