@@ -1,12 +1,5 @@
 from pyControl.hardware import *
-
-class _Poke():
-    def __init__(self, input_pin, LED_pin, rising_event, falling_event, debounce):
-        self.input = Digital_input(input_pin, rising_event, falling_event, debounce)
-        if LED_pin: self.LED = Digital_output(LED_pin)
-
-    def value(self):
-        return self.input.value()
+from devices._poke import _Poke
 
 class Twin_poke():
     # Two IR beams, each with their own LED.
