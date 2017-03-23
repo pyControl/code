@@ -4,6 +4,7 @@ from devices._poke import Poke
 from devices._double_poke import Double_poke
 from devices._twin_poke import Twin_poke
 from devices._quad_poke import Quad_poke
+from devices._six_poke import Six_poke
 from devices._audio_board import Audio_board
 from devices._audio_poke import Audio_poke
 from devices._LED_driver import LED_driver

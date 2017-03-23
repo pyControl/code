@@ -12,10 +12,12 @@ class Poke():
     def value(self):
         return self.input.value()
 
-    @property
-    def rising(self):
-        return self.input.rising_event
 
-    @property
-    def falling(self):
-        return self.input.falling_event        
+class _Poke():
+    # Poke class used in multi-poke devices.
+    def __init__(self, input_pin, LED_pin, rising_event, falling_event, debounce):
+        self.input = Digital_input(input_pin, rising_event, falling_event, debounce)
+        if LED_pin: self.LED = Digital_output(LED_pin)
+
+    def value(self):
+        return self.input.value()
