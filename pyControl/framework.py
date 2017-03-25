@@ -8,7 +8,8 @@ timer_evt    = const(-1) # Timer generated event.
 debounce_evt = const(-2) # Digital_input debounce timer event.
 goto_evt     = const(-3) # timed_goto_state event.
 print_evt    = const(-4) # User print event.
-stop_fw_evt  = const(-5) # Stop framework event.
+data_evt     = const(-5) # User data output event.
+stop_fw_evt  = const(-6) # Stop framework event.
 
 # The Event_queue and Timer classes store events for future processing
 # as lists of tuples.  The following event tuple types are in use:
@@ -17,6 +18,7 @@ stop_fw_evt  = const(-5) # Stop framework event.
 # (state_ID, timestamp) # State transition, ID is a positive integer.
 # (event_ID, timer_evt) # Timer generated event, ID is a positive integer.
 # (print_evt, timestamp, 'print_string') # User print event.
+# (data_evt, timestamp, typecode, data_array) # User data output event.
 # (goto_evt, State_machine_ID)     # timed_goto_state event.
 # (debounce_evt, Digital_input_ID) # Digital_input debouce timer.
 # (stop_fw_evt, None)   # Stop framework event.
@@ -179,6 +181,8 @@ def output_data(event):
     # Output data to serial line.
     if event[0] == print_evt: # Print user generated output string.
         print('P {} {}'.format(event[1], event[2]))
+    elif event[0] == data_evt: # Output user generated data.
+        usb_serial.write('B {} {}'.format(event[1], event[2]).encode() + bytes(event[3]) + b'\n')
     else:  # Print event or state change.
         if verbose: # Print event/state name.
             print('D {} {}'.format(event[1], ID2name[event[0]]))
