@@ -18,7 +18,7 @@ stop_fw_evt  = const(-6) # Stop framework event.
 # (state_ID, timestamp) # State transition, ID is a positive integer.
 # (event_ID, timer_evt) # Timer generated event, ID is a positive integer.
 # (print_evt, timestamp, 'print_string') # User print event.
-# (data_evt, timestamp, typecode, data_array) # User data output event.
+# (data_evt, timestamp, name, typecode, data_array) # User data output event.
 # (goto_evt, State_machine_ID)     # timed_goto_state event.
 # (debounce_evt, Digital_input_ID) # Digital_input debouce timer.
 # (stop_fw_evt, None)   # Stop framework event.
@@ -179,15 +179,17 @@ def print_states():
 
 def output_data(event):
     # Output data to serial line.
-    if event[0] == print_evt: # Print user generated output string.
-        print('P {} {}'.format(event[1], event[2]))
-    elif event[0] == data_evt: # Output user generated data.
-        usb_serial.write('B {} {}'.format(event[1], event[2]).encode() + bytes(event[3]) + b'\n')
-    else:  # Print event or state change.
+    if event[0] > 0:  # Print event or state change.
         if verbose: # Print event/state name.
             print('D {} {}'.format(event[1], ID2name[event[0]]))
         else: # Print event/state ID.
-            print('D {} {}'.format(event[1], event[0]))            
+            print('D {} {}'.format(event[1], event[0]))   
+    elif event[0] == print_evt: # Print user generated output string.
+        print('P {} {}'.format(event[1], event[2]))
+    elif event[0] == data_evt: # Output user generated data.
+        data_bytes = bytes(event[4])
+        usb_serial.send('B {} {} \a{}'.format(event[1], event[2], event[3]).encode()
+                        + len(data_bytes).to_bytes(2, 'little') + data_bytes + b'\n')         
 
 def _update():
     # Perform framework update functions in order of priority.
