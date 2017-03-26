@@ -83,10 +83,10 @@ class State_machine():
         if fw.data_output:
             fw.data_output_queue.put((fw.print_evt, fw.current_time, print_string))
 
-    def data_print(self, typecode, data_array):
+    def data_print(self, name, typecode, data_array):
         # Output data contained in data_array of type specified by typecode 
         if fw.data_output:
-            fw.data_output_queue.put((fw.data_evt, fw.current_time, typecode, data_array))
+            fw.data_output_queue.put((fw.data_evt, fw.current_time, name, typecode, data_array))
 
     def publish_event(self, event):
         # Put event with specified name in the event queue.

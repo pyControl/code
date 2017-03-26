@@ -4,6 +4,7 @@ import time
 import inspect
 from collections import namedtuple
 from serial import SerialException
+from array import array
 from .pyboard import Pyboard, PyboardError
 from .default_paths import *
 
@@ -95,7 +96,6 @@ class Pycboard(Pyboard):
         self.exec(inspect.getsource(_djb2_file))  # define djb2 hashing function.
         self.exec('import os; import gc; import sys; import pyb')
         self.framework_running = False
-        self.data = None
         self.state_machines = [] # List to hold name of instantiated state machines.
         error_message = None
         try:
@@ -291,6 +291,7 @@ class Pycboard(Pyboard):
         self.exec_raw_no_follow('fw.run({})'.format(dur))
         self.framework_running = True
         self.data = b''
+        self.array_data = None
 
     def stop_framework(self):
         'Stop framework running on pyboard by sending stop command.'
@@ -300,8 +301,24 @@ class Pycboard(Pyboard):
     def process_data(self, raise_exception=False):
         'Process data output from the pyboard to the serial line.'
         while self.serial.inWaiting() > 0:
-            self.data = self.data + self.serial.read(1)  
-            if self.data.endswith(b'\x04'): # End of framework run.
+            new_byte = self.serial.read(1)  
+            if new_byte == b'\a': # Start of array data.
+                typecode = self.serial.read(1).decode()
+                n_bytes = int.from_bytes(self.serial.read(2),'little')
+                self.array_data = array(typecode, self.serial.read(n_bytes))
+            elif new_byte == b'\n':  # End of data line.
+                data_string = self.data.decode()
+                if self.array_data:
+                    data_string += repr(list(self.array_data))
+                if self.number:
+                    print('Box {}: '.format(self.number), end = '')
+                print(data_string) 
+                if self.data_file:
+                    self.data_file.write(data_string+'\n')
+                    self.data_file.flush()
+                self.data = b''
+                self.array_data = None
+            elif new_byte == b'\x04': # End of framework run.
                 self.framework_running = False
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
                 if len(data_err) > 2:
@@ -314,16 +331,8 @@ class Pycboard(Pyboard):
                     if raise_exception:
                         raise PyboardError
                 break
-            elif self.data.endswith(b'\n'):  # End of data line.
-                data_string = self.data.decode() 
-                if self.number:
-                    print('Box {}: '.format(self.number), end = '')
-                print(data_string[:-1]) 
-                if self.data_file:
-                    if data_string.split(' ')[1][0] != '#': # Output not a coment, write to file.
-                        self.data_file.write(data_string)
-                        self.data_file.flush()
-                self.data = b''
+            else:
+                self.data+=new_byte
 
     def run_framework(self, dur=None, verbose=False, raise_exception=False):
         '''Run framework for specified duration (seconds).'''
