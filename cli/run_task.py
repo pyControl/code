@@ -41,7 +41,7 @@ def task_menu(board, task):
         input('Press enter to return to task select menu.')
         return
     while True:
-        i = input('\nPress [enter] to run task, [v] to configure variables, [c] to close program or [t] to select a new task:')
+        i = input('\nPress [enter] to run task, [g] to get variable value, [s] to set variable value, [c] to close program or [t] to select a new task:')
         if i == '':
             print('\nRunning task, press ctrl+c to stop.\n')
             try:
@@ -51,8 +51,10 @@ def task_menu(board, task):
                 print(str(e))
                 input('\nPress enter to return to task select menu.')
                 return
-        elif i == 'v':
-            configure_variables(board, task)
+        elif i == 'g':
+            configure_variables(board, task, 'get')
+        elif i == 's':
+            configure_variables(board, task, 'set')
         elif i == 'c':
             close_program(board)
         elif i == 't':
@@ -62,15 +64,18 @@ def task_menu(board, task):
 
 
 def board_config_menu(board):
+    mass_storage_enabled = 'MSC' in board.status['usb_mode']
     while True:
         i = input('''\nConfig menu:
-                         \n 1. Reload framwork.
-                         \n 2. Reload hardware definition.
-                         \n 3. Hard reset board.
-                         \n 4. Reset filesystem.
-                         \n 5. Enter device firmware update (DFU) mode.
-                         \n 6. Close program.
-                         \n 7. Exit config menu.\n''')
+                     \n 1. Reload framwork.
+                     \n 2. Reload hardware definition.
+                     \n 3. Hard reset board.
+                     \n 4. Reset filesystem.
+                     \n 5. Enter device firmware update (DFU) mode.
+                     \n 6. {} mass storage.
+                     \n 7. Close program.
+                     \n 8. Exit config menu.\n'''.format(
+                           'Disable' if mass_storage_enabled else 'Enable'))
         try:
             selection = int(i)
         except:
@@ -89,14 +94,21 @@ def board_config_menu(board):
             board.close()
             sys.exit()
         elif selection == 6:
-            board.close()
+            if mass_storage_enabled:
+                board.disable_mass_storage()
+            else:
+                board.enable_mass_storage()
+            input('Press any key to close program.')
             sys.exit()
         elif selection == 7:
+            board.close()
+            sys.exit()
+        elif selection == 8:
             return
         else:
             print('\nInput not recognised.')  
 
-def configure_variables(board, task):
+def configure_variables(board, task, get_or_set):
     # Get task variables by reading file.
     task_variables = []
     pattern = "v\.(?P<vname>\w+)\s*\="
@@ -106,30 +118,31 @@ def configure_variables(board, task):
         if not v_name in [var_name for var_name in task_variables]:
             task_variables.append(v_name)
     task_variables = {i+1: v for i, v in enumerate(task_variables)}
-    while True:
-        i = input('\nEnter [g] to get variables value, [s] to set variables value, [x] to exit menu:')
-        if i == 'x':
-            return
-        if i in ['g','s']:
-            print('\nVariables found:\n')
-            for j, v_name in task_variables.items():
-                print('{}: {}\n'.format(j,v_name))
-            v = input('Enter variable number or variable name:')
+    print('\nVariables found:\n')
+    for j, v_name in task_variables.items():
+        print('{}: {}\n'.format(j,v_name))
+    v = input('Enter name or number of variable to {}:'.format(get_or_set))
+    try:
+        v_name = task_variables[int(v)]
+    except:
+        v_name = v
+    if get_or_set == 'get':
+        v_value = board.get_variable(v_name)
+        if v_value is not None:
+            if type(v_value) is str:
+                v_value = "'{}'".format(v_value)
+            print('\n{}: {}'.format(v_name, v_value))
+    elif get_or_set == 'set':
+        v_value = None
+        while v_value is None:
             try:
-                v_name = task_variables[int(v)]
-            except:
-                v_name = v
-            if i == 'g':
-                v_value = board.get_variable(v_name)
-                if v_value is not None:
-                    print('\n{}: {}'.format(v_name, v_value))
-            elif i == 's':
                 v_value = eval(input('\nEnter value for variable {}: '.format(v_name)))
-                set_OK = board.set_variable(v_name, v_value)
-                if set_OK:
-                    print('\nVariable {} set to: {}'.format(v_name, v_value))
-        else:
-            print('\nInput not recognised.')
+            except Exception:
+                print('\nUnable to interpret value.')
+        if board.set_variable(v_name, v_value):
+            if type(v_value) is str:
+                v_value = "'{}'".format(v_value)
+            print('\nVariable {} set to: {}'.format(v_name, v_value))
 
 def close_program(board):
     board.close()

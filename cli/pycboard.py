@@ -55,7 +55,7 @@ class Pycboard(Pyboard):
         self.serial_port = serial_port
         self.data_file = None
         self.number = number
-        self.status = {'serial': None, 'framework':None, 'hardware':None}
+        self.status = {'serial': None, 'framework':None, 'hardware':None, 'usb_mode':None}
         try:    
             super().__init__(self.serial_port, baudrate=115200)
             self.status['serial'] = True
@@ -98,6 +98,7 @@ class Pycboard(Pyboard):
         self.framework_running = False
         self.state_machines = [] # List to hold name of instantiated state machines.
         error_message = None
+        self.status['usb_mode'] = self.eval('pyb.usb_mode()').decode()
         try:
             self.exec('from pyControl import *; import devices')
             self.status['framework'] = True # Framework imported OK.
@@ -120,19 +121,22 @@ class Pycboard(Pyboard):
                     self.status['hardware'] = False # Hardware definition import error.
         return error_message
 
-    def hard_reset(self):
+    def hard_reset(self, reconnect=True):
         print('Hard resetting pyboard.')
         try:
             self.exec_raw_no_follow('pyb.hard_reset()')
         except PyboardError:
             pass
         self.close()    # Close serial connection.
-        time.sleep(5.)  # Wait 5 seconds before trying to reopen serial connection.
-        try: 
-            super().__init__(self.serial_port, baudrate=115200) # Reopen serial conection.
-            self.reset()
-        except SerialException:
-            print('Unable to reopen serial connection, check whether serial port address has changed.')
+        if reconnect:
+            time.sleep(5.)  # Wait 5 seconds before trying to reopen serial connection.
+            try: 
+                super().__init__(self.serial_port, baudrate=115200) # Reopen serial conection.
+                self.reset()
+            except SerialException:
+                print('Unable to reopen serial connection.')
+        else:
+            print('Serial connection closed.')
 
     def gc_collect(self): 
         'Run a garbage collection on pyboard to free up memory.'
@@ -151,13 +155,15 @@ class Pycboard(Pyboard):
 
     def disable_mass_storage(self):
         'Modify the boot.py file to make the pyboards mass storage invisible to the host computer.'
+        print('Disabling mass storage.')
         self.write_file('boot.py', "import machine\nimport pyb\npyb.usb_mode('VCP')")
-        self.hard_reset()
+        self.hard_reset(reconnect=False)
 
     def enable_mass_storage(self):
         'Modify the boot.py file to make the pyboards mass storage visible to the host computer.'
+        print('Enabling mass storage.')
         self.write_file('boot.py', "import machine\nimport pyb\npyb.usb_mode('VCP+MSC')")
-        self.hard_reset()
+        self.hard_reset(reconnect=False)
 
     # ------------------------------------------------------------------------------------
     # Pyboard filesystem operations.
@@ -400,9 +406,13 @@ class Pycboard(Pyboard):
                 prev_value = v_value
                 try:
                     self.serial.flushInput()
-                    v_value = eval(self.eval(sm_name + '.smd.v.' + v_name).decode())
-                except:
-                    pass
+                    v_string = self.eval(sm_name + '.smd.v.' + v_name).decode()
+                except PyboardError:
+                    continue
+                try:
+                    v_value = eval(v_string)
+                except NameError:
+                    v_value = v_string
                 if v_value != None and prev_value == v_value:
                     return v_value
             print('\nGet variable error - could not get variable: ' + v_name)
