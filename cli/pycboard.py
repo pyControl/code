@@ -150,6 +150,7 @@ class Pycboard(Pyboard):
     def write_file(self, target_path, data, raise_exception=False):
         '''Write data to file at specified path on pyboard, any data already
         in the file will be deleted.'''
+        self.gc_collect()
         self.exec("tmpfile = open('{}','w')".format(target_path))
         try:
             self.exec("tmpfile.write({})".format(repr(data)))
@@ -158,6 +159,7 @@ class Pycboard(Pyboard):
                 self.exec('tmpfile.close()')
                 raise PyboardError
         self.exec('tmpfile.close()')
+        self.gc_collect()
 
     def get_file_hash(self, target_path):
         'Get the djb2 hash of a file on the pyboard.'
@@ -175,11 +177,9 @@ class Pycboard(Pyboard):
         with open(file_path, 'r') as transfer_file:
             file_contents = transfer_file.read() 
         for i in range(10):
-            self.write_file(target_path, file_contents)
-            self.gc_collect()
             if file_hash == self.get_file_hash(target_path):
-                self.gc_collect()
                 return
+            self.write_file(target_path, file_contents)
         print('Error: Unable to transfer file: ' + file_path)
 
     def transfer_folder(self, folder_path, target_folder=None, file_type='all',
@@ -263,7 +263,7 @@ class Pycboard(Pyboard):
             self.exec(sm_name + ' = sm.State_machine(smd)')
             self.state_machines.append(sm_name)  
         except PyboardError as e:
-            print('Error: Unable to setup state machine.\n' + e.args[2].decode())
+            print('\nError: Unable to setup state machine.\n\n' + e.args[2].decode())
             if raise_exception:
                 raise PyboardError('Unable to setup state machine.', e.args[2])
         self.remove_file(sm_name + '.py')
@@ -323,13 +323,14 @@ class Pycboard(Pyboard):
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
                 if len(data_err) > 2:
                     error_string = data_err[:-3].decode()
-                    print(error_string)
                     if self.data_file:
                         self.data_file.write('! Error during framework run.\n')
                         self.data_file.write('! ' + error_string.replace('\n', '\n! '))
                         self.data_file.flush()                        
                     if raise_exception:
-                        raise PyboardError
+                        raise PyboardError(error_string)
+                    else:
+                        print(error_string)
                 break
             else:
                 self.data+=new_byte
