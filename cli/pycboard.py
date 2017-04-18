@@ -122,11 +122,17 @@ class Pycboard(Pyboard):
 
     def hard_reset(self):
         print('Hard resetting pyboard.')
-        self.serial.write(b'pyb.hard_reset()')
-        self.close()     # Close serial connection.
-        time.sleep(0.1)  # Wait 100 ms. 
-        super().__init__(self.serial_port, baudrate=115200) # Reopen serial conection.
-        self.reset()
+        try:
+            self.exec_raw_no_follow('pyb.hard_reset()')
+        except PyboardError:
+            pass
+        self.close()    # Close serial connection.
+        time.sleep(5.)  # Wait 5 seconds before trying to reopen serial connection.
+        try: 
+            super().__init__(self.serial_port, baudrate=115200) # Reopen serial conection.
+            self.reset()
+        except SerialException:
+            print('Unable to reopen serial connection, check whether serial port address has changed.')
 
     def gc_collect(self): 
         'Run a garbage collection on pyboard to free up memory.'
@@ -143,6 +149,16 @@ class Pycboard(Pyboard):
         print('Entered DFU mode, closing serial connection.')
         self.close()
 
+    def disable_mass_storage(self):
+        'Modify the boot.py file to make the pyboards mass storage invisible to the host computer.'
+        self.write_file('boot.py', "import machine\nimport pyb\npyb.usb_mode('VCP')")
+        self.hard_reset()
+
+    def enable_mass_storage(self):
+        'Modify the boot.py file to make the pyboards mass storage visible to the host computer.'
+        self.write_file('boot.py', "import machine\nimport pyb\npyb.usb_mode('VCP+MSC')")
+        self.hard_reset()
+
     # ------------------------------------------------------------------------------------
     # Pyboard filesystem operations.
     # ------------------------------------------------------------------------------------
@@ -151,14 +167,11 @@ class Pycboard(Pyboard):
         '''Write data to file at specified path on pyboard, any data already
         in the file will be deleted.'''
         self.gc_collect()
-        self.exec("tmpfile = open('{}','w')".format(target_path))
         try:
-            self.exec("tmpfile.write({})".format(repr(data)))
-        except PyboardError:
+            self.exec("with open('{}','w') as f: f.write({})".format(target_path, repr(data)))
+        except PyboardError as e:
             if raise_exception:
-                self.exec('tmpfile.close()')
-                raise PyboardError
-        self.exec('tmpfile.close()')
+                raise PyboardError(e)
         self.gc_collect()
 
     def get_file_hash(self, target_path):
