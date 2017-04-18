@@ -35,12 +35,22 @@ def task_select_menu(board):
                 print('\nInput not recognised.')
 
 def task_menu(board, task):
-    board.setup_state_machine(task, raise_exception=True)
+    try:
+        board.setup_state_machine(task, raise_exception=True)
+    except PyboardError:
+        input('Press enter to return to task select menu.')
+        return
     while True:
         i = input('\nPress [enter] to run task, [v] to configure variables, [c] to close program or [t] to select a new task:')
         if i == '':
             print('\nRunning task, press ctrl+c to stop.\n')
-            board.run_framework(verbose=True)
+            try:
+                board.run_framework(verbose=True, raise_exception=True)
+            except PyboardError as e:
+                print('\nError while running task:\n')
+                print(str(e))
+                input('\nPress enter to return to task select menu.')
+                return
         elif i == 'v':
             configure_variables(board, task)
         elif i == 'c':
@@ -142,11 +152,11 @@ def run_task():
     print('\nSerial connection OK. Micropython version: {}'.format(board.micropython_version))
 
     if not board.status['framework']:
-        print('\nFramework not loaded, uploading framework..')
+        print('')
         board.load_framework()
 
     if not board.status['hardware']:
-        print('\nHardware definition not loaded, uploading hardware definition..')
+        print('')
         board.load_hardware_definition()
 
     task_select_menu(board)
@@ -158,6 +168,7 @@ if __name__ == "__main__":
         print('\nError:\n')
         print(str(e))
         input('\nPress any key to close.')
-    except PyboardError: # No need to print error message as pycboard handles it.
-        pass
+    except PyboardError as e: # No need to print error message as pycboard handles it.
+        print('\nPyboard error:\n')
+        print(str(e))
         input('\nPress any key to close.')
