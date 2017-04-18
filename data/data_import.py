@@ -1,9 +1,13 @@
 import os
 import numpy as np
-from datetime import datetime
+from datetime import datetime, date
 from collections import namedtuple
 
 Event = namedtuple('Event', ['time','name'])
+
+#----------------------------------------------------------------------------------
+# Session class
+#----------------------------------------------------------------------------------
 
 class Session():
     '''Import data from a pyControl file and represent it as an object with attributes:
@@ -11,7 +15,7 @@ class Session():
       - experiment_name
       - task_name
       - subject_ID
-          If argument integer_subject_IDs is True, suject_ID is stored as an integer,
+          If argument int_subject_IDs is True, suject_ID is stored as an integer,
           otherwise subject_ID is stored as a string.
       - datetime
           The date and time that the session started stored as a datetime object.
@@ -30,7 +34,7 @@ class Session():
           with the time in milliseconds at which it was printed.
     '''
 
-    def __init__(self, file_path, integer_subject_IDs=True):
+    def __init__(self, file_path, int_subject_IDs=True):
 
         # Load lines from file.
 
@@ -48,7 +52,7 @@ class Session():
         subject_ID_string    = next(line for line in info_lines if 'Subject ID'      in line).split(' : ')[1]
         datetime_string      = next(line for line in info_lines if 'Start date'      in line).split(' : ')[1]
 
-        if integer_subject_IDs: # Convert subject ID string to integer.
+        if int_subject_IDs: # Convert subject ID string to integer.
             self.subject_ID = int(''.join([i for i in subject_ID_string if i.isdigit()]))
         else:
             self.subject_ID = subject_ID_string
@@ -71,3 +75,115 @@ class Session():
                       for event_name in ID2name.values()}
 
         self.print_lines = [line[2:] for line in all_lines if line[0]=='P']
+
+
+#----------------------------------------------------------------------------------
+# Experiment class
+#----------------------------------------------------------------------------------
+
+class Experiment():
+    def __init__(self, folder_path, int_subject_IDs=True, rebuild_sessions=False):
+        '''
+
+        '''
+
+        self.folder_name = os.path.split(folder_path)[1]
+        self.path = folder_path
+
+        # Import sessions.
+
+        self.sessions = []
+        if not rebuild_sessions:
+            try: # Load sessions from saved sessions.pkl file.
+                with open(os.path.join(self.path, 'sessions.pkl'),'rb') as sessions_file:
+                    self.sessions = pickle.load(sessions_file)
+                print('Saved sessions loaded from: sessions.pkl')
+            except IOError:
+               pass
+
+        old_files = [session.file_name for session in self.sessions]
+        files = os.listdir(self.path)
+        new_files = [f for f in files if f[-4:] == '.txt' and f not in old_files]
+
+        if len(new_files) > 0:
+            print('Loading new data files..')
+            for file_name in new_files:
+                try:
+                    self.sessions.append(Session(os.path.join(self.path, file_name), int_subject_IDs))
+                except Exception as error_message:
+                    print('Unable to import file: ' + file_name)
+                    print(error_message)
+
+        # Assign session numbers.
+
+        self.subject_IDs = list(set([s.subject_ID for s in self.sessions]))
+        self.n_subjects = len(self.subject_IDs)
+
+        self.sessions.sort(key = lambda s:s.datetime_string + str(s.subject_ID))
+        
+        self.sessions_per_subject = {}
+        for subject_ID in self.subject_IDs:
+            subject_sessions = self.get_sessions(subject_ID)
+            for i, session in enumerate(subject_sessions):
+                session.number = i+1
+            self.sessions_per_subject[subject_ID] = subject_sessions[-1].number
+
+    def save(self):
+        '''Save all sessions as .pkl file.'''
+        with open(os.path.join(self.path, 'sessions.pkl'),'wb') as sessions_file:
+            pickle.dump(self.sessions, sessions_file)
+        
+    def get_sessions(self, subject_IDs='all', when='all'):
+        '''Return list of sessions which match specified subject ID and time range.
+        '''
+        if subject_IDs == 'all':
+            subject_IDs = self.subject_IDs
+        if not isinstance(subject_IDs, list):
+            subject_IDs = [subject_IDs]
+
+
+        if when == 'all': # Select all sessions.
+            when_func = lambda session: True
+
+        elif isinstance(when, int):
+            if when < 0: # Select most recent 'when' sessions.
+                when_func = lambda session: (session.number > 
+                    self.sessions_per_subject[session.subject_ID] + when)
+            else: 
+                when_func = lambda session: session.number == when
+
+        elif when[1] == ... : # Select a range..
+            assert type(when[0]) == type(when[2]), 'Start and end of time range must be same type.'
+            if type(when[0]) == int: # .. of session numbers.
+                when_func = lambda session: when[0] <= session.number <= when[2]
+            else: # .. of dates.
+                when_func = lambda session: _toDate(when[0]) <= session.datetime.date() <= _toDate(when[2])
+        
+        else: # Select specified..
+            assert all([type(when[0]) == type(w) for w in when]), "All elements of 'when' must be same type."
+            if type(when[0]) == int: # .. session numbers.
+                when_func = lambda session: session.number in when
+            else: # .. dates.
+                dates = [_toDate(d) for d in when]
+                when_func = lambda session: session.datetime.date() in dates
+
+        valid_sessions = [s for s in self.sessions if s.subject_ID in subject_IDs and when_func(s)]
+        
+        if len(valid_sessions) == 1: 
+            valid_sessions = valid_sessions[0] # Don't return list for single session.
+        return valid_sessions       
+
+
+def _toDate(d): # Convert input to datetime.date object.
+    if type(d) is str:
+        try:
+            return datetime.strptime(d, '%Y-%m-%d').date()
+        except ValueError:
+            print('Unable to convert string to date, format must be YYYY-MM-DD.')
+            raise ValueError
+    elif type(d) is datetime:
+        return d.date()
+    elif type(d) is date:
+        return d
+    else:
+        raise ValueError
