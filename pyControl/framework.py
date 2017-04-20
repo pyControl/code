@@ -109,7 +109,7 @@ clock = pyb.Timer(4) # Timer which generates clock tick.
 
 check_timers = False # Flag to say timers need to be checked, set True by clock tick.
 
-interrupts_waiting = False # Flag to say external interrupt waiting to be processed.
+inputs_waiting = False # Flag to say external input waiting to be processed.
 
 start_time = 0 # Time at which framework run is started.
 
@@ -193,12 +193,12 @@ def output_data(event):
 
 def _update():
     # Perform framework update functions in order of priority.
-    global current_time, interrupts_waiting, running
-    if interrupts_waiting: # Priority 1: Process hardware interrupts.
-        interrupts_waiting = False
-        for digital_input in hw.active_inputs:
-            if digital_input.interrupt_triggered:
-                digital_input._process_interrupt()
+    global current_time, inputs_waiting, running
+    if inputs_waiting: # Priority 1: Process external inputs.
+        inputs_waiting = False
+        for external_input in hw.active_inputs:
+            if external_input.triggered:
+                external_input._process_input()
     elif check_timers: # Priority 2: Check for elapsed timers.
         timer.check() 
     elif event_queue.available(): # Priority 3: Process event from queue.
@@ -223,7 +223,7 @@ def _update():
 
 def run(duration = None):
     # Run framework for specified number of seconds.
-    # Pre run----------------------------
+    # Pre run
     global current_time, start_time, running
     timer.reset()
     event_queue.reset()
@@ -234,7 +234,7 @@ def run(duration = None):
     start_time = pyb.millis()
     clock.init(freq=1000)
     clock.callback(_clock_tick)
-    # Run--------------------------------
+    # Run
     running = True
     for state_machine in state_machines:
         state_machine._start()
@@ -242,10 +242,12 @@ def run(duration = None):
         timer.set(duration*1000, (stop_fw_evt, None))
     while running:
         _update()
-    # Post run---------------------------
+    # Post run
     clock.deinit()
     for state_machine in state_machines:
-        state_machine._stop()  
+        state_machine._stop()
+    for external_input in hw.active_inputs:
+        external_input.stop()
     while data_output_queue.available():
         output_data(data_output_queue.get())
 
