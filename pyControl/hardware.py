@@ -1,4 +1,5 @@
 import pyb
+from array import array
 from . import framework as fw
 
 # ----------------------------------------------------------------------------------------
@@ -6,6 +7,8 @@ from . import framework as fw
 # ----------------------------------------------------------------------------------------
 
 digital_inputs  = []  # All Digital_input objects.
+
+analog_inputs = [] # All analog input objects.
 
 active_inputs = [] # Digital input objects used by current state machines.
 
@@ -27,7 +30,7 @@ def initialise():
     # into active_inputs list and assigns their IDs.
     global active_inputs, initialised
     active_inputs = [digital_input for digital_input in digital_inputs
-                     if digital_input._set_event_IDs()]
+                     if digital_input._set_event_IDs()] + analog_inputs
     for i, digital_input in enumerate(active_inputs):
         digital_input.ID = i  
     initialised = True   
@@ -129,12 +132,12 @@ class Digital_input():
             self.pin_state = not self.pin_state
         elif self.use_both_edges:
             self.pin_state = self.pin.value()
-        self.interrupt_triggered = True # Set tag on Digital_input.
-        fw.interrupts_waiting    = True # Set tag on framework (common to all Digital_inputs).
+        self.triggered = True # Set tag on Digital_input.
+        fw.inputs_waiting = True # Set tag on framework (common to all Digital_inputs).
 
-    def _process_interrupt(self):
+    def _process_input(self):
         # Put apropriate event for interrupt in event queue.
-        self.interrupt_triggered = False
+        self.triggered = False
         self._publish_if_edge_has_event(self.interrupt_timestamp)
         if self.debounce: # Set timer to deactivate debounce in self.debounce milliseconds.
             fw.timer.set(self.debounce, (fw.debounce_evt, self.ID))
@@ -159,12 +162,59 @@ class Digital_input():
         return self.pin.value()
 
     def reset(self): # Reset state of input, called at beginning of run.
-        self.interrupt_triggered = False  # Flag to tell framework to run _process_interrupt.
+        self.triggered = False  # Flag to tell framework to run _process_input.
         self.debounce_active = False      # Set True when pin is ignoring inputs due to debounce.
         if self.use_both_edges:
             self.pin_state = self.pin.value()
         self.interrupt_timestamp = 0
         self.decimate_counter = -1
+
+    def stop(self):
+        pass
+
+# ----------------------------------------------------------------------------------------
+# Analog input.
+# ----------------------------------------------------------------------------------------
+
+class Analog_input():
+
+    def __init__(self, pin, name):
+        self.name = name
+        self.buffer_size = 128
+        self.buffers = (array('H', [0]*self.buffer_size),array('H', [0]*self.buffer_size))
+        self.timer = pyb.Timer(available_timers.pop()) 
+        self.ADC = pyb.ADC(pin)
+        analog_inputs.append(self)
+
+    def reset(self):
+        self.write_buffer = 0 # Buffer to write new data to.
+        self.write_index = 0  # Buffer index to write new data to. 
+        self.triggered = False # Flag to tell framework data ready to transmit.
+
+    def _timer_ISR(self, t):
+        # Read a sample to the buffer, update write index.
+        self.buffers[self.write_buffer][self.write_index] = self.ADC.read()
+        self.write_index = (self.write_index + 1) % self.buffer_size
+        if self.write_index == 0: # Buffer filled, switch buffers.
+            self.write_buffer = 1 - self.write_buffer
+            self.triggered = True    # Set tag on Analog_input.
+            fw.inputs_waiting = True # Set tag on framework (common to all active inputs).
+
+    def _process_input(self):
+         # Put full buffer in data output queue.
+        self.triggered = False
+        if fw.data_output:
+            fw.data_output_queue.put((fw.data_evt, fw.current_time, self.name,
+                                      'H', self.buffers[1-self.write_buffer]))
+
+    def start(self, sampling_rate):
+        # Start aquiring data at specified sampling rate (Hz).
+        self.timer.init(freq=sampling_rate)
+        self.timer.callback(self._timer_ISR)
+
+    def stop(self):
+        # Stop aquiring data.
+        self.timer.deinit()
 
 # ----------------------------------------------------------------------------------------
 # Digital Output.
