@@ -321,14 +321,16 @@ class Pycboard(Pyboard):
         'Process data output from the pyboard to the serial line.'
         while self.serial.inWaiting() > 0:
             new_byte = self.serial.read(1)  
-            if new_byte == b'\a': # Start of array data.
+            if new_byte == b'\a': # Start of analog data chunk.
                 typecode = self.serial.read(1).decode()
-                n_bytes = int.from_bytes(self.serial.read(2),'little')
-                self.array_data = array(typecode, self.serial.read(n_bytes))
+                ID =            int.from_bytes(self.serial.read(1), 'little')
+                sampling_rate = int.from_bytes(self.serial.read(2), 'little')
+                n_bytes =       int.from_bytes(self.serial.read(2),'little')
+                timestamp =     int.from_bytes(self.serial.read(4),'little')
+                array_data = array(typecode, self.serial.read(n_bytes))
+                print([typecode,ID,sampling_rate,n_bytes,timestamp])
             elif new_byte == b'\n':  # End of data line.
                 data_string = self.data.decode()
-                if self.array_data:
-                    data_string += repr(list(self.array_data))
                 if self.number:
                     print('Box {}: '.format(self.number), end = '')
                 print(data_string) 
