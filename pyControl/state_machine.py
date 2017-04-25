@@ -39,7 +39,6 @@ class State_machine():
         smd.disarm_timer     = self.disarm_timer
         smd.reset_timer      = self.reset_timer
         smd.print            = self.print 
-        smd.data_print       = self.data_print
         smd.stop_framework   = self.stop_framework
         smd.publish_event    = self.publish_event
 
@@ -82,11 +81,6 @@ class State_machine():
         #  printed to serial line once higher priority tasks have all been processed. 
         if fw.data_output:
             fw.data_output_queue.put((fw.print_evt, fw.current_time, print_string))
-
-    def data_print(self, name, typecode, data_array):
-        # Output data contained in data_array of type specified by typecode 
-        if fw.data_output:
-            fw.data_output_queue.put((fw.data_evt, fw.current_time, name, typecode, data_array))
 
     def publish_event(self, event):
         # Put event with specified name in the event queue.

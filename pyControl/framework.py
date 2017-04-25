@@ -8,8 +8,7 @@ timer_evt    = const(-1) # Timer generated event.
 debounce_evt = const(-2) # Digital_input debounce timer event.
 goto_evt     = const(-3) # timed_goto_state event.
 print_evt    = const(-4) # User print event.
-data_evt     = const(-5) # User data output event.
-stop_fw_evt  = const(-6) # Stop framework event.
+stop_fw_evt  = const(-5) # Stop framework event.
 
 # The Event_queue and Timer classes store events for future processing
 # as lists of tuples.  The following event tuple types are in use:
@@ -18,7 +17,6 @@ stop_fw_evt  = const(-6) # Stop framework event.
 # (state_ID, timestamp) # State transition, ID is a positive integer.
 # (event_ID, timer_evt) # Timer generated event, ID is a positive integer.
 # (print_evt, timestamp, 'print_string') # User print event.
-# (data_evt, timestamp, name, typecode, data_array) # User data output event.
 # (goto_evt, State_machine_ID)     # timed_goto_state event.
 # (debounce_evt, Digital_input_ID) # Digital_input debouce timer.
 # (stop_fw_evt, None)   # Stop framework event.
@@ -111,6 +109,8 @@ check_timers = False # Flag to say timers need to be checked, set True by clock 
 
 inputs_waiting = False # Flag to say external input waiting to be processed.
 
+analog_waiting = False # Flag to say analog data waiting to be sent.
+
 start_time = 0 # Time at which framework run is started.
 
 # ----------------------------------------------------------------------------------------
@@ -185,22 +185,21 @@ def output_data(event):
         else: # Print event/state ID.
             print('D {} {}'.format(event[1], event[0]))   
     elif event[0] == print_evt: # Print user generated output string.
-        print('P {} {}'.format(event[1], event[2]))
-    elif event[0] == data_evt: # Output user generated data.
-        data_bytes = bytes(event[4])
-        usb_serial.send('B {} {} \a{}'.format(event[1], event[2], event[3]).encode()
-                        + len(data_bytes).to_bytes(2, 'little') + data_bytes + b'\n')         
+        print('P {} {}'.format(event[1], event[2]))        
 
 def _update():
     # Perform framework update functions in order of priority.
-    global current_time, inputs_waiting, running
+    global current_time, inputs_waiting, analog_waiting, running
+
     if inputs_waiting: # Priority 1: Process external inputs.
         inputs_waiting = False
         for external_input in hw.active_inputs:
             if external_input.triggered:
                 external_input._process_input()
+
     elif check_timers: # Priority 2: Check for elapsed timers.
         timer.check() 
+
     elif event_queue.available(): # Priority 3: Process event from queue.
         event = event_queue.get()   
         if event[0] > 0: # State machine event.
@@ -214,11 +213,19 @@ def _update():
             state_machines[event[1]]._process_timed_goto_state()
         elif event[0] == stop_fw_evt:
             running = False
+
     elif usb_serial.any(): # Priority 4: Check for serial input from computer.
         bytes_recieved = usb_serial.read()
         if bytes_recieved == b'E':      # Serial command to stop run.
             running = False
-    elif data_output_queue.available(): # Priority 5: Output data.
+
+    elif analog_waiting: # Priority 5: Send analog data.
+        analog_waiting=False
+        for analog_input in hw.analog_inputs:
+            if analog_input.data_ready:
+                analog_input._output_data()
+
+    elif data_output_queue.available(): # Priority 6: Output data.
         output_data(data_output_queue.get())
 
 def run(duration = None):

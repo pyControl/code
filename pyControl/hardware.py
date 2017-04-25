@@ -177,19 +177,32 @@ class Digital_input():
 # ----------------------------------------------------------------------------------------
 
 class Analog_input():
+    # Aquires data from ADC, stores it in a buffer, then sends it to the
+    # USB serial port when the buffer is full.
+    # Serial data format: '\a d i r l t D' where:
+    # a\ ASCII bell character indicating start of analog data chunk (1 byte)
+    # d data array typecode (1 byte)
+    # i ID of analog input  (1 byte)
+    # r sampling rate (Hz) (2 bytes)
+    # l length of data array in bytes (2 bytes)
+    # t timestamp of chunk start (ms)(4 bytes)
+    # D data array bytes (variable)
 
     def __init__(self, pin, name):
         self.name = name
         self.buffer_size = 128
         self.buffers = (array('H', [0]*self.buffer_size),array('H', [0]*self.buffer_size))
+        self.buffer_start_times = array('i', [0,0])
         self.timer = pyb.Timer(available_timers.pop()) 
         self.ADC = pyb.ADC(pin)
+        self.ID = len(analog_inputs)
         analog_inputs.append(self)
 
     def reset(self):
         self.write_buffer = 0 # Buffer to write new data to.
+        self.send_buffer  = 1 # Buffer to send date from to host.
         self.write_index = 0  # Buffer index to write new data to. 
-        self.triggered = False # Flag to tell framework data ready to transmit.
+        self.data_ready = False # Flag to tell framework data ready to transmit.
 
     def _timer_ISR(self, t):
         # Read a sample to the buffer, update write index.
@@ -197,24 +210,31 @@ class Analog_input():
         self.write_index = (self.write_index + 1) % self.buffer_size
         if self.write_index == 0: # Buffer filled, switch buffers.
             self.write_buffer = 1 - self.write_buffer
-            self.triggered = True    # Set tag on Analog_input.
-            fw.inputs_waiting = True # Set tag on framework (common to all active inputs).
+            self.send_buffer  = 1 - self.send_buffer
+            self.buffer_start_times[self.write_buffer] = fw.current_time
+            self.data_ready   = True  # Set tag on Analog_input.
+            fw.analog_waiting = True  # Set tag on framework.
 
-    def _process_input(self):
-         # Put full buffer in data output queue.
-        self.triggered = False
-        if fw.data_output:
-            fw.data_output_queue.put((fw.data_evt, fw.current_time, self.name,
-                                      'H', self.buffers[1-self.write_buffer]))
+    def _output_data(self):
+         # send data from full buffer to host over USB serial.
+        self.data_ready = False
+        fw.usb_serial.write(self.data_header)
+        fw.usb_serial.write(self.buffer_start_times[self.send_buffer].to_bytes(4,'little'))
+        fw.usb_serial.send(self.buffers[self.send_buffer])
 
     def start(self, sampling_rate):
         # Start aquiring data at specified sampling rate (Hz).
+        self.data_header = b'\aH' + self.ID.to_bytes(1,'little') + \
+                           sampling_rate.to_bytes(2,'little') + \
+                           (2*self.buffer_size).to_bytes(2,'little')
+        self.buffer_start_times[0] = fw.current_time
         self.timer.init(freq=sampling_rate)
         self.timer.callback(self._timer_ISR)
 
     def stop(self):
         # Stop aquiring data.
         self.timer.deinit()
+        self.reset()
 
 # ----------------------------------------------------------------------------------------
 # Digital Output.
