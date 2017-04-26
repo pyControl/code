@@ -107,10 +107,6 @@ clock = pyb.Timer(4) # Timer which generates clock tick.
 
 check_timers = False # Flag to say timers need to be checked, set True by clock tick.
 
-inputs_waiting = False # Flag to say external input waiting to be processed.
-
-analog_waiting = False # Flag to say analog data waiting to be sent.
-
 start_time = 0 # Time at which framework run is started.
 
 # ----------------------------------------------------------------------------------------
@@ -189,13 +185,10 @@ def output_data(event):
 
 def _update():
     # Perform framework update functions in order of priority.
-    global current_time, inputs_waiting, analog_waiting, running
+    global current_time,  running
 
-    if inputs_waiting: # Priority 1: Process external inputs.
-        inputs_waiting = False
-        for external_input in hw.active_inputs:
-            if external_input.triggered:
-                external_input._process_input()
+    if hw.inputs_waiting: # Priority 1: Process event generating inputs.
+        hw.process_inputs()
 
     elif check_timers: # Priority 2: Check for elapsed timers.
         timer.check() 
@@ -219,11 +212,8 @@ def _update():
         if bytes_recieved == b'E':      # Serial command to stop run.
             running = False
 
-    elif analog_waiting: # Priority 5: Send analog data.
-        analog_waiting=False
-        for analog_input in hw.analog_inputs:
-            if analog_input.data_ready:
-                analog_input._output_data()
+    elif hw.analog_waiting: # Priority 5: Send analog data.
+        hw.process_analog()
 
     elif data_output_queue.available(): # Priority 6: Output data.
         output_data(data_output_queue.get())
@@ -251,10 +241,9 @@ def run(duration = None):
         _update()
     # Post run
     clock.deinit()
+    hw.stop()
     for state_machine in state_machines:
         state_machine._stop()
-    for external_input in hw.active_inputs:
-        external_input.stop()
     while data_output_queue.available():
         output_data(data_output_queue.get())
 

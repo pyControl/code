@@ -21,6 +21,10 @@ default_pull = {'down': [], # Used when Mainboards are initialised to specify
 
 initialised = False # Set to True once hardware has been intiialised.
 
+inputs_waiting = False # Flag to tell framework to call process inputs.
+
+analog_waiting = False # Flag to tell framework to call process analog.
+
 # ----------------------------------------------------------------------------------------
 # Functions
 # ----------------------------------------------------------------------------------------
@@ -30,21 +34,42 @@ def initialise():
     # into active_inputs list and assigns their IDs.
     global active_inputs, initialised
     active_inputs = [digital_input for digital_input in digital_inputs
-                     if digital_input._set_event_IDs()] + analog_inputs
+                     if digital_input._set_event_IDs()]
     for i, digital_input in enumerate(active_inputs):
         digital_input.ID = i  
     initialised = True   
 
 def reset():
     # Reset state of inputs and turn off outputs.
-    for digital_input in active_inputs:
-        digital_input.reset()  
+    for _input in active_inputs + analog_inputs:
+        _input.reset()  
     off()
 
 def off():
     # Turn of all outputs.
     for output in all_outputs:
         output.off()
+
+def stop():
+    for analog_input in analog_inputs:
+        analog_input.stop()
+
+def process_inputs():
+    # Put external events in framework event que.
+    global inputs_waiting
+    inputs_waiting = False
+    for external_input in active_inputs:
+        if external_input.triggered:
+            external_input._process_input()
+
+def process_analog():
+    # Send 1 chunk of analog data to computer then return.
+    global analog_waiting
+    for analog_input in analog_inputs:
+        if analog_input.data_ready:
+            analog_input._output_data()
+            return
+    analog_waiting=False
 
 # ----------------------------------------------------------------------------------------
 # Digital Input
@@ -119,6 +144,7 @@ class Digital_input():
         return True
 
     def _ISR(self, line):
+        global inputs_waiting
         # Interrupt service routine called on pin change.
         if self.debounce_active:
                 return # Ignore interrupt as too soon after previous interrupt.
@@ -133,7 +159,7 @@ class Digital_input():
         elif self.use_both_edges:
             self.pin_state = self.pin.value()
         self.triggered = True # Set tag on Digital_input.
-        fw.inputs_waiting = True # Set tag on framework (common to all Digital_inputs).
+        inputs_waiting = True # Set tag on framework (common to all Digital_inputs).
 
     def _process_input(self):
         # Put apropriate event for interrupt in event queue.
@@ -169,9 +195,6 @@ class Digital_input():
         self.interrupt_timestamp = 0
         self.decimate_counter = -1
 
-    def stop(self):
-        pass
-
 # ----------------------------------------------------------------------------------------
 # Analog input.
 # ----------------------------------------------------------------------------------------
@@ -206,6 +229,7 @@ class Analog_input():
 
     def _timer_ISR(self, t):
         # Read a sample to the buffer, update write index.
+        global analog_waiting
         self.buffers[self.write_buffer][self.write_index] = self.ADC.read()
         self.write_index = (self.write_index + 1) % self.buffer_size
         if self.write_index == 0: # Buffer filled, switch buffers.
@@ -213,7 +237,7 @@ class Analog_input():
             self.send_buffer  = 1 - self.send_buffer
             self.buffer_start_times[self.write_buffer] = fw.current_time
             self.data_ready   = True  # Set tag on Analog_input.
-            fw.analog_waiting = True  # Set tag on framework.
+            analog_waiting = True  # Set tag on framework.
 
     def _output_data(self):
          # send data from full buffer to host over USB serial.
