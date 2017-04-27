@@ -14,13 +14,13 @@ from .default_paths import *
 
 # djb2 hashing algorithm used to check integrity of transfered files.
 def _djb2_file(file_path):
-    with open(file_path, 'r') as f:
+    with open(file_path, 'rb') as f:
         h = 5381
         while True:
             c = f.read(1)
             if not c:
                 break
-            h = ((h * 33) + ord(c)) & 0xFFFFFFFF           
+            h = ((h * 33) + int.from_bytes(c,'little')) & 0xFFFFFFFF           
     return h
 
 # Used on pyboard to remove directories or files.
@@ -40,6 +40,21 @@ def _reset_pyb_filesystem():
     for i in os.listdir():
         if i not in ['System Volume Information', 'boot.py']:
             _rm_dir_or_file(i)
+
+# Used on pyboard for file transfer.
+def _receive_file(file_path, file_size):
+    usb = pyb.USB_VCP()
+    usb.setinterrupt(-1)
+    buf_size = 512
+    buf = bytearray(buf_size)
+    bytes_remaining = file_size
+    with open(file_path, 'wb') as f:
+        while bytes_remaining > 0:
+            bytes_read = usb.recv(buf, timeout=5)
+            if bytes_read:
+                bytes_remaining -= bytes_read
+                f.write(buf[:bytes_read])
+            usb.write(b'0')
 
 # ----------------------------------------------------------------------------------------
 #  Pycboard class.
@@ -94,6 +109,7 @@ class Pycboard(Pyboard):
         'Enter raw repl (soft reboots pyboard), import modules.'
         self.enter_raw_repl() # Soft resets pyboard.
         self.exec(inspect.getsource(_djb2_file))  # define djb2 hashing function.
+        self.exec(inspect.getsource(_receive_file))  # define recieve file function.
         self.exec('import os; import gc; import sys; import pyb')
         self.framework_running = False
         self.state_machines = [] # List to hold name of instantiated state machines.
@@ -169,6 +185,23 @@ class Pycboard(Pyboard):
     # Pyboard filesystem operations.
     # ------------------------------------------------------------------------------------
 
+    def send_file(self, file_path, target_path=None):
+        if not target_path:
+            target_path = os.path.split(file_path)[-1]
+        file_size = os.path.getsize(file_path)
+        self.exec_raw_no_follow("_receive_file('{}',{})"
+                                .format(target_path, file_size))
+        with open(file_path, 'rb') as f:
+            while True:
+                chunk = f.read(512)
+                if not chunk:
+                    break
+                self.serial.write(chunk)
+                self.serial.read(1)
+        self.follow(5)
+        print(_djb2_file(file_path))
+        print(self.get_file_hash(target_path))
+
     def write_file(self, target_path, data, raise_exception=False):
         '''Write data to file at specified path on pyboard, any data already
         in the file will be deleted.'''
@@ -218,7 +251,8 @@ class Pycboard(Pyboard):
         for f in files:
             file_path = os.path.join(folder_path, f)
             target_path = target_folder + '/' + f
-            self.transfer_file(file_path, target_path)
+            #self.transfer_file(file_path, target_path)
+            self.send_file(file_path, target_path)
             if show_progress:
                 print('.', end='')
                 sys.stdout.flush()
