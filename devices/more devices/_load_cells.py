@@ -1,9 +1,9 @@
-from pyControl.hardware import *
+import pyControl.hardware as _h
 
 class LoadCell():
     def __init__(self, port1, port2, rising_event_A = None, falling_event_A = None, rising_event_B = None, falling_event_B = None, debounce = 5):        
-        self._cell_threshold_high = Digital_input(port1, rising_event_A, falling_event_A, debounce)
-        self._cell_threshold_low = Digital_input(port2, rising_event_B, falling_event_B, debounce)
+        self._cell_threshold_high = _h.Digital_input(port1, rising_event_A, falling_event_A, debounce)
+        self._cell_threshold_low = _h.Digital_input(port2, rising_event_B, falling_event_B, debounce)
 
     @property
     def high_rising(self):
@@ -23,9 +23,9 @@ class LoadCell():
 class LoadCellsTriggers():
     def __init__(self, task_port, solenoid_port, infrared_port):
 
-        self.task_status = Digital_output(task_port)
-        self.solenoid_status = Digital_output(solenoid_port)
-        self.infrared_status = Digital_output(infrared_port)
+        self.task_status = _h.Digital_output(task_port)
+        self.solenoid_status = _h.Digital_output(solenoid_port)
+        self.infrared_status = _h.Digital_output(infrared_port)
 
     def start_task(self):
         self.task_status.on()

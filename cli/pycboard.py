@@ -17,10 +17,10 @@ def _djb2_file(file_path):
     with open(file_path, 'rb') as f:
         h = 5381
         while True:
-            c = f.read(1)
+            c = f.read(4)
             if not c:
                 break
-            h = ((h * 33) + int.from_bytes(c,'little')) & 0xFFFFFFFF           
+            h = ((h << 5) + h + int.from_bytes(c,'little')) & 0xFFFFFFFF           
     return h
 
 # Used on pyboard to remove directories or files.
@@ -47,14 +47,16 @@ def _receive_file(file_path, file_size):
     usb.setinterrupt(-1)
     buf_size = 512
     buf = bytearray(buf_size)
+    buf_mv = memoryview(buf)
     bytes_remaining = file_size
     with open(file_path, 'wb') as f:
         while bytes_remaining > 0:
             bytes_read = usb.recv(buf, timeout=5)
+            usb.write(b'0')
             if bytes_read:
                 bytes_remaining -= bytes_read
-                f.write(buf[:bytes_read])
-            usb.write(b'0')
+                f.write(buf_mv[:bytes_read])
+            
 
 # ----------------------------------------------------------------------------------------
 #  Pycboard class.
@@ -185,33 +187,14 @@ class Pycboard(Pyboard):
     # Pyboard filesystem operations.
     # ------------------------------------------------------------------------------------
 
-    def send_file(self, file_path, target_path=None):
-        if not target_path:
-            target_path = os.path.split(file_path)[-1]
-        file_size = os.path.getsize(file_path)
-        self.exec_raw_no_follow("_receive_file('{}',{})"
-                                .format(target_path, file_size))
-        with open(file_path, 'rb') as f:
-            while True:
-                chunk = f.read(512)
-                if not chunk:
-                    break
-                self.serial.write(chunk)
-                self.serial.read(1)
-        self.follow(5)
-        print(_djb2_file(file_path))
-        print(self.get_file_hash(target_path))
-
     def write_file(self, target_path, data, raise_exception=False):
         '''Write data to file at specified path on pyboard, any data already
         in the file will be deleted.'''
-        self.gc_collect()
         try:
             self.exec("with open('{}','w') as f: f.write({})".format(target_path, repr(data)))
         except PyboardError as e:
             if raise_exception:
                 raise PyboardError(e)
-        self.gc_collect()
 
     def get_file_hash(self, target_path):
         'Get the djb2 hash of a file on the pyboard.'
@@ -222,16 +205,24 @@ class Pycboard(Pyboard):
         return file_hash
 
     def transfer_file(self, file_path, target_path=None):
-        '''Copy a file into the root directory of the pyboard.'''
+        '''Copy file at file_path to location target_path on pyboard.'''
         if not target_path:
             target_path = os.path.split(file_path)[-1]
+        file_size = os.path.getsize(file_path)
         file_hash = _djb2_file(file_path)
-        with open(file_path, 'r') as transfer_file:
-            file_contents = transfer_file.read() 
         for i in range(10):
             if file_hash == self.get_file_hash(target_path):
                 return
-            self.write_file(target_path, file_contents)
+            self.exec_raw_no_follow("_receive_file('{}',{})"
+                                    .format(target_path, file_size))
+            with open(file_path, 'rb') as f:
+                while True:
+                    chunk = f.read(512)
+                    if not chunk:
+                        break
+                    self.serial.write(chunk)
+                    self.serial.read(1)
+            self.follow(1)
         print('Error: Unable to transfer file: ' + file_path)
 
     def transfer_folder(self, folder_path, target_folder=None, file_type='all',
@@ -245,14 +236,13 @@ class Pycboard(Pyboard):
         if file_type != 'all':
             files = [f for f in files if f.split('.')[-1] == file_type]
         try:
-            self.exec('import os;os.mkdir({})'.format(repr(target_folder)))
+            self.exec('os.mkdir({})'.format(repr(target_folder)))
         except PyboardError:
             pass # Folder already exists.
         for f in files:
             file_path = os.path.join(folder_path, f)
             target_path = target_folder + '/' + f
-            #self.transfer_file(file_path, target_path)
-            self.send_file(file_path, target_path)
+            self.transfer_file(file_path, target_path)
             if show_progress:
                 print('.', end='')
                 sys.stdout.flush()
