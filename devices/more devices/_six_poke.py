@@ -1,4 +1,3 @@
-from pyControl.hardware import *
 from devices._poke import _Poke
 
 class Six_poke():
