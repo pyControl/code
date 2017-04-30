@@ -246,8 +246,3 @@ def run(duration = None):
         state_machine._stop()
     while data_output_queue.available():
         output_data(data_output_queue.get())
-
-def get_current_time():
-    # Get the current framework time.
-    global current_time
-    return current_time

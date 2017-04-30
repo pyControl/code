@@ -156,6 +156,8 @@ def run_experiment():
         else:
             print('not found for subjects: {}'.format(set(exp.subjects.values()) - set(set_pv)))
 
+    if not os.path.exists(data_dir):
+        os.mkdir(data_dir)
     if not os.path.exists(exp_dir):
         os.mkdir(exp_dir)
     boards.open_data_file(file_paths)

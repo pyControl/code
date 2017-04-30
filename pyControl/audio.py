@@ -63,12 +63,12 @@ class Audio_output():
     def stepped_square(self, start_freq, end_freq, n_steps, step_rate):
         self._sound_step(start_freq, end_freq, n_steps, step_rate, self.square)
 
-    def play_file(self, file_name, gc_collect=True):
-        pass
-        #f = Wave_read(file_name)
-        #self._DAC.write_timed(f.readframes(f._nframes), f._framerate)
-        #f.close()
-        #if gc_collect: gc.collect()
+    def play_file(self, file_name):
+        with open(file_name, 'rb') as f:
+            freq      = int.from_bytes(f.read(4), 'little')
+            bit_depth = int.from_bytes(f.read(1), 'little') # Currently ignored - treated as 8bit.
+            wave_data = f.read()
+        self._DAC.write_timed(wave_data, freq)
 
     # Support functions-----------------------------------------------------------------
 
