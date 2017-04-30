@@ -1,6 +1,5 @@
 import pyb
 import math
-from .framework import get_current_time
 
 # ----------------------------------------------------------------------------------------
 #  Random functions and classes.

@@ -33,7 +33,7 @@ class State_machine():
         # to write e.g. goto_state(state) in the task description to call 
         # State_machine.goto_state. 
         smd.goto_state       = self.goto_state
-        smd.goto             = self.goto_state # For backwards compatibility with old tasks.
+        smd.goto             = self.goto_state # For backwards compatibility.
         smd.timed_goto_state = self.timed_goto_state
         smd.set_timer        = self.set_timer
         smd.disarm_timer     = self.disarm_timer
@@ -41,6 +41,7 @@ class State_machine():
         smd.print            = self.print 
         smd.stop_framework   = self.stop_framework
         smd.publish_event    = self.publish_event
+        smd.get_current_time = self.get_current_time
 
     # Methods called by user
 
@@ -89,6 +90,9 @@ class State_machine():
     def stop_framework(self):
         fw.running = False
 
+    def get_current_time(self):
+        return fw.current_time
+
     # Methods called by pyControl framework.
 
     def _process_event(self, event):
@@ -116,8 +120,3 @@ class State_machine():
         # Calls user defined stop function at end of run if function is defined.
         if self.event_dispatch_dict['run_end']:
             self.event_dispatch_dict['run_end']()
-
-
-
-
-
