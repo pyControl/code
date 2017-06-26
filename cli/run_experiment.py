@@ -6,7 +6,9 @@ import shutil
 from imp import reload
 
 if __name__ == "__main__": # Add parent directory to path to allow imports.
-    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)) ) 
+    parent_dir = os.path.dirname(os.path.dirname(__file__)) # Directory containing CLI folder.
+    if not parent_dir in sys.path:
+        sys.path.insert(0, parent_dir)
 
 # Catch errors importing user created config files.
 try: 
