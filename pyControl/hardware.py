@@ -248,9 +248,9 @@ class Analog_input():
 
     def start(self, sampling_rate):
         # Start aquiring data at specified sampling rate (Hz).
-        self.data_header = b'\aH' + self.ID.to_bytes(1,'little') + \
-                           sampling_rate.to_bytes(2,'little') + \
-                           (2*self.buffer_size).to_bytes(2,'little')
+        self.data_header = (b'\aH' + self.ID.to_bytes(1,'little') + 
+                            sampling_rate.to_bytes(2,'little') +
+                            (2*self.buffer_size).to_bytes(2,'little'))
         self.buffer_start_times[0] = fw.current_time
         self.timer.init(freq=sampling_rate)
         self.timer.callback(self._timer_ISR)

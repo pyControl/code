@@ -1,4 +1,5 @@
 import os
+import pickle
 import numpy as np
 from datetime import datetime, date
 from collections import namedtuple
@@ -39,6 +40,7 @@ class Session():
         # Load lines from file.
 
         with open(file_path, 'r') as f:
+            print('Importing data file: '+os.path.split(file_path)[1])
             all_lines = [line.strip() for line in f.readlines() if line.strip()]
 
         # Extract and store session information.
@@ -84,7 +86,8 @@ class Session():
 class Experiment():
     def __init__(self, folder_path, int_subject_IDs=True, rebuild_sessions=False):
         '''
-
+        Import all sessions from specified folder to create experiment object.  Only sessions in the 
+        specified folder (not in subfolders) will be imported.
         '''
 
         self.folder_name = os.path.split(folder_path)[1]
@@ -134,13 +137,22 @@ class Experiment():
             pickle.dump(self.sessions, sessions_file)
         
     def get_sessions(self, subject_IDs='all', when='all'):
-        '''Return list of sessions which match specified subject ID and time range.
+        '''Return list of sessions which match specified subject ID and time range.  Example usages:
+        get_sessions(subject_IDs='all', when='all')  # Get all sessions
+        get_sessions(subject_IDs=1, when='all')      # Get all sessions from subject 1.
+        get_sessions(subject_IDs=[1,2], when='all')  # Get all sessions from subjects 1 and 2
+        get_sessions(subject_IDs='all', when=4)      # Get session 4 for all subjects
+        get_sessions(subject_IDs='all', when=[4,5])  # Get sessions 4 and 5 for all subjects.
+        get_sessions(subject_IDs='all', when='2017-07-07')  # Get sessions from specified date for all subjects.
+        get_sessions(subject_IDs='all', when='2017-07-07')  # Get sessions from specified date for all subjects.
+        get_sessions(subject_IDs='all', when=['2017-07-06','2017-07-07'])  # Get sessions from specified dates for all subjects.
+        get_sessions(subject_IDs='all', when = [3,...,8]) # Get sessions from day range 3-8 for all subjects.
+        get_sessions()
         '''
         if subject_IDs == 'all':
             subject_IDs = self.subject_IDs
         if not isinstance(subject_IDs, list):
             subject_IDs = [subject_IDs]
-
 
         if when == 'all': # Select all sessions.
             when_func = lambda session: True
@@ -152,13 +164,30 @@ class Experiment():
             else: 
                 when_func = lambda session: session.number == when
 
-        elif when[1] == ... : # Select a range..
-            assert type(when[0]) == type(when[2]), 'Start and end of time range must be same type.'
-            if type(when[0]) == int: # .. of session numbers.
-                when_func = lambda session: when[0] <= session.number <= when[2]
-            else: # .. of dates.
-                when_func = lambda session: _toDate(when[0]) <= session.datetime.date() <= _toDate(when[2])
-        
+        elif type(when) in (str, datetime, date): # Select specified date.
+            when_func = lambda session: session.datetime.date() == _toDate(when)
+
+        elif ... in when: # Select a range..
+
+            if len(when) == 3:  # Start and end points defined.
+                assert type(when[0]) == type(when[2]), 'Start and end of time range must be same type.'
+                if type(when[0]) == int: # .. range of session numbers.
+                    when_func = lambda session: when[0] <= session.number <= when[2]
+                else: # .. range of dates.
+                    when_func = lambda session: _toDate(when[0]) <= session.datetime.date() <= _toDate(when[2])
+            
+            elif when.index(...) == 0: # End point only defined.
+                if type(when[1]) == int: # .. range of session numbers.
+                    when_func = lambda session: session.number <= when[1]
+                else: # .. range of dates.
+                    when_func = lambda session: session.datetime.date() <= _toDate(when[1])
+
+            else: # Start point only defined.
+                if type(when[0]) == int: # .. range of session numbers.
+                    when_func = lambda session: when[0] <= session.number
+                else: # .. range of dates.
+                    when_func = lambda session: _toDate(when[0]) <= session.datetime.date()
+            
         else: # Select specified..
             assert all([type(when[0]) == type(w) for w in when]), "All elements of 'when' must be same type."
             if type(when[0]) == int: # .. session numbers.
