@@ -21,6 +21,10 @@ def randint(a,b):
   # Return a random integer N such that a <= N <= b.
     return int(a+(b+1-a)*random())
 
+def choice(L):
+    # Return a randomly selected item from list L.
+    return L[randint(0,len(L)-1)]
+
 class sample_without_replacement:
     # Repeatedly sample elements from items list without replacement.
     def __init__(self, items):
