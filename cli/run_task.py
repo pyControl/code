@@ -6,6 +6,15 @@ from serial import SerialException
 if __name__ == "__main__": # Add parent directory to path to allow imports.
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)) ) 
 
+# Catch errors importing user created config files.
+try: 
+    from config import config
+except Exception as e:
+    print('Unable to import file config.py\n')
+    print(str(e))
+    input('\nPress any key to close.')
+    sys.exit()
+
 from cli.pycboard import Pycboard
 from cli.default_paths import data_dir, tasks_dir
 from cli.pyboard import PyboardError
@@ -155,12 +164,16 @@ def close_program(board):
 def run_task():
     board = None
     while not board:
+        i = input('Enter serial port of board or board number: ')
+        try: # Check if input is an integer corresponding to a setup number.
+            port = config.board_serials[int(i)]
+        except:
+            port = i
         try:
-            port = input('Enter serial port of board: ')
             board = Pycboard(port, raise_exception=True, verbose=False)
         except SerialException:
-            print('\nUnable to open serial connection, Check serial port is correct.\n' 
-                  'If port is correct, try resetting pyboard with reset button.\n')
+            print('\nUnable to open serial connection {}, Check serial port is correct.\n'
+                  'If port is correct, try resetting pyboard with reset button.\n'.format(port))
 
     print('\nSerial connection OK. Micropython version: {}'.format(board.micropython_version))
 
