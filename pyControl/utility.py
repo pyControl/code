@@ -25,6 +25,10 @@ def choice(L):
     # Return a randomly selected item from list L.
     return L[randint(0,len(L)-1)]
 
+def exp_rand(m):
+    #  Return an exponentially distributed random number with mean m.
+    return -math.log(1.-random())*m
+
 class sample_without_replacement:
     # Repeatedly sample elements from items list without replacement.
     def __init__(self, items):
