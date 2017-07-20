@@ -21,6 +21,9 @@ stop_fw_evt  = const(-5) # Stop framework event.
 # (debounce_evt, Digital_input_ID) # Digital_input debouce timer.
 # (stop_fw_evt, None)   # Stop framework event.
 
+class pyControlError(BaseException):
+    pass
+
 # ----------------------------------------------------------------------------------------
 # Event_queue
 # ----------------------------------------------------------------------------------------
