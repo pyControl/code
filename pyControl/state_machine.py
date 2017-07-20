@@ -17,6 +17,7 @@ class State_machine():
         self.smd = smd # State machine definition.
         self.ID = None # Overwritten by fw.register_machine()
         self.tg_next_state = None # Overwritted by timed_goto_state.
+        self.state_transition_in_progress = False # Set to True during state transitions.
 
         fw.register_machine(self)
 
@@ -48,6 +49,9 @@ class State_machine():
     def goto_state(self, next_state):
         # Transition to next state, calling exit action of old state
         # and entry action of next state.
+        if self.state_transition_in_progress:
+            raise fw.pyControlError("goto_state cannot not be called while processing 'entry' or 'exit' events.")
+        self.state_transition_in_progress = True
         self._process_event('exit')
         if self.tg_next_state: # Cancel timed_goto_state.
             self.tg_next_state = None
@@ -56,6 +60,7 @@ class State_machine():
             fw.data_output_queue.put((fw.states[next_state], fw.current_time))
         self.current_state = next_state
         self._process_event('entry')
+        self.state_transition_in_progress = False
 
     def timed_goto_state(self, next_state, interval):
         # Transition to next_state after interval milliseconds. timed_goto_state()

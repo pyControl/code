@@ -6,7 +6,7 @@ import math
 # ----------------------------------------------------------------------------------------
 
 def random():
-    #Return a random float between 0 and 1.
+    #Return a random float x such that 0 <= x < 1.
     return pyb.rng()/1073741824.
 
 def withprob(p):
@@ -28,6 +28,10 @@ def choice(L):
 def exp_rand(m):
     #  Return an exponentially distributed random number with mean m.
     return -math.log(1.-random())*m
+
+def gauss_rand(m,s):
+    # Return a gaussian distributed random number with mean m and standard deviation s.
+    return m+s*(math.sqrt(-2.*math.log(random()))*math.cos(2*math.pi*random()))
 
 class sample_without_replacement:
     # Repeatedly sample elements from items list without replacement.

@@ -6,7 +6,7 @@ from devices import *
 
 # Define hardware (normally done in seperate hardware definition file).
 
-pyboard_button = Digital_input('X17', falling_event='button_press')  # USR button on pyboard.
+pyboard_button = Digital_input('X17', falling_event='button_press', pull='up')  # USR button on pyboard.
 
 # States and events.
   
