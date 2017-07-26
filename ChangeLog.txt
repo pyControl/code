@@ -6,6 +6,7 @@ CLI:
 - Run task now allows board to be selected by number rather than port.
 
 Framework:
+- Added 'pause_timer' and 'unpause_timer' functions.
 - Added 'choice', 'gauss_rand' and 'exp_rand' random functions.
 - More informative error messages for some common task file errors.
 
