@@ -39,6 +39,8 @@ class State_machine():
         smd.set_timer        = self.set_timer
         smd.disarm_timer     = self.disarm_timer
         smd.reset_timer      = self.reset_timer
+        smd.pause_timer      = self.pause_timer
+        smd.unpause_timer    = self.unpause_timer
         smd.print            = self.print 
         smd.stop_framework   = self.stop_framework
         smd.publish_event    = self.publish_event
@@ -75,7 +77,7 @@ class State_machine():
         fw.timer.set(int(interval), (fw.events[event], fw.timer_evt))    
 
     def disarm_timer(self, event):
-        # Disable all active timers due to return specified event.
+        # Disable all timers due to return specified event.
         fw.timer.disarm((fw.events[event], fw.timer_evt))
 
     def reset_timer(self, event, interval):
@@ -83,6 +85,14 @@ class State_machine():
         # to return specified event after interval milliseconds.
         fw.timer.disarm((fw.events[event], fw.timer_evt))
         fw.timer.set(int(interval), (fw.events[event], fw.timer_evt))
+
+    def pause_timer(self,event):
+        # Pause all timers due to return specified event.
+        fw.timer.pause((fw.events[event], fw.timer_evt))
+
+    def unpause_timer(self,event):
+        # Unpause all timers due to return specified event.
+        fw.timer.unpause((fw.events[event], fw.timer_evt))
 
     def print(self, print_string):
         # Used to output data print_string with timestamp.  print_string is stored and only
