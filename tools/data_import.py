@@ -1,3 +1,6 @@
+# Python classes for importing pyControl data files and representing pyControl 
+# sessions and experiments.  Dependencies: Python 3.5+, Numpy.
+
 import os
 import pickle
 import numpy as np
@@ -25,11 +28,11 @@ class Session():
       - events
           A list of all framework events and state entries in the order they occured. 
           Each entry is a namedtuple with fields 'time' & 'name', such that you can get the 
-          name and time of event/state entry x with x.name and x.time respectively/
+          name and time of event/state entry x with x.name and x.time respectively.
       - times
           A dictionary with keys that are the names of the framework events and states and 
           corresponding values which are Numpy arrays of all the times (in milliseconds since the
-           start of the framework run) at which each event occured.
+           start of the framework run) at which each event/state entry occured.
       - print_lines
           A list of all the lines output by print statements during the framework run, each line starts 
           with the time in milliseconds at which it was printed.
@@ -78,16 +81,18 @@ class Session():
 
         self.print_lines = [line[2:] for line in all_lines if line[0]=='P']
 
-
 #----------------------------------------------------------------------------------
 # Experiment class
 #----------------------------------------------------------------------------------
 
 class Experiment():
-    def __init__(self, folder_path, int_subject_IDs=True, rebuild_sessions=False):
+    def __init__(self, folder_path, int_subject_IDs=True):
         '''
         Import all sessions from specified folder to create experiment object.  Only sessions in the 
         specified folder (not in subfolders) will be imported.
+        Arguments:
+        folder_path: Path of data folder.
+        int_subject_IDs:  If True subject IDs are converted to integers, e.g. m012 is converted to 12.
         '''
 
         self.folder_name = os.path.split(folder_path)[1]
@@ -96,13 +101,12 @@ class Experiment():
         # Import sessions.
 
         self.sessions = []
-        if not rebuild_sessions:
-            try: # Load sessions from saved sessions.pkl file.
-                with open(os.path.join(self.path, 'sessions.pkl'),'rb') as sessions_file:
-                    self.sessions = pickle.load(sessions_file)
-                print('Saved sessions loaded from: sessions.pkl')
-            except IOError:
-               pass
+        try: # Load sessions from saved sessions.pkl file.
+            with open(os.path.join(self.path, 'sessions.pkl'),'rb') as sessions_file:
+                self.sessions = pickle.load(sessions_file)
+            print('Saved sessions loaded from: sessions.pkl')
+        except IOError:
+           pass
 
         old_files = [session.file_name for session in self.sessions]
         files = os.listdir(self.path)
@@ -132,22 +136,26 @@ class Experiment():
             self.sessions_per_subject[subject_ID] = subject_sessions[-1].number
 
     def save(self):
-        '''Save all sessions as .pkl file.'''
+        '''Save all sessions as .pkl file. Speeds up subsequent instantiation of 
+        experiment as sessions do not need to be reimported from data files.''' 
         with open(os.path.join(self.path, 'sessions.pkl'),'wb') as sessions_file:
             pickle.dump(self.sessions, sessions_file)
         
     def get_sessions(self, subject_IDs='all', when='all'):
-        '''Return list of sessions which match specified subject ID and time range.  Example usages:
-        get_sessions(subject_IDs='all', when='all')  # Get all sessions
-        get_sessions(subject_IDs=1, when='all')      # Get all sessions from subject 1.
-        get_sessions(subject_IDs=[1,2], when='all')  # Get all sessions from subjects 1 and 2
-        get_sessions(subject_IDs='all', when=4)      # Get session 4 for all subjects
-        get_sessions(subject_IDs='all', when=[4,5])  # Get sessions 4 and 5 for all subjects.
-        get_sessions(subject_IDs='all', when='2017-07-07')  # Get sessions from specified date for all subjects.
-        get_sessions(subject_IDs='all', when='2017-07-07')  # Get sessions from specified date for all subjects.
-        get_sessions(subject_IDs='all', when=['2017-07-06','2017-07-07'])  # Get sessions from specified dates for all subjects.
-        get_sessions(subject_IDs='all', when = [3,...,8]) # Get sessions from day range 3-8 for all subjects.
-        get_sessions()
+        '''Return list of sessions which match specified subject ID and time.  
+        Arguments:
+        subject_ID: Set to 'all' to select sessions from all subjects or provide a list of subject IDs.
+        when      : Determines session number or dates to select, see example usage below:
+                    when = 'all'      # All sessions
+                    when = 1          # Sessions numbered 1
+                    when = [3,5,8]    # Session numbered 3,5 & 8
+                    when = [...,10]   # Sessions numbered <= 10
+                    when = [5,...]    # Sessions numbered >= 5
+                    when = [5,...,10] # Sessions numbered 5 <= n <= 10
+                    when = '2017-07-07' # Select sessions from date '2017-07-07'
+                    when = ['2017-07-07','2017-07-08'] # Select specified list of dates
+                    when = [...,'2017-07-07'] # Select session with date <= '2017-07-07'
+                    when = ['2017-07-01',...,'2017-07-07'] # Select session with '2017-07-01' <= date <= '2017-07-07'.
         '''
         if subject_IDs == 'all':
             subject_IDs = self.subject_IDs
@@ -157,49 +165,41 @@ class Experiment():
         if when == 'all': # Select all sessions.
             when_func = lambda session: True
 
-        elif isinstance(when, int):
-            if when < 0: # Select most recent 'when' sessions.
-                when_func = lambda session: (session.number > 
-                    self.sessions_per_subject[session.subject_ID] + when)
-            else: 
-                when_func = lambda session: session.number == when
+        else:
+            if type(when) is not list:
+                when = [when]
 
-        elif type(when) in (str, datetime, date): # Select specified date.
-            when_func = lambda session: session.datetime.date() == _toDate(when)
+            if ... in when: # Select a range..
 
-        elif ... in when: # Select a range..
+                if len(when) == 3:  # Start and end points defined.
+                    assert type(when[0]) == type(when[2]), 'Start and end of time range must be same type.'
+                    if type(when[0]) == int: # .. range of session numbers.
+                        when_func = lambda session: when[0] <= session.number <= when[2]
+                    else: # .. range of dates.
+                        when_func = lambda session: _toDate(when[0]) <= session.datetime.date() <= _toDate(when[2])
+                
+                elif when.index(...) == 0: # End point only defined.
+                    if type(when[1]) == int: # .. range of session numbers.
+                        when_func = lambda session: session.number <= when[1]
+                    else: # .. range of dates.
+                        when_func = lambda session: session.datetime.date() <= _toDate(when[1])
 
-            if len(when) == 3:  # Start and end points defined.
-                assert type(when[0]) == type(when[2]), 'Start and end of time range must be same type.'
-                if type(when[0]) == int: # .. range of session numbers.
-                    when_func = lambda session: when[0] <= session.number <= when[2]
-                else: # .. range of dates.
-                    when_func = lambda session: _toDate(when[0]) <= session.datetime.date() <= _toDate(when[2])
-            
-            elif when.index(...) == 0: # End point only defined.
-                if type(when[1]) == int: # .. range of session numbers.
-                    when_func = lambda session: session.number <= when[1]
-                else: # .. range of dates.
-                    when_func = lambda session: session.datetime.date() <= _toDate(when[1])
-
-            else: # Start point only defined.
-                if type(when[0]) == int: # .. range of session numbers.
-                    when_func = lambda session: when[0] <= session.number
-                else: # .. range of dates.
-                    when_func = lambda session: _toDate(when[0]) <= session.datetime.date()
-            
-        else: # Select specified..
-            assert all([type(when[0]) == type(w) for w in when]), "All elements of 'when' must be same type."
-            if type(when[0]) == int: # .. session numbers.
-                when_func = lambda session: session.number in when
-            else: # .. dates.
-                dates = [_toDate(d) for d in when]
-                when_func = lambda session: session.datetime.date() in dates
+                else: # Start point only defined.
+                    if type(when[0]) == int: # .. range of session numbers.
+                        when_func = lambda session: when[0] <= session.number
+                    else: # .. range of dates.
+                        when_func = lambda session: _toDate(when[0]) <= session.datetime.date()
+                
+            else: # Select specified..
+                assert all([type(when[0]) == type(w) for w in when]), "All elements of 'when' must be same type."
+                if type(when[0]) == int: # .. session numbers.
+                    when_func = lambda session: session.number in when
+                else: # .. dates.
+                    dates = [_toDate(d) for d in when]
+                    when_func = lambda session: session.datetime.date() in dates
 
         valid_sessions = [s for s in self.sessions if s.subject_ID in subject_IDs and when_func(s)]
         
-        if len(valid_sessions) == 1: 
-            valid_sessions = valid_sessions[0] # Don't return list for single session.
         return valid_sessions       
 
 
@@ -208,11 +208,10 @@ def _toDate(d): # Convert input to datetime.date object.
         try:
             return datetime.strptime(d, '%Y-%m-%d').date()
         except ValueError:
-            print('Unable to convert string to date, format must be YYYY-MM-DD.')
-            raise ValueError
+            raise ValueError('Unable to convert string to date, format must be YYYY-MM-DD.')
     elif type(d) is datetime:
         return d.date()
     elif type(d) is date:
         return d
     else:
-        raise ValueError
+        raise ValueError('Unable to convert input to date.')

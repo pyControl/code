@@ -51,6 +51,8 @@ class State_machine():
         # and entry action of next state.
         if self.state_transition_in_progress:
             raise fw.pyControlError("goto_state cannot not be called while processing 'entry' or 'exit' events.")
+        if not next_state in self.smd.states.keys():
+            raise fw.pyControlError('Invalid state name passed to goto_state: ' + repr(next_state))
         self.state_transition_in_progress = True
         self._process_event('exit')
         if self.tg_next_state: # Cancel timed_goto_state.
