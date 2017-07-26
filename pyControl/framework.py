@@ -60,12 +60,13 @@ class Timer():
 
     def reset(self):
         self.active_timers = [] # list of tuples: (trigger_time, event)
+        self.paused_timers = [] # list of tuples: (remaining_time, event)
     
     def set(self, interval, event):
         # Set a timer to trigger specified event after 'interval' ms has elapsed.
         global current_time
         self.active_timers.append((current_time+interval, event))
-        self.active_timers.sort(reverse = True)
+        self.active_timers.sort(reverse=True)
 
     def check(self):
         #Check whether any timers have triggered, place events in event que.
@@ -77,6 +78,20 @@ class Timer():
     def disarm(self, event):
         # Remove all active timers with specified event.
         self.active_timers = [t for t in self.active_timers if not t[1] == event]
+        self.paused_timers = [t for t in self.paused_timers if not t[1] == event]
+
+    def pause(self, event):
+        # Pause all timers with specified event.
+        global current_time
+        self.paused_timers += [(t[0]-current_time,t[1]) for t in self.active_timers if t[1] == event]
+        self.active_timers = [t for t in self.active_timers if not t[1] == event]
+
+    def unpause(self, event):
+        # Unpause timers with specified event.
+        global current_time
+        self.active_timers += [(t[0]+current_time,t[1]) for t in self.paused_timers if t[1] == event]
+        self.paused_timers = [t for t in self.paused_timers if not t[1] == event]
+        self.active_timers.sort(reverse=True)
 
 # ----------------------------------------------------------------------------------------
 # Framework variables and objects
