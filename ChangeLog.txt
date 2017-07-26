@@ -1,3 +1,41 @@
+Version 1.1.3 
+
+- Added data_import.py, a module for importing pyControl sessions and experiments into Python for analysis. 
+
+CLI:
+- Run task now allows board to be selected by number rather than port.
+
+Framework:
+- Added 'choice', 'gauss_rand' and 'exp_rand' random functions.
+- More informative error messages for some common task file errors.
+
+Bug fixes:
+- Fixed import problem which could prevent run_experiment from running.
+
+Version 1.1.2 08/05/2017
+
+Framework:
+- Added six_poke hardware device.
+- removed .wav playback for audio outputs.
+- Moved rarely used device drivers to seperate 'more devices' folder for 
+  faster framework upload.
+
+CLI:
+- Faster and more reliable file upload to boards.
+- Data file names now include start time.
+- Improved information output to data file before run start.
+- Post run file transfer now uses seperate directories in transfer folder
+  for each experiment.
+- Error tracebacks during run_experiment are now written to file.  Warning
+  is dispayed at end of run if error has occured.
+- Added disable_mass_storage and enable_mass_storage to board config menus.
+- Simplified run_task menus for getting and setting variables.
+
+Bug fixes:
+- Fixed bug which meant that run_experiment stopped when the
+  last numbered box stopped rather than when all boxes had stopped. 
+- Print output from run_end() now saved by run experiment.
+
 Version 1.1 06/02/2017
 
 Framework:
