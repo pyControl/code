@@ -1,4 +1,4 @@
-Version 1.1.3 
+Version 1.1.3 28/07/2017
 
 - Added data_import.py, a module for importing pyControl sessions and experiments into Python for analysis. 
 
