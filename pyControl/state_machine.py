@@ -45,6 +45,7 @@ class State_machine():
         smd.stop_framework   = self.stop_framework
         smd.publish_event    = self.publish_event
         smd.get_current_time = self.get_current_time
+        smd.timer_remaining  = self.timer_remaining
 
     # Methods called by user
 
@@ -93,6 +94,10 @@ class State_machine():
     def unpause_timer(self,event):
         # Unpause all timers due to return specified event.
         fw.timer.unpause((fw.events[event], fw.timer_evt))
+
+    def timer_remaining(self,event):
+         # Return time until timer for specified event elapses, returns 0 if no timer set for event.
+        return fw.timer.remaining((fw.events[event], fw.timer_evt))
 
     def print(self, print_string):
         # Used to output data print_string with timestamp.  print_string is stored and only
