@@ -93,6 +93,14 @@ class Timer():
         self.paused_timers = [t for t in self.paused_timers if not t[1] == event]
         self.active_timers.sort(reverse=True)
 
+    def remaining(self,event):
+        # Return time until timer for specified event elapses, returns 0 if no timer set for event.
+        global current_time
+        try:
+            return next(t[0]-current_time for t in reversed(self.active_timers) if t[1] == event)
+        except StopIteration:
+            return 0
+
 # ----------------------------------------------------------------------------------------
 # Framework variables and objects
 # ----------------------------------------------------------------------------------------
