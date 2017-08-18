@@ -142,7 +142,7 @@ start_time = 0 # Time at which framework run is started.
 def _clock_tick(timer):
     # Set flag to check timers, called by hardware timer once each millisecond.
     global check_timers, current_time, start_time
-    current_time = pyb.millis() - start_time
+    current_time = pyb.elapsed_millis(start_time)
     check_timers = True
 
 def register_machine(state_machine):
