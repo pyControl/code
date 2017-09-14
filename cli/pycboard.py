@@ -56,7 +56,6 @@ def _receive_file(file_path, file_size):
             if bytes_read:
                 bytes_remaining -= bytes_read
                 f.write(buf_mv[:bytes_read])
-            
 
 # ----------------------------------------------------------------------------------------
 #  Pycboard class.
@@ -210,20 +209,25 @@ class Pycboard(Pyboard):
             target_path = os.path.split(file_path)[-1]
         file_size = os.path.getsize(file_path)
         file_hash = _djb2_file(file_path)
-        for i in range(10):
-            if file_hash == self.get_file_hash(target_path):
-                return
-            self.exec_raw_no_follow("_receive_file('{}',{})"
-                                    .format(target_path, file_size))
-            with open(file_path, 'rb') as f:
-                while True:
-                    chunk = f.read(512)
-                    if not chunk:
-                        break
-                    self.serial.write(chunk)
-                    self.serial.read(1)
-            self.follow(1)
-        print('Error: Unable to transfer file: ' + file_path)
+        try:
+            for i in range(10):
+                    if file_hash == self.get_file_hash(target_path):
+                        return
+                    self.exec_raw_no_follow("_receive_file('{}',{})"
+                                            .format(target_path, file_size))
+                    with open(file_path, 'rb') as f:
+                        while True:
+                            chunk = f.read(512)
+                            if not chunk:
+                                break
+                            self.serial.write(chunk)
+                            self.serial.read(1)
+                    self.follow(5)
+        except PyboardError as e:
+            print('Error: Unable to transfer file')
+            print(e)
+            input('\nPress any key to close.')
+            sys.exit()
 
     def transfer_folder(self, folder_path, target_folder=None, file_type='all',
                         show_progress=False):
