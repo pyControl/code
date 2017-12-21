@@ -1,6 +1,6 @@
 pyControl is a system of software and hardware for controlling behavioural experiments based around the Micropython microcontroller.
 
-For more information please see the Docs: http://pycontrol.readthedocs.io/en/latest/
+For more information please see the Docs: http://pycontrol.readthedocs.io/
 
 Repository contents:
 
@@ -12,6 +12,6 @@ pyControl: The pyControl framework (used on the pyboard).
 tasks    : pyControl task files.
 licence  : pyControl-GPL-3 licence.
 
-Version: v1.0
+Version: v1.1.4
 -------------
 
