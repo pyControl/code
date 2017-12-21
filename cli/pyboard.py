@@ -61,6 +61,11 @@ class Pyboard:
 
     def enter_raw_repl(self):
         self.serial.write(b'\r\x03\x03') # ctrl-C twice: interrupt any running program
+        # flush input (without relying on serial.flushInput())
+        n = self.serial.inWaiting()
+        while n > 0:
+            self.serial.read(n)
+            n = self.serial.inWaiting()
         self.serial.write(b'\r\x01') # ctrl-A: enter raw REPL
         data = self.read_until(1, b'to exit\r\n>')
         if not data.endswith(b'raw REPL; CTRL-B to exit\r\n>'):
