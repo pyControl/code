@@ -1,6 +1,24 @@
-Version 1.1.3 
+-------------------------------------------------------------------------------
+Version 1.1.4 21/12/2017
+-------------------------------------------------------------------------------
 
-- Added data_import.py, a module for importing pyControl sessions and experiments into Python for analysis. 
+Framework:
+- Added 'timer_remaining' function.
+
+Bug fixes: 
+- Fixed various bugs that caused problems using CLI on Linux.
+- Fixed bug that could cause CLI to crash during transfer of large files to
+  pyboard.
+- Fixed bug which caused negative timestamps if pyb.millis rolled over during 
+  session.
+
+
+-------------------------------------------------------------------------------
+Version 1.1.3 28/07/2017
+-------------------------------------------------------------------------------
+
+- Added data_import.py, a module for importing pyControl sessions and experiments
+   into Python for analysis. 
 
 CLI:
 - Run task now allows board to be selected by number rather than port.
@@ -13,7 +31,9 @@ Framework:
 Bug fixes:
 - Fixed import problem which could prevent run_experiment from running.
 
+-------------------------------------------------------------------------------
 Version 1.1.2 08/05/2017
+-------------------------------------------------------------------------------
 
 Framework:
 - Added six_poke hardware device.
@@ -37,7 +57,9 @@ Bug fixes:
   last numbered box stopped rather than when all boxes had stopped. 
 - Print output from run_end() now saved by run experiment.
 
+-------------------------------------------------------------------------------
 Version 1.1 06/02/2017
+-------------------------------------------------------------------------------
 
 Framework:
 - Added get_current_time function which returns current time in ms.
