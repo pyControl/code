@@ -96,7 +96,7 @@ class State_machine():
         fw.timer.unpause((fw.events[event], fw.timer_evt))
 
     def timer_remaining(self,event):
-         # Return time until timer for specified event elapses, returns 0 if no timer set for event.
+        # Return time until timer for specified event elapses, returns 0 if no timer set for event.
         return fw.timer.remaining((fw.events[event], fw.timer_evt))
 
     def print(self, print_string):

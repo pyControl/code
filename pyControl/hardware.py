@@ -34,7 +34,7 @@ def initialise():
     # into active_inputs list and assigns their IDs.
     global active_inputs, initialised
     active_inputs = [digital_input for digital_input in digital_inputs
-                     if digital_input._set_event_IDs()]
+                     if digital_input.initialise()]
     for i, digital_input in enumerate(active_inputs):
         digital_input.ID = i  
     initialised = True   
@@ -76,8 +76,7 @@ def process_analog():
 # ----------------------------------------------------------------------------------------
 
 class Digital_input():
-    def __init__(self, pin, rising_event = None, falling_event = None, debounce = 5,
-                 decimate = False, pull = None):
+    def __init__(self, pin, rising_event=None, falling_event=None, debounce=5, decimate=False, pull=None):
         # Digital_input class provides functionallity to generate framework events when a
         # specified pin on the Micropython board changes state. Seperate events can be
         # specified for rising and falling edges. 
@@ -113,15 +112,20 @@ class Digital_input():
         elif pull == 'down':
             pull = pyb.Pin.PULL_DOWN
         self.pull = pull
-        self.pin = pyb.Pin(pin, pyb.Pin.IN, pull = pull)
+        if isinstance(pin, IO_expander_pin): # Pin is on an IO expander.
+            self.pin = pin
+            self.ExtInt = pin.IOx.ExtInt
+        else:                                # Pin is pyboard pin.
+            self.pin = pyb.Pin(pin, pyb.Pin.IN, pull=pull)
+            self.ExtInt = pyb.ExtInt
         self.rising_event = rising_event
         self.falling_event = falling_event
         self.debounce = debounce     
         self.decimate = decimate
-        self.ID = None # Overwritten by initialise()
+        self.ID = None
         digital_inputs.append(self)
 
-    def _set_event_IDs(self):
+    def initialise(self):
         # Set event codes for rising and falling events.  If neither rising or falling event 
         # is used by framework, the interrupt is not activated. Returns boolean indicating
         # whether input is active.
@@ -131,15 +135,15 @@ class Digital_input():
             return False # Input not used by current state machines.
         # Setup interrupts.
         if self.debounce or (self.rising_event_ID and self.falling_event_ID):
-            pyb.ExtInt(self.pin, pyb.ExtInt.IRQ_RISING_FALLING, self.pull, self._ISR)
+            self.ExtInt(self.pin, pyb.ExtInt.IRQ_RISING_FALLING, self.pull, self._ISR)
             self.use_both_edges = True
         else:
             self.use_both_edges = False
             if self.rising_event_ID:
-                pyb.ExtInt(self.pin, pyb.ExtInt.IRQ_RISING, self.pull, self._ISR)
+                self.ExtInt(self.pin, pyb.ExtInt.IRQ_RISING, self.pull, self._ISR)
                 self.pin_state = True
             else:
-                pyb.ExtInt(self.pin, pyb.ExtInt.IRQ_FALLING, self.pull, self._ISR)
+                self.ExtInt(self.pin, pyb.ExtInt.IRQ_FALLING, self.pull, self._ISR)
                 self.pin_state = False
         return True
 
@@ -267,7 +271,11 @@ class Analog_input():
 class Digital_output():
 
     def __init__(self, pin, inverted=False, pulse_enabled=False):
-        self.pin = pyb.Pin(pin, pyb.Pin.OUT_PP)  # Micropython pin object.
+        if isinstance(pin, IO_expander_pin):
+            pin.set_mode(pyb.Pin.OUT)
+            self.pin = pin # Pin is on an IO expander.
+        else:
+            self.pin = pyb.Pin(pin, pyb.Pin.OUT)  # Pin is pyboard pin.
         self.inverted = inverted # Set True for inverted output.
         self.timer = False # Replaced by timer object if pulse enabled.
         self.off()
@@ -343,3 +351,11 @@ class Mainboard():
     
     def set_pull_updown(self, pull): # Set default pullup/pulldown resistors.
         default_pull.update(pull)
+
+# ----------------------------------------------------------------------------------------
+# IO_expander_pin
+# ----------------------------------------------------------------------------------------
+
+class IO_expander_pin():
+    # Parent class for IO expander pins.
+    pass
