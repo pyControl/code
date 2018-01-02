@@ -71,6 +71,10 @@ def process_analog():
             return
     analog_waiting=False
 
+def print_analog_inputs():
+    # Print dictionary of Analog_inputs {IDs:names}.
+    print('A {}'.format({ai.ID: ai.name for ai in analog_inputs}))
+
 # ----------------------------------------------------------------------------------------
 # Digital Input
 # ----------------------------------------------------------------------------------------

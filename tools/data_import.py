@@ -215,3 +215,14 @@ def _toDate(d): # Convert input to datetime.date object.
         return d
     else:
         raise ValueError('Unable to convert input to date.')
+
+
+#----------------------------------------------------------------------------------
+# Load analog data
+#----------------------------------------------------------------------------------
+
+def load_analog_data(file_path):
+    '''Load a pyControl analog data file and return the contents as a numpy array
+    whose first column is timestamps (ms) and second data values.'''
+    with open(file_path, 'rb') as f:
+        return np.fromfile(f, dtype='<i').reshape(-1,2)

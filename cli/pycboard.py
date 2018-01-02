@@ -114,6 +114,7 @@ class Pycboard(Pyboard):
         self.exec('import os; import gc; import sys; import pyb')
         self.framework_running = False
         self.state_machines = [] # List to hold name of instantiated state machines.
+        self.analog_inputs = {}  # Dict to hold analog inputs used by state machines. 
         error_message = None
         self.status['usb_mode'] = self.eval('pyb.usb_mode()').decode()
         try:
@@ -314,6 +315,9 @@ class Pycboard(Pyboard):
             if raise_exception:
                 raise PyboardError('Unable to setup state machine.', e.args[2])
         self.remove_file(sm_name + '.py')
+        # Find out which analog inputs are defined.
+        analog_inputs = eval(self.exec('hw.print_analog_inputs()').decode()[1:].strip())
+        self.analog_inputs = {ID: {'name': name, 'file': None} for ID, name in analog_inputs.items()}
 
     def print_IDs(self):
         'Print state and event IDs.'
@@ -338,7 +342,6 @@ class Pycboard(Pyboard):
         self.exec_raw_no_follow('fw.run({})'.format(dur))
         self.framework_running = True
         self.data = b''
-        self.array_data = None
 
     def stop_framework(self):
         'Stop framework running on pyboard by sending stop command.'
@@ -353,10 +356,11 @@ class Pycboard(Pyboard):
                 typecode = self.serial.read(1).decode()
                 ID =            int.from_bytes(self.serial.read(1), 'little')
                 sampling_rate = int.from_bytes(self.serial.read(2), 'little')
-                n_bytes =       int.from_bytes(self.serial.read(2),'little')
-                timestamp =     int.from_bytes(self.serial.read(4),'little')
-                array_data = array(typecode, self.serial.read(n_bytes))
-                print([typecode,ID,sampling_rate,n_bytes,timestamp])
+                n_bytes =       int.from_bytes(self.serial.read(2), 'little')
+                timestamp =     int.from_bytes(self.serial.read(4), 'little')
+                data_array = array(typecode, self.serial.read(n_bytes))
+                if self.file_path:
+                    self.save_analog_chunk(ID, sampling_rate, timestamp, data_array)
             elif new_byte == b'\n':  # End of data line.
                 data_string = self.data.decode()
                 if self.number:
@@ -366,7 +370,6 @@ class Pycboard(Pyboard):
                     self.data_file.write(data_string+'\n')
                     self.data_file.flush()
                 self.data = b''
-                self.array_data = None
             elif new_byte == b'\x04': # End of framework run.
                 self.framework_running = False
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
@@ -492,9 +495,22 @@ class Pycboard(Pyboard):
     def open_data_file(self, file_path):
         'Open a file to write pyControl data to.'
         self.file_path = file_path
-        self.data_file = open(self.file_path, 'a+', newline = '\n')
+        self.data_file = open(self.file_path, 'w', newline = '\n')
 
     def close_data_file(self):
         self.data_file.close()
         self.data_file = None
         self.file_path = None
+        for ai in self.analog_inputs.values():
+            if ai['file']: ai['file'].close() 
+
+    def save_analog_chunk(self, ID, sampling_rate, timestamp, data_array):
+        if not self.analog_inputs[ID]['file']:
+            file_name = self.file_path + '_' + self.analog_inputs[ID]['name']
+            self.analog_inputs[ID]['file'] = open(file_name, 'wb')
+        ms_per_sample = 1000 / sampling_rate
+        for i, x in enumerate(data_array):
+            t = int(timestamp + i*ms_per_sample)
+            self.analog_inputs[ID]['file'].write(t.to_bytes(4,'little', signed=True))
+            self.analog_inputs[ID]['file'].write(x.to_bytes(4,'little', signed=True))
+        self.analog_inputs[ID]['file'].flush()
