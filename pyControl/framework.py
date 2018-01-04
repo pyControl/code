@@ -213,8 +213,8 @@ def _update():
     # Perform framework update functions in order of priority.
     global current_time,  running
 
-    if hw.inputs_waiting: # Priority 1: Process event generating inputs.
-        hw.process_inputs()
+    if hw.high_priority_queue.available: # Priority 1: Process high priority hardware.
+        hw.IO_dict[hw.high_priority_queue.get()]._process(priority=True)
 
     elif check_timers: # Priority 2: Check for elapsed timers.
         timer.check() 
@@ -227,7 +227,7 @@ def _update():
             for state_machine in state_machines:
                 state_machine._process_event(ID2name[event[0]])
         elif event[0] == debounce_evt:
-            hw.active_inputs[event[1]]._deactivate_debounce()
+            hw.IO_dict[event[1]]._deactivate_debounce()
         elif event[0] == goto_evt:
             state_machines[event[1]]._process_timed_goto_state()
         elif event[0] == stop_fw_evt:
@@ -238,8 +238,8 @@ def _update():
         if bytes_recieved == b'E':      # Serial command to stop run.
             running = False
 
-    elif hw.analog_waiting: # Priority 5: Send analog data.
-        hw.process_analog()
+    elif hw.low_priority_queue.available: # Priority 5: Process low priority hardware.
+        hw.IO_dict[hw.low_priority_queue.get()]._process(priority=False)
 
     elif data_output_queue.available(): # Priority 6: Output data.
         output_data(data_output_queue.get())
@@ -252,7 +252,7 @@ def run(duration = None):
     event_queue.reset()
     data_output_queue.reset()
     if not hw.initialised: hw.initialise()
-    hw.reset()
+    hw.run_start()
     current_time = 0
     start_time = pyb.millis()
     clock.init(freq=1000)
@@ -267,7 +267,7 @@ def run(duration = None):
         _update()
     # Post run
     clock.deinit()
-    hw.stop()
+    hw.run_stop()
     for state_machine in state_machines:
         state_machine._stop()
     while data_output_queue.available():

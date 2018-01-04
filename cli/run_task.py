@@ -2,6 +2,7 @@ import os
 import re
 import sys
 from serial import SerialException
+from serial.tools import list_ports
 
 if __name__ == "__main__": # Add parent directory to path to allow imports.
     parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -165,7 +166,24 @@ def close_program(board):
 def run_task():
     board = None
     while not board:
-        i = input('Enter serial port of board or board number: ')
+        i = input('Enter serial port of board or board number, or [s] to scan for pyboards: ')
+        if i == 's':
+            pyboard_serials = {i+1: c[0] for (i,c) in enumerate(list_ports.comports())
+                               if 'Pyboard' in c[1]}
+            if not pyboard_serials:
+                print('\nNo Pyboards found.\n' )
+                continue
+            else:
+                print('\nPyboards found on the following serial ports:\n')
+                for b in pyboard_serials.keys():
+                    print('{}: {}\n'.format(b, pyboard_serials[b]))
+                while True:
+                    i = input('Select Pyboard:')
+                    try:
+                        port = pyboard_serials[int(i)]
+                        break
+                    except (KeyError, ValueError):
+                        print('\nInput not recognised, valid inputs: {}\n'.format(list(pyboard_serials.keys())))
         try: # Check if input is an integer corresponding to a setup number.
             port = config.board_serials[int(i)]
         except:
