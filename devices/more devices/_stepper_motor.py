@@ -1,7 +1,7 @@
 import pyControl.hardware as _h
 
 class Stepper_motor():
-    def __init__(self, port=None, direction_pin=None, step_pin=None):
+    def __init__(self, direction_pin=None, step_pin=None, port=None):
         if port:
             direction_pin = port.DIO_A
             step_pin = port.DIO_B
@@ -16,5 +16,5 @@ class Stepper_motor():
         self._direction.on() #set direction back
         self._step.pulse(step_rate, n_pulses=n_pulses)
 
-    def off(self):
+    def stop(self):
         self._step.off()
