@@ -116,7 +116,7 @@ def run_experiment():
         boards.close()
         sys.exit()
 
-    if input('\nRun hardware test? (y / n) ') == 'y':
+    if input('\nRun hardware test? (y/[n]) ') == 'y':
         print('\nUploading hardware test.\n')
         boards.setup_state_machine(config.hardware_test)
         if config.hardware_test_display_output:
