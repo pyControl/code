@@ -169,18 +169,19 @@ class Digital_input(IO_object):
         self.falling_event = falling_event
         self.debounce = debounce     
         self.decimate = decimate
+
         assign_ID(self)
 
     def _initialise(self):
         # Set event codes for rising and falling events, configure interrupts.
         self.rising_event_ID  = fw.events[self.rising_event ] if self.rising_event  in fw.events else False
         self.falling_event_ID = fw.events[self.falling_event] if self.falling_event in fw.events else False
+        self.use_both_edges = False
         if self.rising_event_ID or self.falling_event_ID: # Setup interrupts.
             if self.debounce or (self.rising_event_ID and self.falling_event_ID):
                 self.ExtInt(self.pin, pyb.ExtInt.IRQ_RISING_FALLING, self.pull, self._ISR)
                 self.use_both_edges = True
             else:
-                self.use_both_edges = False
                 if self.rising_event_ID:
                     self.ExtInt(self.pin, pyb.ExtInt.IRQ_RISING, self.pull, self._ISR)
                     self.pin_state = True
