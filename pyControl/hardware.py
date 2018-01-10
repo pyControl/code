@@ -49,7 +49,7 @@ ID_generator = (i for i in range(1<<16)) # Generator for hardware object IDs.
 
 IO_dict = {} # Dictionary {ID: IO_object} containing all hardware inputs and outputs.
 
-available_timers = [7,8,9,10,11,12,13,14] # Hardware timers not in use by other fuctions.
+available_timers = [2,3,4,5,7,8,9,10,11,12,13,14] # Hardware timers not in use. Used timers; 1: Framework clock tick, 6: DAC timed write.
 
 default_pull = {'down': [], # Used when Mainboards are initialised to specify 
                 'up'  : []} # default pullup or pulldown resistors for pins.
@@ -243,8 +243,9 @@ class Digital_input(IO_object):
 class Analog_input(IO_object):
     # Analog_input samples analog voltage from specified pin at specified frequency and can
     # stream data to continously to computer as well as generate framework events when 
-    # voltage goes above / below specified value.
-    # Serial data format for streaming: '\a c i r l t D' where:
+    # voltage goes above / below specified value. The Analog_input class is subclassed
+    # by other hardware devices that generate continous data such as the Rotatory_encoder.
+    # Serial data format for sending data to computer: '\a c i r l t D' where:
     # a\ ASCII bell character indicating start of analog data chunk (1 byte)
     # c data array typecode (1 byte)
     # i ID of analog input  (2 byte)
@@ -253,26 +254,35 @@ class Analog_input(IO_object):
     # t timestamp of chunk start (ms)(4 bytes)
     # D data array bytes (variable)
 
-    def __init__(self, pin, name, sampling_rate, threshold=None, rising_event=None, falling_event=None):
+    def __init__(self, pin, name, sampling_rate, threshold=None, rising_event=None, 
+                 falling_event=None, data_type='H'):
         if rising_event or falling_event:
             assert type(threshold) == int, 'Integer threshold must be specified if rising or falling events are defined.'
+        assert data_type in ('b','B','h','H','l','L'), 'Invalid data_type.'
+        if pin: # pin argument can be None when Analog_input subclassed.
+            self.ADC = pyb.ADC(pin)
+            self.read_sample = self.ADC.read
         self.name = name
+        assign_ID(self)
+        # Data acqisition variables
+        self.timer = pyb.Timer(available_timers.pop())
+        self.recording = False # Whether data is being sent to computer.
+        self.acquiring = False # Whether input is being monitored.
         self.sampling_rate = sampling_rate
+        self.data_type = data_type
+        self.bytes_per_sample = {'b':1,'B':1,'h':2,'H':2,'l':4,'L':4}[data_type]
+        self.buffer_size = 256 // self.bytes_per_sample
+        self.buffers = (array(data_type, [0]*self.buffer_size),array(data_type, [0]*self.buffer_size))
+        self.buffers_mv = (memoryview(self.buffers[0]), memoryview(self.buffers[1]))
+        self.buffer_start_times = array('i', [0,0])
+        self.data_header = array('B', b'\a' + data_type.encode() + 
+            self.ID.to_bytes(2,'little') + sampling_rate.to_bytes(2,'little') + b'\x00'*6)
+        # Event generation variables
         self.threshold = threshold
         self.rising_event = rising_event
         self.falling_event = falling_event
         self.timestamp = 0
-        self.buffer_size = 128
-        self.buffers = (array('H', [0]*self.buffer_size),array('H', [0]*self.buffer_size))
-        self.buffer_start_times = array('i', [0,0])
-        self.timer = pyb.Timer(available_timers.pop()) 
-        self.ADC = pyb.ADC(pin)
-        self.recording = False # Whether data is being sent to computer.
-        self.acquiring = False # Whether input is being monitored.
-        assign_ID(self)
-        self.data_header = (b'\aH' + self.ID.to_bytes(2,'little') + 
-                            self.sampling_rate.to_bytes(2,'little') +
-                            (2*self.buffer_size).to_bytes(2,'little'))
+        self.crossing_direction = False
 
     def _initialise(self):
         # Set event codes for rising and falling events.
@@ -287,6 +297,8 @@ class Analog_input(IO_object):
             self._start_acquisition()
 
     def _run_stop(self):
+        if self.recording:
+            self.stop()
         if self.acquiring:
             self._stop_acquisition()
 
@@ -295,31 +307,34 @@ class Analog_input(IO_object):
         self.timer.init(freq=self.sampling_rate)
         self.timer.callback(self._timer_ISR)
         if self.threshold_active:
-            self.above_threshold = self.ADC.read() > self.threshold
+            self.above_threshold = self.read_sample() > self.threshold
         self.acquiring = True
 
     def record(self):
         # Start streaming data to computer.
-        self.write_index = 0  # Buffer index to write new data to. 
-        self.buffer_start_times[self.write_buffer] = fw.current_time
-        self.recording = True
-        if not self.acquiring: self._start_acquisition()
+        if not self.recording:
+            self.write_index = 0  # Buffer index to write new data to. 
+            self.buffer_start_times[self.write_buffer] = fw.current_time
+            self.recording = True
+            if not self.acquiring: self._start_acquisition()
 
     def stop(self):
         # Stop streaming data to computer.
-        self.recording = False
-        if not self.threshold_active: 
-            self._stop_acquisition()
+        if self.recording:
+            if self.write_index != 0:
+                self._send_buffer(self.write_buffer, self.write_index)
+            self.recording = False
+            if not self.threshold_active: 
+                self._stop_acquisition()
 
     def _stop_acquisition(self):
         # Stop sampling analog input values.
         self.timer.deinit()
-        self.recording = False
         self.acquiring = False
 
     def _timer_ISR(self, t):
         # Read a sample to the buffer, update write index.
-        self.buffers[self.write_buffer][self.write_index] = self.ADC.read()
+        self.buffers[self.write_buffer][self.write_index] = self.read_sample()
         if self.threshold_active:
             new_above_threshold = self.buffers[self.write_buffer][self.write_index] > self.threshold
             if new_above_threshold != self.above_threshold: # Threshold crossing.
@@ -343,9 +358,18 @@ class Analog_input(IO_object):
             else:
                 fw.event_queue.put((self.falling_event_ID, self.timestamp))
         else: # Send full buffer to computer.
-            fw.usb_serial.write(self.data_header)
-            fw.usb_serial.write(self.buffer_start_times[1- self.write_buffer].to_bytes(4,'little'))
-            fw.usb_serial.send(self.buffers[1- self.write_buffer])
+            self._send_buffer(1-self.write_buffer)
+
+    def _send_buffer(self, buffer_n, n_samples=False):
+        # Send specified buffer to host computer.
+        n_bytes = self.bytes_per_sample*n_samples if n_samples else self.bytes_per_sample*self.buffer_size
+        self.data_header[6:8]  = n_bytes.to_bytes(2,'little')
+        self.data_header[8:12] = self.buffer_start_times[buffer_n].to_bytes(4,'little')
+        fw.usb_serial.write(self.data_header)
+        if n_samples: # Send first n_samples from buffer.
+            fw.usb_serial.send(self.buffers_mv[buffer_n][:n_samples])
+        else: # Send entire buffer.
+            fw.usb_serial.send(self.buffers[buffer_n])
 
 # ----------------------------------------------------------------------------------------
 # Digital Output.
@@ -362,9 +386,9 @@ class Digital_output(IO_object):
         self.inverted = inverted # Set True for inverted output.
         self.timer = False # Replaced by timer object if pulse enabled.
         self.off()
+        assign_ID(self)
         if pulse_enabled:
             self.enable_pulse()
-        all_outputs.append(self)
 
     def on(self):
         self.pin.value(not self.inverted)
@@ -376,7 +400,7 @@ class Digital_output(IO_object):
         self.pin.value(self.inverted)
         self.state = False
 
-    def toggle(self, t=None): # Unused argument is for compatibility with timer callback.
+    def toggle(self):
         if self.state:
             self.pin.value(self.inverted)
         else:
@@ -385,11 +409,33 @@ class Digital_output(IO_object):
 
     def enable_pulse(self): # Setup a hardware timer to allow pulsed output  
         self.timer = pyb.Timer(available_timers.pop())
+        self.freq_multipliers = {10:10, 25:4, 50:2, 75:4}
+        self.off_inds = {10:1, 25:1, 50:1, 75:3}
 
-    def pulse(self, freq): # Turn on squarewave output with specified frequency. 
+    def pulse(self, freq, duty_cycle=50, n_pulses=False): # Turn on pulsed output with specified frequency and duty cycle.
+        assert duty_cycle in (10,25,50,75), 'duty_cycle must be 10, 25, 50 or 75'
+        self.off_ind = self.off_inds[duty_cycle]
+        self.i = 0
+        self.fm = self.freq_multipliers[duty_cycle]
+        self.n_pulses = n_pulses
+        if self.n_pulses:
+            self.pulse_n = 0
         self.on()
-        self.timer.init(freq=freq*2)
-        self.timer.callback(self.toggle)
+        self.timer.init(freq=freq*self.fm)
+        self.timer.callback(self._ISR)
+
+    def _ISR(self, t):
+        self.i = (self.i + 1) % self.fm
+        if self.i == 0:
+            if self.n_pulses:
+                self.pulse_n += 1
+                if self.pulse_n == self.n_pulses:
+                    self.off()
+                    return
+            self.toggle()
+
+        elif self.i == self.off_ind:
+            self.toggle()
 
 # ----------------------------------------------------------------------------------------
 # Digital Outputs.

@@ -14,16 +14,16 @@ _off_buf = bytearray([128])
 # Audio output
 #-----------------------------------------------------------------------------------
 
-class Audio_output():
+class Audio_output(hw.IO_object):
     def __init__(self, channel=1):
         assert channel in [1,2], '! Channel number invalid, must be 1 or 2.'
         self._DAC = pyb.DAC(channel) 
-        self._timer = pyb.Timer(channel)
+        self._timer = pyb.Timer(hw.available_timers.pop())
         self._playing = False
         self._func = None # Function currently being used for sweeped sound (sine, square or noise)
         self._freq = 0
         self._freq_ind = 0
-        hw.all_outputs.append(self)
+        hw.assign_ID(self)
 
     # User functions-------------------------------------------------------------------
 

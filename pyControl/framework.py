@@ -129,7 +129,7 @@ events = {} # Dictionary of {event_name: event_ID}
 
 ID2name = {} # Dictionary of {ID: state_or_event_name}
 
-clock = pyb.Timer(4) # Timer which generates clock tick.
+clock = pyb.Timer(1) # Timer which generates clock tick.
 
 check_timers = False # Flag to say timers need to be checked, set True by clock tick.
 

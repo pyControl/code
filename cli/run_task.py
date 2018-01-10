@@ -3,6 +3,7 @@ import re
 import sys
 from serial import SerialException
 from serial.tools import list_ports
+from datetime import datetime
 
 if __name__ == "__main__": # Add parent directory to path to allow imports.
     parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -51,15 +52,34 @@ def task_menu(board, task):
     except PyboardError:
         input('Press enter to return to task select menu.')
         return
+    subject_ID = None
     while True:
-        i = input('\nPress [enter] to run task, [g] to get variable value, [s] to set variable value, [c] to close program or [t] to select a new task:')
+        i = input('\nPress [enter] to run task, [g] to get variable value, [s] to set variable value, [c] to close program, [f] to create data file, or [t] to select a new task:')
         if i == '':
+            if subject_ID: 
+                file_path = os.path.join(data_dir, subject_ID + datetime.now().strftime('-%Y-%m-%d-%H%M%S') + '.txt')
+                board.open_data_file(file_path)
+                board.write_to_file('I Experiment name  : run_task_custom_experiment')
+                board.write_to_file('I Task name : ' + task)
+                board.write_to_file('I Subject ID : ' + subject_ID)
+                board.write_to_file('I Start date : ' + datetime.now().strftime('%Y/%m/%d %H:%M:%S') + '\n')
+                board.print_IDs() # Print state and event information to file.
+                board.write_to_file('')
+            else:
+                r = input('\nData file not created, data will not be saved. Continue ([y]/n)')
+                if r == 'n':
+                    continue
             print('\nRunning task, press ctrl+c to stop.\n')
             try:
                 board.run_framework(verbose=True, raise_exception=True)
+                if subject_ID:
+                    board.close_data_file()
+                    input('\nClosing data file. Press enter to return to task select menu.')
+                    return
             except PyboardError as e:
                 print('\nError while running task:\n')
                 print(str(e))
+                if board.data_file: board.close_data_file()
                 input('\nPress enter to return to task select menu.')
                 return
         elif i == 'g':
@@ -68,6 +88,8 @@ def task_menu(board, task):
             configure_variables(board, task, 'set')
         elif i == 'c':
             close_program(board)
+        elif i == 'f':
+            subject_ID = input('\nCreating data file, enter subject_ID:')
         elif i == 't':
             return
         else:
@@ -168,8 +190,8 @@ def run_task():
     while not board:
         i = input('Enter serial port of board or board number, or [s] to scan for pyboards: ')
         if i == 's':
-            pyboard_serials = {i+1: c[0] for (i,c) in enumerate(list_ports.comports())
-                               if 'Pyboard' in c[1]}
+            pyboard_serials = {j+1: b for (j,b) in 
+                enumerate([c[0] for c in list_ports.comports() if 'Pyboard' in c[1]])}
             if not pyboard_serials:
                 print('\nNo Pyboards found.\n' )
                 continue
@@ -178,16 +200,17 @@ def run_task():
                 for b in pyboard_serials.keys():
                     print('{}: {}\n'.format(b, pyboard_serials[b]))
                 while True:
-                    i = input('Select Pyboard:')
+                    k = input('Select Pyboard:')
                     try:
-                        port = pyboard_serials[int(i)]
+                        port = pyboard_serials[int(k)]
                         break
                     except (KeyError, ValueError):
                         print('\nInput not recognised, valid inputs: {}\n'.format(list(pyboard_serials.keys())))
-        try: # Check if input is an integer corresponding to a setup number.
-            port = config.board_serials[int(i)]
-        except:
-            port = i
+        else:
+            try: # Check if input is an integer corresponding to a setup number.
+                port = config.board_serials[int(i)]
+            except (KeyError, ValueError):
+                port = i
         try:
             board = Pycboard(port, raise_exception=True, verbose=False)
         except SerialException:

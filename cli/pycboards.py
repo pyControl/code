@@ -119,10 +119,10 @@ class Pycboards():
         written to each board.'''
         if type(write_string) == dict and set(self.boards.keys()) == set(write_string.keys()): 
             for board_n in self.board_numbers:
-                self.boards[board_n].data_file.write(write_string[board_n]+end)
+                self.boards[board_n].write_to_file(write_string[board_n],end)
         else:
             for board in self.boards.values():
-                board.data_file.write(write_string+end)
+                board.write_to_file(write_string,end)
 
     def save_unique_IDs(self):
         print('Saving hardware unique IDs.')

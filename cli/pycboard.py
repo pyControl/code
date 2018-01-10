@@ -518,3 +518,6 @@ class Pycboard(Pyboard):
                 self.analog_inputs[ID]['file'].write(t.to_bytes(4,'little', signed=True))
                 self.analog_inputs[ID]['file'].write(x.to_bytes(4,'little', signed=True))
             self.analog_inputs[ID]['file'].flush()
+
+    def write_to_file(self, write_string, end='\n'):
+        self.data_file.write(write_string+end)

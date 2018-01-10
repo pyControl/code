@@ -1,4 +1,20 @@
 -------------------------------------------------------------------------------
+Version 1.2
+-------------------------------------------------------------------------------
+
+CLI:
+- run_task.py can automatically detect the serial port of connected pyboards.
+- run_task.py can save data generated in framework run.
+
+Framework:
+- Digital_output.pulse() now allows duty cycle and number of pulses to be 
+  specified.
+- Added Analog_input class.
+- Added Rotatory_encoder device driver.
+- Added Stepper_motor device driver.
+- Added MCP23017 device driver.
+
+-------------------------------------------------------------------------------
 Version 1.1.4 21/12/2017
 -------------------------------------------------------------------------------
 
