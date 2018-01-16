@@ -71,7 +71,8 @@ def task_menu(board, task):
                     continue
             print('\nRunning task, press ctrl+c to stop.\n')
             try:
-                board.run_framework(verbose=True, raise_exception=True)
+                verbose = not bool(board.data_file)
+                board.run_framework(verbose=verbose, raise_exception=True)
                 if subject_ID:
                     board.close_data_file()
                     input('\nClosing data file. Press enter to return to task select menu.')
