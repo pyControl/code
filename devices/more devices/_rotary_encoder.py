@@ -4,13 +4,13 @@ from pyControl.hardware import Analog_input
 class Rotary_encoder(Analog_input):
     # Quadrature output rotary encoder.
     def __init__(self, name, sampling_rate, output='velocity', threshold=None, 
-                 rising_event=None, falling_event=None, bytes_per_sample=2):
-        assert output in ('velocity', 'position'), \
-            "ouput argument must be 'velocity' or 'position'"
+                 rising_event=None, falling_event=None, bytes_per_sample=2, reverse=False):
+        assert output in ('velocity', 'position'), 'ouput argument must be \'velocity\' or \'position\'.'
         assert bytes_per_sample in (2,4), 'bytes_per_sample must be 2 or 4'
         self.output_velocity = output == 'velocity'
-        self.pin_a = pyb.Pin('X1', pyb.Pin.AF_PP, pull=pyb.Pin.PULL_NONE, af=pyb.Pin.AF1_TIM2)
-        self.pin_b = pyb.Pin('X2', pyb.Pin.AF_PP, pull=pyb.Pin.PULL_NONE, af=pyb.Pin.AF1_TIM2)
+        pins = ('X2', 'X1') if reverse else ('X1', 'X2') 
+        self.pin_a = pyb.Pin(pins[0], pyb.Pin.AF_PP, pull=pyb.Pin.PULL_NONE, af=pyb.Pin.AF1_TIM2)
+        self.pin_b = pyb.Pin(pins[1], pyb.Pin.AF_PP, pull=pyb.Pin.PULL_NONE, af=pyb.Pin.AF1_TIM2)
         self.counter_max_value = 0xffff
         self.counter_half_max_value = self.counter_max_value // 2
         self.enc_timer = pyb.Timer(2, prescaler=1, period=self.counter_max_value)
