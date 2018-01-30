@@ -45,7 +45,7 @@ class Ring_buffer():
 # Variables.
 # ----------------------------------------------------------------------------------------
 
-ID_generator = (i for i in range(1<<16)) # Generator for hardware object IDs.
+next_ID = 0 # Next hardware object ID.
 
 IO_dict = {} # Dictionary {ID: IO_object} containing all hardware inputs and outputs.
 
@@ -66,8 +66,10 @@ low_priority_queue  = Ring_buffer() # Hardware objects that need to be processed
 
 def assign_ID(hardware_object):
     # Assign unique ID to hardware object and put in IO_dict.
-    hardware_object.ID = next(ID_generator)
+    global next_ID
+    hardware_object.ID = next_ID
     IO_dict[hardware_object.ID] = hardware_object
+    next_ID += 1
 
 def initialise():
     # Called once after state machines setup and before framework first run.
@@ -245,7 +247,7 @@ class Analog_input(IO_object):
     # Analog_input samples analog voltage from specified pin at specified frequency and can
     # stream data to continously to computer as well as generate framework events when 
     # voltage goes above / below specified value. The Analog_input class is subclassed
-    # by other hardware devices that generate continous data such as the Rotatory_encoder.
+    # by other hardware devices that generate continous data such as the Rotory_encoder.
     # Serial data format for sending data to computer: '\a c i r l t D' where:
     # a\ ASCII bell character indicating start of analog data chunk (1 byte)
     # c data array typecode (1 byte)
