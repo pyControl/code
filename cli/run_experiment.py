@@ -176,8 +176,6 @@ def run_experiment():
 
     boards.run_framework()
 
-    boards.close_data_file()
-
     if exp.persistent_variables:
         print('\nStoring persistent variables.')
         if not os.path.exists(pv_folder):
@@ -200,19 +198,21 @@ def run_experiment():
             v_strings = [v_name + ':\n']
             for board_n in boards_in_use:
                 v_value = boards.boards[board_n].get_variable(v_name, exp.task)
+                boards.boards[board_n].write_to_file('V {}: {}'.format(v_name, v_value))
                 print(exp.subjects[board_n] + ': {}'.format(v_value))
                 v_strings.append(str(v_value) +'\t' + exp.subjects[board_n] + '\n')
             v_strings.append('\n' * (spacing-1)) # Add empty lines between variables.
             summary_string += ''.join(v_strings) 
-        boards.close()
         try:
             import pyperclip
             pyperclip.copy(summary_string.strip()) # Copy to clipboard.
             print('\nSummary data copied to clipboad.')
         except ImportError:
             print('\nSummary data not copied to clipboad as pyperclip not installed.')
-    else:
-        boards.close()
+
+
+    boards.close_data_file()
+    boards.close()
 
     if config.transfer_dir:
         transfer_folder = os.path.join(config.transfer_dir, exp.folder)
