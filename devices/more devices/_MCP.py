@@ -4,27 +4,17 @@ from array import array
 from micropython import schedule
 import pyControl.hardware as _h
 
-class MCP23017():
-    # MCP2301 port expander. Ports A and B are addressed as single 16 bit port and use a single interrupt pin.
+class _MCP():
+    # Parent class for MCP23017 and MCP23008 port expanders.
 
-    def __init__(self, I2C_bus=1, interrupt_pin='X5', addr=0x20):
+    def __init__(self, I2C_bus, interrupt_pin, addr):
         self.i2c = pyb.I2C(I2C_bus, mode=pyb.I2C.MASTER, baudrate=400000) 
         self.addr = addr   # Device I2C address
         self.interrupt_timestamp = 0  # Time of last interrupt.
         self.interrupts_enabled = False
         self.interrupt_pin = interrupt_pin
-        self.reg_addr = {                 # Register memory addresses.
-                         'IODIR'  : 0x00, # Input / output direction.
-                         'GPIO'   : 0x12, # Pin state.
-                         'GPINTEN': 0x04, # Interrupt on change enable.
-                         'INTF'   : 0x0E, # Interrupt flag.
-                         'INTCON' : 0x08, # Interupt compare mode.
-                         'DEFVAL' : 0x06, # Interupt compare default.
-                         'IOCON'  : 0x0A} # Configuration.
         self.reg_values = {} # Register values set by user.
         self._process_interrupt_ref = self._process_interrupt # Needed to pass process_interrupt to schedule in ISR
-        self.read_buffer = array('b', [0] * 2)
-        self.reset()
 
     def reset(self):
         self.write_register('IODIR'  , 0) # Set pins as ouptuts.
@@ -32,19 +22,22 @@ class MCP23017():
         self.write_register('GPINTEN', 0) # Disable interrupts on all pins.
         self.write_register('IOCON'  , 0) # Set configuration to default.
 
-    def read_register(self, register, n_bytes=2):
+    def read_register(self, register, n_bytes=None):
         # Read specified register, convert to int, store in reg_values, return value. 
+        if n_bytes == None: n_bytes = self.reg_size
         v = int.from_bytes(self.i2c.mem_read(n_bytes, self.addr, self.reg_addr[register]), 'little')
         self.reg_values[register] = v
         return v
 
-    def write_register(self, register, values, n_bytes=2):
+    def write_register(self, register, values, n_bytes=None):
         # Write values to specified register, values must be int which is converted to n_bytes bytes.
+        if n_bytes == None: n_bytes = self.reg_size
         self.reg_values[register] = values
         self.i2c.mem_write(values.to_bytes(n_bytes,'little'), self.addr, self.reg_addr[register])
 
-    def write_bit(self, register, bit, value, n_bytes=2):
+    def write_bit(self, register, bit, value, n_bytes=None):
         # Write the value of specified bit to specified register.
+        if n_bytes == None: n_bytes = self.reg_size
         if value:
             self.reg_values[register] |=  (1<<bit)  # Set bit
         else:
@@ -78,11 +71,46 @@ class MCP23017():
         pin.enable_interrupt(callback, mode)
 
 
+class MCP23017(_MCP):
+    # MCP23017 16 bit port expander. Ports A and B are addressed as single 16 bit port
+    # and use a single interrupt pin.
+
+    def __init__(self, I2C_bus=1, interrupt_pin='X5', addr=0x20):
+        super().__init__(I2C_bus, interrupt_pin, addr)
+        self.reg_addr = {                 # Register memory addresses.
+                         'IODIR'  : 0x00, # Input / output direction.
+                         'GPIO'   : 0x12, # Pin state.
+                         'GPINTEN': 0x04, # Interrupt on change enable.
+                         'INTF'   : 0x0E, # Interrupt flag.
+                         'INTCON' : 0x08, # Interupt compare mode.
+                         'DEFVAL' : 0x06, # Interupt compare default.
+                         'IOCON'  : 0x0A} # Configuration.
+        self.reg_size = 2 # Bytes to read/write for each register.
+        self.reset()
+
+
+class MCP23008(_MCP):
+    # MCP23008 8 bit port expander.
+
+    def __init__(self, I2C_bus=1, interrupt_pin='X5', addr=0x20):
+        super().__init__(I2C_bus, interrupt_pin, addr)
+        self.reg_addr = {                 # Register memory addresses.
+                         'IODIR'  : 0x00, # Input / output direction.
+                         'GPIO'   : 0x09, # Pin state.
+                         'GPINTEN': 0x02, # Interrupt on change enable.
+                         'INTF'   : 0x07, # Interrupt flag.
+                         'INTCON' : 0x04, # Interupt compare mode.
+                         'DEFVAL' : 0x03, # Interupt compare default.
+                         'IOCON'  : 0x05} # Configuration.
+        self.reg_size = 1 # Bytes to read/write for each register.
+        self.reset()
+
+
 class _Pin(_h.IO_expander_pin):
     # GPIO pin on MCP IO expander.
 
     def __init__(self, IOx, id, mode=None):
-        assert isinstance(IOx, MCP23017), 'mcp argument must be instance of MCP23017'
+        assert isinstance(IOx, _MCP), 'mcp argument must be instance of MCP23017 or MCP23008'
         assert (id[0] in ['A','B']) and (id[1] in [str(i) for i in range(8)]), \
             "Invalid id argument, valid arguments are e.g. 'A0' or 'B7'"
         self.IOx = IOx # IO expander the pin is located on.

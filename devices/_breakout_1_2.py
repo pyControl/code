@@ -12,7 +12,7 @@ class Breakout_1_2(_h.Mainboard):
         self.port_5 = _h.Port(DIO_A='Y5', DIO_B='Y6' , POW_A='X21', POW_B='X22')
         self.port_6 = _h.Port(DIO_A='X3', DIO_B='X11' , POW_A='Y1' , POW_B='Y2')        
         self.BNC_1  = 'X12'
-        self.BNC_2  = 'Y11'
+        self.BNC_2  = 'X11'
         self.DAC_1  = 'X5'
         self.DAC_2  = 'X6'
         self.button = 'X17'

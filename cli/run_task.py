@@ -193,13 +193,21 @@ def run_task():
         if i == 's':
             pyboard_serials = {j+1: b for (j,b) in 
                 enumerate([c[0] for c in list_ports.comports() if 'Pyboard' in c[1]])}
-            if not pyboard_serials:
+            unknown_usb_serials = {j+len(pyboard_serials)+1: b for (j,b) in 
+                enumerate([c[0] for c in list_ports.comports() if 'USB Serial Device' in c[1]])}
+            if not (pyboard_serials or unknown_usb_serials):
                 print('\nNo Pyboards found.\n' )
                 continue
             else:
-                print('\nPyboards found on the following serial ports:\n')
-                for b in pyboard_serials.keys():
-                    print('{}: {}\n'.format(b, pyboard_serials[b]))
+                if pyboard_serials:
+                    print('\nPyboards found on the following serial ports:\n')
+                    for b in pyboard_serials.keys():
+                        print('{}: {}\n'.format(b, pyboard_serials[b]))
+                if unknown_usb_serials:
+                    print('\nPossible Pyboards found on the following serial ports:\n')
+                    for b in unknown_usb_serials.keys():
+                        print('{}: {}\n'.format(b, unknown_usb_serials[b]))
+                pyboard_serials.update(unknown_usb_serials)
                 while True:
                     k = input('Select Pyboard:')
                     try:
