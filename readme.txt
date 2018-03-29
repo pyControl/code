@@ -12,6 +12,6 @@ pyControl: The pyControl framework (used on the pyboard).
 tasks    : pyControl task files.
 licence  : pyControl-GPL-3 licence.
 
-Version: v1.2
--------------
+Version: v1.2.1
+---------------
 
