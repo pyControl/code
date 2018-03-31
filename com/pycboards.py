@@ -1,10 +1,12 @@
-from .pycboard import Pycboard 
-from pprint import pformat
 import os
-import config.config as config
-from .default_paths import tasks_dir, config_dir
-from .pyboard import PyboardError
 from time import sleep
+from pprint import pformat
+
+from .pycboard import Pycboard 
+from .pyboard import PyboardError
+
+import config.config as config
+from config.paths import tasks_dir, config_dir
 
 class Pycboards():
     'Perform operations on a group of Pycboards.'
