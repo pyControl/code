@@ -5,9 +5,13 @@ from pprint import pformat
 import shutil
 from imp import reload
 
-if __name__ == "__main__": # Add parent directory to path to allow imports.
-    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    if not parent_dir in sys.path: sys.path.insert(0, parent_dir)
+# Add parent directory to path to allow imports.
+top_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if not top_dir in sys.path: sys.path.insert(0, top_dir)
+
+from cli.experiment import Experiment
+from com.pycboards import Pycboards
+from config.paths import data_dir, tasks_dir
 
 # Catch errors importing user created config files.
 try: 
@@ -25,10 +29,6 @@ except Exception as e:
     print(str(e))
     input('\nPress any key to close.')
     sys.exit()
-
-from cli.experiment import Experiment
-from cli.pycboards import Pycboards
-from cli.default_paths import data_dir, tasks_dir
 
 # ----------------------------------------------------------------------------------------
 # Config menu.

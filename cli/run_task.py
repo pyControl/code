@@ -5,9 +5,12 @@ from serial import SerialException
 from serial.tools import list_ports
 from datetime import datetime
 
-if __name__ == "__main__": # Add parent directory to path to allow imports.
-    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    if not parent_dir in sys.path: sys.path.insert(0, parent_dir)
+# Add parent directory to path to allow imports.
+top_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if not top_dir in sys.path: sys.path.insert(0, top_dir)
+
+from com.pycboard import Pycboard, PyboardError
+from config.paths import data_dir, tasks_dir
 
 # Catch errors importing user created config files.
 try: 
@@ -17,10 +20,6 @@ except Exception as e:
     print(str(e))
     input('\nPress any key to close.')
     sys.exit()
-
-from cli.pycboard import Pycboard
-from cli.default_paths import data_dir, tasks_dir
-from cli.pyboard import PyboardError
 
 # ----------------------------------------------------------------------------------------
 # Config menus.

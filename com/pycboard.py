@@ -6,7 +6,7 @@ from collections import namedtuple
 from serial import SerialException
 from array import array
 from .pyboard import Pyboard, PyboardError
-from .default_paths import *
+from config.paths import config_dir, framework_dir, devices_dir, tasks_dir
 
 # ----------------------------------------------------------------------------------------
 #  Helper functions.
@@ -281,7 +281,7 @@ class Pycboard(Pyboard):
             print(error_message)
         return 
 
-    def load_hardware_definition(self, hwd_path = hwd_path):
+    def load_hardware_definition(self, hwd_path=os.path.join(config_dir, 'hardware_definition.py')):
         '''Transfer a hardware definition file to pyboard.  Defaults to transfering 
         file hardware_definition.py from config folder. '''
         if os.path.exists(hwd_path):
