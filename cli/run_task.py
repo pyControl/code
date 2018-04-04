@@ -1,15 +1,16 @@
 import os
 import re
 import sys
+import time
 from serial import SerialException
 from serial.tools import list_ports
-from datetime import datetime
 
 # Add parent directory to path to allow imports.
 top_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if not top_dir in sys.path: sys.path.insert(0, top_dir)
 
 from com.pycboard import Pycboard, PyboardError
+from com.data_logger import Data_logger
 from config.paths import data_dir, tasks_dir
 
 # Catch errors importing user created config files.
@@ -47,8 +48,10 @@ def task_select_menu(board):
 
 def task_menu(board, task):
     try:
-        board.setup_state_machine(task, raise_exception=True)
-    except PyboardError:
+        sm_info = board.setup_state_machine(task, raise_exception=True)
+        data_logger = Data_logger(data_dir, 'run_task', task, sm_info)
+    except Exception as e:
+        print(e)
         input('Press enter to return to task select menu.')
         return
     subject_ID = None
@@ -56,32 +59,31 @@ def task_menu(board, task):
         i = input('\nPress [enter] to run task, [g] to get variable value, [s] to set variable value, [c] to close program, [f] to create data file, or [t] to select a new task:')
         if i == '':
             if subject_ID: 
-                file_path = os.path.join(data_dir, subject_ID + datetime.now().strftime('-%Y-%m-%d-%H%M%S') + '.txt')
-                board.open_data_file(file_path)
-                board.write_to_file('I Experiment name  : run_task_custom_experiment')
-                board.write_to_file('I Task name : ' + task)
-                board.write_to_file('I Subject ID : ' + subject_ID)
-                board.write_to_file('I Start date : ' + datetime.now().strftime('%Y/%m/%d %H:%M:%S') + '\n')
-                board.print_IDs() # Print state and event information to file.
-                board.write_to_file('')
+                data_logger.open_data_file(subject_ID)
             else:
                 r = input('\nData file not created, data will not be saved. Continue ([y]/n)')
                 if r == 'n':
                     continue
             print('\nRunning task, press ctrl+c to stop.\n')
             try:
-                verbose = not bool(board.data_file)
-                board.run_framework(verbose=verbose, raise_exception=True)
-                if subject_ID:
-                    board.close_data_file()
-                    input('\nClosing data file. Press enter to return to task select menu.')
-                    return
+                board.start_framework()
+                while True:
+                    new_data = board.process_data()
+                    print(data_logger.data_to_string(new_data, verbose=True), end='')
+                    if subject_ID: data_logger.write_to_file(new_data)
+            except KeyboardInterrupt:
+                board.stop_framework()
+                time.sleep(0.1)
+                new_data = board.process_data()
+                print(data_logger.data_to_string(new_data, verbose=True), end='')
+                if subject_ID: data_logger.write_to_file(new_data)
             except PyboardError as e:
                 print('\nError while running task:\n')
                 print(str(e))
-                if board.data_file: board.close_data_file()
-                input('\nPress enter to return to task select menu.')
-                return
+            if subject_ID:
+                data_logger.close_data_file()
+            input('\nPress enter to return to task select menu.')
+            return
         elif i == 'g':
             configure_variables(board, task, 'get')
         elif i == 's':
@@ -238,13 +240,14 @@ def run_task():
     task_select_menu(board)
 
 if __name__ == "__main__":
-    try:
-        run_task()
-    except Exception as e:
-        print('\nError:\n')
-        print(str(e))
-        input('\nPress any key to close.')
-    except PyboardError as e: # No need to print error message as pycboard handles it.
-        print('\nPyboard error:\n')
-        print(str(e))
-        input('\nPress any key to close.')
+    run_task()
+    # try:
+    #     run_task()
+    # except Exception as e:
+    #     print('\nError:\n')
+    #     print(str(e))
+    #     input('\nPress any key to close.')
+    # except PyboardError as e: # No need to print error message as pycboard handles it.
+    #     print('\nPyboard error:\n')
+    #     print(str(e))
+    #     input('\nPress any key to close.')

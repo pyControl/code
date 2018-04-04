@@ -16,10 +16,8 @@ class Pycboards():
         self.board_numbers = sorted(board_numbers)
         for board_n in board_numbers:
             print('Opening connection to board {}'.format(board_n))
-            self.boards[board_n] = Pycboard(config.board_serials[board_n], board_n,
-                                            raise_exception=True)
-        self.unique_IDs = {board_n: self.boards[board_n].unique_ID
-                                   for board_n in self.boards}
+            self.boards[board_n] = Pycboard(config.board_serials[board_n], raise_exception=True)
+        self.unique_IDs = {board_n: self.boards[board_n].unique_ID for board_n in self.boards}
 
     def reset(self):
         for board in self.boards.values():
@@ -37,9 +35,9 @@ class Pycboards():
         for board in self.boards.values():
             board.setup_state_machine(sm_name, sm_dir)
 
-    def start_framework(self, dur = None, verbose = False, data_output = True, ISI = False):
+    def start_framework(self, dur=None, data_output=True, ISI=False):
         for board_n in self.board_numbers:
-            self.boards[board_n].start_framework(dur, verbose, data_output)
+            self.boards[board_n].start_framework(dur, data_output)
             if ISI:
                 sleep(ISI)  # Stagger start times by ISI seconds.       
                 self.boards[board_n].process_data()
@@ -63,9 +61,9 @@ class Pycboards():
                 self.board_errors.append(board.number)
         return boards_running
 
-    def run_framework(self, dur = None, verbose = False):
+    def run_framework(self, dur=None):
         self.board_errors = []
-        self.start_framework(dur, verbose)
+        self.start_framework(dur)
         try:
             while self.process_data():
                 pass

@@ -96,10 +96,9 @@ def off():
     for IO_object in IO_dict.values():
         IO_object.off()
 
-def print_analog_inputs():
-    # Print dictionary of Analog_inputs {IDs:names}.
-    print('A {}'.format({io.ID: io.name for io in IO_dict.values() if isinstance(io, Analog_input)}))
-
+def get_analog_inputs():
+    # Print dictionary of Analog_inputs {AI name: ID}.
+    print({io.name:io.ID for io in IO_dict.values() if isinstance(io, Analog_input)})
 
 # ----------------------------------------------------------------------------------------
 # IO_object
@@ -248,13 +247,14 @@ class Analog_input(IO_object):
     # stream data to continously to computer as well as generate framework events when 
     # voltage goes above / below specified value. The Analog_input class is subclassed
     # by other hardware devices that generate continous data such as the Rotory_encoder.
-    # Serial data format for sending data to computer: '\a c i r l t D' where:
-    # a\ ASCII bell character indicating start of analog data chunk (1 byte)
+    # Serial data format for sending data to computer: 'A c i r l t k D' where:
+    # A character indicating start of analog data chunk (1 byte)
     # c data array typecode (1 byte)
     # i ID of analog input  (2 byte)
     # r sampling rate (Hz) (2 bytes)
     # l length of data array in bytes (2 bytes)
     # t timestamp of chunk start (ms)(4 bytes)
+    # k checksum (2 bytes)
     # D data array bytes (variable)
 
     def __init__(self, pin, name, sampling_rate, threshold=None, rising_event=None, 
@@ -278,8 +278,8 @@ class Analog_input(IO_object):
         self.buffers = (array(data_type, [0]*self.buffer_size),array(data_type, [0]*self.buffer_size))
         self.buffers_mv = (memoryview(self.buffers[0]), memoryview(self.buffers[1]))
         self.buffer_start_times = array('i', [0,0])
-        self.data_header = array('B', b'\a' + data_type.encode() + 
-            self.ID.to_bytes(2,'little') + sampling_rate.to_bytes(2,'little') + b'\x00'*6)
+        self.data_header = array('B', b'A' + data_type.encode() + 
+            self.ID.to_bytes(2,'little') + sampling_rate.to_bytes(2,'little') + b'\x00'*8)
         # Event generation variables
         self.threshold = threshold
         self.rising_event = rising_event
@@ -368,6 +368,9 @@ class Analog_input(IO_object):
         n_bytes = self.bytes_per_sample*n_samples if n_samples else self.bytes_per_sample*self.buffer_size
         self.data_header[6:8]  = n_bytes.to_bytes(2,'little')
         self.data_header[8:12] = self.buffer_start_times[buffer_n].to_bytes(4,'little')
+        checksum = sum(self.buffers_mv[buffer_n][:n_samples] if n_samples else self.buffers[buffer_n])
+        checksum += sum(self.data_header[1:12])
+        self.data_header[12:14] = checksum.to_bytes(2,'little')
         fw.usb_serial.write(self.data_header)
         if n_samples: # Send first n_samples from buffer.
             fw.usb_serial.send(self.buffers_mv[buffer_n][:n_samples])
