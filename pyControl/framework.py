@@ -115,8 +115,6 @@ data_output_queue = Event_queue() # Queue used for outputing events to serial li
 
 data_output = True  # Whether to output data to the serial line.
 
-verbose = False     # True: output names, False: output IDs
-
 current_time = None # Time since run started (milliseconds).
 
 running = False     # Set to True when framework is running, set to False to stop run.
@@ -134,6 +132,10 @@ clock = pyb.Timer(1) # Timer which generates clock tick.
 check_timers = False # Flag to say timers need to be checked, set True by clock tick.
 
 start_time = 0 # Time at which framework run is started.
+
+data_bytes  = bytearray('D' + ' '*8) # Used to send event/state entries to host.
+
+print_bytes = bytearray('P' + ' '*8) # Used to send print output to host.
 
 # ----------------------------------------------------------------------------------------
 # Framework functions.
@@ -191,23 +193,28 @@ def register_machine(state_machine):
     state_machine.ID = len(state_machines)
     state_machines.append(state_machine)
 
-def print_events():
+def get_events():
     """ Print  events as a dictionary"""
-    print("E {}".format(events))
+    print(events)
 
-def print_states():
+def get_states():
     """ Print states as a dictionary"""
-    print("S {}".format(states))
+    print(states)  
 
 def output_data(event):
     # Output data to serial line.
-    if event[0] > 0:  # Print event or state change.
-        if verbose: # Print event/state name.
-            print('D {} {}'.format(event[1], ID2name[event[0]]))
-        else: # Print event/state ID.
-            print('D {} {}'.format(event[1], event[0]))   
-    elif event[0] == print_evt: # Print user generated output string.
-        print('P {} {}'.format(event[1], event[2]))        
+    if event[0] > 0:  # send event or state change.
+        data_bytes[1:5] = event[1].to_bytes(4, 'little') # Timestamp
+        data_bytes[5:7] = event[0].to_bytes(2, 'little') # Event code
+        data_bytes[7:9] = sum(data_bytes[1:7]).to_bytes(2, 'little') # Checksum. 
+        usb_serial.send(data_bytes) 
+    elif event[0] == print_evt: # send user generated output string.
+        print_string = event[2].encode()
+        print_bytes[1:3] = len(print_string).to_bytes(2, 'little') # Data length.   
+        print_bytes[3:7] = event[1].to_bytes(4, 'little') # Timestamp
+        print_bytes[7:9] = (sum(print_bytes[1:7]) + sum(print_string)).to_bytes(2, 'little') # Checksum.
+        usb_serial.send(print_bytes)
+        usb_serial.send(print_string)
 
 def _update():
     # Perform framework update functions in order of priority.

@@ -2,7 +2,6 @@ import os
 import sys
 import time
 import inspect
-from collections import namedtuple
 from serial import SerialException
 from array import array
 from .pyboard import Pyboard, PyboardError
@@ -66,11 +65,8 @@ class Pycboard(Pyboard):
     and pyControl operations.
     '''
 
-    def __init__(self, serial_port, number=None, baudrate=115200, verbose=True,
-                 raise_exception=False):
+    def __init__(self, serial_port,  baudrate=115200, verbose=True, raise_exception=True):
         self.serial_port = serial_port
-        self.data_file = None
-        self.number = number
         self.status = {'serial': None, 'framework':None, 'hardware':None, 'usb_mode':None}
         try:    
             super().__init__(self.serial_port, baudrate=115200)
@@ -114,7 +110,6 @@ class Pycboard(Pyboard):
         self.exec('import os; import gc; import sys; import pyb')
         self.framework_running = False
         self.state_machines = [] # List to hold name of instantiated state machines.
-        self.analog_inputs = {}  # Dict to hold analog inputs used by state machines. 
         error_message = None
         self.status['usb_mode'] = self.eval('pyb.usb_mode()').decode()
         try:
@@ -187,7 +182,7 @@ class Pycboard(Pyboard):
     # Pyboard filesystem operations.
     # ------------------------------------------------------------------------------------
 
-    def write_file(self, target_path, data, raise_exception=False):
+    def write_file(self, target_path, data, raise_exception=True):
         '''Write data to file at specified path on pyboard, any data already
         in the file will be deleted.'''
         try:
@@ -294,7 +289,7 @@ class Pycboard(Pyboard):
         else:
             print('Hardware definition file not found.') 
 
-    def setup_state_machine(self, sm_name, sm_dir=tasks_dir, raise_exception=False):
+    def setup_state_machine(self, sm_name, sm_dir=tasks_dir, raise_exception=True):
         ''' Transfer state machine descriptor file sm_name.py from folder sm_dir
         to board. Instantiate state machine object as sm_name'''
         self.reset()
@@ -315,81 +310,88 @@ class Pycboard(Pyboard):
             if raise_exception:
                 raise PyboardError('Unable to setup state machine.', e.args[2])
         self.remove_file(sm_name + '.py')
-        # Find out which analog inputs are defined.
-        analog_inputs = eval(self.exec('hw.print_analog_inputs()').decode()[1:].strip())
-        self.analog_inputs = {ID: {'name': name, 'file': None} for ID, name in analog_inputs.items()}
-
-    def print_IDs(self):
-        'Print state and event IDs.'
-        ID_info = self.get_states() + '\n\n' + self.get_events() + '\n'
-        if self.data_file: # Print IDs to file.
-            self.data_file.write(ID_info)
-        else: # Print to screen.
-            print(ID_info)
+        # Get information about state machine.
+        sm_info = {'states': self.get_states(),
+                   'events': self.get_events(),
+                   'analog_inputs': self.get_analog_inputs()}
+        return sm_info
 
     def get_states(self):
-        'Return states as a dictionary'
-        return self.exec('fw.print_states()').decode().strip()
+        'Return states as a dictionary {state_name: state_ID}'
+        return eval(self.exec('fw.get_states()').decode().strip())
 
     def get_events(self):
-        'Return events as a dictionary'
-        return self.exec('fw.print_events()').decode().strip()
+        'Return events as a dictionary {event_name: state_ID}'
+        return eval(self.exec('fw.get_events()').decode().strip())
 
-    def start_framework(self, dur = None, verbose = False, data_output = True):
+    def get_analog_inputs(self):
+        'Return analog_inputs as a directory {input name: ID}'
+        return eval(self.exec('hw.get_analog_inputs()').decode().strip())
+
+    def start_framework(self, dur=None, data_output=True):
         'Start pyControl framwork running on pyboard.'
-        self.exec('fw.verbose = ' + repr(verbose))
         self.exec('fw.data_output = ' + repr(data_output))
         self.exec_raw_no_follow('fw.run({})'.format(dur))
         self.framework_running = True
-        self.data = b''
 
     def stop_framework(self):
         'Stop framework running on pyboard by sending stop command.'
         self.serial.write(b'E')
         self.framework_running = False
 
-    def process_data(self, raise_exception=False):
-        'Process data output from the pyboard to the serial line.'
+    def process_data(self, raise_exception=True):
+        'Read data from serial line and return list of data tuples.'
+        new_data = []
         while self.serial.inWaiting() > 0:
             new_byte = self.serial.read(1)  
-            if new_byte == b'\a': # Start of analog data chunk.
-                typecode = self.serial.read(1).decode()
-                ID =            int.from_bytes(self.serial.read(2), 'little')
-                sampling_rate = int.from_bytes(self.serial.read(2), 'little')
-                n_bytes =       int.from_bytes(self.serial.read(2), 'little')
-                timestamp =     int.from_bytes(self.serial.read(4), 'little')
-                data_array = array(typecode, self.serial.read(n_bytes))
-                if self.data_file:
-                    self.save_analog_chunk(ID, sampling_rate, timestamp, data_array)
-            elif new_byte == b'\n':  # End of data line.
-                data_string = self.data.decode()
-                if self.number:
-                    print('Box {}: '.format(self.number), end = '')
-                print(data_string) 
-                if self.data_file:
-                    self.data_file.write(data_string+'\n')
-                    self.data_file.flush()
-                self.data = b''
+            if new_byte == b'A': # Analog data, 13 byte header + variable size content.
+                data_header = self.serial.read(13)
+                typecode      = data_header[0:1].decode()             
+                ID            = int.from_bytes(data_header[1:3], 'little')
+                sampling_rate = int.from_bytes(data_header[3:5], 'little')
+                n_bytes       = int.from_bytes(data_header[5:7], 'little')
+                timestamp     = int.from_bytes(data_header[7:11], 'little')
+                checksum      = int.from_bytes(data_header[11:13], 'little')
+                data_array    = array(typecode, self.serial.read(n_bytes))
+                if checksum == (sum(data_header[:-2]) + sum(data_array)) & 0xffff: # Checksum OK.
+                    new_data.append(('A',ID, sampling_rate, timestamp, data_array))
+                else:
+                    new_data.append(('!','bad checksum A'))
+            elif new_byte == b'D': # Event or state entry, 8 byte data header only.
+                data_header = self.serial.read(8)
+                timestamp = int.from_bytes(data_header[ :4], 'little')
+                ID        = int.from_bytes(data_header[4:6], 'little')
+                checksum  = int.from_bytes(data_header[6:8], 'little')
+                if checksum == sum(data_header[:-2]): # Checksum OK.
+                    new_data.append(('D',timestamp, ID))
+                else:
+                    new_data.append(('!','bad checksum D'))
+            elif new_byte == b'P': # User print statement, 8 byte data header + variable size content.
+                data_header = self.serial.read(8)
+                n_bytes   = int.from_bytes(data_header[ :2], 'little')
+                timestamp = int.from_bytes(data_header[2:6], 'little')
+                checksum  = int.from_bytes(data_header[6:8], 'little')
+                print_string = self.serial.read(n_bytes)
+                if checksum == (sum(data_header[:-2]) + sum(print_string)) & 0xffff: # Checksum OK.
+                    new_data.append(('P',timestamp, print_string.decode()))
+                else:
+                    new_data.append(('!','bad checksum P'))
             elif new_byte == b'\x04': # End of framework run.
                 self.framework_running = False
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
                 if len(data_err) > 2:
                     error_string = data_err[:-3].decode()
-                    if self.data_file:
-                        self.data_file.write('! Error during framework run.\n')
-                        self.data_file.write('! ' + error_string.replace('\n', '\n! '))
-                        self.data_file.flush()                        
+                    self.reset() # Reset board to turn off all output.                      
                     if raise_exception:
                         raise PyboardError(error_string)
                     else:
                         print(error_string)
                 break
-            else:
-                self.data+=new_byte
+        return new_data
 
-    def run_framework(self, dur=None, verbose=False, raise_exception=False):
+    def run_framework(self, dur=None, raise_exception=True):
         '''Run framework for specified duration (seconds).'''
-        self.start_framework(dur, verbose)
+        self.start_framework(dur)
         try:
             while self.framework_running:
                 self.process_data(raise_exception=raise_exception)     
@@ -479,45 +481,11 @@ class Pycboard(Pyboard):
         elif (((type(t) == float) or (type(v) == float)) 
                 and (abs(t - v) < (1e-5 + 1e-3 * abs(v)))):
             return True # Variable set within floating point accuracy.
-        elif type(t) in (list, tuple) and all([_approx_equal(vi, ti) 
+        elif type(t) in (list, tuple) and all([self._approx_equal(vi, ti) 
                                                for vi, ti in zip(v,t)]):
             return True
-        elif type(t) == dict and all([_approx_equal(vi, ti)
+        elif type(t) == dict and all([self._approx_equal(vi, ti)
                                       for vi, ti in zip(v.items(),t.items())]):
             return True
         else:
             return False
-            
-    # ------------------------------------------------------------------------------------
-    # Data logging
-    # ------------------------------------------------------------------------------------
-
-    def open_data_file(self, file_path):
-        'Open a file to write pyControl data to.'
-        self.file_path = file_path
-        self.data_file = open(self.file_path, 'w', newline = '\n')
-
-    def close_data_file(self):
-        self.data_file.close()
-        self.data_file = None
-        self.file_path = None
-        for ai in self.analog_inputs.values():
-            if ai['file']:
-                ai['file'].close()
-                ai['file'] = None
-
-    def save_analog_chunk(self, ID, sampling_rate, timestamp, data_array):
-        if self.data_file:
-            if not self.analog_inputs[ID]['file']:
-                file_name = os.path.splitext(self.file_path)[0] + '_' + \
-                                self.analog_inputs[ID]['name'] + '.pca'
-                self.analog_inputs[ID]['file'] = open(file_name, 'wb')
-            ms_per_sample = 1000 / sampling_rate
-            for i, x in enumerate(data_array):
-                t = int(timestamp + i*ms_per_sample)
-                self.analog_inputs[ID]['file'].write(t.to_bytes(4,'little', signed=True))
-                self.analog_inputs[ID]['file'].write(x.to_bytes(4,'little', signed=True))
-            self.analog_inputs[ID]['file'].flush()
-
-    def write_to_file(self, write_string, end='\n'):
-        self.data_file.write(write_string+end)

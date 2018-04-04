@@ -1,7 +1,4 @@
-import pyb
-from array import array
 from . import framework as fw
-from .utility import *
 
 # ----------------------------------------------------------------------------------------
 # State Machine
