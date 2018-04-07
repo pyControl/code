@@ -300,16 +300,16 @@ class Pycboard(Pyboard):
                 raise PyboardError('State machine file not found at: ' + sm_path)
             return
         print('Transfering state machine {} to pyboard.'.format(repr(sm_name)))
-        self.transfer_file(sm_path)
+        self.transfer_file(sm_path, 'task_file.py')
         try:
-            self.exec('import {} as smd'.format(sm_name))
+            self.exec('import task_file as smd')
             self.exec(sm_name + ' = sm.State_machine(smd)')
             self.state_machines.append(sm_name)  
         except PyboardError as e:
             print('\nError: Unable to setup state machine.\n\n' + e.args[2].decode())
             if raise_exception:
                 raise PyboardError('Unable to setup state machine.', e.args[2])
-        self.remove_file(sm_name + '.py')
+        #self.remove_file(sm_name + '.py')
         # Get information about state machine.
         sm_info = {'states': self.get_states(),
                    'events': self.get_events(),
