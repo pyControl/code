@@ -81,7 +81,7 @@ def task_menu(board, task):
                 print('\nError while running task:\n')
                 print(str(e))
             if subject_ID:
-                data_logger.close_data_file()
+                data_logger.close_files()
             input('\nPress enter to return to task select menu.')
             return
         elif i == 'g':
