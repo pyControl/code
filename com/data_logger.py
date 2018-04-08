@@ -29,7 +29,7 @@ class Data_logger():
         self.data_file.write('S {}\n\n'.format(self.states))
         self.data_file.write('E {}\n\n'.format(self.events))
 
-    def close_data_file(self):
+    def close_files(self):
         if self.data_file:
             self.data_file.close()
             self.data_file = None

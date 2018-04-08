@@ -65,8 +65,10 @@ class Pycboard(Pyboard):
     and pyControl operations.
     '''
 
-    def __init__(self, serial_port,  baudrate=115200, verbose=True, raise_exception=True):
+    def __init__(self, serial_port,  baudrate=115200, verbose=True, 
+                 print_func=print, raise_exception=True):
         self.serial_port = serial_port
+        self.print = print_func # Function used for print statements.
         self.status = {'serial': None, 'framework':None, 'hardware':None, 'usb_mode':None}
         try:    
             super().__init__(self.serial_port, baudrate=115200)
@@ -82,25 +84,25 @@ class Pycboard(Pyboard):
             self.status['serial'] = False
         if verbose: # Print status.
             if self.status['serial']:
-                print('Micropython version: {}'.format(self.micropython_version))
+                self.print('Micropython version: {}'.format(self.micropython_version))
             else:
-                print('Error: Unable to open serial connection.')
+                self.print('Error: Unable to open serial connection.')
                 return
             if self.status['framework']:
-                print('pyControl Framework: OK')
+                self.print('pyControl Framework: OK')
             else:
                 if self.status['framework'] is None:
-                    print('pyControl Framework: Not loaded')
+                    self.print('pyControl Framework: Not loaded')
                 else:
-                    print('pyControl Framework: Import error')
+                    self.print('pyControl Framework: Import error')
                 return
             if self.status['hardware']:
-                print('Hardware definition: OK')
+                self.print('Hardware definition: OK\n')
             else:
                 if self.status['hardware'] is None:
-                    print('Hardware definition: Not loaded')
+                    self.print('Hardware definition: Not loaded\n')
                 else:
-                    print('Hardware definition: Import error')
+                    self.print('Hardware definition: Import error\n')
 
     def reset(self):
         'Enter raw repl (soft reboots pyboard), import modules.'
@@ -135,7 +137,7 @@ class Pycboard(Pyboard):
         return error_message
 
     def hard_reset(self, reconnect=True):
-        print('Hard resetting pyboard.')
+        self.print('Hard resetting pyboard.')
         try:
             self.exec_raw_no_follow('pyb.hard_reset()')
         except PyboardError:
@@ -147,9 +149,9 @@ class Pycboard(Pyboard):
                 super().__init__(self.serial_port, baudrate=115200) # Reopen serial conection.
                 self.reset()
             except SerialException:
-                print('Unable to reopen serial connection.')
+                self.print('Unable to reopen serial connection.')
         else:
-            print('Serial connection closed.')
+            self.print('Serial connection closed.')
 
     def gc_collect(self): 
         'Run a garbage collection on pyboard to free up memory.'
@@ -163,18 +165,18 @@ class Pycboard(Pyboard):
             self.exec_raw_no_follow('pyb.bootloader()')
         except PyboardError as e:
             pass # Error occurs on older versions of micropython but DFU is entered OK.
-        print('Entered DFU mode, closing serial connection.')
+        self.print('Entered DFU mode, closing serial connection.\n')
         self.close()
 
     def disable_mass_storage(self):
         'Modify the boot.py file to make the pyboards mass storage invisible to the host computer.'
-        print('Disabling mass storage.')
+        self.print('Disabling mass storage.')
         self.write_file('boot.py', "import machine\nimport pyb\npyb.usb_mode('VCP')")
         self.hard_reset(reconnect=False)
 
     def enable_mass_storage(self):
         'Modify the boot.py file to make the pyboards mass storage visible to the host computer.'
-        print('Enabling mass storage.')
+        self.print('Enabling mass storage.')
         self.write_file('boot.py', "import machine\nimport pyb\npyb.usb_mode('VCP+MSC')")
         self.hard_reset(reconnect=False)
 
@@ -220,8 +222,8 @@ class Pycboard(Pyboard):
                             self.serial.read(1)
                     self.follow(5)
         except PyboardError as e:
-            print('Error: Unable to transfer file')
-            print(e)
+            self.print('Error: Unable to transfer file')
+            self.print(e)
             input('\nPress any key to close.')
             sys.exit()
 
@@ -244,7 +246,7 @@ class Pycboard(Pyboard):
             target_path = target_folder + '/' + f
             self.transfer_file(file_path, target_path)
             if show_progress:
-                print('.', end='')
+                self.print('.', end='')
                 sys.stdout.flush()
 
     def remove_file(self, file_path):
@@ -253,7 +255,7 @@ class Pycboard(Pyboard):
 
     def reset_filesystem(self):
         '''Delete all files in the flash drive apart from boot.py'''
-        print('Resetting filesystem.')
+        self.print('Resetting filesystem.')
         self.reset()
         self.exec(inspect.getsource(_rm_dir_or_file))
         self.exec(inspect.getsource(_reset_pyb_filesystem)) 
@@ -264,30 +266,32 @@ class Pycboard(Pyboard):
     # pyControl operations.
     # ------------------------------------------------------------------------------------
 
-    def load_framework(self, framework_dir = framework_dir):
+    def load_framework(self, framework_dir=framework_dir):
         'Copy the pyControl framework folder to the board.'
-        print('Transfering pyControl framework to pyboard.', end='')
+        self.print('Transfering pyControl framework to pyboard.', end='')
         self.transfer_folder(framework_dir, file_type='py', show_progress=True)
         self.transfer_folder(devices_dir  , file_type='py', show_progress=True)
-        print('')
+        self.print(' OK')
         error_message = self.reset()
         if not self.status['framework']:
-            print('Error importing framework:')
-            print(error_message)
+            self.print('Error importing framework:')
+            self.print(error_message)
         return 
 
     def load_hardware_definition(self, hwd_path=os.path.join(config_dir, 'hardware_definition.py')):
         '''Transfer a hardware definition file to pyboard.  Defaults to transfering 
         file hardware_definition.py from config folder. '''
         if os.path.exists(hwd_path):
-            print('Transfering hardware definition to pyboard.')
+            self.print('Transfering hardware definition to pyboard.', end='')
             self.transfer_file(hwd_path, target_path = 'hardware_definition.py')
             error_message = self.reset()
-            if not self.status['hardware']:
-                print('Error importing hardware definition:')
-                print(error_message)
+            if self.status['hardware']:
+                self.print(' OK')
+            else:
+                self.print('\n\nError importing hardware definition:\n')
+                self.print(error_message)
         else:
-            print('Hardware definition file not found.') 
+            self.print('Hardware definition file not found.') 
 
     def setup_state_machine(self, sm_name, sm_dir=tasks_dir, raise_exception=True):
         ''' Transfer state machine descriptor file sm_name.py from folder sm_dir
@@ -295,18 +299,18 @@ class Pycboard(Pyboard):
         self.reset()
         sm_path = os.path.join(sm_dir, sm_name + '.py')
         if not os.path.exists(sm_path):
-            print('Error: State machine file not found at: ' + sm_path)
+            self.print('Error: State machine file not found at: ' + sm_path)
             if raise_exception:
                 raise PyboardError('State machine file not found at: ' + sm_path)
             return
-        print('Transfering state machine {} to pyboard.'.format(repr(sm_name)))
+        self.print('Transfering state machine {} to pyboard.'.format(repr(sm_name)))
         self.transfer_file(sm_path, 'task_file.py')
         try:
             self.exec('import task_file as smd')
             self.exec(sm_name + ' = sm.State_machine(smd)')
             self.state_machines.append(sm_name)  
         except PyboardError as e:
-            print('\nError: Unable to setup state machine.\n\n' + e.args[2].decode())
+            self.print('\nError: Unable to setup state machine.\n\n' + e.args[2].decode())
             if raise_exception:
                 raise PyboardError('Unable to setup state machine.', e.args[2])
         #self.remove_file(sm_name + '.py')
@@ -411,12 +415,12 @@ class Pycboard(Pyboard):
         if not sm_name: sm_name = self.state_machines[0]
         if not self._check_variable_exits(sm_name, v_name): return
         if v_value == None:
-            print('\nSet variable aborted - value \'None\' not allowed.')
+            self.print('\nSet variable aborted - value \'None\' not allowed.')
             return
         try:
             eval(repr(v_value))
         except:
-            print('\nSet variable aborted - invalid variable value: ' + repr(v_value))
+            self.print('\nSet variable aborted - invalid variable value: ' + repr(v_value))
             return
         for i in range(10):
             try:
@@ -426,7 +430,7 @@ class Pycboard(Pyboard):
             set_value = self.get_variable(v_name, sm_name, pre_checked = True)
             if self._approx_equal(set_value, v_value):
                 return True
-        print('\nSet variable error - could not set variable: ' + v_name)
+        self.print('\nSet variable error - could not set variable: ' + v_name)
         return
 
     def get_variable(self, v_name, sm_name = None, pre_checked = False):
@@ -450,7 +454,7 @@ class Pycboard(Pyboard):
                     v_value = v_string
                 if v_value != None and prev_value == v_value:
                     return v_value
-            print('\nGet variable error - could not get variable: ' + v_name)
+            self.print('\nGet variable error - could not get variable: ' + v_name)
 
     def _check_variable_exits(self, sm_name, v_name, op = 'Set'):
         'Check if specified state machine has variable with specified name.'
@@ -469,9 +473,9 @@ class Pycboard(Pyboard):
                 except PyboardError:
                     pass
         if sm_found:
-            print('\n'+ op + ' variable aborted: invalid variable name:' + v_name)
+            self.print('\n'+ op + ' variable aborted: invalid variable name:' + v_name)
         else:
-            print('\n'+ op + ' variable aborted: invalid state machine name:' + sm_name)
+            self.print('\n'+ op + ' variable aborted: invalid state machine name:' + sm_name)
         return False
 
     def _approx_equal(self, v, t):

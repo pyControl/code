@@ -34,6 +34,7 @@ class Run_task_gui(QtGui.QWidget):
         self.subject_ID = None
         self.sm_info = None # Information about uploaded state machine.
         self.update_interval = 50 # Time between updates (ms)
+        self.subject_ID = None
 
         # Create widgets.
 
@@ -60,6 +61,7 @@ class Run_task_gui(QtGui.QWidget):
         self.start_button = QtGui.QPushButton('Start')
         self.stop_button = QtGui.QPushButton('Stop')
         self.log_text = QtGui.QTextEdit()
+        self.log_text.setFont(QtGui.QFont('Courier', 9))
         self.log_text.setReadOnly(True)
 
         self.task_plot = Task_plotter()
@@ -96,14 +98,21 @@ class Run_task_gui(QtGui.QWidget):
         self.vertical_layout.addWidget(self.log_text , 20)
         self.vertical_layout.addWidget(self.task_plot, 80)
 
-
         self.setLayout(self.vertical_layout)
+
+        # Create dialogs.
+
+        self.config_dialog = Board_config(parent=self)
 
         # Connect widgets
 
         self.port_text.returnPressed.connect(self.connect)
         self.connect_button.clicked.connect(self.connect)
+        self.config_button.clicked.connect(lambda x: self.config_dialog.exec_())
         self.upload_button.clicked.connect(self.upload_task)
+        self.data_dir_text.textChanged.connect(self.data_dir_text_change)
+        self.data_dir_button.clicked.connect(self.select_data_dir)
+        self.subject_text.textChanged.connect(self.subject_text_change)
         self.start_button.clicked.connect(self.start_task)
         self.stop_button.clicked.connect(self.stop_task)
 
@@ -117,7 +126,36 @@ class Run_task_gui(QtGui.QWidget):
         self.process_timer = QtCore.QTimer() # Timer to regularly call process_data() during run.        
         self.process_timer.timeout.connect(self.process_data)
 
-    # Widget functions
+    # General methods
+
+    def print_to_log(self, print_string, end='\n'):
+        self.log_text.moveCursor(QtGui.QTextCursor.End)
+        self.log_text.insertPlainText(print_string+end)
+        self.log_text.repaint()
+
+    def not_connected(self):
+        # Configure buttons for not connected state.
+        self.connect_button.setEnabled(True)
+        self.config_button.setEnabled(False)
+        self.task_select.setEnabled(False)
+        self.upload_button.setEnabled(False)
+        self.variables_button.setEnabled(False)
+        self.data_dir_text.setEnabled(False)
+        self.data_dir_button.setEnabled(False)
+        self.subject_text.setEnabled(False)
+        self.start_button.setEnabled(False)
+        self.stop_button.setEnabled(False)
+
+    def test_data_path(self):
+        # Checks whether data dir and subject ID are valid.
+        if  os.path.isdir(self.data_logger.data_dir) and self.subject_ID:
+            self.start_button.setText('Record')
+            return True
+        else:
+            self.start_button.setText('Start')
+            return False
+
+    # Widget methods.
 
     def get_tasks(self):
         # Set task select widget values.
@@ -127,10 +165,12 @@ class Run_task_gui(QtGui.QWidget):
             self.task_select.addItem(task)
 
     def connect(self):
+        # Connect to pyboard.
         try:
             self.status_text.setText('Connecting...')
             self.repaint()            
-            self.board = Pycboard(self.port_text.text())
+            self.board = Pycboard(self.port_text.text(),
+                                  print_func=self.print_to_log)
             self.connect_button.setEnabled(False)
             self.config_button.setEnabled(True)
             self.port_text.setEnabled(False)
@@ -139,6 +179,12 @@ class Run_task_gui(QtGui.QWidget):
             self.status_text.setText('Connected')
         except SerialException:
             self.status_text.setText('Connection failed')
+
+    def disconnect(self):
+        # Disconnect from pyboard.
+        self.board.close()
+        self.board = None
+        self.not_connected()
 
     def upload_task(self):
         try:
@@ -151,6 +197,9 @@ class Run_task_gui(QtGui.QWidget):
             self.variables_button.setEnabled(True)
             self.data_logger = Data_logger(data_dir, 'run_task', task, self.sm_info)
             self.task_plot.set_state_machine(self.sm_info)
+            self.data_dir_text.setEnabled(True)
+            self.data_dir_button.setEnabled(True)
+            self.subject_text.setEnabled(True)
             self.start_button.setEnabled(True)
             self.status_text.setText('Uploaded : ' + task)
             self.task = task
@@ -158,31 +207,37 @@ class Run_task_gui(QtGui.QWidget):
             print(e)
             self.status_text.setText('Upload failed.')
 
-    def not_connected(self):
-        # Configure buttons for not connected state.
-        self.config_button.setEnabled(False)
-        self.task_select.setEnabled(False)
-        self.upload_button.setEnabled(False)
-        self.variables_button.setEnabled(False)
-        self.subject_text.setEnabled(False)
-        self.start_button.setEnabled(False)
-        self.stop_button.setEnabled(False)
+    def select_data_dir(self):
+        self.data_dir_text.setText(
+            QtGui.QFileDialog.getExistingDirectory(self, 'Select data folder'))
+
+    def data_dir_text_change(self, text):
+        self.data_logger.data_dir = text
+        self.test_data_path()
+
+    def subject_text_change(self, text):
+        self.subject_ID = text
+        self.test_data_path()
 
     def start_task(self):
+        if self.test_data_path():
+            self.data_logger.open_data_file(self.subject_ID)
         self.board.start_framework()
         self.task_plot.run_start()
         self.start_button.setEnabled(False)
         self.task_select.setEnabled(False)
         self.upload_button.setEnabled(False)
         self.stop_button.setEnabled(True)
-        self.log_text.insertPlainText(
-            '\nRun started at: {}\n\n'.format(
+        self.print_to_log(
+            '\nRun started at: {}\n'.format(
             datetime.now().strftime('%Y/%m/%d %H:%M:%S')))
         self.process_timer.start(self.update_interval)
         self.status_text.setText('Running: ' + self.task)
 
-    def stop_task(self):
-        self.board.stop_framework()
+    def stop_task(self, error=False):
+        if not error: 
+            self.board.stop_framework()
+        self.data_logger.close_files()
         self.start_button.setEnabled(True)
         self.task_select.setEnabled(True)
         self.upload_button.setEnabled(True)
@@ -191,16 +246,22 @@ class Run_task_gui(QtGui.QWidget):
         QtCore.QTimer.singleShot(100, self.process_data) # Catch output after framework stops.
         self.status_text.setText('Uploaded : ' + self.task)
 
+
     # Update functions called while task running.
 
     def process_data(self):
         # Called regularly during run to process data from board.
-        new_data = self.board.process_data()
-        self.task_plot.process_data(new_data)
-        if new_data:
-            self.log_text.insertPlainText(
-                self.data_logger.data_to_string(new_data, verbose=True))
-            self.log_text.moveCursor(QtGui.QTextCursor.End)
+        try:
+            new_data = self.board.process_data()
+            self.task_plot.process_data(new_data)
+            if new_data:
+                if self.data_logger.data_file: 
+                    self.data_logger.write_to_file(new_data)
+                data_string = self.data_logger.data_to_string(new_data, True) 
+                self.print_to_log(data_string, end='')
+        except PyboardError as e:
+            self.print_to_log('\nError during run:\n\n' + str(e))
+            self.stop_task(error=True)
 
     # Cleanup.
 
@@ -208,6 +269,39 @@ class Run_task_gui(QtGui.QWidget):
         # Called when GUI window is closed.
         if self.board: self.board.close()
         event.accept()
+
+# Board_config -------------------------------------------------
+
+class Board_config(QtGui.QDialog):
+
+    def __init__(self, parent=None):
+        super(QtGui.QDialog, self).__init__(parent)
+        self.setWindowTitle('Configure pyboard')
+        self.load_fw_button = QtGui.QPushButton('Load framework')
+        self.load_hw_button = QtGui.QPushButton('Load hardware definition')
+        self.DFU_button = QtGui.QPushButton('Enter Device Firmware Update (DFU) mode.')
+        self.vertical_layout = QtGui.QVBoxLayout()
+        self.setLayout(self.vertical_layout)
+        self.vertical_layout.addWidget(self.load_fw_button)
+        self.vertical_layout.addWidget(self.load_hw_button)
+        self.vertical_layout.addWidget(self.DFU_button)
+        self.load_fw_button.clicked.connect(self.load_framework)
+        self.load_hw_button.clicked.connect(self.load_hardware_definition)
+        self.DFU_button.clicked.connect(self.DFU_mode)
+
+    def load_framework(self):
+        self.accept()
+        self.parent().board.load_framework()
+
+    def load_hardware_definition(self):
+        self.accept()
+        self.parent().board.load_hardware_definition()
+
+    def DFU_mode(self):
+        self.accept()
+        self.parent().board.DFU_mode()
+        self.parent().not_connected()
+
 
 # Task_plotter -----------------------------------------------------------------------
 
@@ -220,15 +314,13 @@ class Task_plotter(QtGui.QWidget):
         # Create widgets
 
         self.state_axis = pg.PlotWidget(title="States")
-        self.event_axis = pg.PlotWidget(title="Events", 
-                                        labels={'bottom':'Time (seconds)'})
+        self.event_axis = pg.PlotWidget(title="Events", labels={'bottom':'Time (seconds)'})
         self.analog_axis = pg.PlotWidget(title="Analog")
 
         # Setup plots
 
         self.event_plot = pg.ScatterPlotItem(size=6, pen=None)
         self.event_axis.addItem(self.event_plot)
-
         self.event_axis.setXLink(self.state_axis)
         self.analog_axis.setXLink(self.state_axis)
 
@@ -240,7 +332,6 @@ class Task_plotter(QtGui.QWidget):
         self.vertical_layout.addWidget(self.analog_axis,1)
 
         self.setLayout(self.vertical_layout)
-
 
     def set_state_machine(self, sm_info):
         # Initialise plots with state machine information.
@@ -265,7 +356,6 @@ class Task_plotter(QtGui.QWidget):
             self.analog_axis.setVisible(True)
         else:
             self.analog_axis.setVisible(False)
-
 
     def run_start(self):
         self.start_time = time.time()
@@ -319,7 +409,7 @@ class expanding_array():
         # Get all valid data from array
         return self.data[:self.i,:]
 
-# Start GUI.
+# Start GUI. ----------------------------------------------------------------
 
 if __name__ == '__main__':
     run_task_gui = Run_task_gui()
