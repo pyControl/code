@@ -97,12 +97,12 @@ class Pycboard(Pyboard):
                     self.print('pyControl Framework: Import error')
                 return
             if self.status['hardware']:
-                self.print('Hardware definition: OK\n')
+                self.print('Hardware definition: OK')
             else:
                 if self.status['hardware'] is None:
-                    self.print('Hardware definition: Not loaded\n')
+                    self.print('Hardware definition: Not loaded')
                 else:
-                    self.print('Hardware definition: Import error\n')
+                    self.print('Hardware definition: Import error')
 
     def reset(self):
         'Enter raw repl (soft reboots pyboard), import modules.'
@@ -303,7 +303,7 @@ class Pycboard(Pyboard):
             if raise_exception:
                 raise PyboardError('State machine file not found at: ' + sm_path)
             return
-        self.print('Transfering state machine {} to pyboard.'.format(repr(sm_name)))
+        self.print('\nTransfering state machine {} to pyboard.'.format(repr(sm_name)))
         self.transfer_file(sm_path, 'task_file.py')
         try:
             self.exec('import task_file as smd')
@@ -317,7 +317,8 @@ class Pycboard(Pyboard):
         # Get information about state machine.
         sm_info = {'states': self.get_states(),
                    'events': self.get_events(),
-                   'analog_inputs': self.get_analog_inputs()}
+                   'analog_inputs': self.get_analog_inputs(),
+                   'variables': self.get_variables()}
         return sm_info
 
     def get_states(self):
@@ -327,6 +328,10 @@ class Pycboard(Pyboard):
     def get_events(self):
         'Return events as a dictionary {event_name: state_ID}'
         return eval(self.exec('fw.get_events()').decode().strip())
+
+    def get_variables(self):
+        'Return all variables as a dictionary {variable_name: value}'
+        return eval(self.exec('fw.get_variables()').decode().strip())
 
     def get_analog_inputs(self):
         'Return analog_inputs as a directory {input name: ID}'
@@ -408,7 +413,7 @@ class Pycboard(Pyboard):
     # Getting and setting variables.
     # ------------------------------------------------------------------------------------
 
-    def set_variable(self, v_name, v_value, sm_name = None):
+    def set_variable(self, v_name, v_value, sm_name=None):
         '''Set state machine variable with check that variable has not got corrupted 
         during transfer. If state machine name argument is not provided, default to
         the first instantiated state machine.'''
@@ -433,7 +438,7 @@ class Pycboard(Pyboard):
         self.print('\nSet variable error - could not set variable: ' + v_name)
         return
 
-    def get_variable(self, v_name, sm_name = None, pre_checked = False):
+    def get_variable(self, v_name, sm_name=None, pre_checked=False):
         '''Get value of state machine variable.  To minimise risk of variable
         corruption during transfer, process is repeated until two consistent
         values are obtained. If state machine name argument is not provided, 

@@ -194,12 +194,16 @@ def register_machine(state_machine):
     state_machines.append(state_machine)
 
 def get_events():
-    """ Print  events as a dictionary"""
+    # Print events as dict.
     print(events)
 
 def get_states():
-    """ Print states as a dictionary"""
-    print(states)  
+    # Print states as a dict.
+    print(states)
+
+def get_variables():
+    # Print first instantiated state machines variables as dict {v_name: repr(v_value)}
+    print({k: repr(v) for k, v in state_machines[0].smd.v.__dict__.items()})
 
 def output_data(event):
     # Output data to serial line.
