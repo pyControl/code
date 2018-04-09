@@ -8,12 +8,13 @@ class Data_logger():
         self.data_dir = data_dir
         self.experiment_name = experiment_name
         self.task_name = task_name
-        self.events = sm_info['events']
-        self.states = sm_info['states']
-        self.analog_inputs = {ID: {'name': name, 'file': None} 
-                                   for name, ID in sm_info['analog_inputs'].items()}
-        self.ID_2_name = {v: k for k, v in {**self.states, **self.events}.items()}
+        self.sm_info = sm_info
+        self.ID2name_fw = {ID: name for name, ID       # Dict mapping framework IDs to names.
+                           in {**self.sm_info['states'], **self.sm_info['events']}.items()}
+        self.ID2name_hw = {ai['ID']: name for name, ai # Dict mapping hardware IDs to names.
+                           in self.sm_info['analog_inputs'].items()}
         self.data_file = None
+        self.analog_files = {ai['ID']: None for ai in self.sm_info['analog_inputs'].values()}
 
     def open_data_file(self, subject_ID,  datetime_now=None):
         '''Open data file and write header information.'''
@@ -26,18 +27,18 @@ class Data_logger():
         self.data_file.write('I Task name : {}\n'.format(self.task_name))
         self.data_file.write('I Subject ID : {}\n'.format(self.subject_ID))
         self.data_file.write('I Start date : ' + datetime_now.strftime('%Y/%m/%d %H:%M:%S') + '\n\n')
-        self.data_file.write('S {}\n\n'.format(self.states))
-        self.data_file.write('E {}\n\n'.format(self.events))
+        self.data_file.write('S {}\n\n'.format(self.sm_info['states'] ))
+        self.data_file.write('E {}\n\n'.format(self.sm_info['events'] ))
 
     def close_files(self):
         if self.data_file:
             self.data_file.close()
             self.data_file = None
             self.file_path = None
-        for ai in self.analog_inputs.values():
-            if ai['file']:
-                ai['file'].close()
-                ai['file'] = None
+        for analog_file in self.analog_files.values():
+            if analog_file:
+                analog_file.close()
+                analog_file = None
 
     def write_to_file(self, new_data):
         data_string = self.data_to_string(new_data)
@@ -52,7 +53,7 @@ class Data_logger():
         for nd in new_data:
             if nd[0] == 'D':  # State entry or event.
                     if verbose: # Print state or event name.
-                        data_string += 'D {} {}\n'.format(nd[1], self.ID_2_name[nd[2]])
+                        data_string += 'D {} {}\n'.format(nd[1], self.ID2name_fw[nd[2]])
                     else:       # Print state or event ID.
                         data_string += 'D {} {}\n'.format(nd[1], nd[2])
             elif nd[0] == 'P': # User print output.
@@ -65,13 +66,13 @@ class Data_logger():
     def save_analog_chunk(self, ID, sampling_rate, timestamp, data_array):
         '''Save a chunk of analog data to .pca data file.  File is created if not 
         already open for that analog input.'''
-        if not self.analog_inputs[ID]['file']:
+        if not self.analog_files[ID]:
             file_name = os.path.splitext(self.file_path)[0] + '_' + \
-                            self.analog_inputs[ID]['name'] + '.pca'
-            self.analog_inputs[ID]['file'] = open(file_name, 'wb')
+                            self.ID2name_hw[ID] + '.pca'
+            self.analog_files[ID] = open(file_name, 'wb')
         ms_per_sample = 1000 / sampling_rate
         for i, x in enumerate(data_array):
             t = int(timestamp + i*ms_per_sample)
-            self.analog_inputs[ID]['file'].write(t.to_bytes(4,'little', signed=True))
-            self.analog_inputs[ID]['file'].write(x.to_bytes(4,'little', signed=True))
-        self.analog_inputs[ID]['file'].flush()
+            self.analog_files[ID].write(t.to_bytes(4,'little', signed=True))
+            self.analog_files[ID].write(x.to_bytes(4,'little', signed=True))
+        self.analog_files[ID].flush()

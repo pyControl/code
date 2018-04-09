@@ -97,8 +97,9 @@ def off():
         IO_object.off()
 
 def get_analog_inputs():
-    # Print dictionary of Analog_inputs {AI name: ID}.
-    print({io.name:io.ID for io in IO_dict.values() if isinstance(io, Analog_input)})
+    # Print dict of analog inputs {name: {'ID': ID, 'Fs':sampling rate}}
+    print({io.name:{'ID': io.ID, 'Fs': io.sampling_rate}
+          for io in IO_dict.values() if isinstance(io, Analog_input)})
 
 # ----------------------------------------------------------------------------------------
 # IO_object
@@ -274,7 +275,7 @@ class Analog_input(IO_object):
         self.sampling_rate = sampling_rate
         self.data_type = data_type
         self.bytes_per_sample = {'b':1,'B':1,'h':2,'H':2,'l':4,'L':4}[data_type]
-        self.buffer_size = 256 // self.bytes_per_sample
+        self.buffer_size = max(4, min(256 // self.bytes_per_sample, sampling_rate//10))
         self.buffers = (array(data_type, [0]*self.buffer_size),array(data_type, [0]*self.buffer_size))
         self.buffers_mv = (memoryview(self.buffers[0]), memoryview(self.buffers[1]))
         self.buffer_start_times = array('i', [0,0])

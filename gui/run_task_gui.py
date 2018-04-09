@@ -33,7 +33,7 @@ class Run_task_gui(QtGui.QWidget):
         self.task = None   # Task currently uploaded on pyboard. 
         self.subject_ID = None
         self.sm_info = None # Information about uploaded state machine.
-        self.update_interval = 50 # Time between updates (ms)
+        self.update_interval = 20 # Time between updates (ms)
         self.subject_ID = None
 
         # Create widgets.
@@ -422,9 +422,9 @@ class Task_plotter(QtGui.QWidget):
         if self.analog_inputs:
             self.analog_axis.setVisible(True)
             self.analog_axis.addLegend(offset=(10, 10)) 
-            self.analog_plots = {ID: self.analog_axis.plot(name=name,
-                                 pen=pg.mkPen(pg.intColor(ID, len(self.analog_inputs))))
-                                 for name, ID in self.analog_inputs.items()}
+            self.analog_plots = {ai['ID']: self.analog_axis.plot(name=name,
+                                 pen=pg.mkPen(pg.intColor(ai['ID'], len(self.analog_inputs))))
+                                 for name, ai in self.analog_inputs.items()}
             self.event_axis.getAxis('bottom').setLabel('Time (seconds)')
         else:
             self.analog_axis.setVisible(False)
@@ -438,15 +438,15 @@ class Task_plotter(QtGui.QWidget):
         if self.analog_inputs:
             for analog_plot in self.analog_plots.values():
                 analog_plot.clear()
-            self.analog_data = {ID: Analog_history(history_length=10000)
-                                for ID in self.analog_inputs.values()}
+            self.analog_data = {ai['ID']: Analog_history(history_length=ai['Fs']*12)
+                                for name, ai in self.analog_inputs.items()}
         self.current_state = None
         self.current_state_data = np.zeros([1,2])
 
     def process_data(self, new_data):
         # Update plots.
         run_time = time.time() - self.start_time
-        self.state_axis.setRange(xRange=[run_time-10, run_time])
+        self.state_axis.setRange(xRange=[run_time-10.5, run_time-0.5])
         # Plot new states or events.
         for nd in new_data:
             if nd[0] == 'D': # State entry or event.
