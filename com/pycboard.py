@@ -268,13 +268,13 @@ class Pycboard(Pyboard):
 
     def load_framework(self, framework_dir=framework_dir):
         'Copy the pyControl framework folder to the board.'
-        self.print('Transfering pyControl framework to pyboard.', end='')
+        self.print('\nTransfering pyControl framework to pyboard.', end='')
         self.transfer_folder(framework_dir, file_type='py', show_progress=True)
         self.transfer_folder(devices_dir  , file_type='py', show_progress=True)
         self.print(' OK')
         error_message = self.reset()
         if not self.status['framework']:
-            self.print('Error importing framework:')
+            self.print('\nError importing framework:')
             self.print(error_message)
         return 
 
@@ -282,7 +282,7 @@ class Pycboard(Pyboard):
         '''Transfer a hardware definition file to pyboard.  Defaults to transfering 
         file hardware_definition.py from config folder. '''
         if os.path.exists(hwd_path):
-            self.print('Transfering hardware definition to pyboard.', end='')
+            self.print('\nTransfering hardware definition to pyboard.', end='')
             self.transfer_file(hwd_path, target_path = 'hardware_definition.py')
             error_message = self.reset()
             if self.status['hardware']:
@@ -313,12 +313,11 @@ class Pycboard(Pyboard):
             self.print('\nError: Unable to setup state machine.\n\n' + e.args[2].decode())
             if raise_exception:
                 raise PyboardError('Unable to setup state machine.', e.args[2])
-        #self.remove_file(sm_name + '.py')
         # Get information about state machine.
-        sm_info = {'states': self.get_states(),
-                   'events': self.get_events(),
-                   'analog_inputs': self.get_analog_inputs(),
-                   'variables': self.get_variables()}
+        sm_info = {'states': self.get_states(), # {name: ID}
+                   'events': self.get_events(), # {name: ID}
+                   'analog_inputs': self.get_analog_inputs(), # {name: {'ID': ID, 'Fs':sampling rate}}
+                   'variables': self.get_variables()} # {name: repr(value)}
         return sm_info
 
     def get_states(self):
