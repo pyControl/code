@@ -84,7 +84,7 @@ class Pycboard(Pyboard):
             self.status['serial'] = False
         if verbose: # Print status.
             if self.status['serial']:
-                self.print('Micropython version: {}'.format(self.micropython_version))
+                self.print('\nMicropython version: {}'.format(self.micropython_version))
             else:
                 self.print('Error: Unable to open serial connection.')
                 return
@@ -417,7 +417,6 @@ class Pycboard(Pyboard):
         during transfer. If state machine name argument is not provided, default to
         the first instantiated state machine.'''
         if not sm_name: sm_name = self.state_machines[0]
-        if not self._check_variable_exits(sm_name, v_name): return
         if v_value == None:
             self.print('\nSet variable aborted - value \'None\' not allowed.')
             return
@@ -431,56 +430,33 @@ class Pycboard(Pyboard):
                 self.exec(sm_name + '.smd.v.' + v_name + '=' + repr(v_value))
             except:
                 pass 
-            set_value = self.get_variable(v_name, sm_name, pre_checked = True)
+            set_value = self.get_variable(v_name, sm_name)
             if self._approx_equal(set_value, v_value):
                 return True
         self.print('\nSet variable error - could not set variable: ' + v_name)
         return
 
-    def get_variable(self, v_name, sm_name=None, pre_checked=False):
+    def get_variable(self, v_name, sm_name=None):
         '''Get value of state machine variable.  To minimise risk of variable
         corruption during transfer, process is repeated until two consistent
         values are obtained. If state machine name argument is not provided, 
         default to the first instantiated  state machine.'''
         if not sm_name: sm_name = self.state_machines[0]
-        if pre_checked or self._check_variable_exits(sm_name, v_name, op = 'Get'):
-            v_value = None
-            for i in range(10):
-                prev_value = v_value
-                try:
-                    self.serial.flushInput()
-                    v_string = self.eval(sm_name + '.smd.v.' + v_name).decode()
-                except PyboardError:
-                    continue
-                try:
-                    v_value = eval(v_string)
-                except NameError:
-                    v_value = v_string
-                if v_value != None and prev_value == v_value:
-                    return v_value
-            self.print('\nGet variable error - could not get variable: ' + v_name)
-
-    def _check_variable_exits(self, sm_name, v_name, op = 'Set'):
-        'Check if specified state machine has variable with specified name.'
-        sm_found = False
+        v_value = None
         for i in range(10):
-            if not sm_found: # Check if state machine exists.
-                try: 
-                    self.exec(sm_name)
-                    sm_found = True
-                except PyboardError:
-                    pass
-            else: # Check if variable exists.
-                try: 
-                    self.exec(sm_name + '.smd.v.' + v_name)
-                    return True
-                except PyboardError:
-                    pass
-        if sm_found:
-            self.print('\n'+ op + ' variable aborted: invalid variable name:' + v_name)
-        else:
-            self.print('\n'+ op + ' variable aborted: invalid state machine name:' + sm_name)
-        return False
+            prev_value = v_value
+            try:
+                self.serial.flushInput()
+                v_string = self.eval(sm_name + '.smd.v.' + v_name).decode()
+            except PyboardError:
+                continue
+            try:
+                v_value = eval(v_string)
+            except NameError:
+                v_value = v_string
+            if v_value != None and prev_value == v_value:
+                return v_value
+        self.print('\nGet variable error - could not get variable: ' + v_name)
 
     def _approx_equal(self, v, t):
         'Check two variables are the same up to floating point rounding errors.'
