@@ -111,7 +111,6 @@ class Pycboard(Pyboard):
         self.exec(inspect.getsource(_receive_file))  # define recieve file function.
         self.exec('import os; import gc; import sys; import pyb')
         self.framework_running = False
-        self.state_machines = [] # List to hold name of instantiated state machines.
         error_message = None
         self.status['usb_mode'] = self.eval('pyb.usb_mode()').decode()
         try:
@@ -170,13 +169,13 @@ class Pycboard(Pyboard):
 
     def disable_mass_storage(self):
         'Modify the boot.py file to make the pyboards mass storage invisible to the host computer.'
-        self.print('Disabling mass storage.')
+        self.print('\nDisabling USB flash drive')
         self.write_file('boot.py', "import machine\nimport pyb\npyb.usb_mode('VCP')")
         self.hard_reset(reconnect=False)
 
     def enable_mass_storage(self):
         'Modify the boot.py file to make the pyboards mass storage visible to the host computer.'
-        self.print('Enabling mass storage.')
+        self.print('\nEnabling USB flash drive')
         self.write_file('boot.py', "import machine\nimport pyb\npyb.usb_mode('VCP+MSC')")
         self.hard_reset(reconnect=False)
 
@@ -271,11 +270,12 @@ class Pycboard(Pyboard):
         self.print('\nTransfering pyControl framework to pyboard.', end='')
         self.transfer_folder(framework_dir, file_type='py', show_progress=True)
         self.transfer_folder(devices_dir  , file_type='py', show_progress=True)
-        self.print(' OK')
         error_message = self.reset()
         if not self.status['framework']:
             self.print('\nError importing framework:')
             self.print(error_message)
+        else:
+            self.print(' OK')
         return 
 
     def load_hardware_definition(self, hwd_path=os.path.join(config_dir, 'hardware_definition.py')):
@@ -295,7 +295,7 @@ class Pycboard(Pyboard):
 
     def setup_state_machine(self, sm_name, sm_dir=tasks_dir, raise_exception=True):
         ''' Transfer state machine descriptor file sm_name.py from folder sm_dir
-        to board. Instantiate state machine object as sm_name'''
+        to board. Instantiate state machine object as state_machine on pyboard.'''
         self.reset()
         sm_path = os.path.join(sm_dir, sm_name + '.py')
         if not os.path.exists(sm_path):
@@ -303,22 +303,21 @@ class Pycboard(Pyboard):
             if raise_exception:
                 raise PyboardError('State machine file not found at: ' + sm_path)
             return
-        self.print('\nTransfering state machine {} to pyboard.'.format(repr(sm_name)))
+        self.print('\nTransfering state machine {} to pyboard.'.format(sm_name))
         self.transfer_file(sm_path, 'task_file.py')
         try:
             self.exec('import task_file as smd')
-            self.exec(sm_name + ' = sm.State_machine(smd)')
-            self.state_machines.append(sm_name)  
+            self.exec('state_machine = sm.State_machine(smd)') 
         except PyboardError as e:
             self.print('\nError: Unable to setup state machine.\n\n' + e.args[2].decode())
             if raise_exception:
                 raise PyboardError('Unable to setup state machine.', e.args[2])
         # Get information about state machine.
-        sm_info = {'states': self.get_states(), # {name: ID}
-                   'events': self.get_events(), # {name: ID}
-                   'analog_inputs': self.get_analog_inputs(), # {name: {'ID': ID, 'Fs':sampling rate}}
-                   'variables': self.get_variables()} # {name: repr(value)}
-        return sm_info
+        self.sm_info = {'states': self.get_states(), # {name: ID}
+                        'events': self.get_events(), # {name: ID}
+                        'analog_inputs': self.get_analog_inputs(), # {name: {'ID': ID, 'Fs':sampling rate}}
+                        'variables': self.get_variables()} # {name: repr(value)}
+        return self.sm_info
 
     def get_states(self):
         'Return states as a dictionary {state_name: state_ID}'
@@ -412,11 +411,9 @@ class Pycboard(Pyboard):
     # Getting and setting variables.
     # ------------------------------------------------------------------------------------
 
-    def set_variable(self, v_name, v_value, sm_name=None):
-        '''Set state machine variable with check that variable has not got corrupted 
-        during transfer. If state machine name argument is not provided, default to
-        the first instantiated state machine.'''
-        if not sm_name: sm_name = self.state_machines[0]
+    def set_variable(self, v_name, v_value):
+        '''Set the value of a state machine variable'''
+        assert v_name in self.sm_info['variables'], 'Invalid variable name'
         if v_value == None:
             self.print('\nSet variable aborted - value \'None\' not allowed.')
             return
@@ -427,27 +424,27 @@ class Pycboard(Pyboard):
             return
         for i in range(10):
             try:
-                self.exec(sm_name + '.smd.v.' + v_name + '=' + repr(v_value))
+                self.exec('state_machine.smd.v.' + v_name + '=' + repr(v_value))
             except:
                 pass 
-            set_value = self.get_variable(v_name, sm_name)
+            set_value = self.get_variable(v_name)
             if self._approx_equal(set_value, v_value):
                 return True
         self.print('\nSet variable error - could not set variable: ' + v_name)
         return
 
-    def get_variable(self, v_name, sm_name=None):
+    def get_variable(self, v_name):
         '''Get value of state machine variable.  To minimise risk of variable
         corruption during transfer, process is repeated until two consistent
         values are obtained. If state machine name argument is not provided, 
         default to the first instantiated  state machine.'''
-        if not sm_name: sm_name = self.state_machines[0]
+        assert v_name in self.sm_info['variables'], 'Invalid variable name'
         v_value = None
         for i in range(10):
             prev_value = v_value
             try:
                 self.serial.flushInput()
-                v_string = self.eval(sm_name + '.smd.v.' + v_name).decode()
+                v_string = self.eval('state_machine.smd.v.' + v_name).decode()
             except PyboardError:
                 continue
             try:

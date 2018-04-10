@@ -7,17 +7,29 @@ class Board_config_dialog(QtGui.QDialog):
     def __init__(self, parent=None):
         super(QtGui.QDialog, self).__init__(parent)
         self.setWindowTitle('Configure pyboard')
+        # Create widgets.
         self.load_fw_button = QtGui.QPushButton('Load framework')
         self.load_hw_button = QtGui.QPushButton('Load hardware definition')
-        self.DFU_button = QtGui.QPushButton('Enter Device Firmware Update (DFU) mode.')
+        self.DFU_button = QtGui.QPushButton('Enter Device Firmware Update (DFU) mode')
+        self.flashdrive_button = QtGui.QPushButton()
         self.vertical_layout = QtGui.QVBoxLayout()
+        # Layout.
         self.setLayout(self.vertical_layout)
         self.vertical_layout.addWidget(self.load_fw_button)
         self.vertical_layout.addWidget(self.load_hw_button)
         self.vertical_layout.addWidget(self.DFU_button)
+        self.vertical_layout.addWidget(self.flashdrive_button)
+        # Connect widgets.
         self.load_fw_button.clicked.connect(self.load_framework)
         self.load_hw_button.clicked.connect(self.load_hardware_definition)
         self.DFU_button.clicked.connect(self.DFU_mode)
+        self.flashdrive_button.clicked.connect(self.flashdrive)
+
+    def exec_(self):
+        self.flashdrive_enabled = 'MSC' in self.parent().board.status['usb_mode']
+        self.flashdrive_button.setText('{} USB flash drive'
+            .format('Disable' if self.flashdrive_enabled else 'Enable'))
+        return QtGui.QDialog.exec_(self)
 
     def load_framework(self):
         self.accept()
@@ -31,6 +43,15 @@ class Board_config_dialog(QtGui.QDialog):
         self.accept()
         self.parent().board.DFU_mode()
         self.parent().not_connected()
+
+    def flashdrive(self):
+        self.accept()
+        if self.flashdrive_enabled:
+            self.parent().board.disable_mass_storage()
+            self.parent().disconnect()
+        else:
+            self.parent().board.enable_mass_storage()
+            self.parent().disconnect()
 
 # Variables_dialog ---------------------------------------------------------------------
 
