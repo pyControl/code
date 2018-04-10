@@ -1,0 +1,86 @@
+from pyqtgraph.Qt import QtGui, QtCore
+
+# Board_config_dialog -------------------------------------------------
+
+class Board_config_dialog(QtGui.QDialog):
+
+    def __init__(self, parent=None):
+        super(QtGui.QDialog, self).__init__(parent)
+        self.setWindowTitle('Configure pyboard')
+        self.load_fw_button = QtGui.QPushButton('Load framework')
+        self.load_hw_button = QtGui.QPushButton('Load hardware definition')
+        self.DFU_button = QtGui.QPushButton('Enter Device Firmware Update (DFU) mode.')
+        self.vertical_layout = QtGui.QVBoxLayout()
+        self.setLayout(self.vertical_layout)
+        self.vertical_layout.addWidget(self.load_fw_button)
+        self.vertical_layout.addWidget(self.load_hw_button)
+        self.vertical_layout.addWidget(self.DFU_button)
+        self.load_fw_button.clicked.connect(self.load_framework)
+        self.load_hw_button.clicked.connect(self.load_hardware_definition)
+        self.DFU_button.clicked.connect(self.DFU_mode)
+
+    def load_framework(self):
+        self.accept()
+        self.parent().board.load_framework()
+
+    def load_hardware_definition(self):
+        self.accept()
+        self.parent().board.load_hardware_definition()
+
+    def DFU_mode(self):
+        self.accept()
+        self.parent().board.DFU_mode()
+        self.parent().not_connected()
+
+# Variables_dialog ---------------------------------------------------------------------
+
+class Variables_dialog(QtGui.QDialog):
+    # Dialog for setting and getting task variables.
+    def __init__(self, parent=None): # Should split into seperate init and provide info.
+        super(QtGui.QDialog, self).__init__(parent)
+        self.setWindowTitle('Set variables')
+        variables = self.parent().sm_info['variables']
+        self.grid_layout = QtGui.QGridLayout()
+        for i, (v_name, v_value_str) in enumerate(variables.items()):
+            Variable_setter(v_name, v_value_str, self.grid_layout, i, parent=self)
+        self.setLayout(self.grid_layout)
+
+class Variable_setter(QtGui.QWidget):
+    # Widget for setting and getting a single variable.
+    def __init__(self, v_name, v_value_str, grid_layout, i, parent=None): # Should split into seperate init and provide info.
+        super(QtGui.QWidget, self).__init__(parent)
+        self.board = self.parent().parent().board
+        self.v_name = v_name
+        self.label = QtGui.QLabel(v_name)
+        self.get_button = QtGui.QPushButton('Get value')
+        self.set_button = QtGui.QPushButton('Set value')
+        self.value_str = QtGui.QLineEdit(v_value_str)
+        if v_value_str[0] == '<': # Variable is a complex object that cannot be modifed.
+            self.value_str.setText('<complex object>')
+            self.set_button.setEnabled(False)
+            self.get_button.setEnabled(False)
+        self.value_text_colour('gray')
+        self.get_button.clicked.connect(self.get)
+        self.set_button.clicked.connect(self.set)
+        self.value_str.textChanged.connect(lambda x: self.value_text_colour('black'))
+        grid_layout.addWidget(self.label     , i, 1)
+        grid_layout.addWidget(self.value_str , i, 2)
+        grid_layout.addWidget(self.get_button, i, 3)
+        grid_layout.addWidget(self.set_button, i, 4)
+
+    def value_text_colour(self, color='gray'):
+        self.value_str.setStyleSheet("color: {};".format(color))
+
+    def get(self):
+        self.value_str.setText(str(self.board.get_variable(self.v_name)))
+        self.value_text_colour('black')
+        QtCore.QTimer.singleShot(1000, self.value_text_colour)
+        
+    def set(self):
+        try:
+            v_value = eval(self.value_str.text())
+        except Exception:
+            self.value_str.setText('Invalid value')
+            return
+        self.board.set_variable(self.v_name, v_value)
+        self.value_text_colour('gray')
