@@ -80,25 +80,23 @@ class Pycboards():
         for board in self.boards.values():
             board.print_IDs()
 
-    def set_variable(self, v_name, v_value, sm_name = None):
-        '''Set specified variable on a all pycboards. If v_value is a
-         dict whose keys are the board ID numbers, the variable on each
-         board is set to the corresponding value from the dictionary.  Otherwise
-         the variable on all boards is set to v_value.
-        '''
+    def set_variable(self, v_name, v_value):
+        '''Set specified variable on a all pycboards. If v_value is a dict whose keys are
+        the board ID numbers, the variable on each board is set to the corresponding value
+        from the dictionary.  Otherwise the variable on all boards is set to v_value.'''
         if type(v_value) == dict and set(self.boards.keys()) == set(v_value.keys()): 
             for board_n in self.board_numbers:
-                self.boards[board_n].set_variable(v_name, v_value[board_n], sm_name)
+                self.boards[board_n].set_variable(v_name, v_value[board_n])
         else:
             for board in self.boards.values():
-                board.set_variable(v_name, v_value, sm_name)
+                board.set_variable(v_name, v_value)
 
-    def get_variable(self, v_name, sm_name = None):
+    def get_variable(self, v_name):
         '''Get value of specified variable from all boards and return as dict with 
         board numbers as keys.'''
         v_values = {}
         for board_n in self.board_numbers:
-            v_values[board_n] = self.boards[board_n].get_variable(v_name, sm_name)
+            v_values[board_n] = self.boards[board_n].get_variable(v_name)
         return v_values
 
     def open_data_file(self, file_paths):

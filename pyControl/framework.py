@@ -17,7 +17,7 @@ stop_fw_evt  = const(-5) # Stop framework event.
 # (state_ID, timestamp) # State transition, ID is a positive integer.
 # (event_ID, timer_evt) # Timer generated event, ID is a positive integer.
 # (print_evt, timestamp, 'print_string') # User print event.
-# (goto_evt, State_machine_ID)     # timed_goto_state event.
+# (goto_evt)     # timed_goto_state event.
 # (debounce_evt, Digital_input_ID) # Digital_input debouce timer.
 # (stop_fw_evt, None)   # Stop framework event.
 
@@ -105,7 +105,7 @@ class Timer():
 # Framework variables and objects
 # ----------------------------------------------------------------------------------------
 
-state_machines = []  # List to hold state machines.
+state_machine = None  # State machine object.
 
 timer = Timer()  # Instantiate timer_array object.
 
@@ -147,51 +147,27 @@ def _clock_tick(timer):
     current_time = pyb.elapsed_millis(start_time)
     check_timers = True
 
-def register_machine(state_machine):
+def register_machine(sm):
+    global state_machine, states, events, ID2name
     # Adds state machine states and events to framework states and events dicts,
-    # if IDs are provided, checks these are valid, otherwise asigns valid ID automatically.
-    # No two state machines can have states with the same name.  Two state machines can
-    # share the same event, but the event must have the same ID if ID is specified.
+    # if IDs are provided, checks these are valid, otherwise asign IDs.
+    assert (type(sm.smd.states) in (dict, list) and (type(sm.smd.states) == type(sm.smd.events))), \
+        'States and events must both be lists or both be dicts'
 
-    next_ID = 1
+    if type(sm.smd.states) == list: # Assign IDs
+        states = {s: i+1 for s, i in zip(sm.smd.states, range(len(sm.smd.states)))}
+        events = {e: i+1+len(sm.smd.states)
+                  for e, i in zip(sm.smd.events, range(len(sm.smd.events)))}
+        sm.smd.states = states 
+        sm.smd.events = events
 
-    def assign_IDs(name_list):
-        # Assign lowest available positive integer IDs to list of state or event names.
-        name_dict = {}
-        for name in name_list:
-            if name in events.keys(): # Events shared by multiple state machines have same ID.
-                name_dict[name] = events[name]
-            else:
-                while next_ID in ID2name.keys():
-                    next_ID += 1
-                name_dict[name] = next_ID
-                next_ID += 1
-        return name_dict
+    else: # Check IDs are valid.
+        IDs = list(sm.smd.states.values()) + list(sm.smd.events.values())
+        assert all([type(i) == int and i > 0 for i in IDs]) and len(set(IDs)) == len(IDs), \
+            'Event and state IDs must be unique positive integers.'
 
-    if type(state_machine.smd.states) == list:
-        state_machine.smd.states = assign_IDs(state_machine.smd.states)
-
-    if type(state_machine.smd.events) == list:
-        state_machine.smd.events = assign_IDs(state_machine.smd.events)
-
-    for state_name, ID in state_machine.smd.states.items():
-        assert state_name not in states.keys(), '! State names cannot be repeated.'
-        assert type(ID) == int and ID > 0,      '! State and event IDs must be positive integers.'
-        assert ID not in ID2name.keys(),        '! Different states or events cannot have same ID'
-
-    for event_name, ID in state_machine.smd.events.items():
-        if event_name in events.keys():
-            assert ID == events[event_name], '! Events with same name must have same ID. ' 
-        else:
-            assert ID not in ID2name.keys(), '! Different states or events cannot have same ID'
-        assert type(ID) == int and ID > 0,   '! State and event IDs must be positive integers.'
-
-    states.update(state_machine.smd.states)
-    events.update(state_machine.smd.events)
-    ID2name.update({ID:name for name, ID in list(state_machine.smd.states.items()) +
-                                            list(state_machine.smd.events.items())})
-    state_machine.ID = len(state_machines)
-    state_machines.append(state_machine)
+    ID2name = {ID: name for name, ID in list(states.items()) + list(events.items())}
+    state_machine = sm
 
 def get_events():
     # Print events as dict.
@@ -203,7 +179,7 @@ def get_states():
 
 def get_variables():
     # Print first instantiated state machines variables as dict {v_name: repr(v_value)}
-    print({k: repr(v) for k, v in state_machines[0].smd.v.__dict__.items()})
+    print({k: repr(v) for k, v in state_machine.smd.v.__dict__.items()})
 
 def output_data(event):
     # Output data to serial line.
@@ -235,12 +211,11 @@ def _update():
         if event[0] > 0: # State machine event.
             if event[1] != timer_evt and data_output: # External event -> place in output queue.
                 data_output_queue.put(event)
-            for state_machine in state_machines:
-                state_machine._process_event(ID2name[event[0]])
+            state_machine._process_event(ID2name[event[0]])
         elif event[0] == debounce_evt:
             hw.IO_dict[event[1]]._deactivate_debounce()
         elif event[0] == goto_evt:
-            state_machines[event[1]]._process_timed_goto_state()
+            state_machine._process_timed_goto_state()
         elif event[0] == stop_fw_evt:
             running = False
 
@@ -270,8 +245,7 @@ def run(duration = None):
     clock.callback(_clock_tick)
     # Run
     running = True
-    for state_machine in state_machines:
-        state_machine._start()
+    state_machine._start()
     if duration: # Set timer to stop framework.
         timer.set(duration*1000, (stop_fw_evt, None))
     while running:
@@ -279,7 +253,6 @@ def run(duration = None):
     # Post run
     clock.deinit()
     hw.run_stop()
-    for state_machine in state_machines:
-        state_machine._stop()
+    state_machine._stop()
     while data_output_queue.available():
         output_data(data_output_queue.get())

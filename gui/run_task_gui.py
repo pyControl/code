@@ -191,6 +191,7 @@ class Run_task_gui(QtGui.QWidget):
         if self.status['connected']:
             self.board.close()
         self.board = None
+        self.port_select.setEnabled(True)
         self.connect_button.setText('Connect')
         self.connect_button.setEnabled(True)
         self.config_button.setEnabled(False)
