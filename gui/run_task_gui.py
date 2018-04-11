@@ -297,9 +297,10 @@ class Run_task_gui(QtGui.QWidget):
 
     def closeEvent(self, event):
         # Called when GUI window is closed.
-        if self.board: self.board.close()
+        if self.board:
+            self.board.stop_framework()
+            self.board.close()
         event.accept()
-
 
 # Main ----------------------------------------------------------------
 

@@ -202,7 +202,7 @@ def recieve_data():
     # Read and process data from computer.
     global running
     new_byte = usb_serial.read(1) 
-    if new_byte == b'E': # Serial command to stop run.
+    if new_byte == b'\x03': # Serial command to stop run.
         running = False
     elif new_byte == b'V': # Get/set variables command.
         data_len = int.from_bytes(usb_serial.read(2), 'little')

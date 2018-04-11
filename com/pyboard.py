@@ -50,7 +50,6 @@ class Pyboard:
                 data = data + new_data
                 if data_consumer:
                     data_consumer(new_data)
-                #time.sleep(0.01)
                 timeout_count = 0
             else:
                 timeout_count += 1

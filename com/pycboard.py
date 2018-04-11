@@ -339,13 +339,14 @@ class Pycboard(Pyboard):
 
     def start_framework(self, dur=None, data_output=True):
         '''Start pyControl framwork running on pyboard.'''
+        self.gc_collect()
         self.exec('fw.data_output = ' + repr(data_output))
         self.exec_raw_no_follow('fw.run({})'.format(dur))
         self.framework_running = True
 
     def stop_framework(self):
         '''Stop framework running on pyboard by sending stop command.'''
-        self.serial.write(b'E')
+        self.serial.write(b'\x03') # Stop signal
         self.framework_running = False
 
     def process_data(self, raise_exception=True):
@@ -381,10 +382,14 @@ class Pycboard(Pyboard):
                 timestamp = int.from_bytes(data_header[2:6], 'little')
                 checksum  = int.from_bytes(data_header[6:8], 'little')
                 data_bytes = self.serial.read(data_len)
-                if checksum == (sum(data_header[:-2]) + sum(data_bytes)) & 0xffff: # Checksum OK.
-                    new_data.append((new_byte.decode(),timestamp, data_bytes.decode()))
-                else:
+                if not checksum == (sum(data_header[:-2]) + sum(data_bytes)) & 0xffff: # Bad checksum.
                     new_data.append(('!','bad checksum ' + new_byte.decode()))
+                    continue
+                new_data.append((new_byte.decode(),timestamp, data_bytes.decode()))
+                if new_byte == b'V': # Store new variable value in sm_info
+                    v_name, v_str = data_bytes.decode().split(' ')
+                    self.sm_info['variables'][v_name] = eval(v_str)
+                      
             elif new_byte == b'\x04': # End of framework run.
                 self.framework_running = False
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
@@ -403,8 +408,9 @@ class Pycboard(Pyboard):
     # ------------------------------------------------------------------------------------
 
     def set_variable(self, v_name, v_value):
-        '''Set the value of a state machine variable.  Returns True if variable
-        set OK, None if setting variable fails.'''
+        '''Set the value of a state machine variable. If framework is not running
+        returns True if variable set OK, False if set failed.  Returns None framework
+        running, but variable event is later output by board.'''
         assert v_name in self.sm_info['variables'], 'Invalid variable name'
         v_str = repr(v_value)
         if self.framework_running: # Set variable with serial command.
@@ -412,15 +418,16 @@ class Pycboard(Pyboard):
             data_len = len(data).to_bytes(2, 'little')
             checksum = sum(data).to_bytes(2, 'little')
             self.serial.write(b'V' + data_len +  data + checksum)
-            return True # No check for set OK currently performed.
+            return None
         else: # Set variable using REPL.
             checksum = sum(v_str.encode())
             return eval(self.eval("state_machine._set_variable({}, {}, {})"
                                   .format(repr(v_name), repr(v_str), checksum)).decode())
 
     def get_variable(self, v_name):
-        '''Get the value of a state machine variable. Returns the variable value
-        if got OK, None if get variable failed.'''
+        '''Get the value of a state machine variable. If framework not running returns
+        variable value if got OK, None if get fails.  Returns None if framework 
+        running, but variable event is later output by board.'''
         assert v_name in self.sm_info['variables'], 'Invalid variable name'
         if self.framework_running: # Get variable with serial command.
             data = v_name.encode() + b'g'

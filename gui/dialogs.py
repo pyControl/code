@@ -98,17 +98,33 @@ class Variable_setter(QtGui.QWidget):
         self.value_str.setStyleSheet("color: {};".format(color))
 
     def get(self):
-        self.value_str.setText(str(self.board.get_variable(self.v_name)))
-        self.value_text_colour('black')
-        QtCore.QTimer.singleShot(1000, self.value_text_colour)
-        
+        if self.board.framework_running: # Value returned later.
+            self.board.get_variable(self.v_name)
+            self.value_str.setText('getting..')
+            QtCore.QTimer.singleShot(200, self.reload)
+        else: # Value returned immediately.
+            self.value_str.setText(str(self.board.get_variable(self.v_name))) 
+            QtCore.QTimer.singleShot(1000, self.value_text_colour)
+
     def set(self):
         try:
             v_value = eval(self.value_str.text())
         except Exception:
             self.value_str.setText('Invalid value')
             return
-        if self.board.set_variable(self.v_name, v_value):
-            self.value_text_colour('gray')
-        else:
-            self.value_str.setText('Set failed')
+        if self.board.framework_running: # Value returned later if set OK.
+            self.board.set_variable(self.v_name, v_value)
+            self.value_str.setText('setting..')
+            QtCore.QTimer.singleShot(200, self.reload)
+        else: # Set OK returned immediately.
+            if self.board.set_variable(self.v_name, v_value):
+                self.value_text_colour('gray')
+            else:
+                self.value_str.setText('Set failed')
+                
+    def reload(self):
+        '''Reload value from sm_info.  sm_info is updated when variables are output
+        during framework run due to get/set.'''
+        self.value_text_colour('black')
+        self.value_str.setText(str(self.board.sm_info['variables'][self.v_name]))
+        QtCore.QTimer.singleShot(1000, self.value_text_colour)
