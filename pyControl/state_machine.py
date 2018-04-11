@@ -149,7 +149,7 @@ class State_machine():
             setattr(self.smd.v, v_name, eval(v_str))
             return True # Variable set OK.
         except Exception:
-            return None # Bad variable name or invalid value string.
+            return False # Bad variable name or invalid value string.
 
     def _get_variable(self, v_name):
         try:
