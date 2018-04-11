@@ -112,7 +112,7 @@ class Run_task_gui(QtGui.QWidget):
         # Connect widgets
 
         self.refresh_button.clicked.connect(self.refresh)
-        self.connect_button.clicked.connect(self.connect)
+        self.connect_button.clicked.connect(self.connect_disconnect)
         self.config_button.clicked.connect(lambda x: self.config_dialog.exec_())
         self.upload_button.clicked.connect(self.upload_task)
         self.variables_button.clicked.connect(lambda x: self.variables_dialog.exec_())
@@ -166,30 +166,34 @@ class Run_task_gui(QtGui.QWidget):
         self.task_select.clear()
         self.task_select.addItems(tasks)
 
+    def connect_disconnect(self):
+        if self.status['connected'] == True:
+            self.disconnect()
+        else:
+            self.connect()
+
     def connect(self):
         # Connect to pyboard.
-        if self.status['connected']: # Connect button becomes disconnect when connected.
-            self.disconnect() 
-        else:
-            try:
-                self.status_text.setText('Connecting...')
-                self.repaint()            
-                self.board = Pycboard(self.port_select.currentText(),
-                                      print_func=self.print_to_log)
-                self.connect_button.setText('Disconnect')
-                self.config_button.setEnabled(True)
-                self.port_select.setEnabled(False)
-                self.task_select.setEnabled(True)
-                self.upload_button.setEnabled(True)
-                self.status_text.setText('Connected')
-                self.status['connected'] = True
-            except SerialException:
-                self.status_text.setText('Connection failed')
+        try:
+            self.status_text.setText('Connecting...')
+            self.repaint()            
+            self.board = Pycboard(self.port_select.currentText(),
+                                  print_func=self.print_to_log)
+            self.connect_button.setText('Disconnect')
+            self.config_button.setEnabled(True)
+            self.port_select.setEnabled(False)
+            self.task_select.setEnabled(True)
+            self.upload_button.setEnabled(True)
+            self.status['connected'] = True
+            if not self.board.status['framework']:
+                self.board.load_framework()
+            self.status_text.setText('Connected')
+        except SerialException:
+            self.status_text.setText('Connection failed')
 
     def disconnect(self):
         # Disconnect from pyboard.
-        if self.status['connected']:
-            self.board.close()
+        if self.board: self.board.close()
         self.board = None
         self.port_select.setEnabled(True)
         self.connect_button.setText('Connect')

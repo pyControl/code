@@ -105,7 +105,7 @@ class Pycboard(Pyboard):
                     self.print('Hardware definition: Import error')
 
     def reset(self):
-        'Enter raw repl (soft reboots pyboard), import modules.'
+        '''Enter raw repl (soft reboots pyboard), import modules.'''
         self.enter_raw_repl() # Soft resets pyboard.
         self.exec(inspect.getsource(_djb2_file))  # define djb2 hashing function.
         self.exec(inspect.getsource(_receive_file))  # define recieve file function.
@@ -136,7 +136,7 @@ class Pycboard(Pyboard):
         return error_message
 
     def hard_reset(self, reconnect=True):
-        self.print('Hard resetting pyboard.')
+        self.print('\nResetting pyboard.')
         try:
             self.exec_raw_no_follow('pyb.hard_reset()')
         except PyboardError:
@@ -150,31 +150,33 @@ class Pycboard(Pyboard):
             except SerialException:
                 self.print('Unable to reopen serial connection.')
         else:
-            self.print('Serial connection closed.')
+            self.print('\nSerial connection closed.')
 
     def gc_collect(self): 
-        'Run a garbage collection on pyboard to free up memory.'
+        '''Run a garbage collection on pyboard to free up memory.'''
         self.exec('gc.collect()')
         time.sleep(0.01)
 
     def DFU_mode(self):
-        'Put the pyboard into device firmware update mode.'
+        '''Put the pyboard into device firmware update mode.'''
         self.exec('import pyb')
         try:
             self.exec_raw_no_follow('pyb.bootloader()')
         except PyboardError as e:
             pass # Error occurs on older versions of micropython but DFU is entered OK.
-        self.print('Entered DFU mode, closing serial connection.\n')
+        self.print('\nEntered DFU mode, closing serial connection.\n')
         self.close()
 
     def disable_mass_storage(self):
-        'Modify the boot.py file to make the pyboards mass storage invisible to the host computer.'
+        '''Modify the boot.py file to make the pyboards mass storage invisible to the
+        host computer.'''
         self.print('\nDisabling USB flash drive')
         self.write_file('boot.py', "import machine\nimport pyb\npyb.usb_mode('VCP')")
         self.hard_reset(reconnect=False)
 
     def enable_mass_storage(self):
-        'Modify the boot.py file to make the pyboards mass storage visible to the host computer.'
+        '''Modify the boot.py file to make the pyboards mass storage visible to the
+        host computer.'''
         self.print('\nEnabling USB flash drive')
         self.write_file('boot.py', "import machine\nimport pyb\npyb.usb_mode('VCP+MSC')")
         self.hard_reset(reconnect=False)
@@ -193,7 +195,7 @@ class Pycboard(Pyboard):
                 raise PyboardError(e)
 
     def get_file_hash(self, target_path):
-        'Get the djb2 hash of a file on the pyboard.'
+        '''Get the djb2 hash of a file on the pyboard.'''
         try:
             file_hash = int(self.eval("_djb2_file('{}')".format(target_path)).decode())
         except PyboardError as e: # File does not exist.
@@ -249,7 +251,7 @@ class Pycboard(Pyboard):
                 sys.stdout.flush()
 
     def remove_file(self, file_path):
-        'Remove a file from the pyboard.'
+        '''Remove a file from the pyboard.'''
         self.exec('os.remove({})'.format(repr(file_path)))
 
     def reset_filesystem(self):
@@ -266,7 +268,7 @@ class Pycboard(Pyboard):
     # ------------------------------------------------------------------------------------
 
     def load_framework(self, framework_dir=framework_dir):
-        'Copy the pyControl framework folder to the board.'
+        '''Copy the pyControl framework folder to the board.'''
         self.print('\nTransfering pyControl framework to pyboard.', end='')
         self.transfer_folder(framework_dir, file_type='py', show_progress=True)
         self.transfer_folder(devices_dir  , file_type='py', show_progress=True)
@@ -280,7 +282,7 @@ class Pycboard(Pyboard):
 
     def load_hardware_definition(self, hwd_path=os.path.join(config_dir, 'hardware_definition.py')):
         '''Transfer a hardware definition file to pyboard.  Defaults to transfering 
-        file hardware_definition.py from config folder. '''
+        file hardware_definition.py from config folder.'''
         if os.path.exists(hwd_path):
             self.print('\nTransfering hardware definition to pyboard.', end='')
             self.transfer_file(hwd_path, target_path = 'hardware_definition.py')
@@ -294,7 +296,7 @@ class Pycboard(Pyboard):
             self.print('Hardware definition file not found.') 
 
     def setup_state_machine(self, sm_name, sm_dir=tasks_dir, raise_exception=True):
-        ''' Transfer state machine descriptor file sm_name.py from folder sm_dir
+        '''Transfer state machine descriptor file sm_name.py from folder sm_dir
         to board. Instantiate state machine object as state_machine on pyboard.'''
         self.reset()
         sm_path = os.path.join(sm_dir, sm_name + '.py')
@@ -320,34 +322,34 @@ class Pycboard(Pyboard):
         return self.sm_info
 
     def get_states(self):
-        'Return states as a dictionary {state_name: state_ID}'
+        '''Return states as a dictionary {state_name: state_ID}'''
         return eval(self.exec('fw.get_states()').decode().strip())
 
     def get_events(self):
-        'Return events as a dictionary {event_name: state_ID}'
+        '''Return events as a dictionary {event_name: state_ID}'''
         return eval(self.exec('fw.get_events()').decode().strip())
 
     def get_variables(self):
-        'Return all variables as a dictionary {variable_name: value}'
+        '''Return variables as a dictionary {variable_name: value}'''
         return eval(self.exec('fw.get_variables()').decode().strip())
 
     def get_analog_inputs(self):
-        'Return analog_inputs as a directory {input name: ID}'
+        '''Return analog_inputs as a directory {input name: ID}'''
         return eval(self.exec('hw.get_analog_inputs()').decode().strip())
 
     def start_framework(self, dur=None, data_output=True):
-        'Start pyControl framwork running on pyboard.'
+        '''Start pyControl framwork running on pyboard.'''
         self.exec('fw.data_output = ' + repr(data_output))
         self.exec_raw_no_follow('fw.run({})'.format(dur))
         self.framework_running = True
 
     def stop_framework(self):
-        'Stop framework running on pyboard by sending stop command.'
+        '''Stop framework running on pyboard by sending stop command.'''
         self.serial.write(b'E')
         self.framework_running = False
 
     def process_data(self, raise_exception=True):
-        'Read data from serial line and return list of data tuples.'
+        '''Read data from serial line and return list of data tuples.'''
         new_data = []
         while self.serial.inWaiting() > 0:
             new_byte = self.serial.read(1)  
@@ -356,10 +358,10 @@ class Pycboard(Pyboard):
                 typecode      = data_header[0:1].decode()             
                 ID            = int.from_bytes(data_header[1:3], 'little')
                 sampling_rate = int.from_bytes(data_header[3:5], 'little')
-                n_bytes       = int.from_bytes(data_header[5:7], 'little')
+                data_len      = int.from_bytes(data_header[5:7], 'little')
                 timestamp     = int.from_bytes(data_header[7:11], 'little')
                 checksum      = int.from_bytes(data_header[11:13], 'little')
-                data_array    = array(typecode, self.serial.read(n_bytes))
+                data_array    = array(typecode, self.serial.read(data_len))
                 if checksum == (sum(data_header[:-2]) + sum(data_array)) & 0xffff: # Checksum OK.
                     new_data.append(('A',ID, sampling_rate, timestamp, data_array))
                 else:
@@ -373,16 +375,16 @@ class Pycboard(Pyboard):
                     new_data.append(('D',timestamp, ID))
                 else:
                     new_data.append(('!','bad checksum D'))
-            elif new_byte == b'P': # User print statement, 8 byte data header + variable size content.
+            elif new_byte in (b'P', b'V'): # User print statement or set variable, 8 byte data header + variable size content.
                 data_header = self.serial.read(8)
-                n_bytes   = int.from_bytes(data_header[ :2], 'little')
+                data_len  = int.from_bytes(data_header[ :2], 'little')
                 timestamp = int.from_bytes(data_header[2:6], 'little')
                 checksum  = int.from_bytes(data_header[6:8], 'little')
-                print_string = self.serial.read(n_bytes)
-                if checksum == (sum(data_header[:-2]) + sum(print_string)) & 0xffff: # Checksum OK.
-                    new_data.append(('P',timestamp, print_string.decode()))
+                data_bytes = self.serial.read(data_len)
+                if checksum == (sum(data_header[:-2]) + sum(data_bytes)) & 0xffff: # Checksum OK.
+                    new_data.append((new_byte.decode(),timestamp, data_bytes.decode()))
                 else:
-                    new_data.append(('!','bad checksum P'))
+                    new_data.append(('!','bad checksum ' + new_byte.decode()))
             elif new_byte == b'\x04': # End of framework run.
                 self.framework_running = False
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
@@ -396,77 +398,35 @@ class Pycboard(Pyboard):
                 break
         return new_data
 
-    def run_framework(self, dur=None, raise_exception=True):
-        '''Run framework for specified duration (seconds).'''
-        self.start_framework(dur)
-        try:
-            while self.framework_running:
-                self.process_data(raise_exception=raise_exception)     
-        except KeyboardInterrupt:
-            self.stop_framework()
-        time.sleep(0.1)
-        self.process_data(raise_exception=raise_exception)
-
     # ------------------------------------------------------------------------------------
     # Getting and setting variables.
     # ------------------------------------------------------------------------------------
 
     def set_variable(self, v_name, v_value):
-        '''Set the value of a state machine variable'''
+        '''Set the value of a state machine variable.  Returns True if variable
+        set OK, None if setting variable fails.'''
         assert v_name in self.sm_info['variables'], 'Invalid variable name'
-        if v_value == None:
-            self.print('\nSet variable aborted - value \'None\' not allowed.')
-            return
-        try:
-            eval(repr(v_value))
-        except:
-            self.print('\nSet variable aborted - invalid variable value: ' + repr(v_value))
-            return
-        for i in range(10):
-            try:
-                self.exec('state_machine.smd.v.' + v_name + '=' + repr(v_value))
-            except:
-                pass 
-            set_value = self.get_variable(v_name)
-            if self._approx_equal(set_value, v_value):
-                return True
-        self.print('\nSet variable error - could not set variable: ' + v_name)
-        return
+        v_str = repr(v_value)
+        if self.framework_running: # Set variable with serial command.
+            data = repr((v_name, v_str)).encode() + b's'
+            data_len = len(data).to_bytes(2, 'little')
+            checksum = sum(data).to_bytes(2, 'little')
+            self.serial.write(b'V' + data_len +  data + checksum)
+            return True # No check for set OK currently performed.
+        else: # Set variable using REPL.
+            checksum = sum(v_str.encode())
+            return eval(self.eval("state_machine._set_variable({}, {}, {})"
+                                  .format(repr(v_name), repr(v_str), checksum)).decode())
 
     def get_variable(self, v_name):
-        '''Get value of state machine variable.  To minimise risk of variable
-        corruption during transfer, process is repeated until two consistent
-        values are obtained. If state machine name argument is not provided, 
-        default to the first instantiated  state machine.'''
+        '''Get the value of a state machine variable. Returns the variable value
+        if got OK, None if get variable failed.'''
         assert v_name in self.sm_info['variables'], 'Invalid variable name'
-        v_value = None
-        for i in range(10):
-            prev_value = v_value
-            try:
-                self.serial.flushInput()
-                v_string = self.eval('state_machine.smd.v.' + v_name).decode()
-            except PyboardError:
-                continue
-            try:
-                v_value = eval(v_string)
-            except NameError:
-                v_value = v_string
-            if v_value != None and prev_value == v_value:
-                return v_value
-        self.print('\nGet variable error - could not get variable: ' + v_name)
-
-    def _approx_equal(self, v, t):
-        'Check two variables are the same up to floating point rounding errors.'
-        if v == t: 
-            return True
-        elif (((type(t) == float) or (type(v) == float)) 
-                and (abs(t - v) < (1e-5 + 1e-3 * abs(v)))):
-            return True # Variable set within floating point accuracy.
-        elif type(t) in (list, tuple) and all([self._approx_equal(vi, ti) 
-                                               for vi, ti in zip(v,t)]):
-            return True
-        elif type(t) == dict and all([self._approx_equal(vi, ti)
-                                      for vi, ti in zip(v.items(),t.items())]):
-            return True
-        else:
-            return False
+        if self.framework_running: # Get variable with serial command.
+            data = v_name.encode() + b'g'
+            data_len = len(data).to_bytes(2, 'little')
+            checksum = sum(data).to_bytes(2, 'little')
+            self.serial.write(b'V' + data_len +  data + checksum)
+        else: # Get variable using REPL.
+            return eval(self.eval("state_machine._get_variable({})"
+                                  .format(repr(v_name))).decode())
