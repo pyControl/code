@@ -46,8 +46,7 @@ def config_menu():
                                  \n\n 4. Hard reset boards.
                                  \n\n 5. Reset filesystems.
                                  \n\n 6. Close program.
-                                 \n\n 7. Exit config menu.\n\n'''))
-                                 
+                                 \n\n 7. Exit config menu.\n\n'''))                   
         if selection == 1:
             boards.load_framework()
         elif selection == 2:
@@ -79,8 +78,6 @@ def run_experiment():
         exp_list = [e for e in [getattr(experiments, c) for c in dir(experiments)]
                        if isinstance(e, Experiment)] # Construct list of available experiments.
 
-    date_time = datetime.now().strftime('-%Y-%m-%d-%H%M%S')
-
     selection = 0
     while selection == 0: 
 
@@ -104,8 +101,6 @@ def run_experiment():
 
     boards_in_use = sorted(list(exp.subjects.keys()))
     exp_dir     = os.path.join(data_dir, exp.folder)
-    file_paths   = {board_n: os.path.join(exp_dir, exp.subjects[board_n] + date_time + '.txt')
-                           for board_n in boards_in_use}
 
     print('')
 
@@ -117,7 +112,7 @@ def run_experiment():
         sys.exit()
 
     if input('\nRun hardware test? (y/[n]) ') == 'y':
-        print('\nUploading hardware test.\n')
+        print('\nUploading hardware test.')
         boards.setup_state_machine(config.hardware_test)
         if config.hardware_test_display_output:
             print('\nPress CTRL + C when finished with hardware test.\n')
@@ -129,14 +124,14 @@ def run_experiment():
     else:
         print('\nSkipping hardware test.')
 
-    print('\nUploading task.\n')
+    print('\nUploading task.')
 
     boards.setup_state_machine(exp.task)
 
     if exp.set_variables: # Set state machine variables from experiment specification.
         print('\nSetting state machine variables.')
         for v_name in exp.set_variables:
-            boards.set_variable(v_name, exp.set_variables[v_name], exp.task)
+            boards.set_variable(v_name, exp.set_variables[v_name])
 
     if exp.persistent_variables:
         print('\nPersistent variables ', end = '')
@@ -148,7 +143,7 @@ def run_experiment():
                 with open(subject_pv_path, 'r') as pv_file:
                     pv_dict = eval(pv_file.read())
                 for v_name, v_value in pv_dict.items():
-                    boards.boards[board_n].set_variable(v_name, v_value, exp.task)
+                    boards.boards[board_n].set_variable(v_name, v_value)
                 set_pv.append(subject_ID)
         if len(set_pv) == exp.n_subjects:
             print('set OK.')
@@ -161,18 +156,10 @@ def run_experiment():
         os.mkdir(data_dir)
     if not os.path.exists(exp_dir):
         os.mkdir(exp_dir)
-    boards.open_data_file(file_paths)
 
-    input('\nHit enter to start exp. To stop experiment when running, hit ctrl + c.\n\n')
+    input('\nHit enter to start exp. To stop experiment when running, hit ctrl + c.\n')
 
-    boards.write_to_file('I Experiment name  : ' + exp.name)
-    boards.write_to_file('I Task name : ' + exp.task)
-    boards.write_to_file({board_n: 'I Subject ID : ' + subject_ID  
-                          for board_n, subject_ID in exp.subjects.items()})
-    boards.write_to_file('I Start date : ' + 
-                         datetime.now().strftime('%Y/%m/%d %H:%M:%S') + '\n')
-    boards.print_IDs() # Print state and event information to file.
-    boards.write_to_file('')
+    boards.open_data_file(exp_dir, exp.name, exp.subjects, datetime.now())
 
     boards.run_framework()
 
@@ -183,7 +170,7 @@ def run_experiment():
         for board_n, subject_ID in exp.subjects.items():
             pv_dict = {}
             for v_name in exp.persistent_variables:
-                pv_dict[v_name] = boards.boards[board_n].get_variable(v_name, exp.task)
+                pv_dict[v_name] = boards.boards[board_n].get_variable(v_name)
             subject_pv_path = os.path.join(pv_folder, '{}.txt'.format(subject_ID))
             with open(subject_pv_path, 'w') as pv_file:
                 pv_file.write(pformat(pv_dict))
@@ -197,8 +184,8 @@ def run_experiment():
             print('\n' + v_name + ':')
             v_strings = [v_name + ':\n']
             for board_n in boards_in_use:
-                v_value = boards.boards[board_n].get_variable(v_name, exp.task)
-                boards.boards[board_n].write_to_file('V {}: {}'.format(v_name, v_value))
+                v_value = boards.boards[board_n].get_variable(v_name)
+                boards.data_loggers[board_n].data_file.write('V {} {}\n'.format(v_name, v_value))
                 print(exp.subjects[board_n] + ': {}'.format(v_value))
                 v_strings.append(str(v_value) +'\t' + exp.subjects[board_n] + '\n')
             v_strings.append('\n' * (spacing-1)) # Add empty lines between variables.

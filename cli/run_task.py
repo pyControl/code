@@ -49,14 +49,14 @@ def task_select_menu(board):
 def task_menu(board, task):
     try:
         sm_info = board.setup_state_machine(task, raise_exception=True)
-        data_logger = Data_logger(data_dir, 'run_task', task, sm_info)
+        data_logger = Data_logger(data_dir, 'run_task', sm_info)
     except Exception as e:
         print(e)
         input('Press enter to return to task select menu.')
         return
     subject_ID = None
     while True:
-        i = input('\n\nPress [enter] to run task, [g] to get variable value, [s] to set variable value, [c] to close program, [f] to create data file, or [t] to select a new task:')
+        i = input('\nPress [enter] to run task, [g] to get variable value, [s] to set variable value, [c] to close program, [f] to create data file, or [t] to select a new task:')
         if i == '':
             if subject_ID: 
                 data_logger.open_data_file(subject_ID)
@@ -76,14 +76,16 @@ def task_menu(board, task):
                 time.sleep(0.1)
                 new_data = board.process_data()
                 print(data_logger.data_to_string(new_data, verbose=True), end='')
-                if subject_ID: data_logger.write_to_file(new_data)
+                if subject_ID:
+                    data_logger.write_to_file(new_data)
+                    data_logger.close_files()
             except PyboardError as e:
                 print('\nError while running task:\n')
                 print(str(e))
-            if subject_ID:
-                data_logger.close_files()
-            input('\nPress enter to return to task select menu.')
-            return
+                if subject_ID:
+                    data_logger.close_files()
+                input('\nPress enter to return to task select menu.')
+                return
         elif i == 'g':
             configure_variables(board, 'get')
         elif i == 's':
@@ -148,7 +150,7 @@ def configure_variables(board, get_or_set):
     task_variables = {i+1: v for i, v in enumerate(board.sm_info['variables'])}
     print('\nVariables:')
     for i, v_name in task_variables.items():
-        print('{}: {}\n'.format(i,v_name))
+        print('{}: {}'.format(i,v_name))
     v_name = None
     while v_name == None:
         v = input('\nEnter name or number of variable to {}:'.format(get_or_set))
