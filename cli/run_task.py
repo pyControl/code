@@ -1,5 +1,4 @@
 import os
-import re
 import sys
 import time
 from serial import SerialException
@@ -39,12 +38,13 @@ def task_select_menu(board):
         elif i == 'b':
             board_config_menu(board)
         else:
+            task = None
             try:
                 task = available_tasks[int(i)]
-                print('')
-                task_menu(board, task)
             except (KeyError, ValueError):
                 print('\nInput not recognised.')
+            if task:
+                task_menu(board, task)
 
 def task_menu(board, task):
     try:
@@ -56,7 +56,7 @@ def task_menu(board, task):
         return
     subject_ID = None
     while True:
-        i = input('\nPress [enter] to run task, [g] to get variable value, [s] to set variable value, [c] to close program, [f] to create data file, or [t] to select a new task:')
+        i = input('\n\nPress [enter] to run task, [g] to get variable value, [s] to set variable value, [c] to close program, [f] to create data file, or [t] to select a new task:')
         if i == '':
             if subject_ID: 
                 data_logger.open_data_file(subject_ID)
@@ -85,9 +85,9 @@ def task_menu(board, task):
             input('\nPress enter to return to task select menu.')
             return
         elif i == 'g':
-            configure_variables(board, task, 'get')
+            configure_variables(board, 'get')
         elif i == 's':
-            configure_variables(board, task, 'set')
+            configure_variables(board, 'set')
         elif i == 'c':
             close_program(board)
         elif i == 'f':
@@ -143,24 +143,20 @@ def board_config_menu(board):
         else:
             print('\nInput not recognised.')  
 
-def configure_variables(board, task, get_or_set):
+def configure_variables(board, get_or_set):
     # Get task variables by reading file.
-    task_variables = []
-    pattern = "v\.(?P<vname>\w+)\s*\="
-    with open(os.path.join(tasks_dir, task+'.py'), "r") as file:
-        file_content = file.read()
-    for v_name in re.findall(pattern, file_content):
-        if not v_name in [var_name for var_name in task_variables]:
-            task_variables.append(v_name)
-    task_variables = {i+1: v for i, v in enumerate(task_variables)}
-    print('\nVariables found:\n')
-    for j, v_name in task_variables.items():
-        print('{}: {}\n'.format(j,v_name))
-    v = input('Enter name or number of variable to {}:'.format(get_or_set))
-    try:
-        v_name = task_variables[int(v)]
-    except:
-        v_name = v
+    task_variables = {i+1: v for i, v in enumerate(board.sm_info['variables'])}
+    print('\nVariables:')
+    for i, v_name in task_variables.items():
+        print('{}: {}\n'.format(i,v_name))
+    v_name = None
+    while v_name == None:
+        v = input('\nEnter name or number of variable to {}:'.format(get_or_set))
+        try:
+            v_name = task_variables[int(v)]
+        except (ValueError, KeyError):
+            if v in task_variables.values():
+                v_name = v
     if get_or_set == 'get':
         v_value = board.get_variable(v_name)
         if v_value is not None:
@@ -173,11 +169,10 @@ def configure_variables(board, task, get_or_set):
             try:
                 v_value = eval(input('\nEnter value for variable {}: '.format(v_name)))
             except Exception:
-                print('\nUnable to interpret value.')
-        if board.set_variable(v_name, v_value):
-            if type(v_value) is str:
-                v_value = "'{}'".format(v_value)
-            print('\nVariable {} set to: {}'.format(v_name, v_value))
+                print('\nInvalid value.')
+        board.set_variable(v_name, v_value)
+        if type(v_value) is str: v_value = "'{}'".format(v_value)
+        print('\nVariable {} set to: {}'.format(v_name, v_value))
 
 def close_program(board):
     board.close()
@@ -230,24 +225,21 @@ def run_task():
     print('\nSerial connection OK. Micropython version: {}'.format(board.micropython_version))
 
     if not board.status['framework']:
-        print('')
         board.load_framework()
 
     if not board.status['hardware']:
-        print('')
         board.load_hardware_definition()
 
     task_select_menu(board)
 
 if __name__ == "__main__":
-    run_task()
-    # try:
-    #     run_task()
-    # except Exception as e:
-    #     print('\nError:\n')
-    #     print(str(e))
-    #     input('\nPress any key to close.')
-    # except PyboardError as e: # No need to print error message as pycboard handles it.
-    #     print('\nPyboard error:\n')
-    #     print(str(e))
-    #     input('\nPress any key to close.')
+    try:
+        run_task()
+    except Exception as e:
+        print('\nError:\n')
+        print(str(e))
+        input('\nPress any key to close.')
+    except PyboardError as e: # No need to print error message as pycboard handles it.
+        print('\nPyboard error:\n')
+        print(str(e))
+        input('\nPress any key to close.')

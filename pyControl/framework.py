@@ -9,6 +9,7 @@ debounce_evt = const(-2) # Digital_input debounce timer event.
 goto_evt     = const(-3) # timed_goto_state event.
 print_evt    = const(-4) # User print event.
 stop_fw_evt  = const(-5) # Stop framework event.
+varset_evt  = const(-6) # Variable changed event.
 
 # The Event_queue and Timer classes store events for future processing
 # as lists of tuples.  The following event tuple types are in use:
@@ -16,10 +17,11 @@ stop_fw_evt  = const(-5) # Stop framework event.
 # (event_ID, timestamp) # External event, ID is positive integer.
 # (state_ID, timestamp) # State transition, ID is a positive integer.
 # (event_ID, timer_evt) # Timer generated event, ID is a positive integer.
-# (print_evt, timestamp, 'print_string') # User print event.
+# (print_evt, timestamp, 'data_bytes') # User print event.
 # (goto_evt)     # timed_goto_state event.
 # (debounce_evt, Digital_input_ID) # Digital_input debouce timer.
 # (stop_fw_evt, None)   # Stop framework event.
+# (varset_evt, timestamp, v_name, v_str) # Variable changed.
 
 class pyControlError(BaseException):
     pass
@@ -133,10 +135,6 @@ check_timers = False # Flag to say timers need to be checked, set True by clock 
 
 start_time = 0 # Time at which framework run is started.
 
-data_bytes  = bytearray('D' + ' '*8) # Used to send event/state entries to host.
-
-print_bytes = bytearray('P' + ' '*8) # Used to send print output to host.
-
 # ----------------------------------------------------------------------------------------
 # Framework functions.
 # ----------------------------------------------------------------------------------------
@@ -182,23 +180,48 @@ def get_variables():
     print({k: repr(v) for k, v in state_machine.smd.v.__dict__.items()})
 
 def output_data(event):
-    # Output data to serial line.
+    # Output data to computer.
     if event[0] > 0:  # send event or state change.
-        data_bytes[1:5] = event[1].to_bytes(4, 'little') # Timestamp
-        data_bytes[5:7] = event[0].to_bytes(2, 'little') # Event code
-        data_bytes[7:9] = sum(data_bytes[1:7]).to_bytes(2, 'little') # Checksum. 
-        usb_serial.send(data_bytes) 
-    elif event[0] == print_evt: # send user generated output string.
-        print_string = event[2].encode()
-        print_bytes[1:3] = len(print_string).to_bytes(2, 'little') # Data length.   
-        print_bytes[3:7] = event[1].to_bytes(4, 'little') # Timestamp
-        print_bytes[7:9] = (sum(print_bytes[1:7]) + sum(print_string)).to_bytes(2, 'little') # Checksum.
-        usb_serial.send(print_bytes)
-        usb_serial.send(print_string)
+        timestamp = event[1].to_bytes(4, 'little') 
+        ID        = event[0].to_bytes(2, 'little')
+        checksum  = sum(timestamp + ID).to_bytes(2, 'little') 
+        usb_serial.send(b'D' + timestamp + ID + checksum)
+    elif event[0] in (print_evt, varset_evt): # send user generated output string.
+        if event[0] == print_evt: # send user generated output string.
+            start_byte = b'P'
+            data_bytes = event[2].encode()
+        elif event[0] == varset_evt: # Variable changed.
+            start_byte = b'V'
+            data_bytes = event[2].encode() + b' ' + event[3].encode()
+        data_len = len(data_bytes).to_bytes(2, 'little')  
+        timestamp = event[1].to_bytes(4, 'little')
+        checksum  = (sum(data_len + timestamp) + sum(data_bytes)).to_bytes(2, 'little')
+        usb_serial.send(start_byte + data_len + timestamp + checksum + data_bytes)
+
+def recieve_data():
+    # Read and process data from computer.
+    global running
+    new_byte = usb_serial.read(1) 
+    if new_byte == b'E': # Serial command to stop run.
+        running = False
+    elif new_byte == b'V': # Get/set variables command.
+        data_len = int.from_bytes(usb_serial.read(2), 'little')
+        data = usb_serial.read(data_len)
+        checksum = int.from_bytes(usb_serial.read(2), 'little')
+        if not checksum == (sum(data) & 0xFFFF):
+            return  # Bad checksum.
+        if data[-1:] == b's': # Set variable.
+            v_name, v_str = eval(data[:-1])
+            if state_machine._set_variable(v_name, v_str):
+                data_output_queue.put((varset_evt, current_time, v_name, v_str))
+        elif data[-1:] == b'g': # Get variable.
+            v_name = data[:-1].decode()
+            v_str = str(state_machine._get_variable(v_name))
+            data_output_queue.put((varset_evt, current_time, v_name, v_str))
 
 def _update():
     # Perform framework update functions in order of priority.
-    global current_time,  running
+    global running
 
     if hw.high_priority_queue.available: # Priority 1: Process high priority hardware.
         hw.IO_dict[hw.high_priority_queue.get()]._process(priority=True)
@@ -218,11 +241,8 @@ def _update():
             state_machine._process_timed_goto_state()
         elif event[0] == stop_fw_evt:
             running = False
-
     elif usb_serial.any(): # Priority 4: Check for serial input from computer.
-        bytes_recieved = usb_serial.read()
-        if bytes_recieved == b'E':      # Serial command to stop run.
-            running = False
+        recieve_data()
 
     elif hw.low_priority_queue.available: # Priority 5: Process low priority hardware.
         hw.IO_dict[hw.low_priority_queue.get()]._process(priority=False)
@@ -243,14 +263,16 @@ def run(duration = None):
     start_time = pyb.millis()
     clock.init(freq=1000)
     clock.callback(_clock_tick)
-    # Run
+    usb_serial.setinterrupt(-1) # Disable 'ctrl+c' on serial raising KeyboardInterrupt.
     running = True
     state_machine._start()
     if duration: # Set timer to stop framework.
         timer.set(duration*1000, (stop_fw_evt, None))
+    # Run
     while running:
         _update()
     # Post run
+    usb_serial.setinterrupt(3) # Enable 'ctrl+c' on serial raising KeyboardInterrupt.
     clock.deinit()
     hw.run_stop()
     state_machine._stop()

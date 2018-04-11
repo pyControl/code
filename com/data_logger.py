@@ -56,8 +56,8 @@ class Data_logger():
                         data_string += 'D {} {}\n'.format(nd[1], self.ID2name_fw[nd[2]])
                     else:       # Print state or event ID.
                         data_string += 'D {} {}\n'.format(nd[1], nd[2])
-            elif nd[0] == 'P': # User print output.
-                data_string += 'P {} {}\n'.format(nd[1], nd[2])
+            elif nd[0] in ('P', 'V'): # User print output or set variable.
+                data_string += '{} {} {}\n'.format(*nd)
             elif nd[0] == '!': # Error
                 error_string = nd[1]
                 data_string += '! ' + error_string.replace('\n', '\n! ') + '\n'

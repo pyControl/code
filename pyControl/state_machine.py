@@ -138,3 +138,21 @@ class State_machine():
         # Calls user defined stop function at end of run if function is defined.
         if self.event_dispatch_dict['run_end']:
             self.event_dispatch_dict['run_end']()
+
+    def _set_variable(self, v_name, v_str, checksum=None):
+        # Set value of variable v.v_name to value eval(v_str).
+        if checksum:
+            str_sum = sum(v_str) if type(v_str) is bytes else sum(v_str.encode())
+            if not str_sum == checksum:
+                return False # Bad checksum.
+        try:
+            setattr(self.smd.v, v_name, eval(v_str))
+            return True # Variable set OK.
+        except Exception:
+            return None # Bad variable name or invalid value string.
+
+    def _get_variable(self, v_name):
+        try:
+            return getattr(self.smd.v, v_name)
+        except Exception:
+            return None
