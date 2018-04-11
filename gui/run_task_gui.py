@@ -220,7 +220,7 @@ class Run_task_gui(QtGui.QWidget):
             self.sm_info = self.board.setup_state_machine(task)
             self.variables_dialog = Variables_dialog(self)
             self.variables_button.setEnabled(True)
-            self.data_logger = Data_logger(data_dir, 'run_task', task, self.sm_info)
+            self.data_logger = Data_logger(data_dir, 'run_task', self.sm_info)
             self.task_plot.set_state_machine(self.sm_info)
             self.data_dir_text.setEnabled(True)
             self.data_dir_button.setEnabled(True)

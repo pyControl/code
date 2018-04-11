@@ -4,10 +4,10 @@ from datetime import datetime
 class Data_logger():
     '''Class for logging data from a pyControl setup to disk'''
 
-    def __init__(self, data_dir, experiment_name, task_name, sm_info):
+    def __init__(self, data_dir, experiment_name, sm_info):
         self.data_dir = data_dir
         self.experiment_name = experiment_name
-        self.task_name = task_name
+        self.task_name = sm_info['name']
         self.sm_info = sm_info
         self.ID2name_fw = {ID: name for name, ID       # Dict mapping framework IDs to names.
                            in {**self.sm_info['states'], **self.sm_info['events']}.items()}

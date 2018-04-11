@@ -315,7 +315,8 @@ class Pycboard(Pyboard):
             if raise_exception:
                 raise PyboardError('Unable to setup state machine.', e.args[2])
         # Get information about state machine.
-        self.sm_info = {'states': self.get_states(), # {name: ID}
+        self.sm_info = {'name'  : sm_name,
+                        'states': self.get_states(), # {name: ID}
                         'events': self.get_events(), # {name: ID}
                         'analog_inputs': self.get_analog_inputs(), # {name: {'ID': ID, 'Fs':sampling rate}}
                         'variables': self.get_variables()} # {name: repr(value)}
