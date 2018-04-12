@@ -118,7 +118,7 @@ def run_experiment():
             print('\nPress CTRL + C when finished with hardware test.\n')
             boards.run_framework()
         else: 
-            boards.start_framework(data_output = False)
+            boards.start_framework(data_output=False)
             input('\nPress any key when finished with hardware test.')
             boards.stop_framework()
     else:
@@ -186,7 +186,7 @@ def run_experiment():
             v_strings = [v_name + ':\n']
             for board_n in boards_in_use:
                 v_value = boards.boards[board_n].get_variable(v_name)
-                boards.data_loggers[board_n].data_file.write('V {} {}\n'.format(v_name, v_value))
+                boards.data_loggers[board_n].data_file.write('V -1 {} {}\n'.format(v_name, v_value))
                 print(exp.subjects[board_n] + ': {}'.format(v_value))
                 v_strings.append(str(v_value) +'\t' + exp.subjects[board_n] + '\n')
             v_strings.append('\n' * (spacing-1)) # Add empty lines between variables.

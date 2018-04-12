@@ -29,13 +29,14 @@ class Run_task_gui(QtGui.QWidget):
         self.setWindowTitle('pyControl run task GUI')
 
         # Variables.
-        self.board = None  # Pycboard class instance.
-        self.task = None   # Task currently uploaded on pyboard. 
-        self.subject_ID = None
-        self.sm_info = None # Information about uploaded state machine.
+        self.board = None      # Pycboard class instance.
+        self.task = None       # Task currently uploaded on pyboard. 
+        self.sm_info = None    # Information about current state machine.
+        self.data_dir = None
+        self.subject_ID = None 
         self.update_interval = 20 # Time between updates (ms)
-        self.subject_ID = None
         self.status = {'connected': False}
+        self.data_logger = Data_logger(print_func=self.print_to_log)
 
         # Create widgets.
 
@@ -116,9 +117,9 @@ class Run_task_gui(QtGui.QWidget):
         self.config_button.clicked.connect(lambda x: self.config_dialog.exec_())
         self.upload_button.clicked.connect(self.upload_task)
         self.variables_button.clicked.connect(lambda x: self.variables_dialog.exec_())
-        self.data_dir_text.textChanged.connect(self.data_dir_text_change)
+        self.data_dir_text.textChanged.connect(self.test_data_path)
         self.data_dir_button.clicked.connect(self.select_data_dir)
-        self.subject_text.textChanged.connect(self.subject_text_change)
+        self.subject_text.textChanged.connect(self.test_data_path)
         self.start_button.clicked.connect(self.start_task)
         self.stop_button.clicked.connect(self.stop_task)
 
@@ -142,7 +143,9 @@ class Run_task_gui(QtGui.QWidget):
 
     def test_data_path(self):
         # Checks whether data dir and subject ID are valid.
-        if  os.path.isdir(self.data_logger.data_dir) and self.subject_ID:
+        self.data_dir = self.data_dir_text.text()
+        self.subject_ID = self.subject_text.text()
+        if  os.path.isdir(self.data_dir) and self.subject_ID:
             self.start_button.setText('Record')
             return True
         else:
@@ -178,7 +181,7 @@ class Run_task_gui(QtGui.QWidget):
             self.status_text.setText('Connecting...')
             self.repaint()            
             self.board = Pycboard(self.port_select.currentText(),
-                                  print_func=self.print_to_log)
+                                  print_func=self.print_to_log, data_logger=self.data_logger)
             self.connect_button.setText('Disconnect')
             self.config_button.setEnabled(True)
             self.port_select.setEnabled(False)
@@ -220,7 +223,6 @@ class Run_task_gui(QtGui.QWidget):
             self.sm_info = self.board.setup_state_machine(task)
             self.variables_dialog = Variables_dialog(self)
             self.variables_button.setEnabled(True)
-            self.data_logger = Data_logger(data_dir, 'run_task', self.sm_info)
             self.task_plot.set_state_machine(self.sm_info)
             self.data_dir_text.setEnabled(True)
             self.data_dir_button.setEnabled(True)
@@ -236,17 +238,9 @@ class Run_task_gui(QtGui.QWidget):
         self.data_dir_text.setText(
             QtGui.QFileDialog.getExistingDirectory(self, 'Select data folder'))
 
-    def data_dir_text_change(self, text):
-        self.data_logger.data_dir = text
-        self.test_data_path()
-
-    def subject_text_change(self, text):
-        self.subject_ID = text
-        self.test_data_path()
-
     def start_task(self):
         if self.test_data_path():
-            self.data_logger.open_data_file(self.subject_ID)
+            self.data_logger.open_data_file(self.data_dir, 'run_task', self.subject_ID)
         self.board.start_framework()
         self.task_plot.run_start()
         self.config_button.setEnabled(False)
@@ -284,13 +278,8 @@ class Run_task_gui(QtGui.QWidget):
         try:
             new_data = self.board.process_data()
             self.task_plot.process_data(new_data)
-            if new_data:
-                if self.data_logger.data_file: 
-                    self.data_logger.write_to_file(new_data)
-                data_string = self.data_logger.data_to_string(new_data, True) 
-                self.print_to_log(data_string, end='')
         except PyboardError as e:
-            self.print_to_log('\nError during run:\n\n' + str(e))
+            self.print_to_log('\nError during framework run.')
             self.stop_task(error=True)
 
     # Cleanup.
