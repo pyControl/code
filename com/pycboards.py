@@ -7,6 +7,13 @@ from com.data_logger import Data_logger
 import config.config as config
 from config.paths import tasks_dir, config_dir
 
+def print_func_factory(n):
+    def print_func(s, end='\n'):
+        print('Box {}: '.format(n) + s, end=end)
+    return print_func
+
+# Pycboards --------------------------------------------------------------------------
+
 class Pycboards():
     'Perform operations on a group of Pycboards.'
 
@@ -15,7 +22,8 @@ class Pycboards():
         self.numbers = sorted(numbers)
         for n in numbers:
             print('\nOpening connection to board {}'.format(n))
-            self.boards[n] = Pycboard(config.board_serials[n], raise_exception=True)
+            self.boards[n] = Pycboard(config.board_serials[n], 
+                data_logger=Data_logger(print_func=print_func_factory(n)))
         self.unique_IDs = {n: self.boards[n].unique_ID for n in self.boards}
 
     def reset(self):
@@ -55,11 +63,9 @@ class Pycboards():
             if board.framework_running:
                 boards_running = True
             try:
-                new_data = board.process_data()
-                self.data_loggers[n].write_to_file(new_data)
-                print(self.data_loggers[n].data_to_string(new_data, verbose=True), end='')
+                board.process_data()
             except PyboardError:
-                self.board_errors.append(board.number)
+                self.board_errors.append(n)
         return boards_running
 
     def run_framework(self, dur=None):
@@ -101,17 +107,16 @@ class Pycboards():
         return v_values
 
     def open_data_file(self, data_dir, experiment_name, subject_IDs, datetime_now=None):
-        self.data_loggers = {}
         for n, board in self.boards.items():
-            self.data_loggers[n] = Data_logger(data_dir, experiment_name, board.sm_info) 
-            self.data_loggers[n].open_data_file(subject_IDs[n], datetime_now)
+            board.data_logger.open_data_file(
+                data_dir, experiment_name, subject_IDs[n], datetime_now)
 
     def get_file_paths(self):
-        return {n:self.data_loggers[n].file_path for n in self.numbers}
+        return {n:self.boards[n].data_logger.file_path for n in self.numbers}
 
     def close_data_file(self):
-        for data_logger in self.data_loggers.values():
-            data_logger.close_files
+        for board in self.boards.values():
+            board.data_logger.close_files()
 
     def close(self):
         for board in self.boards.values():
@@ -120,7 +125,7 @@ class Pycboards():
     def save_unique_IDs(self):
         print('Saving hardware unique IDs.')
         with open(os.path.join(config_dir, 'hardware_unique_IDs.txt'), 'w') as id_file:        
-                id_file.write(pformat(self.unique_IDs))
+            id_file.write(pformat(self.unique_IDs))
 
     def check_unique_IDs(self):
         '''Check whether hardware unique IDs of pyboards match those saved in 

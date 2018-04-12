@@ -65,10 +65,10 @@ class Pycboard(Pyboard):
     and pyControl operations.
     '''
 
-    def __init__(self, serial_port,  baudrate=115200, verbose=True, 
-                 print_func=print, raise_exception=True):
+    def __init__(self, serial_port,  baudrate=115200, verbose=True, print_func=print, data_logger=None):
         self.serial_port = serial_port
-        self.print = print_func # Function used for print statements.
+        self.print = print_func        # Function used for print statements.
+        self.data_logger = data_logger # Instance of Data_logger class for saving and printing data.
         self.status = {'serial': None, 'framework':None, 'hardware':None, 'usb_mode':None}
         try:    
             super().__init__(self.serial_port, baudrate=115200)
@@ -79,8 +79,7 @@ class Pycboard(Pyboard):
             "sys.implementation.version if hasattr(sys, 'implementation') else (0,0,0)").decode())
             self.micropython_version = float('{}.{}{}'.format(*v_tuple))
         except SerialException as e:
-            if raise_exception:
-                raise(e)
+            raise(e)
             self.status['serial'] = False
         if verbose: # Print status.
             if self.status['serial']:
@@ -185,14 +184,13 @@ class Pycboard(Pyboard):
     # Pyboard filesystem operations.
     # ------------------------------------------------------------------------------------
 
-    def write_file(self, target_path, data, raise_exception=True):
+    def write_file(self, target_path, data):
         '''Write data to file at specified path on pyboard, any data already
         in the file will be deleted.'''
         try:
             self.exec("with open('{}','w') as f: f.write({})".format(target_path, repr(data)))
         except PyboardError as e:
-            if raise_exception:
-                raise PyboardError(e)
+            raise PyboardError(e)
 
     def get_file_hash(self, target_path):
         '''Get the djb2 hash of a file on the pyboard.'''
@@ -295,16 +293,14 @@ class Pycboard(Pyboard):
         else:
             self.print('Hardware definition file not found.') 
 
-    def setup_state_machine(self, sm_name, sm_dir=tasks_dir, raise_exception=True):
+    def setup_state_machine(self, sm_name, sm_dir=tasks_dir):
         '''Transfer state machine descriptor file sm_name.py from folder sm_dir
         to board. Instantiate state machine object as state_machine on pyboard.'''
         self.reset()
         sm_path = os.path.join(sm_dir, sm_name + '.py')
         if not os.path.exists(sm_path):
             self.print('Error: State machine file not found at: ' + sm_path)
-            if raise_exception:
-                raise PyboardError('State machine file not found at: ' + sm_path)
-            return
+            raise PyboardError('State machine file not found at: ' + sm_path)
         self.print('\nTransfering state machine {} to pyboard.'.format(sm_name))
         self.transfer_file(sm_path, 'task_file.py')
         try:
@@ -312,14 +308,15 @@ class Pycboard(Pyboard):
             self.exec('state_machine = sm.State_machine(smd)') 
         except PyboardError as e:
             self.print('\nError: Unable to setup state machine.\n\n' + e.args[2].decode())
-            if raise_exception:
-                raise PyboardError('Unable to setup state machine.', e.args[2])
+            raise PyboardError('Unable to setup state machine.', e.args[2])
         # Get information about state machine.
         self.sm_info = {'name'  : sm_name,
                         'states': self.get_states(), # {name: ID}
                         'events': self.get_events(), # {name: ID}
                         'analog_inputs': self.get_analog_inputs(), # {name: {'ID': ID, 'Fs':sampling rate}}
                         'variables': self.get_variables()} # {name: repr(value)}
+        if self.data_logger:
+            self.data_logger.set_state_machine(self.sm_info)
         return self.sm_info
 
     def get_states(self):
@@ -350,9 +347,11 @@ class Pycboard(Pyboard):
         self.serial.write(b'\x03') # Stop signal
         self.framework_running = False
 
-    def process_data(self, raise_exception=True):
-        '''Read data from serial line and return list of data tuples.'''
+    def process_data(self):
+        '''Read data from serial line, generate list new_data of data tuples, 
+        pass new_data to data_logger and print_func if specified, return new_data.'''
         new_data = []
+        error_message = None
         while self.serial.inWaiting() > 0:
             new_byte = self.serial.read(1)  
             if new_byte == b'A': # Analog data, 13 byte header + variable size content.
@@ -390,18 +389,18 @@ class Pycboard(Pyboard):
                 if new_byte == b'V': # Store new variable value in sm_info
                     v_name, v_str = data_bytes.decode().split(' ')
                     self.sm_info['variables'][v_name] = eval(v_str)
-                      
             elif new_byte == b'\x04': # End of framework run.
                 self.framework_running = False
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
                 if len(data_err) > 2:
-                    error_string = data_err[:-3].decode()
+                    error_message = data_err[:-3].decode()
+                    new_data.append(('!', error_message))
                     self.reset() # Reset board to turn off all output.                      
-                    if raise_exception:
-                        raise PyboardError(error_string)
-                    else:
-                        print(error_string)
                 break
+        if new_data and self.data_logger:
+            self.data_logger.process_data(new_data)
+        if error_message:
+            raise PyboardError(error_message)
         return new_data
 
     # ------------------------------------------------------------------------------------

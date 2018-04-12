@@ -263,6 +263,8 @@ class Analog_input(IO_object):
         if rising_event or falling_event:
             assert type(threshold) == int, 'Integer threshold must be specified if rising or falling events are defined.'
         assert data_type in ('b','B','h','H','l','L'), 'Invalid data_type.'
+        assert not any([name == io.name for io in IO_dict.values() 
+                        if isinstance(io, Analog_input)]), 'Analog inputs must have unique names.'
         if pin: # pin argument can be None when Analog_input subclassed.
             self.ADC = pyb.ADC(pin)
             self.read_sample = self.ADC.read

@@ -22,7 +22,63 @@ except Exception as e:
     sys.exit()
 
 # ----------------------------------------------------------------------------------------
-# Config menus.
+# Run task
+# ----------------------------------------------------------------------------------------
+
+def run_task():
+    data_logger = Data_logger(print_func=print)
+    board = None
+    while not board:
+        i = input('Enter serial port of board or board number, or [s] to scan for pyboards: ')
+        if i == 's':
+            pyboard_serials = {j+1: b for (j,b) in 
+                enumerate([c[0] for c in list_ports.comports() if 'Pyboard' in c[1]])}
+            unknown_usb_serials = {j+len(pyboard_serials)+1: b for (j,b) in 
+                enumerate([c[0] for c in list_ports.comports() if 'USB Serial Device' in c[1]])}
+            if not (pyboard_serials or unknown_usb_serials):
+                print('\nNo Pyboards found.\n' )
+                continue
+            else:
+                if pyboard_serials:
+                    print('\nPyboards found on the following serial ports:\n')
+                    for b in pyboard_serials.keys():
+                        print('{}: {}\n'.format(b, pyboard_serials[b]))
+                if unknown_usb_serials:
+                    print('\nPossible Pyboards found on the following serial ports:\n')
+                    for b in unknown_usb_serials.keys():
+                        print('{}: {}\n'.format(b, unknown_usb_serials[b]))
+                pyboard_serials.update(unknown_usb_serials)
+                while True:
+                    k = input('Select Pyboard:')
+                    try:
+                        port = pyboard_serials[int(k)]
+                        break
+                    except (KeyError, ValueError):
+                        print('\nInput not recognised, valid inputs: {}\n'.format(list(pyboard_serials.keys())))
+        else:
+            try: # Check if input is an integer corresponding to a setup number.
+                port = config.board_serials[int(i)]
+            except (KeyError, ValueError):
+                port = i
+        try:
+            board = Pycboard(port, verbose=False, data_logger=data_logger)
+        except SerialException:
+            print('\nUnable to open serial connection {}, Check serial port is correct.\n'
+                  'If port is correct, try resetting pyboard with reset button.\n'.format(port))
+
+    print('\nSerial connection OK. Micropython version: {}'.format(board.micropython_version))
+
+    if not board.status['framework']:
+        board.load_framework()
+
+    if not board.status['hardware']:
+        board.load_hardware_definition()
+
+    task_select_menu(board)
+
+
+# ----------------------------------------------------------------------------------------
+# Menus.
 # ----------------------------------------------------------------------------------------
 
 def task_select_menu(board):
@@ -48,8 +104,7 @@ def task_select_menu(board):
 
 def task_menu(board, task):
     try:
-        sm_info = board.setup_state_machine(task, raise_exception=True)
-        data_logger = Data_logger(data_dir, 'run_task', sm_info)
+        board.setup_state_machine(task)
     except Exception as e:
         print(e)
         input('Press enter to return to task select menu.')
@@ -59,7 +114,7 @@ def task_menu(board, task):
         i = input('\nPress [enter] to run task, [g] to get variable value, [s] to set variable value, [c] to close program, [f] to create data file, or [t] to select a new task:')
         if i == '':
             if subject_ID: 
-                data_logger.open_data_file(subject_ID)
+                board.data_logger.open_data_file(data_dir, 'run_task', subject_ID)
             else:
                 r = input('\nData file not created, data will not be saved. Continue ([y]/n)')
                 if r == 'n':
@@ -68,22 +123,15 @@ def task_menu(board, task):
             try:
                 board.start_framework()
                 while True:
-                    new_data = board.process_data()
-                    print(data_logger.data_to_string(new_data, verbose=True), end='')
-                    if subject_ID: data_logger.write_to_file(new_data)
+                    board.process_data()
             except KeyboardInterrupt:
                 board.stop_framework()
                 time.sleep(0.1)
-                new_data = board.process_data()
-                print(data_logger.data_to_string(new_data, verbose=True), end='')
-                if subject_ID:
-                    data_logger.write_to_file(new_data)
-                    data_logger.close_files()
+                board.process_data()
+                board.data_logger.close_files()
             except PyboardError as e:
-                print('\nError while running task:\n')
-                print(str(e))
-                if subject_ID:
-                    data_logger.close_files()
+                print('\nError while running task.')
+                board.data_logger.close_files()
                 input('\nPress enter to return to task select menu.')
                 return
         elif i == 'g':
@@ -180,59 +228,7 @@ def close_program(board):
     board.close()
     sys.exit()
 
-# ----------------------------------------------------------------------------------------
-# Run task
-# ----------------------------------------------------------------------------------------
-
-def run_task():
-    board = None
-    while not board:
-        i = input('Enter serial port of board or board number, or [s] to scan for pyboards: ')
-        if i == 's':
-            pyboard_serials = {j+1: b for (j,b) in 
-                enumerate([c[0] for c in list_ports.comports() if 'Pyboard' in c[1]])}
-            unknown_usb_serials = {j+len(pyboard_serials)+1: b for (j,b) in 
-                enumerate([c[0] for c in list_ports.comports() if 'USB Serial Device' in c[1]])}
-            if not (pyboard_serials or unknown_usb_serials):
-                print('\nNo Pyboards found.\n' )
-                continue
-            else:
-                if pyboard_serials:
-                    print('\nPyboards found on the following serial ports:\n')
-                    for b in pyboard_serials.keys():
-                        print('{}: {}\n'.format(b, pyboard_serials[b]))
-                if unknown_usb_serials:
-                    print('\nPossible Pyboards found on the following serial ports:\n')
-                    for b in unknown_usb_serials.keys():
-                        print('{}: {}\n'.format(b, unknown_usb_serials[b]))
-                pyboard_serials.update(unknown_usb_serials)
-                while True:
-                    k = input('Select Pyboard:')
-                    try:
-                        port = pyboard_serials[int(k)]
-                        break
-                    except (KeyError, ValueError):
-                        print('\nInput not recognised, valid inputs: {}\n'.format(list(pyboard_serials.keys())))
-        else:
-            try: # Check if input is an integer corresponding to a setup number.
-                port = config.board_serials[int(i)]
-            except (KeyError, ValueError):
-                port = i
-        try:
-            board = Pycboard(port, raise_exception=True, verbose=False)
-        except SerialException:
-            print('\nUnable to open serial connection {}, Check serial port is correct.\n'
-                  'If port is correct, try resetting pyboard with reset button.\n'.format(port))
-
-    print('\nSerial connection OK. Micropython version: {}'.format(board.micropython_version))
-
-    if not board.status['framework']:
-        board.load_framework()
-
-    if not board.status['hardware']:
-        board.load_hardware_definition()
-
-    task_select_menu(board)
+# Main ----------------------------------------------------------------------------
 
 if __name__ == "__main__":
     try:

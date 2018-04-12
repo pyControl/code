@@ -4,27 +4,31 @@ from datetime import datetime
 class Data_logger():
     '''Class for logging data from a pyControl setup to disk'''
 
-    def __init__(self, data_dir, experiment_name, sm_info):
-        self.data_dir = data_dir
-        self.experiment_name = experiment_name
-        self.task_name = sm_info['name']
+    def __init__(self, sm_info=None, print_func=None):
+        self.data_file = None
+        self.print_func = print_func
+        if sm_info:
+            self.set_state_machine(sm_info)
+
+    def set_state_machine(self, sm_info):
         self.sm_info = sm_info
         self.ID2name_fw = {ID: name for name, ID       # Dict mapping framework IDs to names.
                            in {**self.sm_info['states'], **self.sm_info['events']}.items()}
         self.ID2name_hw = {ai['ID']: name for name, ai # Dict mapping hardware IDs to names.
                            in self.sm_info['analog_inputs'].items()}
-        self.data_file = None
         self.analog_files = {ai['ID']: None for ai in self.sm_info['analog_inputs'].values()}
 
-    def open_data_file(self, subject_ID,  datetime_now=None):
+    def open_data_file(self, data_dir, experiment_name, subject_ID, datetime_now=None):
         '''Open data file and write header information.'''
-        if datetime_now is None: datetime_now = datetime.now()
+        self.data_dir = data_dir
+        self.experiment_name = experiment_name
         self.subject_ID = subject_ID
+        if datetime_now is None: datetime_now = datetime.now()
         file_name = os.path.join(self.subject_ID + datetime_now.strftime('-%Y-%m-%d-%H%M%S') + '.txt')
         self.file_path = os.path.join(self.data_dir, file_name)
         self.data_file = open(self.file_path, 'w', newline = '\n')
         self.data_file.write('I Experiment name  : {}\n'.format(self.experiment_name))
-        self.data_file.write('I Task name : {}\n'.format(self.task_name))
+        self.data_file.write('I Task name : {}\n'.format(self.sm_info['name']))
         self.data_file.write('I Subject ID : {}\n'.format(self.subject_ID))
         self.data_file.write('I Start date : ' + datetime_now.strftime('%Y/%m/%d %H:%M:%S') + '\n\n')
         self.data_file.write('S {}\n\n'.format(self.sm_info['states'] ))
@@ -40,6 +44,14 @@ class Data_logger():
                 analog_file.close()
                 analog_file = None
 
+    def process_data(self, new_data):
+        '''If data _file is open new data is written to file.  If print_func is specified
+        human readable data strings are passed to it.'''
+        if self.data_file:
+            self.write_to_file(new_data)
+        if self.print_func:
+            self.print_func(self.data_to_string(new_data, verbose=True), end='')
+
     def write_to_file(self, new_data):
         data_string = self.data_to_string(new_data)
         if data_string:
@@ -49,6 +61,8 @@ class Data_logger():
                 self.save_analog_chunk(*nd[1:]) 
 
     def data_to_string(self, new_data, verbose=False):
+        '''Convert list of data tuples into a string.  If verbose=True state and event names are used,
+        if verbose=False state and event IDs are used.'''
         data_string = ''
         for nd in new_data:
             if nd[0] == 'D':  # State entry or event.
@@ -60,7 +74,9 @@ class Data_logger():
                 data_string += '{} {} {}\n'.format(*nd)
             elif nd[0] == '!': # Error
                 error_string = nd[1]
-                data_string += '! ' + error_string.replace('\n', '\n! ') + '\n'
+                if not verbose:
+                    error_string = '! ' +error_string.replace('\n', '\n! ')
+                data_string += error_string + '\n'
         return data_string
 
     def save_analog_chunk(self, ID, sampling_rate, timestamp, data_array):
