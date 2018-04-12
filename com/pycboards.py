@@ -8,8 +8,10 @@ import config.config as config
 from config.paths import tasks_dir, config_dir
 
 def print_func_factory(n):
+    # Returns function which prepend each line of print string with box number n.
     def print_func(s, end='\n'):
-        print('Box {}: '.format(n) + s, end=end)
+        s = 'Box {}: '.format(n) + s[:-1].replace('\n', '\nBox {}: '.format(n)) + '\n'
+        print(s, end=end)
     return print_func
 
 # Pycboards --------------------------------------------------------------------------

@@ -394,8 +394,7 @@ class Pycboard(Pyboard):
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
                 if len(data_err) > 2:
                     error_message = data_err[:-3].decode()
-                    new_data.append(('!', error_message))
-                    self.reset() # Reset board to turn off all output.                      
+                    new_data.append(('!', error_message))                
                 break
         if new_data and self.data_logger:
             self.data_logger.process_data(new_data)
