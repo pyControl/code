@@ -11,7 +11,7 @@ if not top_dir in sys.path: sys.path.insert(0, top_dir)
 
 from cli.experiment import Experiment
 from com.pycboards import Pycboards
-from config.paths import data_dir, tasks_dir
+from config.paths import data_dir, tasks_dir, transfer_dir
 
 # Catch errors importing user created config files.
 try: 
@@ -160,6 +160,7 @@ def run_experiment():
     input('\nHit enter to start exp. To stop experiment when running, hit ctrl + c.\n')
 
     boards.open_data_file(exp_dir, exp.name, exp.subjects, datetime.now())
+    file_paths = boards.get_file_paths()
 
     boards.run_framework()
 
@@ -201,7 +202,7 @@ def run_experiment():
     boards.close_data_file()
     boards.close()
 
-    if config.transfer_dir:
+    if transfer_dir:
         transfer_folder = os.path.join(config.transfer_dir, exp.folder)
         print('\nCopying files to transfer folder.')
         if not os.path.exists(transfer_folder):
