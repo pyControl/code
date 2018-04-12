@@ -106,6 +106,9 @@ class Pycboards():
             self.data_loggers[n] = Data_logger(data_dir, experiment_name, board.sm_info) 
             self.data_loggers[n].open_data_file(subject_IDs[n], datetime_now)
 
+    def get_file_paths(self):
+        return {n:self.data_loggers[n].file_path for n in self.numbers}
+
     def close_data_file(self):
         for data_logger in self.data_loggers.values():
             data_logger.close_files
