@@ -85,8 +85,8 @@ def run_experiment():
 
         for i, exp in enumerate(exp_list):
           print('\nExperiment number : {}  Name:  {}\n'.format(i + 1, exp.name))
-          for board_n, subject_ID in exp.subjects.items():
-            print('    Box : {}   {}'.format(board_n, subject_ID))
+          for n, subject_ID in exp.subjects.items():
+            print('    Box : {}   {}'.format(n, subject_ID))
 
         selection = int(input('\n\nEnter number of experiment to run, for config options enter 0: '))
         if selection == 0:
@@ -137,13 +137,13 @@ def run_experiment():
         print('\nPersistent variables ', end = '')
         pv_folder = os.path.join(exp_dir, 'persistent_variables')
         set_pv = [] # Subjects whose persistant variables have been set.
-        for board_n, subject_ID in exp.subjects.items():
+        for n, subject_ID in exp.subjects.items():
             subject_pv_path = os.path.join(pv_folder, '{}.txt'.format(subject_ID))
             if os.path.exists(subject_pv_path):
                 with open(subject_pv_path, 'r') as pv_file:
                     pv_dict = eval(pv_file.read())
                 for v_name, v_value in pv_dict.items():
-                    boards.boards[board_n].set_variable(v_name, v_value)
+                    boards.boards[n].set_variable(v_name, v_value)
                 set_pv.append(subject_ID)
         if len(set_pv) == exp.n_subjects:
             print('set OK.')
@@ -168,10 +168,10 @@ def run_experiment():
         print('\nStoring persistent variables.')
         if not os.path.exists(pv_folder):
             os.mkdir(pv_folder)
-        for board_n, subject_ID in exp.subjects.items():
+        for n, subject_ID in exp.subjects.items():
             pv_dict = {}
             for v_name in exp.persistent_variables:
-                pv_dict[v_name] = boards.boards[board_n].get_variable(v_name)
+                pv_dict[v_name] = boards.boards[n].get_variable(v_name)
             subject_pv_path = os.path.join(pv_folder, '{}.txt'.format(subject_ID))
             with open(subject_pv_path, 'w') as pv_file:
                 pv_file.write(pformat(pv_dict))
@@ -184,11 +184,11 @@ def run_experiment():
         for v_name in exp.summary_variables:
             print('\n' + v_name + ':')
             v_strings = [v_name + ':\n']
-            for board_n in boards_in_use:
-                v_value = boards.boards[board_n].get_variable(v_name)
-                boards.data_loggers[board_n].data_file.write('V -1 {} {}\n'.format(v_name, v_value))
-                print(exp.subjects[board_n] + ': {}'.format(v_value))
-                v_strings.append(str(v_value) +'\t' + exp.subjects[board_n] + '\n')
+            for n in boards_in_use:
+                v_value = boards.boards[n].get_variable(v_name)
+                boards.boards[n].data_logger.data_file.write('V -1 {} {}\n'.format(v_name, v_value))
+                print(exp.subjects[n] + ': {}'.format(v_value))
+                v_strings.append(str(v_value) +'\t' + exp.subjects[n] + '\n')
             v_strings.append('\n' * (spacing-1)) # Add empty lines between variables.
             summary_string += ''.join(v_strings) 
         try:
