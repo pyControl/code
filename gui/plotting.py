@@ -1,4 +1,5 @@
 import time
+from datetime import timedelta
 import pyqtgraph as pg
 import numpy as np
 from pyqtgraph.Qt import QtGui
@@ -16,6 +17,7 @@ class Task_plotter(QtGui.QWidget):
         self.states_plot = States_plot(self)
         self.events_plot = Events_plot(self)
         self.analog_plot = Analog_plot(self)
+        self.run_clock   = Run_clock(self.states_plot.axis)
 
         # Setup plots
 
@@ -53,10 +55,10 @@ class Task_plotter(QtGui.QWidget):
     def process_data(self, new_data):
         # Update plots.
         run_time = time.time() - self.start_time
-        # Plot new states or events.
         self.states_plot.update(new_data, run_time)
         self.events_plot.update(new_data, run_time)
         self.analog_plot.update(new_data, run_time)
+        self.run_clock.update(run_time)
 
 
 # States_plot --------------------------------------------------------
@@ -189,3 +191,17 @@ class Analog_data():
         self.data = np.roll(self.data, -data_len, axis=1)
         self.data[:,-data_len:] = new_data
 
+# -----------------------------------------------------
+
+class Run_clock():
+    # Class for displaying the run time.
+
+    def __init__(self, axis):
+        self.text = pg.TextItem(text='')#, color=(255,0,0))
+        self.text.setFont(QtGui.QFont('arial',11, QtGui.QFont.Bold))
+        axis.getViewBox().addItem(self.text, ignoreBounds=True)
+        self.text.setParentItem(axis.getViewBox())
+        self.text.setPos(10,-5)
+
+    def update(self, run_time):
+        self.text.setText(str(timedelta(seconds=run_time))[:7])
