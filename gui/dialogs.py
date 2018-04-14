@@ -2,6 +2,30 @@ import os
 from pyqtgraph.Qt import QtGui, QtCore
 from config.paths import config_dir
 
+# Settings_dialog -------------------------------------------------------
+
+class Settings_dialog(QtGui.QDialog):
+
+    def __init__(self, parent=None):
+        super(QtGui.QDialog, self).__init__(parent)
+        self.setWindowTitle('GUI settings')
+        # Create widgets.
+        self.s_len_label = QtGui.QLabel('State history length')
+        self.s_len_text  = QtGui.QLineEdit(str(100))
+        self.e_len_label = QtGui.QLabel('Event hisory length')
+        self.e_len_text  = QtGui.QLineEdit(str(100))
+        self.a_len_label = QtGui.QLabel('Analog history duration (s)')
+        self.a_len_text  = QtGui.QLineEdit(str(5))
+        # Layout
+        self.grid_layout = QtGui.QGridLayout()
+        self.grid_layout.addWidget(self.s_len_label, 1, 1)
+        self.grid_layout.addWidget(self.s_len_text , 1, 2)
+        self.grid_layout.addWidget(self.e_len_label, 2, 1)
+        self.grid_layout.addWidget(self.e_len_text , 2, 2)
+        self.grid_layout.addWidget(self.a_len_label, 3, 1)
+        self.grid_layout.addWidget(self.a_len_text , 3, 2)
+        self.setLayout(self.grid_layout)
+
 # Board_config_dialog -------------------------------------------------
 
 class Board_config_dialog(QtGui.QDialog):

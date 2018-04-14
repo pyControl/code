@@ -293,16 +293,17 @@ class Pycboard(Pyboard):
         else:
             self.print('Hardware definition file not found.') 
 
-    def setup_state_machine(self, sm_name, sm_dir=tasks_dir):
+    def setup_state_machine(self, sm_name, sm_dir=tasks_dir, uploaded=False):
         '''Transfer state machine descriptor file sm_name.py from folder sm_dir
         to board. Instantiate state machine object as state_machine on pyboard.'''
         self.reset()
-        sm_path = os.path.join(sm_dir, sm_name + '.py')
-        if not os.path.exists(sm_path):
-            self.print('Error: State machine file not found at: ' + sm_path)
-            raise PyboardError('State machine file not found at: ' + sm_path)
-        self.print('\nTransfering state machine {} to pyboard.'.format(sm_name))
-        self.transfer_file(sm_path, 'task_file.py')
+        if not uploaded:
+            sm_path = os.path.join(sm_dir, sm_name + '.py')
+            if not os.path.exists(sm_path):
+                self.print('Error: State machine file not found at: ' + sm_path)
+                raise PyboardError('State machine file not found at: ' + sm_path)
+            self.print('\nTransfering state machine {} to pyboard.'.format(sm_name))
+            self.transfer_file(sm_path, 'task_file.py')
         try:
             self.exec('import task_file as smd')
             self.exec('state_machine = sm.State_machine(smd)') 
