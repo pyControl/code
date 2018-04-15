@@ -1,8 +1,10 @@
 import time
+import numpy as np
 from datetime import timedelta
 import pyqtgraph as pg
-import numpy as np
 from pyqtgraph.Qt import QtGui
+
+from config.gui_settings import event_history_len, state_history_len, analog_history_dur
 
 # Task_plotter -----------------------------------------------------------------------
 
@@ -14,9 +16,9 @@ class Task_plotter(QtGui.QWidget):
 
         # Create widgets
 
-        self.states_plot = States_plot(self)
-        self.events_plot = Events_plot(self)
-        self.analog_plot = Analog_plot(self)
+        self.states_plot = States_plot(self, data_len=state_history_len)
+        self.events_plot = Events_plot(self, data_len=event_history_len)
+        self.analog_plot = Analog_plot(self, data_dur=analog_history_dur)
         self.run_clock   = Run_clock(self.states_plot.axis)
 
         # Setup plots
@@ -151,45 +153,39 @@ class Analog_plot():
 
     def __init__(self, parent=None, data_dur=10):
         self.data_dur = data_dur
-        self.axis = pg.PlotWidget(title='Events')
-        self.axis.addLegend(offset=(10, 10)) 
+        self.axis = pg.PlotWidget(title='Analog')
+        self.legend = None 
 
     def set_state_machine(self, sm_info):
         self.inputs = sm_info['analog_inputs']
         if not self.inputs: return # State machine may not have analog inputs.
+        if self.legend:
+            self.legend.close()
+        self.legend = self.axis.addLegend(offset=(10, 10))
         self.axis.clear()
         self.plots = {ai['ID']: self.axis.plot(name=name, 
-                      pen=pg.mkPen(pg.intColor(ai['ID'],len(self.inputs)))) for name, ai in self.inputs.items()}
+                      pen=pg.mkPen(pg.intColor(ai['ID'],len(self.inputs)))) for name, ai in sorted(self.inputs.items())}
         self.axis.getAxis('bottom').setLabel('Time (seconds)')
         
     def run_start(self):
         if not self.inputs: return # State machine may not have analog inputs.
         for plot in self.plots.values():
             plot.clear()
-        self.data = {ai['ID']: Analog_data(data_length=ai['Fs']*12) for name, ai in self.inputs.items()}
+        self.data = {ai['ID']: np.zeros([ai['Fs']*self.data_dur, 2])
+                     for ai in self.inputs.values()}
 
     def update(self, new_data, run_time):
         if not self.inputs: return # State machine may not have analog inputs.
         new_analog = [nd for nd in new_data if nd[0] == 'A']
         for na in new_analog:
             ID, sampling_rate, timestamp, data_array = na[1:]
-            t = timestamp/1000 + np.arange(len(data_array))/sampling_rate
-            self.data[ID].put(np.vstack([t,data_array]))
-            self.plots[ID].setData(*self.data[ID].data)
+            new_len = len(data_array)
+            t = timestamp/1000 + np.arange(new_len)/sampling_rate
+            self.data[ID] = np.roll(self.data[ID], -new_len, axis=0)
+            self.data[ID][-new_len:,:] = np.vstack([t,data_array]).T
+            self.plots[ID].setData(self.data[ID])
         for plot in self.plots.values():
             plot.setPos(-run_time, 0)   
-
-class Analog_data():
-    # Class used to store data from an analog input.
-
-    def __init__(self, data_length, dtype=float):
-        self.data = np.zeros([2, data_length], dtype) # [timestamps, values]
-
-    def put(self, new_data):
-        # Move old data along buffer, store new data samples.
-        data_len = new_data.shape[1]
-        self.data = np.roll(self.data, -data_len, axis=1)
-        self.data[:,-data_len:] = new_data
 
 # -----------------------------------------------------
 

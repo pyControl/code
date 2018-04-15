@@ -11,7 +11,9 @@ if not top_dir in sys.path: sys.path.insert(0, top_dir)
 
 from com.pycboard import Pycboard, PyboardError
 from com.data_logger import Data_logger
+
 from config.paths import data_dir, tasks_dir
+from config.gui_settings import update_interval
 
 from gui.dialogs import Settings_dialog, Board_config_dialog, Variables_dialog
 from gui.plotting import Task_plotter
@@ -34,11 +36,13 @@ class Run_task_gui(QtGui.QWidget):
         self.sm_info = None    # Information about current state machine.
         self.data_dir = None
         self.subject_ID = None 
-        self.update_interval = 10 # Time between updates (ms)
         self.data_logger = Data_logger(print_func=self.print_to_log)
         self.connected     = False # Whether gui is conencted to pyboard.
         self.uploaded = False # Whether selected task is on board.
         self.subject_changed = False
+        self.available_tasks = None
+        self.available_ports = None
+        self.refresh_interval = 1000 # Interval to refresh tasks and ports when not running (ms).
 
         # GUI groupbox.
 
@@ -48,15 +52,15 @@ class Run_task_gui(QtGui.QWidget):
         self.status_text = QtGui.QLineEdit('Not connected')
         self.status_text.setStyleSheet('background-color:rgb(210, 210, 210);')
         self.status_text.setReadOnly(True)
-        self.refresh_button = QtGui.QPushButton('Refresh')
         self.settings_button = QtGui.QPushButton('Settings')
 
         self.guigroup_layout = QtGui.QHBoxLayout()
         self.guigroup_layout.addWidget(self.status_label)
         self.guigroup_layout.addWidget(self.status_text)
-        self.guigroup_layout.addWidget(self.refresh_button)
-        self.guigroup_layout.addWidget(self.settings_button)
+        #self.guigroup_layout.addWidget(self.settings_button)
         self.gui_groupbox.setLayout(self.guigroup_layout)  
+
+        self.settings_button.clicked.connect(lambda: self.settings_dialog.exec_())
 
         # Board groupbox
 
@@ -76,21 +80,10 @@ class Run_task_gui(QtGui.QWidget):
         self.boardgroup_layout.addWidget(self.config_button)
         self.board_groupbox.setLayout(self.boardgroup_layout)
 
-        # Task groupbox
-
-        self.task_groupbox = QtGui.QGroupBox('Task')
-
-        self.task_label = QtGui.QLabel('Task:')
-        self.task_select = QtGui.QComboBox()
-        self.upload_button = QtGui.QPushButton('Upload')
-        self.variables_button = QtGui.QPushButton('Variables')
-
-        self.taskgroup_layout = QtGui.QHBoxLayout()
-        self.taskgroup_layout.addWidget(self.task_label)
-        self.taskgroup_layout.addWidget(self.task_select)
-        self.taskgroup_layout.addWidget(self.upload_button)
-        self.taskgroup_layout.addWidget(self.variables_button)
-        self.task_groupbox.setLayout(self.taskgroup_layout)
+        self.connect_button.clicked.connect(
+            lambda: self.disconnect() if self.connected else self.connect())
+        self.config_button.clicked.connect(
+            lambda: self.config_dialog.exec_())
 
         # File groupbox
 
@@ -113,6 +106,30 @@ class Run_task_gui(QtGui.QWidget):
         self.filegroup_layout.addWidget(self.subject_text)
         self.file_groupbox.setLayout(self.filegroup_layout)
 
+        self.data_dir_text.textChanged.connect(self.test_data_path)
+        self.data_dir_button.clicked.connect(self.select_data_dir)
+        self.subject_text.textChanged.connect(self.test_data_path)
+
+        # Task groupbox
+
+        self.task_groupbox = QtGui.QGroupBox('Task')
+
+        self.task_label = QtGui.QLabel('Task:')
+        self.task_select = QtGui.QComboBox()
+        self.upload_button = QtGui.QPushButton('Upload')
+        self.variables_button = QtGui.QPushButton('Variables')
+
+        self.taskgroup_layout = QtGui.QHBoxLayout()
+        self.taskgroup_layout.addWidget(self.task_label)
+        self.taskgroup_layout.addWidget(self.task_select)
+        self.taskgroup_layout.addWidget(self.upload_button)
+        self.taskgroup_layout.addWidget(self.variables_button)
+        self.task_groupbox.setLayout(self.taskgroup_layout)
+
+        self.task_select.currentTextChanged.connect(self.task_changed)
+        self.upload_button.clicked.connect(self.setup_task)        
+        self.variables_button.clicked.connect(lambda x: self.variables_dialog.exec_())
+
         # Session groupbox.
 
         self.session_groupbox = QtGui.QGroupBox('Session')
@@ -124,6 +141,9 @@ class Run_task_gui(QtGui.QWidget):
         self.sessiongroup_layout.addWidget(self.start_button)
         self.sessiongroup_layout.addWidget(self.stop_button)
         self.session_groupbox.setLayout(self.sessiongroup_layout)
+
+        self.start_button.clicked.connect(self.start_task)
+        self.stop_button.clicked.connect(self.stop_task)
 
         # Log text and task plots.
 
@@ -157,31 +177,19 @@ class Run_task_gui(QtGui.QWidget):
         self.settings_dialog = Settings_dialog(parent=self)
         self.config_dialog = Board_config_dialog(parent=self)
 
-        # Connect widgets
-
-        self.settings_button.clicked.connect(lambda: self.settings_dialog.exec_())
-        self.refresh_button.clicked.connect(self.refresh)
-        self.connect_button.clicked.connect(lambda:
-            self.disconnect() if self.connected else self.connect())
-        self.config_button.clicked.connect(lambda x: self.config_dialog.exec_())
-        self.task_select.currentTextChanged.connect(self.task_changed)
-        self.upload_button.clicked.connect(self.setup_task)        
-        self.variables_button.clicked.connect(lambda x: self.variables_dialog.exec_())
-        self.data_dir_text.textChanged.connect(self.test_data_path)
-        self.data_dir_button.clicked.connect(self.select_data_dir)
-        self.subject_text.textChanged.connect(self.test_data_path)
-        self.start_button.clicked.connect(self.start_task)
-        self.stop_button.clicked.connect(self.stop_task)
-
-        # Widget initial setup.
-
-        self.refresh()     # Populate port and task select widgets.
-        self.disconnect()  # Configure not connected state.
-
         # Create timers
 
         self.process_timer = QtCore.QTimer() # Timer to regularly call process_data() during run.        
         self.process_timer.timeout.connect(self.process_data)
+        self.refresh_timer = QtCore.QTimer() # Timer to regularly call refresh() when not running.
+        self.refresh_timer.timeout.connect(self.refresh)
+
+
+        # Initial setup.
+
+        self.disconnect() # Set initial state as disconnected.
+        self.refresh()    # Refresh tasks and ports lists.
+        self.refresh_timer.start(self.refresh_interval) 
 
     # General methods
 
@@ -202,22 +210,25 @@ class Run_task_gui(QtGui.QWidget):
             self.start_button.setText('Start')
             return False
 
-    # Widget methods.
+    def scan_ports(self):
+        # Scan serial ports for connected boards and update ports list if changed.
+        ports = set([c[0] for c in list_ports.comports()
+                     if ('Pyboard' in c[1]) or ('USB Serial Device' in c[1])])
+        if not ports == self.available_ports:
+            self.port_select.clear()
+            self.port_select.addItems(sorted(ports))
+            self.available_ports = ports
 
-    def refresh(self):
-        # Refresh serial ports and task list controls.
-        prev_status= self.status_text.text()
-        QtCore.QTimer.singleShot(1000, lambda : self.status_text.setText(prev_status))
-        self.status_text.setText('Refreshing ports and tasks...')
-        self.repaint()   
-        ports = [c[0] for c in list_ports.comports()
-                 if ('Pyboard' in c[1]) or ('USB Serial Device' in c[1])]
-        self.port_select.clear()
-        self.port_select.addItems(ports)
-        tasks =  [t.split('.')[0] for t in os.listdir(tasks_dir)
-                  if t[-3:] == '.py']
-        self.task_select.clear()
-        self.task_select.addItems(tasks)
+    def scan_tasks(self):
+        # Scan task folder for available tasks and update tasks list if changed.     
+        tasks =  set([t.split('.')[0] for t in os.listdir(tasks_dir)
+                  if t[-3:] == '.py'])
+        if not tasks == self.available_tasks:    
+            self.task_select.clear()
+            self.task_select.addItems(sorted(tasks))
+            self.available_tasks = tasks
+
+    # Widget methods.
 
     def connect(self):
         # Connect to pyboard.
@@ -247,6 +258,7 @@ class Run_task_gui(QtGui.QWidget):
         self.file_groupbox.setEnabled(False)
         self.session_groupbox.setEnabled(False)
         self.config_button.setEnabled(False)
+        self.port_select.setEnabled(True)
         self.connect_button.setText('Connect')
         self.status_text.setText('Not connected')
         self.connected = False
@@ -305,24 +317,24 @@ class Run_task_gui(QtGui.QWidget):
         self.file_groupbox.setEnabled(False)
         self.start_button.setEnabled(False)
         self.board_groupbox.setEnabled(False)
-        self.refresh_button.setEnabled(False)
         self.settings_button.setEnabled(False)
         self.stop_button.setEnabled(True)
         self.print_to_log(
             '\nRun started at: {}\n'.format(
             datetime.now().strftime('%Y/%m/%d %H:%M:%S')))
-        self.process_timer.start(self.update_interval)
+        self.process_timer.start(update_interval)
+        self.refresh_timer.stop()
         self.status_text.setText('Running: ' + self.task)
 
     def stop_task(self, error=False):
         self.process_timer.stop()
+        self.refresh_timer.start(self.refresh_interval)
         if not error: 
             self.board.stop_framework()
             QtCore.QTimer.singleShot(100, self.process_data) # Catch output after framework stops.
         self.data_logger.close_files()
         self.board_groupbox.setEnabled(True)
         self.file_groupbox.setEnabled(True)
-        self.refresh_button.setEnabled(True)
         self.settings_button.setEnabled(True)
         self.start_button.setEnabled(True)
         self.task_select.setEnabled(True)
@@ -330,7 +342,7 @@ class Run_task_gui(QtGui.QWidget):
         self.stop_button.setEnabled(False)
         self.status_text.setText('Uploaded : ' + self.task)
 
-    # Update functions called while task running.
+    # Timer updates
 
     def process_data(self):
         # Called regularly during run to process data from board.
@@ -340,6 +352,11 @@ class Run_task_gui(QtGui.QWidget):
         except PyboardError as e:
             self.print_to_log('\nError during framework run.')
             self.stop_task(error=True)
+
+    def refresh(self):
+        # Called regularly when not running to update tasks and ports.
+        self.scan_tasks()
+        self.scan_ports()
 
     # Cleanup.
 
