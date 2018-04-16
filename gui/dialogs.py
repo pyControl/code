@@ -36,7 +36,7 @@ class Board_config_dialog(QtGui.QDialog):
         # Create widgets.
         self.load_fw_button = QtGui.QPushButton('Load framework')
         self.load_hw_button = QtGui.QPushButton('Load hardware definition')
-        self.DFU_button = QtGui.QPushButton('Enter Device Firmware Update (DFU) mode')
+        self.DFU_button = QtGui.QPushButton('Device Firmware Update (DFU) mode')
         self.flashdrive_button = QtGui.QPushButton()
         self.vertical_layout = QtGui.QVBoxLayout()
         # Layout.
