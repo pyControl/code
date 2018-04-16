@@ -1,4 +1,24 @@
 -------------------------------------------------------------------------------
+Version 1.3 16/04/2018
+-------------------------------------------------------------------------------
+
+GUI:
+- New graphical interface run_task_gui.py for running tasks, supports online
+  visualisation of task behaviour and setting of variables during run.
+
+CLI:
+- Summary variables now written to data file at end of run_experiment.py
+- Event and state names rather than IDs now displayed during run_task and 
+  run_experiment.
+
+Framework:
+- Added Port_expander hardware device driver.
+- All data now tranmtted from pyboard to computer as binary rather than printed 
+  strings.
+- Data logging moved to seperate Data_logger class.
+- Setting / getting variables modifed to work while framework running.
+
+-------------------------------------------------------------------------------
 Version 1.2.1 29/03/2018
 -------------------------------------------------------------------------------
 
