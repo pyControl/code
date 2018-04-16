@@ -99,7 +99,7 @@ class State_machine():
         # Used to output data print_string with timestamp.  print_string is stored and only
         #  printed to serial line once higher priority tasks have all been processed. 
         if fw.data_output:
-            fw.data_output_queue.put((fw.print_evt, fw.current_time, print_string))
+            fw.data_output_queue.put((fw.print_evt, fw.current_time, str(print_string)))
 
     def publish_event(self, event):
         # Put event with specified name in the event queue.
