@@ -9,7 +9,7 @@ from serial.tools import list_ports
 top_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if not top_dir in sys.path: sys.path.insert(0, top_dir)
 
-from com.pycboard import Pycboard, PyboardError
+from com.pycboard import Pycboard, PyboardError, _djb2_file
 from com.data_logger import Data_logger
 
 from config.paths import data_dir, tasks_dir
@@ -33,6 +33,7 @@ class Run_task_gui(QtGui.QWidget):
         # Variables.
         self.board = None      # Pycboard class instance.
         self.task = None       # Task currently uploaded on pyboard. 
+        self.task_hash = None  # Used to check if file has changed.
         self.sm_info = None    # Information about current state machine.
         self.data_dir = None
         self.subject_ID = None 
@@ -227,6 +228,13 @@ class Run_task_gui(QtGui.QWidget):
             self.task_select.clear()
             self.task_select.addItems(sorted(tasks))
             self.available_tasks = tasks
+        if self.task:
+            try:
+                task_path = os.path.join(tasks_dir, self.task + '.py')
+                if not self.task_hash == _djb2_file(task_path): # Task file modified.
+                    self.task_changed()
+            except FileNotFoundError:
+                pass
 
     # Widget methods.
 
@@ -274,6 +282,7 @@ class Run_task_gui(QtGui.QWidget):
                 self.status_text.setText('Resetting task..')
             else:
                 self.status_text.setText('Uploading..')
+                self.task_hash = _djb2_file(os.path.join(tasks_dir, task + '.py'))
             self.start_button.setEnabled(False)
             self.variables_button.setEnabled(False)
             self.repaint()
