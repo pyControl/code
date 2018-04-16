@@ -290,7 +290,7 @@ class Run_task_gui(QtGui.QWidget):
             self.uploaded = True
             self.upload_button.setText('Reset')
         except PyboardError as e:
-            print(e)
+            self.print_to_log(str(e))
             self.status_text.setText('Upload failed.')
      
     def select_data_dir(self):

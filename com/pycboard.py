@@ -222,7 +222,7 @@ class Pycboard(Pyboard):
                     self.follow(5)
         except PyboardError as e:
             self.print('Error: Unable to transfer file')
-            self.print(e)
+            self.print(str(e))
             input('\nPress any key to close.')
             sys.exit()
 
