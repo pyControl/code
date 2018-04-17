@@ -242,21 +242,24 @@ class Run_task_gui(QtGui.QWidget):
         # Connect to pyboard.
         try:
             self.status_text.setText('Connecting...')
+            self.port_select.setEnabled(False)
+            self.variables_button.setEnabled(False)
+            self.connect_button.setEnabled(False)
             self.repaint()            
             self.board = Pycboard(self.port_select.currentText(),
                                   print_func=self.print_to_log, data_logger=self.data_logger)
-            self.port_select.setEnabled(False)
-            self.config_button.setEnabled(True)
-            self.task_groupbox.setEnabled(True)
-            self.variables_button.setEnabled(False)
-            
-            self.connected = True
+
             if not self.board.status['framework']:
                 self.board.load_framework()
+            self.connected = True
+            self.config_button.setEnabled(True)
+            self.task_groupbox.setEnabled(True)
+            self.connect_button.setEnabled(True)
             self.connect_button.setText('Disconnect')
             self.status_text.setText('Connected')
         except SerialException:
             self.status_text.setText('Connection failed')
+            self.connect_button.setEnabled(True)
 
     def disconnect(self):
         # Disconnect from pyboard.
@@ -274,6 +277,7 @@ class Run_task_gui(QtGui.QWidget):
     def task_changed(self):
         self.uploaded = False
         self.upload_button.setText('Upload')
+        self.start_button.setEnabled(False)
 
     def setup_task(self):
         try:
@@ -298,9 +302,8 @@ class Run_task_gui(QtGui.QWidget):
             self.task = task
             self.uploaded = True
             self.upload_button.setText('Reset')
-        except PyboardError as e:
-            self.print_to_log(str(e))
-            self.status_text.setText('Upload failed.')
+        except PyboardError:
+            self.status_text.setText('Error setting up state machine.')
      
     def select_data_dir(self):
         self.data_dir_text.setText(
