@@ -76,7 +76,6 @@ def run_task():
 
     task_select_menu(board)
 
-
 # ----------------------------------------------------------------------------------------
 # Menus.
 # ----------------------------------------------------------------------------------------
@@ -105,8 +104,7 @@ def task_select_menu(board):
 def task_menu(board, task):
     try:
         board.setup_state_machine(task)
-    except Exception as e:
-        print(e)
+    except PyboardError as e:
         input('Press enter to return to task select menu.')
         return
     subject_ID = None
