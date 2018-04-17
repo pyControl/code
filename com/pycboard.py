@@ -297,7 +297,9 @@ class Pycboard(Pyboard):
         '''Transfer state machine descriptor file sm_name.py from folder sm_dir
         to board. Instantiate state machine object as state_machine on pyboard.'''
         self.reset()
-        if not uploaded:
+        if uploaded:
+            self.print('\n Resetting task. ', end='')
+        else:
             sm_path = os.path.join(sm_dir, sm_name + '.py')
             if not os.path.exists(sm_path):
                 self.print('Error: State machine file not found at: ' + sm_path)
