@@ -20,8 +20,6 @@ from gui.plotting import Task_plotter
 
 # Run_task_gui ------------------------------------------------------------------------
 
-app = QtGui.QApplication([])  # Start QT
-
 ## Create widgets.
 
 class Run_task_gui(QtGui.QWidget):
@@ -382,6 +380,7 @@ class Run_task_gui(QtGui.QWidget):
 # Main ----------------------------------------------------------------
 
 if __name__ == '__main__':
+    app = QtGui.QApplication([])  # Start QT
     run_task_gui = Run_task_gui()
     run_task_gui.show() 
     app.exec_()
