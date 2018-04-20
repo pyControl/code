@@ -1,6 +1,5 @@
 import pyb
 import math
-import gc
 from . import hardware as hw
 
 _sine_len = 100 # Number of points in sine wave.
@@ -10,9 +9,7 @@ _click_buf = bytearray([255,0,255,255,0,0]+4*[255]+4*[0]+8*[255]+8*[0]
                        +16*[255]+16*[0]+32*[255]+32*[0]+[128])
 _off_buf = bytearray([128])
 
-#-----------------------------------------------------------------------------------
-# Audio output
-#-----------------------------------------------------------------------------------
+# Audio output ----------------------------------------------------------------
 
 class Audio_output(hw.IO_object):
     def __init__(self, channel=1):
@@ -25,7 +22,7 @@ class Audio_output(hw.IO_object):
         self._freq_ind = 0
         hw.assign_ID(self)
 
-    # User functions-------------------------------------------------------------------
+    # User functions
 
     def off(self):
             self._DAC.write_timed(_off_buf, 10000, mode=pyb.DAC.NORMAL)
@@ -70,7 +67,7 @@ class Audio_output(hw.IO_object):
             wave_data = f.read()
         self._DAC.write_timed(wave_data, freq)
 
-    # Support functions-----------------------------------------------------------------
+    # Support functions
 
     def _pulsed_sound(self, freq, pulse_rate, func):
         self._freq = freq

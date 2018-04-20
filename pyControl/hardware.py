@@ -1,10 +1,9 @@
 import pyb
 from array import array
 from . import framework as fw
+from .utility import randint
 
-# ----------------------------------------------------------------------------------------
-# Ring buffer
-# ----------------------------------------------------------------------------------------
+# Ring buffer -----------------------------------------------------------------
 
 class Ring_buffer():
     #  Ring buffer for storing data from interrupt service routines.
@@ -41,9 +40,7 @@ class Ring_buffer():
             self.full = False
             return x
 
-# ----------------------------------------------------------------------------------------
-# Variables.
-# ----------------------------------------------------------------------------------------
+# Variables -------------------------------------------------------------------
 
 next_ID = 0 # Next hardware object ID.
 
@@ -56,13 +53,11 @@ default_pull = {'down': [], # Used when Mainboards are initialised to specify
 
 initialised = False # Set to True once hardware has been intiialised.
 
-high_priority_queue = Ring_buffer() # Hardware objects that need to be processed as soon as possible.
+interrupt_queue = Ring_buffer()   # Queue for processing hardware interrupts.
 
-low_priority_queue  = Ring_buffer() # Hardware objects that need to be processed at some point.
+stream_data_queue = Ring_buffer() # Queue for streaming data to computer.
 
-# ----------------------------------------------------------------------------------------
-# Functions
-# ----------------------------------------------------------------------------------------
+# Functions -------------------------------------------------------------------
 
 def assign_ID(hardware_object):
     # Assign unique ID to hardware object and put in IO_dict.
@@ -80,8 +75,8 @@ def initialise():
 
 def run_start():
     # Called at start of each framework run.
-    high_priority_queue.reset()
-    low_priority_queue.reset()
+    interrupt_queue.reset()
+    stream_data_queue.reset()
     for IO_object in IO_dict.values():
         IO_object._run_start()
 
@@ -101,9 +96,7 @@ def get_analog_inputs():
     print({io.name:{'ID': io.ID, 'Fs': io.sampling_rate}
           for io in IO_dict.values() if isinstance(io, Analog_input)})
 
-# ----------------------------------------------------------------------------------------
-# IO_object
-# ----------------------------------------------------------------------------------------
+# IO_object -------------------------------------------------------------------
 
 class IO_object():
     # Parent class for all pyControl input and output objects.
@@ -120,9 +113,7 @@ class IO_object():
     def off(self):
         pass
 
-# ----------------------------------------------------------------------------------------
-# Digital Input
-# ----------------------------------------------------------------------------------------
+# Digital Input ---------------------------------------------------------------
 
 class Digital_input(IO_object):
     def __init__(self, pin, rising_event=None, falling_event=None, debounce=5, decimate=False, pull=None):
@@ -205,15 +196,15 @@ class Digital_input(IO_object):
             self.pin_state = not self.pin_state
         elif self.use_both_edges:
             self.pin_state = self.pin.value()
-        high_priority_queue.put(self.ID)
+        interrupt_queue.put(self.ID)
 
-    def _process(self, priority):
+    def _process_interrupt(self):
         # Put apropriate event for interrupt in event queue.
         self._publish_if_edge_has_event(self.interrupt_timestamp)
         if self.debounce: # Set timer to deactivate debounce in self.debounce milliseconds.
-            fw.timer.set(self.debounce, (fw.debounce_evt, self.ID))
+            fw.timer.set(self.debounce, (fw.hw_timed_evt, self.ID))
 
-    def _deactivate_debounce(self):
+    def _process_timed_evt(self):
         # Called when debounce timer elapses, deactivates debounce and 
         # if necessary publishes event for edge missed during debounce.
         if not self.pin_state == self.pin.value(): # An edge has been missed.  
@@ -239,9 +230,7 @@ class Digital_input(IO_object):
         self.interrupt_timestamp = 0
         self.decimate_counter = -1
 
-# ----------------------------------------------------------------------------------------
-# Analog input.
-# ----------------------------------------------------------------------------------------
+# Analog input ----------------------------------------------------------------
 
 class Analog_input(IO_object):
     # Analog_input samples analog voltage from specified pin at specified frequency and can
@@ -349,22 +338,24 @@ class Analog_input(IO_object):
                     (not self.above_threshold and self.falling_event_ID)):
                         self.timestamp = fw.current_time
                         self.crossing_direction = self.above_threshold
-                        high_priority_queue.put(self.ID)
+                        interrupt_queue.put(self.ID)
         if self.recording:
             self.write_index = (self.write_index + 1) % self.buffer_size
             if self.write_index == 0: # Buffer full, switch buffers.
                 self.write_buffer = 1 - self.write_buffer
                 self.buffer_start_times[self.write_buffer] = fw.current_time
-                low_priority_queue.put(self.ID)
+                stream_data_queue.put(self.ID)
 
-    def _process(self, priority):
-        if priority: # Process threshold crossing.
-            if self.crossing_direction:
-                fw.event_queue.put((self.rising_event_ID, self.timestamp))
-            else:
-                fw.event_queue.put((self.falling_event_ID, self.timestamp))
-        else: # Send full buffer to computer.
-            self._send_buffer(1-self.write_buffer)
+    def _process_interrupt(self):
+        # Put event generated by threshold crossing in event queue.
+        if self.crossing_direction:
+            fw.event_queue.put((self.rising_event_ID, self.timestamp))
+        else:
+            fw.event_queue.put((self.falling_event_ID, self.timestamp))
+
+    def _process_streaming(self):
+        # Stream full buffer to computer.
+        self._send_buffer(1-self.write_buffer)
 
     def _send_buffer(self, buffer_n, n_samples=False):
         # Send specified buffer to host computer.
@@ -380,9 +371,7 @@ class Analog_input(IO_object):
         else: # Send entire buffer.
             fw.usb_serial.send(self.buffers[buffer_n])
 
-# ----------------------------------------------------------------------------------------
-# Digital Output.
-# ----------------------------------------------------------------------------------------
+# Digital Output --------------------------------------------------------------
 
 class Digital_output(IO_object):
 
@@ -446,9 +435,7 @@ class Digital_output(IO_object):
         elif self.i == self.off_ind:
             self.toggle()
 
-# ----------------------------------------------------------------------------------------
-# Digital Outputs.
-# ----------------------------------------------------------------------------------------
+# Digital Outputs -------------------------------------------------------------
 
 class Digital_output_group():
     # Grouping of Digital_output objects with methods for turning on or off together.
@@ -463,9 +450,7 @@ class Digital_output_group():
         for digital_output in self.digital_outputs:
             digital_output.off()
 
-# ----------------------------------------------------------------------------------------
-# Port
-# ----------------------------------------------------------------------------------------
+# Port ------------------------------------------------------------------------
 
 class Port():
     # Class representing one RJ45 behavioural hardware port.
@@ -481,9 +466,7 @@ class Port():
         self.I2C   = I2C
         self.UART  = UART
 
-# ----------------------------------------------------------------------------------------
-# Mainboard
-# ----------------------------------------------------------------------------------------
+# Mainboard -------------------------------------------------------------------
 
 class Mainboard():
     # Parent class for devboard and breakout boards.
@@ -491,10 +474,39 @@ class Mainboard():
     def set_pull_updown(self, pull): # Set default pullup/pulldown resistors.
         default_pull.update(pull)
 
-# ----------------------------------------------------------------------------------------
-# IO_expander_pin
-# ----------------------------------------------------------------------------------------
+# IO_expander_pin -------------------------------------------------------------
 
 class IO_expander_pin():
     # Parent class for IO expander pins.
     pass
+
+# Rsync -----------------------------------------------------------------------
+
+class Rsync(IO_object):
+    # Class for generating sync pulses with random inter-pulse interval.
+
+    def __init__(self, pin, event_name='Rsync', mean_IPI=1000, pulse_dur=5):
+        assert 0.1*mean_IPI > pulse_dur, '0.1*mean_IPI must be greater than pulse_dur'
+        self.sync_pin = pyb.Pin(pin, pyb.Pin.OUT)
+        self.event_name = event_name
+        self.pulse_dur = pulse_dur       # Sync pulse duration (ms)
+        self.min_IPI = int(0.1*mean_IPI) 
+        self.max_IPI = int(1.9*mean_IPI)
+        assign_ID(self)
+
+    def _initialise(self):
+        self.event_ID  = fw.events[self.event_name] if self.event_name in fw.events else False
+
+    def _run_start(self): 
+        if self.event_ID:
+            self.state = False # Whether output is high or low.
+            self._process_timed_evt()
+
+    def _process_timed_evt(self):
+        if self.state: # Pin high -> low, set timer for next pulse.
+            fw.timer.set(randint(self.min_IPI, self.max_IPI), (fw.hw_timed_evt, self.ID))
+        else: # Pin low -> high, set timer for pulse duration.
+            fw.data_output_queue.put((self.event_ID, fw.current_time))
+            fw.timer.set(self.pulse_dur, (fw.hw_timed_evt, self.ID))
+        self.state = not self.state
+        self.sync_pin.value(self.state)
