@@ -60,12 +60,14 @@ class Board_config_dialog(QtGui.QDialog):
     def load_framework(self):
         self.accept()
         self.parent().board.load_framework()
+        self.parent().task_changed()
 
     def load_hardware_definition(self):
         hwd_path = QtGui.QFileDialog.getOpenFileName(self, 'Select hardware definition:',
                     os.path.join(config_dir, 'hardware_definition.py'), filter='*.py')[0]
         self.accept()
         self.parent().board.load_hardware_definition(hwd_path)
+        self.parent().task_changed()
 
     def DFU_mode(self):
         self.accept()

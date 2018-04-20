@@ -1,9 +1,5 @@
 from . import framework as fw
 
-# ----------------------------------------------------------------------------------------
-# State Machine
-# ----------------------------------------------------------------------------------------
-
 class State_machine():
     # State machine behaviour is defined by passing state machine description object smd to 
     # State_machine __init__(). smd is a module which defines the states, events and  

@@ -5,11 +5,11 @@ from . import hardware as hw
 # Constants used to indicate special event types:
 
 timer_evt    = const(-1) # Timer generated event.
-debounce_evt = const(-2) # Digital_input debounce timer event.
+hw_timed_evt = const(-2) # Timer event set by hardware object.
 goto_evt     = const(-3) # timed_goto_state event.
 print_evt    = const(-4) # User print event.
 stop_fw_evt  = const(-5) # Stop framework event.
-varset_evt  = const(-6) # Variable changed event.
+varset_evt   = const(-6) # Variable changed event.
 
 # The Event_queue and Timer classes store events for future processing
 # as lists of tuples.  The following event tuple types are in use:
@@ -18,17 +18,15 @@ varset_evt  = const(-6) # Variable changed event.
 # (state_ID, timestamp) # State transition, ID is a positive integer.
 # (event_ID, timer_evt) # Timer generated event, ID is a positive integer.
 # (print_evt, timestamp, 'data_bytes') # User print event.
-# (goto_evt)     # timed_goto_state event.
-# (debounce_evt, Digital_input_ID) # Digital_input debouce timer.
-# (stop_fw_evt, None)   # Stop framework event.
+# (goto_evt) # timed_goto_state event.
+# (hw_timed_evt, hardware_ID) # Timer set by hardware object.
+# (stop_fw_evt, None) # Stop framework event.
 # (varset_evt, timestamp, v_name, v_str) # Variable changed.
 
 class pyControlError(BaseException):
     pass
 
-# ----------------------------------------------------------------------------------------
-# Event_queue
-# ----------------------------------------------------------------------------------------
+# Event_queue -----------------------------------------------------------------
 
 class Event_queue():  
     # First-in first-out event queue.
@@ -51,9 +49,7 @@ class Event_queue():
         # Return True if queue contains events.
         return len(self.Q) > 0
 
-# ----------------------------------------------------------------------------------------
-# Timer
-# ----------------------------------------------------------------------------------------
+# Timer -----------------------------------------------------------------------
 
 class Timer():
 
@@ -103,9 +99,7 @@ class Timer():
         except StopIteration:
             return 0
 
-# ----------------------------------------------------------------------------------------
-# Framework variables and objects
-# ----------------------------------------------------------------------------------------
+# Framework variables and objects ---------------------------------------------
 
 state_machine = None  # State machine object.
 
@@ -135,9 +129,7 @@ check_timers = False # Flag to say timers need to be checked, set True by clock 
 
 start_time = 0 # Time at which framework run is started.
 
-# ----------------------------------------------------------------------------------------
-# Framework functions.
-# ----------------------------------------------------------------------------------------
+# Framework functions ---------------------------------------------------------
 
 def _clock_tick(timer):
     # Set flag to check timers, called by hardware timer once each millisecond.
@@ -223,8 +215,8 @@ def _update():
     # Perform framework update functions in order of priority.
     global running
 
-    if hw.high_priority_queue.available: # Priority 1: Process high priority hardware.
-        hw.IO_dict[hw.high_priority_queue.get()]._process(priority=True)
+    if hw.interrupt_queue.available: # Priority 1: Process hardware interrupts.
+        hw.IO_dict[hw.interrupt_queue.get()]._process_interrupt()
 
     elif check_timers: # Priority 2: Check for elapsed timers.
         timer.check() 
@@ -235,8 +227,8 @@ def _update():
             if event[1] != timer_evt and data_output: # External event -> place in output queue.
                 data_output_queue.put(event)
             state_machine._process_event(ID2name[event[0]])
-        elif event[0] == debounce_evt:
-            hw.IO_dict[event[1]]._deactivate_debounce()
+        elif event[0] == hw_timed_evt:
+            hw.IO_dict[event[1]]._process_timed_evt()
         elif event[0] == goto_evt:
             state_machine._process_timed_goto_state()
         elif event[0] == stop_fw_evt:
@@ -244,10 +236,10 @@ def _update():
     elif usb_serial.any(): # Priority 4: Check for serial input from computer.
         recieve_data()
 
-    elif hw.low_priority_queue.available: # Priority 5: Process low priority hardware.
-        hw.IO_dict[hw.low_priority_queue.get()]._process(priority=False)
+    elif hw.stream_data_queue.available: # Priority 5: Stream analog data.
+        hw.IO_dict[hw.stream_data_queue.get()]._process_streaming()
 
-    elif data_output_queue.available(): # Priority 6: Output data.
+    elif data_output_queue.available(): # Priority 6: Output framework data.
         output_data(data_output_queue.get())
 
 def run(duration = None):
@@ -258,8 +250,8 @@ def run(duration = None):
     event_queue.reset()
     data_output_queue.reset()
     if not hw.initialised: hw.initialise()
-    hw.run_start()
     current_time = 0
+    hw.run_start()
     start_time = pyb.millis()
     clock.init(freq=1000)
     clock.callback(_clock_tick)

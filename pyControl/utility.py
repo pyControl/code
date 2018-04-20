@@ -1,17 +1,17 @@
 import pyb
 import math
 
-# ----------------------------------------------------------------------------------------
-#  Random functions and classes.
-# ----------------------------------------------------------------------------------------
+#  Random functions and classes -----------------------------------------------
+
+max_rand = 1 << 30 # Largest number output by pyb.rng()
 
 def random():
     #Return a random float x such that 0 <= x < 1.
-    return pyb.rng()/1073741824.
+    return pyb.rng()/max_rand
 
 def withprob(p):
     # Return a random boolean that is True with probability p.
-    return pyb.rng()<(1073741824. * p)
+    return pyb.rng()<(max_rand * p)
 
 def shuffled(L):
     # Return a shuffled copy of list L.
@@ -44,9 +44,7 @@ class sample_without_replacement:
             self._next_items += shuffled(self._all_items)
         return self._next_items.pop()
 
-# ----------------------------------------------------------------------------------------
-#  Math functions and classes
-# ----------------------------------------------------------------------------------------
+#  Math functions and classes -------------------------------------------------
 
 def mean(x):
     # Return the mean value of x.
@@ -71,18 +69,14 @@ class exp_mov_ave:
     def update(self, sample):
         self.value = (self.value * self._m) + (self._i * sample)
 
-# ----------------------------------------------------------------------------------------
-# Units.
-# ----------------------------------------------------------------------------------------
+# Units -----------------------------------------------------------------------
 
 ms     = const(1)
 second = const(1000*ms)
 minute = const(60*second)
 hour   = const(60*minute)
 
-# ----------------------------------------------------------------------------------------
-# Variables class.
-# ----------------------------------------------------------------------------------------
+# Variables class -------------------------------------------------------------
 
 class variables():
     # Class for holding task variables.  Acts as single namespace used by all

@@ -391,7 +391,7 @@ class Pycboard(Pyboard):
                     continue
                 new_data.append((new_byte.decode(),timestamp, data_bytes.decode()))
                 if new_byte == b'V': # Store new variable value in sm_info
-                    v_name, v_str = data_bytes.decode().split(' ')
+                    v_name, v_str = data_bytes.decode().split(' ', 1)
                     self.sm_info['variables'][v_name] = eval(v_str)
             elif new_byte == b'\x04': # End of framework run.
                 self.framework_running = False
