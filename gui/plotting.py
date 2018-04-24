@@ -70,12 +70,16 @@ class States_plot():
     def __init__(self, parent=None, data_len=100):
         self.data_len = data_len
         self.axis = pg.PlotWidget(title='States')
-        self.axis.setRange(xRange=[-10, 0])
+        self.axis.showAxis('right')
+        self.axis.hideAxis('left')
+        self.axis.setRange(xRange=[-10.2, 0], padding=0)
 
     def set_state_machine(self, sm_info):
         self.state_IDs = list(sm_info['states'].values())
         self.axis.clear()
-        self.axis.getAxis('left').setTicks([[(i, n) for (n, i) in sm_info['states'].items()]])
+        max_len = max([len(n) for n in list(sm_info['states'])+list(sm_info['events'])])
+        self.axis.getAxis('right').setTicks([[(i, n) for (n, i) in sm_info['states'].items()]])
+        self.axis.getAxis('right').setWidth(5*max_len)
         self.axis.setYRange(min(self.state_IDs), max(self.state_IDs), padding=0.1)
         self.n_colours = len(sm_info['states'])+len(sm_info['events'])
         self.plots = {ID: self.axis.plot(pen=pg.mkPen(pg.intColor(ID, self.n_colours), width=3))
@@ -116,13 +120,18 @@ class Events_plot():
 
     def __init__(self, parent=None, data_len=100):
         self.axis = pg.PlotWidget(title='Events')
+        self.axis.showAxis('right')
+        self.axis.hideAxis('left')
+        self.axis.setRange(xRange=[-10.2, 0], padding=0)
         self.data_len = data_len
 
     def set_state_machine(self, sm_info):
         self.event_IDs = list(sm_info['events'].values())
         self.axis.clear()
         if not self.event_IDs: return # State machine can have no events.
-        self.axis.getAxis('left').setTicks([[(i, n) for (n, i) in sm_info['events'].items()]])
+        max_len = max([len(n) for n in list(sm_info['states'])+list(sm_info['events'])])
+        self.axis.getAxis('right').setTicks([[(i, n) for (n, i) in sm_info['events'].items()]])
+        self.axis.getAxis('right').setWidth(5*max_len)
         self.axis.setYRange(min(self.event_IDs), max(self.event_IDs), padding=0.1)
         self.n_colours = len(sm_info['states'])+len(sm_info['events'])
         self.plot = self.axis.plot(pen=None, symbol='o', symbolSize=6, symbolPen=None)
@@ -154,6 +163,9 @@ class Analog_plot():
     def __init__(self, parent=None, data_dur=10):
         self.data_dur = data_dur
         self.axis = pg.PlotWidget(title='Analog')
+        self.axis.showAxis('right')
+        self.axis.hideAxis('left')
+        self.axis.setRange(xRange=[-10.2, 0], padding=0)
         self.legend = None 
 
     def set_state_machine(self, sm_info):
@@ -166,6 +178,8 @@ class Analog_plot():
         self.plots = {ai['ID']: self.axis.plot(name=name, 
                       pen=pg.mkPen(pg.intColor(ai['ID'],len(self.inputs)))) for name, ai in sorted(self.inputs.items())}
         self.axis.getAxis('bottom').setLabel('Time (seconds)')
+        max_len = max([len(n) for n in list(sm_info['states'])+list(sm_info['events'])])
+        self.axis.getAxis('right').setWidth(5*max_len)
         
     def run_start(self):
         if not self.inputs: return # State machine may not have analog inputs.
