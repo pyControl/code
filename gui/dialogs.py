@@ -38,8 +38,8 @@ class Board_config_dialog(QtGui.QDialog):
         self.load_hw_button = QtGui.QPushButton('Load hardware definition')
         self.DFU_button = QtGui.QPushButton('Device Firmware Update (DFU) mode')
         self.flashdrive_button = QtGui.QPushButton()
-        self.vertical_layout = QtGui.QVBoxLayout()
         # Layout.
+        self.vertical_layout = QtGui.QVBoxLayout()
         self.setLayout(self.vertical_layout)
         self.vertical_layout.addWidget(self.load_fw_button)
         self.vertical_layout.addWidget(self.load_hw_button)
@@ -91,17 +91,29 @@ class Variables_dialog(QtGui.QDialog):
     def __init__(self, parent=None): # Should split into seperate init and provide info.
         super(QtGui.QDialog, self).__init__(parent)
         self.setWindowTitle('Set variables')
-        variables = self.parent().sm_info['variables']
+        self.scroll_area = QtGui.QScrollArea(parent=self)
+        self.scroll_area.setWidgetResizable(True)
+        self.variables_grid = Variables_grid(self.scroll_area)
+        self.scroll_area.setWidget(self.variables_grid)
+        self.layout = QtGui.QVBoxLayout(self)
+        self.layout.addWidget(self.scroll_area)
+        self.setLayout(self.layout)
+
+class Variables_grid(QtGui.QWidget):
+    # Grid of variables to set/get, displayed within scross area of dialog.
+    def __init__(self, parent=None):
+        super(QtGui.QWidget, self).__init__(parent)
+        variables = self.parent().parent().parent().sm_info['variables']
         self.grid_layout = QtGui.QGridLayout()
-        for i, (v_name, v_value_str) in enumerate(variables.items()):
+        for i, (v_name, v_value_str) in enumerate(sorted(variables.items())):
             Variable_setter(v_name, v_value_str, self.grid_layout, i, parent=self)
         self.setLayout(self.grid_layout)
 
 class Variable_setter(QtGui.QWidget):
-    # Widget for setting and getting a single variable.
+    # For setting and getting a single variable.
     def __init__(self, v_name, v_value_str, grid_layout, i, parent=None): # Should split into seperate init and provide info.
         super(QtGui.QWidget, self).__init__(parent)
-        self.board = self.parent().parent().board
+        self.board = self.parent().parent().parent().parent().board
         self.v_name = v_name
         self.label = QtGui.QLabel(v_name)
         self.get_button = QtGui.QPushButton('Get value')
