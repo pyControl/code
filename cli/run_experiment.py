@@ -218,7 +218,7 @@ def run_experiment():
 if __name__ == "__main__":
     try:
         run_experiment()
-    except Exception as e:
+    except BaseException as e:
         print('\nError:\n')
         print(str(e))
         input('\nUnable to run experiment, press any key to close.')
