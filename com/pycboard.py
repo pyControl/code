@@ -306,6 +306,7 @@ class Pycboard(Pyboard):
                 raise PyboardError('State machine file not found at: ' + sm_path)
             self.print('\nTransfering state machine {} to pyboard. '.format(sm_name), end='')
             self.transfer_file(sm_path, 'task_file.py')
+        self.gc_collect()
         try:
             self.exec('import task_file as smd')
             self.exec('state_machine = sm.State_machine(smd)')
