@@ -71,9 +71,6 @@ def run_task():
     if not board.status['framework']:
         board.load_framework()
 
-    if not board.status['hardware']:
-        board.load_hardware_definition()
-
     task_select_menu(board)
 
 # ----------------------------------------------------------------------------------------
@@ -122,6 +119,9 @@ def task_menu(board, task):
                 board.start_framework()
                 while True:
                     board.process_data()
+                    if not board.framework_running:
+                        print('\nFramework stopped by task.')
+                        break
             except KeyboardInterrupt:
                 board.stop_framework()
                 time.sleep(0.1)
