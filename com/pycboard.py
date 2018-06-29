@@ -69,7 +69,7 @@ class Pycboard(Pyboard):
         self.serial_port = serial_port
         self.print = print_func        # Function used for print statements.
         self.data_logger = data_logger # Instance of Data_logger class for saving and printing data.
-        self.status = {'serial': None, 'framework':None, 'hardware':None, 'usb_mode':None}
+        self.status = {'serial': None, 'framework':None, 'usb_mode':None}
         try:    
             super().__init__(self.serial_port, baudrate=115200)
             self.status['serial'] = True
@@ -95,13 +95,6 @@ class Pycboard(Pyboard):
                 else:
                     self.print('pyControl Framework: Import error')
                 return
-            if self.status['hardware']:
-                self.print('Hardware definition: OK')
-            else:
-                if self.status['hardware'] is None:
-                    self.print('Hardware definition: Not loaded')
-                else:
-                    self.print('Hardware definition: Import error')
 
     def reset(self):
         '''Enter raw repl (soft reboots pyboard), import modules.'''
@@ -122,16 +115,6 @@ class Pycboard(Pyboard):
                 self.status['framework'] = None # Framework not installed.
             else:
                 self.status['framework'] = False # Framework import error.
-        if self.status['framework']:
-            try:
-                self.exec('import hardware_definition')
-                self.status['hardware'] = True # Hardware definition imported OK.
-            except PyboardError as e:
-                error_message = e.args[2].decode()
-                if "ImportError: no module named 'hardware_definition'" in error_message:
-                    self.status['hardware'] = None # Hardware definition not installed.
-                else:
-                    self.status['hardware'] = False # Hardware definition import error.
         return error_message
 
     def hard_reset(self, reconnect=True):
@@ -284,10 +267,12 @@ class Pycboard(Pyboard):
         if os.path.exists(hwd_path):
             self.print('\nTransfering hardware definition to pyboard.', end='')
             self.transfer_file(hwd_path, target_path = 'hardware_definition.py')
-            error_message = self.reset()
-            if self.status['hardware']:
+            self.reset()
+            try:
+                self.exec('import hardware_definition')
                 self.print(' OK')
-            else:
+            except PyboardError as e:
+                error_message = e.args[2].decode()
                 self.print('\n\nError importing hardware definition:\n')
                 self.print(error_message)
         else:

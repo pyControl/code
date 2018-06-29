@@ -336,10 +336,10 @@ class Run_task_gui(QtGui.QWidget):
         self.refresh_timer.stop()
         self.status_text.setText('Running: ' + self.task)
 
-    def stop_task(self, error=False):
+    def stop_task(self, error=False, stopped_by_task=False):
         self.process_timer.stop()
         self.refresh_timer.start(self.refresh_interval)
-        if not error: 
+        if not (error or stopped_by_task): 
             self.board.stop_framework()
             QtCore.QTimer.singleShot(100, self.process_data) # Catch output after framework stops.
         self.data_logger.close_files()
@@ -359,6 +359,8 @@ class Run_task_gui(QtGui.QWidget):
         try:
             new_data = self.board.process_data()
             self.task_plot.process_data(new_data)
+            if not self.board.framework_running:
+                self.stop_task(stopped_by_task=True)
         except PyboardError as e:
             self.print_to_log('\nError during framework run.')
             self.stop_task(error=True)
