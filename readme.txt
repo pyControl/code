@@ -15,6 +15,6 @@ tasks    : pyControl task files.
 licence  : pyControl-GPL-3 licence.
 tools    : Module for importing task data into Python.
 
-Version: v1.3
+Version: v1.3.2
 ---------------
 
