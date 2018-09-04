@@ -102,7 +102,7 @@ def task_menu(board, task):
     try:
         board.setup_state_machine(task)
     except PyboardError:
-        input('Press enter to return to task select menu.')
+        input('\nPress enter to return to task select menu.')
         return
     subject_ID = None
     while True:

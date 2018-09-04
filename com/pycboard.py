@@ -42,6 +42,7 @@ def _reset_pyb_filesystem():
 
 # Used on pyboard for file transfer.
 def _receive_file(file_path, file_size):
+    gc.collect()
     usb = pyb.USB_VCP()
     usb.setinterrupt(-1)
     buf_size = 512
@@ -55,6 +56,7 @@ def _receive_file(file_path, file_size):
             if bytes_read:
                 bytes_remaining -= bytes_read
                 f.write(buf_mv[:bytes_read])
+    gc.collect()
 
 # ----------------------------------------------------------------------------------------
 #  Pycboard class.
@@ -193,6 +195,10 @@ class Pycboard(Pyboard):
             for i in range(10):
                     if file_hash == self.get_file_hash(target_path):
                         return
+                    try:
+                        self.remove_file(file_path)
+                    except PyboardError:
+                        pass
                     self.exec_raw_no_follow("_receive_file('{}',{})"
                                             .format(target_path, file_size))
                     with open(file_path, 'rb') as f:
@@ -204,10 +210,9 @@ class Pycboard(Pyboard):
                             self.serial.read(1)
                     self.follow(5)
         except PyboardError as e:
-            self.print('Error: Unable to transfer file')
+            self.print('\n\nError: Unable to transfer file\n')
             self.print(str(e))
-            input('\nPress any key to close.')
-            sys.exit()
+            raise PyboardError
 
     def transfer_folder(self, folder_path, target_folder=None, file_type='all',
                         show_progress=False):
