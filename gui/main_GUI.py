@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 from pyqtgraph.Qt import QtGui, QtCore
 
@@ -110,10 +111,6 @@ class Experiments_tab(QtGui.QWidget):
         self.data_dir_button = QtGui.QPushButton('...')
         self.data_dir_button.setFixedWidth(30)
 
-        self.name_text.textChanged.connect(self.name_edited)
-        self.data_dir_text.textEdited.connect(lambda: setattr(self, 'custom_dir', True))
-        self.data_dir_button.clicked.connect(self.select_data_dir)
-
         self.expbox_Hlayout_1.addWidget(self.experiment_select)
         self.expbox_Hlayout_1.setStretchFactor(self.experiment_select, 2)
         self.expbox_Hlayout_1.addWidget(self.run_button)
@@ -129,18 +126,24 @@ class Experiments_tab(QtGui.QWidget):
         # Subjects Groupbox
         self.subjects_groupbox = QtGui.QGroupBox('Subjects')
         self.subjectsbox_layout = QtGui.QHBoxLayout(self.subjects_groupbox)
-        self.subjects_table = SubjectsTable()
+        self.subjects_table = SubjectsTable(self)
         self.subjectsbox_layout.addWidget(self.subjects_table)
 
         # Variables Groupbox
         self.variables_groupbox = QtGui.QGroupBox('Variables')
         self.variablesbox_layout = QtGui.QHBoxLayout(self.variables_groupbox)
-        self.variables_table = VariablesTable()
+        self.variables_table = VariablesTable(self)
         self.variablesbox_layout.addWidget(self.variables_table)
 
         # Initialise widgets
         self.experiment_select.addItems(['select experiment'])
 
+        # Connect signals.
+        self.name_text.textChanged.connect(self.name_edited)
+        self.data_dir_text.textEdited.connect(lambda: setattr(self, 'custom_dir', True))
+        self.data_dir_button.clicked.connect(self.select_data_dir)
+        self.task_select.currentIndexChanged[str].connect(self.task_changed)
+        
         # Main layout
         self.vertical_layout = QtGui.QVBoxLayout(self)
         self.vertical_layout.addWidget(self.experiment_groupbox)
@@ -156,11 +159,14 @@ class Experiments_tab(QtGui.QWidget):
             QtGui.QFileDialog.getExistingDirectory(self, 'Select data folder', data_dir))
         self.custom_dir = True
 
+    def task_changed(self, task_name):
+        self.variables_table.task_changed(task_name)
+
     def refresh(self):
         if self.GUI_main.available_tasks_changed == True:
             self.task_select.clear()
-            self.task_select.addItems(self.GUI_main.available_tasks)
-
+            self.task_select.addItems(sorted(self.GUI_main.available_tasks))
+            self.GUI_main.available_tasks_changed = False
 
 class SubjectsTable(QtGui.QTableWidget):
     '''Table for specifying the setups and subjects used in experiment. '''
@@ -172,10 +178,16 @@ class SubjectsTable(QtGui.QTableWidget):
         self.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
         self.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.ResizeToContents)
         self.verticalHeader().setVisible(False)
+        self.cellChanged.connect(self.cell_changed)
         self.n_subjects = 0
         self.all_setups = {'COM1', 'COM2', 'COM3', 'COM4'}
         self.available_setups = sorted(list(self.all_setups))
+        self.subjects = []
         self.add_subject()
+
+    def cell_changed(self, row, column):
+        if column == 1:
+            self.update_subjects()
 
     def add_subject(self):
         '''Add row to table allowing extra subject to be specified.'''
@@ -199,6 +211,7 @@ class SubjectsTable(QtGui.QTableWidget):
         self.removeRow(subject_n)
         self.n_subjects -= 1
         self.update_available()
+        self.update_subjects()
 
     def update_available(self):
         '''Update which setups are available for selection in dropdown menus.'''
@@ -213,25 +226,30 @@ class SubjectsTable(QtGui.QTableWidget):
             self.cellWidget(s,0).addItems(available)
             self.cellWidget(s,0).setCurrentIndex(i)
 
+    def update_subjects(self):
+        '''Update the subjects list'''
+        self.subjects = [str(self.item(s, 1).text()) for s in range(self.n_subjects)]
+
 class VariablesTable(QtGui.QTableWidget):
     '''Class for specifying what variables are set to non-default values.'''
 
     def __init__(self, parent=None):
         super(QtGui.QTableWidget, self).__init__(1,5, parent=parent)
         self.setHorizontalHeaderLabels(['Variable', 'Subject', 'Value', 'Persistent',''])
-        self.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.Stretch)
+        self.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Stretch)
         self.horizontalHeader().setResizeMode(4, QtGui.QHeaderView.ResizeToContents)
         self.verticalHeader().setVisible(False)
-        self.n_variables = 0
         add_button = QtGui.QPushButton('add')
         add_button.clicked.connect(self.add_variable)
         self.setCellWidget(0,4, add_button)
+        self.n_variables = 0
+        self.variable_names = []
 
     def add_variable(self):
         variable_cbox = QtGui.QComboBox()
-        variable_cbox.addItems(['select variable'])
+        variable_cbox.addItems(['select variable']+self.variable_names)
         subject_cbox = QtGui.QComboBox()
-        subject_cbox.addItems(['all'])
+        subject_cbox.addItems(['all']+self.parent().parent().subjects_table.subjects)
         persistent = TableCheckbox()
         remove_button = QtGui.QPushButton('remove')
         ind = QtCore.QPersistentModelIndex(self.model().index(self.n_variables, 2))
@@ -249,6 +267,18 @@ class VariablesTable(QtGui.QTableWidget):
     def remove_variable(self, variable_n):
         self.removeRow(variable_n)
         self.n_variables -= 1
+
+    def task_changed(self, task):
+        '''Reset variables table, get names of task variables.'''
+        while self.n_variables > 0:
+            self.remove_variable(0)
+        pattern = "v\.(?P<vname>\w+)\s*\="
+        with open(os.path.join(tasks_dir, task+'.py'), "r") as file:
+            file_content = file.read()
+        self.variable_names = []
+        for v_name in re.findall(pattern, file_content):
+            if not v_name in [var_name for var_name in self.variable_names]:
+                self.variable_names.append(v_name)
 
 # -------------------------------------------------------------------------
 
