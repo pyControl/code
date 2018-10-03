@@ -56,7 +56,6 @@ class Run_task_gui(QtGui.QWidget):
         self.guigroup_layout = QtGui.QHBoxLayout()
         self.guigroup_layout.addWidget(self.status_label)
         self.guigroup_layout.addWidget(self.status_text)
-        #self.guigroup_layout.addWidget(self.settings_button)
         self.gui_groupbox.setLayout(self.guigroup_layout)  
 
         self.settings_button.clicked.connect(lambda: self.settings_dialog.exec_())
