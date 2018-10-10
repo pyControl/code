@@ -334,6 +334,7 @@ class Pycboard(Pyboard):
         '''Start pyControl framwork running on pyboard.'''
         self.gc_collect()
         self.exec('fw.data_output = ' + repr(data_output))
+        self.serial.reset_input_buffer()
         self.exec_raw_no_follow('fw.run({})'.format(dur))
         self.framework_running = True
 
