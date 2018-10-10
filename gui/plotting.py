@@ -73,6 +73,9 @@ class States_plot():
         self.axis.showAxis('right')
         self.axis.hideAxis('left')
         self.axis.setRange(xRange=[-10.2, 0], padding=0)
+        self.axis.setMouseEnabled(x=True,y=False)
+        self.axis.showGrid(x=True,alpha=0.75)
+        self.axis.setLimits(xMax=0)
 
     def set_state_machine(self, sm_info):
         self.state_IDs = list(sm_info['states'].values())
@@ -123,6 +126,9 @@ class Events_plot():
         self.axis.showAxis('right')
         self.axis.hideAxis('left')
         self.axis.setRange(xRange=[-10.2, 0], padding=0)
+        self.axis.setMouseEnabled(x=True,y=False)
+        self.axis.showGrid(x=True,alpha=0.75)
+        self.axis.setLimits(xMax=0)
         self.data_len = data_len
 
     def set_state_machine(self, sm_info):
@@ -166,6 +172,9 @@ class Analog_plot():
         self.axis.showAxis('right')
         self.axis.hideAxis('left')
         self.axis.setRange(xRange=[-10.2, 0], padding=0)
+        self.axis.setMouseEnabled(x=True,y=False)
+        self.axis.showGrid(x=True,alpha=0.75)
+        self.axis.setLimits(xMax=0)
         self.legend = None 
 
     def set_state_machine(self, sm_info):
