@@ -1,10 +1,9 @@
 import pyb
 import math
 from array import array
-from micropython import schedule
 import pyControl.hardware as _h
 
-class _MCP():
+class _MCP(_h.IO_object):
     # Parent class for MCP23017 and MCP23008 port expanders.
 
     def __init__(self, I2C_bus, interrupt_pin, addr):
@@ -14,7 +13,7 @@ class _MCP():
         self.interrupts_enabled = False
         self.interrupt_pin = interrupt_pin
         self.reg_values = {} # Register values set by user.
-        self._process_interrupt_ref = self._process_interrupt # Needed to pass process_interrupt to schedule in ISR
+        _h.assign_ID(self)
 
     def reset(self):
         self.write_register('IODIR'  , 0) # Set pins as ouptuts.
@@ -55,9 +54,9 @@ class _MCP():
         self.interrupts_enabled = True
 
     def ISR(self, i):
-        schedule(self._process_interrupt_ref ,0)
+        _h.interrupt_queue.put(self.ID)
         
-    def _process_interrupt(self, i):
+    def _process_interrupt(self):#, i):
         pin = int(math.log2(self.read_register('INTF'))+0.1)
         self.read_register('GPIO')
         self.pin_callbacks[pin](pin) # Callback is called with pin as an argument for consistency with pyb.ExtInt
