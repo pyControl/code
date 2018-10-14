@@ -1,10 +1,11 @@
 import os
 import re
 import sys
+import json
 from pyqtgraph.Qt import QtGui, QtCore
 
 from run_task_gui import Run_task_gui
-from config.paths import data_dir, tasks_dir
+from config.paths import data_dir, tasks_dir, experiments_dir
 
 # --------------------------------------------------------------------------------
 
@@ -13,7 +14,7 @@ class GUI_main(QtGui.QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('pyControl')
-        self.setGeometry(20, 30, 600, 800) # Left, top, width, height.
+        self.setGeometry(20, 30, 700, 800) # Left, top, width, height.
 
         # Variables
         self.refresh_interval = 1000
@@ -143,7 +144,8 @@ class Experiments_tab(QtGui.QWidget):
         self.data_dir_text.textEdited.connect(lambda: setattr(self, 'custom_dir', True))
         self.data_dir_button.clicked.connect(self.select_data_dir)
         self.task_select.currentIndexChanged[str].connect(self.task_changed)
-        
+        self.save_button.clicked.connect(self.save_experiment)
+
         # Main layout
         self.vertical_layout = QtGui.QVBoxLayout(self)
         self.vertical_layout.addWidget(self.experiment_groupbox)
@@ -167,6 +169,20 @@ class Experiments_tab(QtGui.QWidget):
             self.task_select.clear()
             self.task_select.addItems(sorted(self.GUI_main.available_tasks))
             self.GUI_main.available_tasks_changed = False
+
+    def save_experiment(self):
+        '''Save the current experiment as a json object'''
+        # Generate dictionary repesenting experiment
+        experiment = {
+            'name': self.name_text.text(),
+            'task': str(self.task_select.currentText()),
+            'data_dir': self.data_dir_text.text(),
+            'subjects': self.subjects_table.subjects_dict(),
+            'variables': self.variables_table.variables_list()}
+        exp_path = os.path.join(experiments_dir, self.name_text.text()+'.pcx')
+        with open(exp_path,'w') as exp_file:
+            exp_file.write(json.dumps(experiment, sort_keys=True, indent=4))
+
 
 class SubjectsTable(QtGui.QTableWidget):
     '''Table for specifying the setups and subjects used in experiment. '''
@@ -208,8 +224,9 @@ class SubjectsTable(QtGui.QTableWidget):
         
     def remove_subject(self, subject_n):
         '''Remove specified row from table'''
-        s_name = self.item(subject_n, 1).text()
-        if s_name: self.parent().parent().variables_table.remove_subject(s_name)
+        if self.item(subject_n, 1): 
+            s_name = self.item(subject_n, 1).text()
+            self.parent().parent().variables_table.remove_subject(s_name)
         self.removeRow(subject_n)
         self.n_subjects -= 1
         self.update_available_setups()
@@ -219,7 +236,7 @@ class SubjectsTable(QtGui.QTableWidget):
         '''Update which setups are available for selection in dropdown menus.'''
         selected_setups = set([str(self.cellWidget(s,0).currentText())
                                for s in range(self.n_subjects)])
-        self.available_setups = list(self.all_setups - selected_setups)
+        self.available_setups = sorted(list(self.all_setups - selected_setups))
         for s in range(self.n_subjects):
             update_options(self.cellWidget(s,0), self.available_setups)
 
@@ -228,22 +245,29 @@ class SubjectsTable(QtGui.QTableWidget):
         self.subjects = [str(self.item(s, 1).text()) 
                          for s in range(self.n_subjects) if self.item(s, 1)]
 
+    def subjects_dict(self):
+        '''Return setups and subjects as a dictionary'''
+        return {str(self.cellWidget(s,0).currentText()): 
+                str(self.item(s, 1).text()) if self.item(s, 1) else ''
+                for s in range(self.n_subjects)}
+
 class VariablesTable(QtGui.QTableWidget):
     '''Class for specifying what variables are set to non-default values.'''
 
     def __init__(self, parent=None):
-        super(QtGui.QTableWidget, self).__init__(1,5, parent=parent)
+        super(QtGui.QTableWidget, self).__init__(1,6, parent=parent)
         self.subjects_table = self.parent().subjects_table
-        self.setHorizontalHeaderLabels(['Variable', 'Subject', 'Value', 'Persistent',''])
+        self.setHorizontalHeaderLabels(['Variable', 'Subject', 'Value', 'Persistent','Summary',''])
         self.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Stretch)
         self.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.Stretch)
-        self.horizontalHeader().setResizeMode(4, QtGui.QHeaderView.ResizeToContents)
+        self.horizontalHeader().setResizeMode(5, QtGui.QHeaderView.ResizeToContents)
         self.verticalHeader().setVisible(False)
         add_button = QtGui.QPushButton('add')
         add_button.clicked.connect(self.add_variable)
-        self.setCellWidget(0,4, add_button)
+        self.setCellWidget(0,5, add_button)
         self.n_variables = 0
         self.variable_names = []
+        self.assigned = {v_name:[] for v_name in self.variable_names} # Which subjects have values assigned for each variable.
 
     def add_variable(self):
         variable_cbox = QtGui.QComboBox()
@@ -252,17 +276,21 @@ class VariablesTable(QtGui.QTableWidget):
         subject_cbox = QtGui.QComboBox()
         subject_cbox.activated.connect(self.update_available)
         persistent = TableCheckbox()
+        summary    = TableCheckbox()
         remove_button = QtGui.QPushButton('remove')
         ind = QtCore.QPersistentModelIndex(self.model().index(self.n_variables, 2))
         remove_button.clicked.connect(lambda :self.remove_variable(ind.row()))
+        #variable_cbox.activated[str].connect(
+        #    lambda v_name: self.variable_selected(v_name, ind.row()))
         add_button = QtGui.QPushButton('add')
         add_button.clicked.connect(self.add_variable)
         self.insertRow(self.n_variables+1)
         self.setCellWidget(self.n_variables  ,0, variable_cbox)
         self.setCellWidget(self.n_variables  ,1, subject_cbox)
         self.setCellWidget(self.n_variables  ,3, persistent)
-        self.setCellWidget(self.n_variables  ,4, remove_button)
-        self.setCellWidget(self.n_variables+1,4, add_button)
+        self.setCellWidget(self.n_variables  ,4, summary)
+        self.setCellWidget(self.n_variables  ,5, remove_button)
+        self.setCellWidget(self.n_variables+1,5, add_button)
         self.n_variables += 1
 
     def remove_variable(self, variable_n):
@@ -278,32 +306,36 @@ class VariablesTable(QtGui.QTableWidget):
         self.update_available()
 
     def update_available(self, i=None):
-        # Find out what variable subject combinations already assigned.
-        set_variables = {v_name:[] for v_name in self.variable_names}
+        # Find out what variable-subject combinations already assigned.
+        self.assigned = {v_name:[] for v_name in self.variable_names}
         for v in range(self.n_variables):
             v_name = self.cellWidget(v,0).currentText()
             s_name = self.cellWidget(v,1).currentText()
-            if s_name != '':
-                set_variables[v_name].append(s_name)
+            if v_name != 'select variable':
+                self.assigned[v_name].append(s_name)
         # Update the variables available:
         self.available_variables = sorted(list(set(self.variable_names) - 
-            set([v_n for v_n in set_variables.keys() if 'all' in set_variables[v_n]])))
-        for v in range(self.n_variables):
-            # Update variable combo box options.
-            update_options(self.cellWidget(v,0), self.available_variables)    
+            set([v_n for v_n in self.assigned.keys() if 
+                'all' in self.assigned[v_n] or
+                set(self.assigned[v_n]) == set(self.subjects_table.subjects)])))
+        for v in range(self.n_variables):  
             v_name = str(self.cellWidget(v,0).currentText())
             s_name = self.cellWidget(v,1).currentText()
+            # Update subjects combo box options.
             if v_name != 'select variable':
-                # Update subjects combo box options.
-                if set_variables[v_name] == []:
-                    available_subjects = ['all']+self.subjects_table.subjects
+                if len(self.assigned[v_name]) <= 1:
+                    available_subjects = ['all']+ sorted(self.subjects_table.subjects)
                 else:
                     available_subjects = sorted(list(set(self.subjects_table.subjects)-
-                        set(set_variables[v_name]))+[s_name])
+                                                     set(self.assigned[v_name])))
+                # If variable has no subjects assigned, set subjects to 'all'.
+                if self.assigned[v_name] == ['']:
+                    self.cellWidget(v,1).addItems(['all'])
+                    self.assigned[v_name] = ['all']
+                    self.available_variables.remove(v_name)
                 update_options(self.cellWidget(v,1), available_subjects)
-                if s_name == '' and 'all' in available_subjects: # Set selection to 'all'.
-                    i = self.cellWidget(v,1).findText('all', QtCore.Qt.MatchFixedString)
-                    self.cellWidget(v,1).setCurrentIndex(i)
+            # Update variable combo box options.
+            update_options(self.cellWidget(v,0), self.available_variables)  
 
     def task_changed(self, task):
         '''Reset variables table, get names of task variables.'''
@@ -318,6 +350,15 @@ class VariablesTable(QtGui.QTableWidget):
                 self.variable_names.append(v_name)
         self.available_variables = self.variable_names
 
+    def variables_list(self):
+        '''Return the variables table contents as a list of dictionaries.'''
+        return [{'variable'  : str(self.cellWidget(v,0).currentText()),
+                 'subject'   : str(self.cellWidget(v,1).currentText()),
+                 'value'     : str(self.item(v, 2).text()) if self.item(v,2) else '',
+                 'persistent': self.cellWidget(v,3).isChecked(),
+                 'summary'   : self.cellWidget(v,3).isChecked()}
+                 for v in range(self.n_variables)]
+
 # -------------------------------------------------------------------------
 
 class TableCheckbox(QtGui.QWidget):
@@ -331,12 +372,15 @@ class TableCheckbox(QtGui.QWidget):
         self.layout.setAlignment(QtCore.Qt.AlignCenter)
         self.layout.setContentsMargins(0,0,0,0)
 
+    def isChecked(self):
+        return self.checkbox.isChecked()
+
 # --------------------------------------------------------------------------------
 
 def update_options(cbox, options):
     '''Update the options available in a qcombobox without changing the selection.'''
     selected = str(cbox.currentText())
-    available = sorted([selected]+options)
+    available = sorted(list(set([selected]+options)))
     i = available.index(selected)
     cbox.clear()
     cbox.addItems(available)
