@@ -8,7 +8,6 @@ class State_machine():
     def __init__(self, smd):
 
         self.smd = smd # State machine definition.
-        self.tg_next_state = None # Overwritted by timed_goto_state.
         self.state_transition_in_progress = False # Set to True during state transitions.
 
         fw.register_machine(self)
@@ -50,11 +49,9 @@ class State_machine():
             raise fw.pyControlError('Invalid state name passed to goto_state: ' + repr(next_state))
         self.state_transition_in_progress = True
         self._process_event('exit')
-        if self.tg_next_state: # Cancel timed_goto_state.
-            self.tg_next_state = None
-            fw.timer.disarm((fw.goto_evt,))    
+        fw.timer.disarm_type(fw.state_typ) # Clear any timed_goto_states     
         if fw.data_output:
-            fw.data_output_queue.put((fw.states[next_state], fw.current_time))
+            fw.data_output_queue.put((fw.current_time, fw.state_typ, fw.states[next_state]))
         self.current_state = next_state
         self._process_event('entry')
         self.state_transition_in_progress = False
@@ -62,44 +59,43 @@ class State_machine():
     def timed_goto_state(self, next_state, interval):
         # Transition to next_state after interval milliseconds. timed_goto_state()
         # is cancelled if goto_state() occurs before interval elapses.
-        fw.timer.set(int(interval), (fw.goto_evt,))
-        self.tg_next_state = next_state
+        fw.timer.set(interval, fw.state_typ, fw.states[next_state])
 
     def set_timer(self, event, interval):
         # Set a timer to return specified event after interval milliseconds.
-        fw.timer.set(int(interval), (fw.events[event], fw.timer_evt))    
+        fw.timer.set(interval, fw.event_typ, fw.events[event])    
 
     def disarm_timer(self, event):
         # Disable all timers due to return specified event.
-        fw.timer.disarm((fw.events[event], fw.timer_evt))
+        fw.timer.disarm(fw.events[event])
 
     def reset_timer(self, event, interval):
-        # Disable all active timers due to return specified event and set new timer
+        # Disarm all timers due to return specified event and set new timer
         # to return specified event after interval milliseconds.
-        fw.timer.disarm((fw.events[event], fw.timer_evt))
-        fw.timer.set(int(interval), (fw.events[event], fw.timer_evt))
+        fw.timer.disarm(fw.events[event])
+        fw.timer.set(interval, fw.event_typ, fw.events[event])    
 
     def pause_timer(self,event):
         # Pause all timers due to return specified event.
-        fw.timer.pause((fw.events[event], fw.timer_evt))
+        fw.timer.pause(fw.events[event])
 
     def unpause_timer(self,event):
         # Unpause all timers due to return specified event.
-        fw.timer.unpause((fw.events[event], fw.timer_evt))
+        fw.timer.unpause(fw.events[event])
 
     def timer_remaining(self,event):
         # Return time until timer for specified event elapses, returns 0 if no timer set for event.
-        return fw.timer.remaining((fw.events[event], fw.timer_evt))
+        return fw.timer.remaining(fw.events[event])
 
     def print(self, print_string):
         # Used to output data print_string with timestamp.  print_string is stored and only
         #  printed to serial line once higher priority tasks have all been processed. 
         if fw.data_output:
-            fw.data_output_queue.put((fw.print_evt, fw.current_time, str(print_string)))
+            fw.data_output_queue.put((fw.current_time, fw.print_typ, str(print_string)))
 
     def publish_event(self, event):
         # Put event with specified name in the event queue.
-        fw.event_queue.put((fw.events[event], fw.current_time))
+        fw.event_queue.put((fw.current_time, fw.event_typ, fw.events[event]))
 
     def stop_framework(self):
         fw.running = False
@@ -117,17 +113,13 @@ class State_machine():
         if self.event_dispatch_dict[self.current_state]:                # If state machine has event handler function for current state.
             self.event_dispatch_dict[self.current_state](event)         # Evaluate state event handler function.
 
-    def _process_timed_goto_state(self):
-        # Called by framework when timed_goto_state timer elapses.
-        self.goto_state(self.tg_next_state)
-
     def _start(self):
         # Called when run is started. Puts agent in initial state, and runs entry event.
         if self.event_dispatch_dict['run_start']:
             self.event_dispatch_dict['run_start']()
         self.current_state = self.smd.initial_state
         if fw.data_output:
-            fw.data_output_queue.put((fw.states[self.current_state], fw.current_time))
+            fw.data_output_queue.put((fw.current_time, fw.state_typ, fw.states[self.current_state]))
         self._process_event('entry')
 
     def _stop(self):
