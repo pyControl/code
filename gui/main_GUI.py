@@ -6,7 +6,10 @@ from pyqtgraph.Qt import QtGui, QtCore
 
 from run_task_gui import Run_task_gui
 from config.paths import data_dir, tasks_dir, experiments_dir
+from gui.plotting import Task_plotter
 
+# --------------------------------------------------------------------------------
+# GUI_main
 # --------------------------------------------------------------------------------
 
 class GUI_main(QtGui.QMainWindow):
@@ -17,24 +20,24 @@ class GUI_main(QtGui.QMainWindow):
         self.setGeometry(20, 30, 700, 800) # Left, top, width, height.
 
         # Variables
-        self.refresh_interval = 1000
-        self.available_tasks = None
-        self.available_experiments = None
+        self.refresh_interval = 1000 # How often refresh method is called when not running (ms).
+        self.available_tasks = None  # List of task file names in tasks folder.
+        self.available_experiments = None # List of experiment in experiments folder.
         self.available_tasks_changed = False
         self.available_experiments_changed = False
+        self.experiment = None # Overwritten by experiment dict on run.
  
+        # Widgets and timers
         self.main_tabs = MainTabs(self)
         self.setCentralWidget(self.main_tabs)
- 
-        self.show()
-
         self.refresh_timer = QtCore.QTimer() # Timer to regularly call refresh() when not running.
-        self.refresh_timer.timeout.connect(self.refresh)
 
         # Initial setup.
-
         self.refresh()    # Refresh tasks and ports lists.
+        self.refresh_timer.timeout.connect(self.refresh)
         self.refresh_timer.start(self.refresh_interval)
+
+        self.show()
 
     def refresh(self):
         # Called regularly when not running to update tasks and ports.
@@ -53,6 +56,10 @@ class GUI_main(QtGui.QMainWindow):
             self.available_experiments = experiments
             self.available_experiments_changed = True
 
+    def run_experiment(self, experiment):
+        self.experiment = experiment
+        self.main_tabs.run_experiment(experiment)
+
 # ------------------------------------------------------------------------------
 
 class MainTabs(QtGui.QTabWidget):        
@@ -63,14 +70,14 @@ class MainTabs(QtGui.QTabWidget):
         # Initialize tab widgets.
         self.run_task_tab = Run_task_gui(self)  
         self.experiments_tab = Experiments_tab(self)
-        self.summary_tab = QtGui.QWidget(self)  
-        self.plot_tab = QtGui.QWidget(self)
+        self.summary_tab = Summary_tab(self) 
+        self.plots_tab = Plots_tab(self)
 
         # Add tabs
         self.addTab(self.run_task_tab,'Run task')
         self.addTab(self.experiments_tab,'Experiments')
         self.addTab(self.summary_tab,'Summary')
-        self.addTab(self.plot_tab,'Plots')     
+        self.addTab(self.plots_tab,'Plots')     
 
         # Set initial state.
         self.setTabEnabled(2,False)
@@ -81,7 +88,16 @@ class MainTabs(QtGui.QTabWidget):
         if self.currentWidget() == self.experiments_tab:
             self.currentWidget().refresh()
 
+    def run_experiment(self, experiment):
+        self.setTabEnabled(0, False)
+        self.setTabEnabled(1, False)
+        self.setTabEnabled(2, True)
+        self.setTabEnabled(3, True)
+        self.summary_tab.run_experiment(experiment)
+        self.plots_tab.run_experiment(experiment)
 
+# --------------------------------------------------------------------------------
+# Experiments_tab
 # --------------------------------------------------------------------------------
 
 class Experiments_tab(QtGui.QWidget):
@@ -89,9 +105,9 @@ class Experiments_tab(QtGui.QWidget):
     def __init__(self, parent=None):
         super(QtGui.QWidget, self).__init__(parent)
 
-        # State variables
+        # Variables
         self.GUI_main = self.parent().parent()
-        self.custom_dir = False
+        self.custom_dir = False # True if data_dir field has not been edited.
 
         # Experiment Groupbox
         self.experiment_groupbox = QtGui.QGroupBox('Experiment')
@@ -152,6 +168,7 @@ class Experiments_tab(QtGui.QWidget):
         self.experiment_select.currentIndexChanged[str].connect(self.experiment_changed)
         self.task_select.currentIndexChanged[str].connect(self.task_changed)
         self.save_button.clicked.connect(self.save_experiment)
+        self.run_button.clicked.connect(self.run_experiment)
 
         # Main layout
         self.vertical_layout = QtGui.QVBoxLayout(self)
@@ -184,15 +201,18 @@ class Experiments_tab(QtGui.QWidget):
             update_options(self.experiment_select, self.GUI_main.available_experiments)
             self.GUI_main.available_experiments_changed = False
 
+    def experiment_dict(self):
+        '''Return the current state of the experiments tab as a dictionary.'''
+        return {'name': self.name_text.text(),
+                'task': str(self.task_select.currentText()),
+                'data_dir': self.data_dir_text.text(),
+                'subjects': self.subjects_table.subjects_dict(),
+                'variables': self.variables_table.variables_list()}
+
     def save_experiment(self):
         '''Store the current state of the experiment tab as a JSON object
         saved in the experiments folder as .pcx file.'''
-        experiment = {
-            'name': self.name_text.text(),
-            'task': str(self.task_select.currentText()),
-            'data_dir': self.data_dir_text.text(),
-            'subjects': self.subjects_table.subjects_dict(),
-            'variables': self.variables_table.variables_list()}
+        experiment = self.experiment_dict()
         exp_path = os.path.join(experiments_dir, self.name_text.text()+'.pcx')
         with open(exp_path,'w') as exp_file:
             exp_file.write(json.dumps(experiment, sort_keys=True, indent=4))
@@ -209,6 +229,20 @@ class Experiments_tab(QtGui.QWidget):
         self.data_dir_text.setText(experiment['data_dir'])
         self.subjects_table.set_from_dict(experiment['subjects'])
         self.variables_table.set_from_list(experiment['variables'])
+
+    def run_experiment(self):
+        '''Run an experiment by calling the GUI_main run_experiment method.
+        Prompts user to save experiment if it is new or has been edited.'''
+        experiment = self.experiment_dict()
+        exp_path = os.path.join(experiments_dir, self.name_text.text()+'.pcx')
+        if not os.path.exists(exp_path):
+            print('Experiment not saved, save experiment?')
+        else:
+            with open(exp_path,'r') as exp_file:
+                saved_experiment = json.loads(exp_file.read())
+            if experiment != saved_experiment:
+                print('Experiment edited, save experiment?')
+        self.GUI_main.run_experiment(experiment)
 
 # ---------------------------------------------------------------------------------
 
@@ -435,7 +469,94 @@ class VariablesTable(QtGui.QTableWidget):
             self.add_variable(var_dict)
         self.update_available()
 
-# -------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+# Summary tab
+# --------------------------------------------------------------------------------
+
+class Summary_tab(QtGui.QWidget):
+
+    def __init__(self, parent=None):
+        super(QtGui.QWidget, self).__init__(parent)
+
+        self.GUI_main = self.parent().parent()
+        self.Vlayout = QtGui.QVBoxLayout(self)
+
+    def run_experiment(self, experiment):
+        '''Called when experiment is run to setup tab.'''
+        self.subject_summaryboxes = []
+        for setup in sorted(experiment['subjects'].keys()):
+            self.subject_summaryboxes.append(
+                Subject_summarybox('{} : {}'.format(setup, experiment['subjects'][setup])))
+            self.Vlayout.addWidget(self.subject_summaryboxes[-1])
+
+class Subject_summarybox(QtGui.QGroupBox):
+
+    def __init__(self, name, parent=None):
+        super(QtGui.QGroupBox, self).__init__(name, parent=parent)
+
+        self.state_label = QtGui.QLabel('State:')
+        self.state_text = QtGui.QLineEdit('Current state')
+        self.state_text.setReadOnly(True)
+        self.print_label = QtGui.QLabel('Print:')
+        self.print_text = QtGui.QLineEdit('Last print line')
+        self.print_text.setReadOnly(True)
+        self.variables_button = QtGui.QPushButton('Variables')
+        self.log_textbox = QtGui.QTextEdit()
+        self.log_textbox.setFont(QtGui.QFont('Courier', 9))
+        self.log_textbox.setReadOnly(True)
+
+        self.Vlayout = QtGui.QVBoxLayout(self)
+        self.Hlayout = QtGui.QHBoxLayout()
+        self.Hlayout.addWidget(self.state_label)
+        self.Hlayout.addWidget(self.state_text)
+        self.Hlayout.addWidget(self.print_label)
+        self.Hlayout.addWidget(self.print_text)
+        self.Hlayout.setStretchFactor(self.print_text, 3)
+        self.Hlayout.addWidget(self.variables_button)
+        self.Vlayout.addLayout(self.Hlayout)
+        self.Vlayout.addWidget(self.log_textbox)
+
+# --------------------------------------------------------------------------------
+# Plots tab
+# --------------------------------------------------------------------------------
+
+class Plots_tab(QtGui.QTabWidget):
+
+    def __init__(self, parent=None):
+        super(QtGui.QWidget, self).__init__(parent)
+
+        self.GUI_main = self.parent().parent()
+        self.Vlayout = QtGui.QVBoxLayout(self)
+
+    def run_experiment(self, experiment):
+        '''Called when experiment is run to setup tab.'''
+        self.subject_plottabs = []
+        for setup in sorted(experiment['subjects'].keys()):
+            self.subject_plottabs.append(Subject_plottab(self))
+            self.addTab(self.subject_plottabs[-1],
+                '{} : {}'.format(setup, experiment['subjects'][setup]))
+
+
+class Subject_plottab(QtGui.QWidget):
+
+    def __init__(self, parent=None):
+        super(QtGui.QWidget, self).__init__(parent)
+        self.log_textbox = QtGui.QTextEdit()
+        self.log_textbox.setFont(QtGui.QFont('Courier', 9))
+        self.log_textbox.setReadOnly(True)
+        self.task_plot = Task_plotter()
+
+        self.Vlayout = QtGui.QVBoxLayout()
+        self.Vlayout.addWidget(self.log_textbox)
+        self.Vlayout.addWidget(self.task_plot)
+        self.setLayout(self.Vlayout)
+
+
+
+
+# --------------------------------------------------------------------------------
+# Utility functions and classes
+# --------------------------------------------------------------------------------
 
 class TableCheckbox(QtGui.QWidget):
     '''Checkbox that is centered in cell when placed in table.'''
@@ -474,6 +595,8 @@ def set_item(cbox, item_name):
     else:
         return False
 
+# --------------------------------------------------------------------------------
+# Main
 # --------------------------------------------------------------------------------
 
 if __name__ == '__main__':
