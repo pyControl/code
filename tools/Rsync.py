@@ -66,8 +66,15 @@ class Rsync_aligner():
         self.cor_times_B = cor_times_B
         self.units_A = units_A
         self.units_B = units_B
+        # Check quality of alignment.
+        separation_OK = (np.abs(gmm.means_[0]-gmm.means_[1])[0]/  # Different in GMM means divided by 
+                         np.sum(np.sqrt(gmm.covariances_))) > 3   # sum of standard deviations must be > 3.
+        order_OK = ((np.nanmin(np.diff(self.A_to_B(pulse_times_A))) > 0) and
+                    (np.nanmin(np.diff(self.B_to_A(pulse_times_B))) > 0))
+        print('separation OK: {}'.format(separation_OK))
+        print('Ordering OK  : {}'.format(order_OK))
+        # Plotting
         if plot:
-            # Plotting
             plt.figure(plot if type(plot)==int else 1, figsize=[7,9]).clf()
             plt.subplot2grid((3,3),(0,0),rowspan=1,colspan=2)
             plt.hist(log_mse[ valid_matches], 20, color='b', label='Match')
