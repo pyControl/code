@@ -197,7 +197,7 @@ def output_data(event):
             start_byte = b'V'
             data_bytes = event[2][0].encode() + b' ' + event[2][1].encode()
         data_len = len(data_bytes).to_bytes(2, 'little')  
-        timestamp = event[1].to_bytes(4, 'little')
+        timestamp = event[0].to_bytes(4, 'little')
         checksum  = (sum(data_len + timestamp) + sum(data_bytes)).to_bytes(2, 'little')
         usb_serial.send(start_byte + data_len + timestamp + checksum + data_bytes)
 
