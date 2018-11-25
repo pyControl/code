@@ -71,6 +71,9 @@ class _MCP(_h.IO_object):
         # Enable interrupt on specified pin using syntax compatible with pyb.ExtInt. Pull argument ignored.
         pin.enable_interrupt(callback, mode)
 
+    def _run_start(self):
+        self.read_register('GPIO') # Read the GPIO register to clear interrupts.
+        
 
 class MCP23017(_MCP):
     # MCP23017 16 bit port expander. Ports A and B are addressed as single 16 bit port
