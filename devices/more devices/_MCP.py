@@ -56,10 +56,12 @@ class _MCP(_h.IO_object):
     def ISR(self, i):
         _h.interrupt_queue.put(self.ID)
         
-    def _process_interrupt(self):#, i):
-        pin = int(math.log2(self.read_register('INTF'))+0.1)
+    def _process_interrupt(self):
+        INTF = self.read_register('INTF')
         self.read_register('GPIO')
-        self.pin_callbacks[pin](pin) # Callback is called with pin as an argument for consistency with pyb.ExtInt
+        if INTF > 0:
+            pin = int(math.log2(intf)+0.1)
+            self.pin_callbacks[pin](pin) # Called with pin as an argument for consistency with pyb.ExtInt
 
     def Pin(self, id, mode=None, pull=None):
         # Instantiate and return a Pin object, pull argument currently ignored.
