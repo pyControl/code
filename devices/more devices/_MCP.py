@@ -60,7 +60,7 @@ class _MCP(_h.IO_object):
         INTF = self.read_register('INTF')
         self.read_register('GPIO')
         if INTF > 0:
-            pin = int(math.log2(intf)+0.1)
+            pin = int(math.log2(INTF)+0.1)
             self.pin_callbacks[pin](pin) # Called with pin as an argument for consistency with pyb.ExtInt
 
     def Pin(self, id, mode=None, pull=None):
