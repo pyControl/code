@@ -485,7 +485,7 @@ class IO_expander_pin():
 class Rsync(IO_object):
     # Class for generating sync pulses with random inter-pulse interval.
 
-    def __init__(self, pin, event_name='Rsync', mean_IPI=1000, pulse_dur=5):
+    def __init__(self, pin, event_name='rsync', mean_IPI=5000, pulse_dur=50):
         assert 0.1*mean_IPI > pulse_dur, '0.1*mean_IPI must be greater than pulse_dur'
         self.sync_pin = pyb.Pin(pin, pyb.Pin.OUT)
         self.event_name = event_name
@@ -502,11 +502,14 @@ class Rsync(IO_object):
             self.state = False # Whether output is high or low.
             self._timer_callback()
 
+    def _run_stop(self):
+        self.sync_pin.value(False)
+
     def _timer_callback(self):
         if self.state: # Pin high -> low, set timer for next pulse.
             fw.timer.set(randint(self.min_IPI, self.max_IPI), fw.hardw_typ, self.ID)
         else: # Pin low -> high, set timer for pulse duration.
-            fw.data_output_queue.put((fw.current_time, fw.event_typ, self.event_ID))
             fw.timer.set(self.pulse_dur, fw.hardw_typ, self.ID)
+            fw.data_output_queue.put((fw.current_time, fw.event_typ, self.event_ID))
         self.state = not self.state
         self.sync_pin.value(self.state)
