@@ -30,6 +30,9 @@ initial_state = 'LED_off'
 
 # Define behaviour.
 
+def run_start():
+   analog_input.record()
+
 def LED_on(event):
     if event == 'entry':
         blue_LED.on()

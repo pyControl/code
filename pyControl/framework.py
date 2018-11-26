@@ -68,14 +68,14 @@ class Timer():
     def check(self):
         #Check whether timers have triggered.
         global current_time, check_timers
-        self.available = self.active_timers and self.active_timers[-1][0] <= current_time
+        self.available = bool(self.active_timers) and (self.active_timers[-1][0] <= current_time)
         check_timers = False
 
     def get(self):
         # Get first timer event.
         global current_time
         event_tuple = self.active_timers.pop()
-        self.available = self.active_timers and self.active_timers[-1][0] <= current_time
+        self.available = bool(self.active_timers) and (self.active_timers[-1][0] <= current_time)
         return event_tuple
 
     def disarm(self, event_ID):
@@ -230,7 +230,7 @@ def _update():
         hw.IO_dict[hw.interrupt_queue.get()]._process_interrupt()
 
     elif check_timers: # Priority 2: Check for elapsed timers.
-        timer.check() 
+        timer.check()
 
     elif event_queue.available: # Priority 3: Process event from queue.
         event = event_queue.get()
