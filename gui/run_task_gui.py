@@ -33,11 +33,11 @@ class Run_task_gui(QtGui.QWidget):
         self.task = None       # Task currently uploaded on pyboard. 
         self.task_hash = None  # Used to check if file has changed.
         self.sm_info = None    # Information about current state machine.
-        self.data_dir = None
-        self.subject_ID = None 
+        self.data_dir = None 
         self.data_logger = Data_logger(print_func=self.print_to_log)
         self.connected     = False # Whether gui is conencted to pyboard.
-        self.uploaded = False # Whether selected task is on board.
+        self.uploaded = False # Whether selected task file is on board.
+        self.fresh_task = None # Whether task has been run or variables edited.
         self.subject_changed = False
         self.available_tasks = None
         self.available_ports = None
@@ -92,7 +92,7 @@ class Run_task_gui(QtGui.QWidget):
         self.data_dir_button = QtGui.QPushButton('...')
         self.data_dir_button.setFixedWidth(30)
         self.subject_label = QtGui.QLabel('Subject ID:')
-        self.subject_text = QtGui.QLineEdit(self.subject_ID)
+        self.subject_text = QtGui.QLineEdit()
         self.subject_text.setFixedWidth(80)
         self.subject_text.setMaxLength(12)
 
@@ -284,6 +284,7 @@ class Run_task_gui(QtGui.QWidget):
             else:
                 self.status_text.setText('Uploading..')
                 self.task_hash = _djb2_file(os.path.join(tasks_dir, task + '.py'))
+                self.uploaded = True
             self.start_button.setEnabled(False)
             self.variables_button.setEnabled(False)
             self.repaint()
@@ -297,7 +298,7 @@ class Run_task_gui(QtGui.QWidget):
             self.stop_button.setEnabled(False)
             self.status_text.setText('Uploaded : ' + task)
             self.task = task
-            self.uploaded = True
+            self.fresh_task = True
             self.upload_button.setText('Reset')
         except PyboardError:
             self.status_text.setText('Error setting up state machine.')
@@ -307,20 +308,20 @@ class Run_task_gui(QtGui.QWidget):
             QtGui.QFileDialog.getExistingDirectory(self, 'Select data folder', data_dir))
 
     def start_task(self):
-        if self.test_data_path():
-            subject_changed = (self.subject_ID is not None and 
-                str(self.subject_text.text()) != self.subject_ID)
-            self.subject_ID = str(self.subject_text.text())
-            if subject_changed:
-                reset_task = QtGui.QMessageBox.question(self, 'Subject changed', 
-                    'Subject ID changed, reset task?'
+        recording = self.test_data_path()
+        if recording:
+            if not self.fresh_task:
+                reset_task = QtGui.QMessageBox.question(self, 'Reset task', 
+                    'Task has already been run, variables may not have default values.\n\nReset task?'
                     ,QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
                 if reset_task == QtGui.QMessageBox.Yes:
                     self.setup_task()
                     return
-            self.data_logger.open_data_file(self.data_dir, 'run_task', self.subject_ID)
+            subject_ID = str(self.subject_text.text())
+            self.data_logger.open_data_file(self.data_dir, 'run_task', subject_ID)
+        self.fresh_task = False
         self.board.start_framework()
-        self.task_plot.run_start()
+        self.task_plot.run_start(recording)
         self.task_select.setEnabled(False)
         self.upload_button.setEnabled(False)
         self.file_groupbox.setEnabled(False)
@@ -342,6 +343,7 @@ class Run_task_gui(QtGui.QWidget):
             self.board.stop_framework()
             QtCore.QTimer.singleShot(100, self.process_data) # Catch output after framework stops.
         self.data_logger.close_files()
+        self.task_plot.run_stop()
         self.board_groupbox.setEnabled(True)
         self.file_groupbox.setEnabled(True)
         self.settings_button.setEnabled(True)

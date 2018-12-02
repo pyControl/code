@@ -48,11 +48,16 @@ class Task_plotter(QtGui.QWidget):
             self.analog_plot.axis.setVisible(False)
             self.events_plot.axis.getAxis('bottom').setLabel('Time (seconds)')
 
-    def run_start(self):
+    def run_start(self, recording):
         self.start_time = time.time()
         self.states_plot.run_start()
         self.events_plot.run_start()
         self.analog_plot.run_start()
+        if recording:
+            self.run_clock.recording()
+
+    def run_stop(self):
+        self.run_clock.run_stop()
 
     def process_data(self, new_data):
         # Update plots.
@@ -216,11 +221,23 @@ class Run_clock():
     # Class for displaying the run time.
 
     def __init__(self, axis):
-        self.text = pg.TextItem(text='')#, color=(255,0,0))
-        self.text.setFont(QtGui.QFont('arial',11, QtGui.QFont.Bold))
-        axis.getViewBox().addItem(self.text, ignoreBounds=True)
-        self.text.setParentItem(axis.getViewBox())
-        self.text.setPos(10,-5)
+        self.clock_text = pg.TextItem(text='')#, color=(255,0,0))
+        self.clock_text.setFont(QtGui.QFont('arial',11, QtGui.QFont.Bold))
+        axis.getViewBox().addItem(self.clock_text, ignoreBounds=True)
+        self.clock_text.setParentItem(axis.getViewBox())
+        self.clock_text.setPos(10,-5)
+        self.recording_text = pg.TextItem(text='', color=(255,0,0))
+        self.recording_text.setFont(QtGui.QFont('arial',12,QtGui.QFont.Bold))
+        axis.getViewBox().addItem(self.recording_text, ignoreBounds=True)
+        self.recording_text.setParentItem(axis.getViewBox())
+        self.recording_text.setPos(80,-5)
 
     def update(self, run_time):
-        self.text.setText(str(timedelta(seconds=run_time))[:7])
+        self.clock_text.setText(str(timedelta(seconds=run_time))[:7])
+
+    def recording(self):
+        self.recording_text.setText('Recording')
+
+    def run_stop(self):
+        self.clock_text.setText('')
+        self.recording_text.setText('')
