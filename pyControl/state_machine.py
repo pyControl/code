@@ -61,19 +61,21 @@ class State_machine():
         # is cancelled if goto_state() occurs before interval elapses.
         fw.timer.set(interval, fw.state_typ, fw.states[next_state])
 
-    def set_timer(self, event, interval):
+    def set_timer(self, event, interval, output_event=False):
         # Set a timer to return specified event after interval milliseconds.
-        fw.timer.set(interval, fw.event_typ, fw.events[event])    
+        event_type = fw.event_typ if output_event else fw.timer_typ
+        fw.timer.set(interval, event_type, fw.events[event])    
 
     def disarm_timer(self, event):
         # Disable all timers due to return specified event.
         fw.timer.disarm(fw.events[event])
 
-    def reset_timer(self, event, interval):
+    def reset_timer(self, event, interval, output_event=False):
         # Disarm all timers due to return specified event and set new timer
         # to return specified event after interval milliseconds.
         fw.timer.disarm(fw.events[event])
-        fw.timer.set(interval, fw.event_typ, fw.events[event])    
+        event_type = fw.event_typ if output_event else fw.timer_typ
+        fw.timer.set(interval, event_type, fw.events[event])
 
     def pause_timer(self,event):
         # Pause all timers due to return specified event.
