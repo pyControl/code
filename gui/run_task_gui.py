@@ -284,7 +284,6 @@ class Run_task_gui(QtGui.QWidget):
             else:
                 self.status_text.setText('Uploading..')
                 self.task_hash = _djb2_file(os.path.join(tasks_dir, task + '.py'))
-                self.uploaded = True
             self.start_button.setEnabled(False)
             self.variables_button.setEnabled(False)
             self.repaint()
@@ -299,6 +298,7 @@ class Run_task_gui(QtGui.QWidget):
             self.status_text.setText('Uploaded : ' + task)
             self.task = task
             self.fresh_task = True
+            self.uploaded = True
             self.upload_button.setText('Reset')
         except PyboardError:
             self.status_text.setText('Error setting up state machine.')
