@@ -61,26 +61,26 @@ def red_on(event):
 
 def all_states(event):
     if event == 'green_timer':
-        green_LED.toggle()
-        set_timer('green_timer', 0.2*second)
+        set_timer('green_timer', 0.2*second, output_event=True)
         set_timer('pause_timer', 0.1*second)
         set_timer('red_timer', 50*ms)
         set_timer('disarm_timer', 40*ms)
+        green_LED.toggle()
     elif event == 'pause_timer':
-        print('Timer remaining  : {}'.format(timer_remaining('green_timer')))
-        print('Not set remaining: {}'.format(timer_remaining('unused_timer')))
         pause_timer('green_timer')
         set_timer('unpause_timer', 0.3*second)
     elif event == 'unpause_timer':
         unpause_timer('green_timer')
+        print('Timer remaining  : {}'.format(timer_remaining('green_timer')))
+        print('Not set remaining: {}'.format(timer_remaining('unused_timer')))
     elif event == 'red_timer':
         goto_state('red_on')
     elif event == 'disarm_timer':
         disarm_timer('red_timer')
     elif event == 'yellow_timer':
-        yellow_LED.toggle()
         reset_timer('yellow_timer', 0.5*second)
         set_timer('yellow_timer', 0.75*second)
+        yellow_LED.toggle()
 
 
 

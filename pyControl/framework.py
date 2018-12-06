@@ -9,10 +9,11 @@ class pyControlError(BaseException): # Exception for pyControl errors.
 
 event_typ = const(1) # Framework event.
 state_typ = const(2) # State transition.
-print_typ = const(3) # User print.
-hardw_typ = const(4) # Harware callback
-stopf_typ = const(5) # Stop framework.
-varbl_typ = const(6) # Variable change.
+timer_typ = const(3) # User timer.
+print_typ = const(4) # User print.
+hardw_typ = const(5) # Harware callback
+stopf_typ = const(6) # Stop framework.
+varbl_typ = const(7) # Variable change.
 
 # Generic event tuple format used by Event_queue and Timer class: (timestamp, event_type, event_data)
 
@@ -20,6 +21,7 @@ varbl_typ = const(6) # Variable change.
 
 # (time, event_typ, event_ID)       # External event.
 # (time, state_typ, state_ID)       # State transition.
+# (time, timer_typ, event_ID)       # User timer.
 # (time, print_typ, print_string)   # User print.
 # (time, hardw_typ, hardware_ID)    # Harware callback
 # (time, stopf_typ, None)           # Stop framework.
@@ -80,15 +82,17 @@ class Timer():
 
     def disarm(self, event_ID):
         # Remove all user timers with specified event_ID.
-        self.active_timers = [t for t in self.active_timers if not (t[1] == event_typ and t[2] == event_ID)]
+        self.active_timers = [t for t in self.active_timers 
+                              if not (t[2] == event_ID and (t[1] in (event_typ, timer_typ)))]
         self.paused_timers = [t for t in self.paused_timers if not t[2] == event_ID]
 
     def pause(self, event_ID):
         # Pause all user timers with specified event_ID.
         global current_time
         self.paused_timers += [(t[0]-current_time,t[1], t[2]) for t in self.active_timers 
-                               if (t[1] == event_typ and t[2] == event_ID)]
-        self.active_timers = [t for t in self.active_timers if not (t[1] == event_typ and t[2] == event_ID)]
+                               if (t[2] == event_ID and (t[1] in (event_typ, timer_typ)))]
+        self.active_timers = [t for t in self.active_timers 
+                              if not (t[2] == event_ID and (t[1] in (event_typ, timer_typ)))]
 
     def unpause(self, event_ID):
         # Unpause user timers with specified event.
@@ -239,7 +243,10 @@ def _update():
 
     elif timer.available: # Priority 4: Process timer event.
         event = timer.get()
-        if event[1] == event_typ:
+        if  event[1] == timer_typ:
+            state_machine._process_event(ID2name[event[2]])
+        elif event[1] == event_typ:
+            data_output_queue.put(event)
             state_machine._process_event(ID2name[event[2]])
         elif event[1] == hardw_typ:
             hw.IO_dict[event[2]]._timer_callback()
