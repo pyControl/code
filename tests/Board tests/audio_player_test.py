@@ -5,7 +5,7 @@
 # in the folder.  You can use a wav file from the sample pack that can be 
 # downloaded from this address address: http://smd-records.com/tr808/?page_id=14 
 # Put the folder in the SD card socket on the audio player. Run the task and the 
-# wav file should play alternately from each speaker at a range of different volumes.
+# wav file should play alternately from each speaker at two different volumes.
 
 from pyControl.utility import *
 from devices import Breakout_1_2, Audio_player
@@ -24,7 +24,8 @@ initial_state = 'wait'
 
 # Variables
 
-v.volume = 1
+v.i = 0
+v.volumes = [30,30,15,15]
 v.speaker_enabled = True
       
 # Define behaviour. 
@@ -32,9 +33,9 @@ v.speaker_enabled = True
 def wait(event):
     if event == 'entry':
     	timed_goto_state('play_sound', 0.5 * second)
-        v.volume = (v.volume + 1) % 29
         v.speaker_enabled = not v.speaker_enabled
-        player.set_volume(v.volume+1)
+        player.set_volume(v.volumes[v.i])
+        v.i = (v.i + 1) % 4
         player.set_enabled(left=v.speaker_enabled, right=not v.speaker_enabled)
 
 
