@@ -35,6 +35,7 @@ class Run_task_gui(QtGui.QWidget):
         self.sm_info = None    # Information about current state machine.
         self.data_dir = None 
         self.data_logger = Data_logger(print_func=self.print_to_log)
+        self.app = None # Overwritten with QtGui.QApplication instance in main.
         self.connected     = False # Whether gui is conencted to pyboard.
         self.uploaded = False # Whether selected task file is on board.
         self.fresh_task = None # Whether task has been run or variables edited.
@@ -182,7 +183,6 @@ class Run_task_gui(QtGui.QWidget):
         self.refresh_timer = QtCore.QTimer() # Timer to regularly call refresh() when not running.
         self.refresh_timer.timeout.connect(self.refresh)
 
-
         # Initial setup.
 
         self.disconnect() # Set initial state as disconnected.
@@ -195,7 +195,7 @@ class Run_task_gui(QtGui.QWidget):
         self.log_textbox.moveCursor(QtGui.QTextCursor.End)
         self.log_textbox.insertPlainText(print_string+end)
         self.log_textbox.moveCursor(QtGui.QTextCursor.End)
-        self.log_textbox.repaint()
+        self.app.processEvents() # To update gui during long operations that print progress.
 
     def test_data_path(self):
         # Checks whether data dir and subject ID are valid.
@@ -244,10 +244,8 @@ class Run_task_gui(QtGui.QWidget):
             self.connect_button.setEnabled(False)
             self.repaint()            
             self.board = Pycboard(self.port_select.currentText(),
-                                  print_func=self.print_to_log, data_logger=self.data_logger)
-
-            if not self.board.status['framework']:
-                self.board.load_framework()
+                                  print_func=self.print_to_log,
+                                  data_logger=self.data_logger)
             self.connected = True
             self.config_button.setEnabled(True)
             self.task_groupbox.setEnabled(True)
@@ -256,7 +254,10 @@ class Run_task_gui(QtGui.QWidget):
             self.status_text.setText('Connected')
         except SerialException:
             self.status_text.setText('Connection failed')
+            self.print_to_log(' Connection failed.')
             self.connect_button.setEnabled(True)
+        if self.connected and not self.board.status['framework']:
+            self.board.load_framework()
 
     def disconnect(self):
         # Disconnect from pyboard.
@@ -269,6 +270,7 @@ class Run_task_gui(QtGui.QWidget):
         self.port_select.setEnabled(True)
         self.connect_button.setText('Connect')
         self.status_text.setText('Not connected')
+        self.task_changed()
         self.connected = False
 
     def task_changed(self):
@@ -336,6 +338,7 @@ class Run_task_gui(QtGui.QWidget):
         self.refresh_timer.stop()
         self.status_text.setText('Running: ' + self.task)
 
+
     def stop_task(self, error=False, stopped_by_task=False):
         self.process_timer.stop()
         self.refresh_timer.start(self.refresh_interval)
@@ -380,10 +383,22 @@ class Run_task_gui(QtGui.QWidget):
             self.board.close()
         event.accept()
 
+    # Exception handling.
+
+    def excepthook(self, ex_type, ex_value, ex_traceback):
+        # Called whenever an uncaught exception occurs.
+        if ex_type == SerialException:
+            self.print_to_log('\nError: Serial connection with board lost.')
+        elif ex_type == PyboardError:
+            self.print_to_log('\nError: Unable to execute command.')
+        self.disconnect()
+
 # Main ----------------------------------------------------------------
 
 if __name__ == '__main__':
     app = QtGui.QApplication([])  # Start QT
     run_task_gui = Run_task_gui()
+    run_task_gui.app = app # To allow app functions to be called from GUI.
     run_task_gui.show() 
+    sys.excepthook = run_task_gui.excepthook
     app.exec_()
