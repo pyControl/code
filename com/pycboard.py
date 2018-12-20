@@ -210,8 +210,7 @@ class Pycboard(Pyboard):
                             self.serial.read(1)
                     self.follow(5)
         except PyboardError as e:
-            self.print('\n\nError: Unable to transfer file\n')
-            self.print(str(e))
+            self.print('\n\nError: Unable to transfer file.')
             raise PyboardError
 
     def transfer_folder(self, folder_path, target_folder=None, file_type='all',
