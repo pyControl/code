@@ -16,7 +16,7 @@ class Experiments_tab(QtGui.QWidget):
         super(QtGui.QWidget, self).__init__(parent)
 
         # Variables
-        self.GUI_main = self.parent().parent()
+        self.GUI_main = self.parent()
         self.custom_dir = False # True if data_dir field has been manually edited.
 
         # Experiment Groupbox
