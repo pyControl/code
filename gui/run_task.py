@@ -1,13 +1,8 @@
 import os
-import sys
 from pyqtgraph.Qt import QtGui, QtCore
 from datetime import datetime
 from serial import SerialException, SerialTimeoutException
 from serial.tools import list_ports
-
-# Add parent directory to path to allow imports.
-top_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if not top_dir in sys.path: sys.path.insert(0, top_dir)
 
 from com.pycboard import Pycboard, PyboardError, _djb2_file
 from com.data_logger import Data_logger
@@ -22,27 +17,23 @@ from gui.plotting import Task_plotter
 
 ## Create widgets.
 
-class Run_task_gui(QtGui.QWidget):
+class Run_task(QtGui.QWidget):
 
     def __init__(self, parent=None):
         super(QtGui.QWidget, self).__init__(parent)
-        self.setWindowTitle('pyControl run task GUI')
 
         # Variables.
+        self.GUI_main = self.parent().parent()
         self.board = None      # Pycboard class instance.
         self.task = None       # Task currently uploaded on pyboard. 
         self.task_hash = None  # Used to check if file has changed.
         self.sm_info = None    # Information about current state machine.
         self.data_dir = None 
         self.data_logger = Data_logger(print_func=self.print_to_log)
-        self.app = None # Overwritten with QtGui.QApplication instance in main.
         self.connected     = False # Whether gui is conencted to pyboard.
         self.uploaded = False # Whether selected task file is on board.
         self.fresh_task = None # Whether task has been run or variables edited.
         self.subject_changed = False
-        self.available_tasks = None
-        self.available_ports = None
-        self.refresh_interval = 1000 # Interval to refresh tasks and ports when not running (ms).
 
         # GUI groupbox.
 
@@ -180,14 +171,11 @@ class Run_task_gui(QtGui.QWidget):
 
         self.process_timer = QtCore.QTimer() # Timer to regularly call process_data() during run.        
         self.process_timer.timeout.connect(self.process_data)
-        self.refresh_timer = QtCore.QTimer() # Timer to regularly call refresh() when not running.
-        self.refresh_timer.timeout.connect(self.refresh)
 
         # Initial setup.
 
         self.disconnect() # Set initial state as disconnected.
         self.refresh()    # Refresh tasks and ports lists.
-        self.refresh_timer.start(self.refresh_interval) 
 
     # General methods
 
@@ -195,7 +183,7 @@ class Run_task_gui(QtGui.QWidget):
         self.log_textbox.moveCursor(QtGui.QTextCursor.End)
         self.log_textbox.insertPlainText(print_string+end)
         self.log_textbox.moveCursor(QtGui.QTextCursor.End)
-        self.app.processEvents() # To update gui during long operations that print progress.
+        self.GUI_main.app.processEvents() # To update gui during long operations that print progress.
 
     def test_data_path(self):
         # Checks whether data dir and subject ID are valid.
@@ -208,23 +196,14 @@ class Run_task_gui(QtGui.QWidget):
             self.start_button.setText('Start')
             return False
 
-    def scan_ports(self):
-        # Scan serial ports for connected boards and update ports list if changed.
-        ports = set([c[0] for c in list_ports.comports()
-                     if ('Pyboard' in c[1]) or ('USB Serial Device' in c[1])])
-        if not ports == self.available_ports:
+    def refresh(self):
+        # Called regularly when framework not running.
+        if self.GUI_main.available_ports_changed:
             self.port_select.clear()
-            self.port_select.addItems(sorted(ports))
-            self.available_ports = ports
-
-    def scan_tasks(self):
-        # Scan task folder for available tasks and update tasks list if changed.     
-        tasks =  set([t.split('.')[0] for t in os.listdir(tasks_dir)
-                  if t[-3:] == '.py'])
-        if not tasks == self.available_tasks:    
+            self.port_select.addItems(sorted(self.GUI_main.available_ports))
+        if self.GUI_main.available_tasks_changed:
             self.task_select.clear()
-            self.task_select.addItems(sorted(tasks))
-            self.available_tasks = tasks
+            self.task_select.addItems(sorted(self.GUI_main.available_tasks))
         if self.task:
             try:
                 task_path = os.path.join(tasks_dir, self.task + '.py')
@@ -335,13 +314,13 @@ class Run_task_gui(QtGui.QWidget):
             '\nRun started at: {}\n'.format(
             datetime.now().strftime('%Y/%m/%d %H:%M:%S')))
         self.process_timer.start(update_interval)
-        self.refresh_timer.stop()
+        self.GUI_main.refresh_timer.stop()
         self.status_text.setText('Running: ' + self.task)
 
 
     def stop_task(self, error=False, stopped_by_task=False):
         self.process_timer.stop()
-        self.refresh_timer.start(self.refresh_interval)
+        self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
         if not (error or stopped_by_task): 
             self.board.stop_framework()
             QtCore.QTimer.singleShot(100, self.process_data) # Catch output after framework stops.
@@ -369,11 +348,6 @@ class Run_task_gui(QtGui.QWidget):
             self.print_to_log('\nError during framework run.')
             self.stop_task(error=True)
 
-    def refresh(self):
-        # Called regularly when not running to update tasks and ports.
-        self.scan_tasks()
-        self.scan_ports()
-
     # Cleanup.
 
     def closeEvent(self, event):
@@ -394,13 +368,3 @@ class Run_task_gui(QtGui.QWidget):
         else:
             self.print_to_log('\nError: uncaught exception of type: {}'.format(ex_type))
         self.disconnect()
-
-# Main ----------------------------------------------------------------
-
-if __name__ == '__main__':
-    app = QtGui.QApplication([])  # Start QT
-    run_task_gui = Run_task_gui()
-    run_task_gui.app = app # To allow app functions to be called from GUI.
-    run_task_gui.show() 
-    sys.excepthook = run_task_gui.excepthook
-    app.exec_()
