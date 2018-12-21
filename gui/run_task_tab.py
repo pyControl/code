@@ -2,7 +2,6 @@ import os
 from pyqtgraph.Qt import QtGui, QtCore
 from datetime import datetime
 from serial import SerialException, SerialTimeoutException
-from serial.tools import list_ports
 
 from com.pycboard import Pycboard, PyboardError, _djb2_file
 from com.data_logger import Data_logger
@@ -17,20 +16,20 @@ from gui.plotting import Task_plotter
 
 ## Create widgets.
 
-class Run_task(QtGui.QWidget):
+class Run_task_tab(QtGui.QWidget):
 
     def __init__(self, parent=None):
         super(QtGui.QWidget, self).__init__(parent)
 
         # Variables.
-        self.GUI_main = self.parent().parent()
+        self.GUI_main = self.parent()
         self.board = None      # Pycboard class instance.
         self.task = None       # Task currently uploaded on pyboard. 
         self.task_hash = None  # Used to check if file has changed.
         self.sm_info = None    # Information about current state machine.
         self.data_dir = None 
         self.data_logger = Data_logger(print_func=self.print_to_log)
-        self.connected     = False # Whether gui is conencted to pyboard.
+        self.connected = False # Whether gui is conencted to pyboard.
         self.uploaded = False # Whether selected task file is on board.
         self.fresh_task = None # Whether task has been run or variables edited.
         self.subject_changed = False
@@ -175,7 +174,6 @@ class Run_task(QtGui.QWidget):
         # Initial setup.
 
         self.disconnect() # Set initial state as disconnected.
-        self.refresh()    # Refresh tasks and ports lists.
 
     # General methods
 
@@ -316,6 +314,7 @@ class Run_task(QtGui.QWidget):
         self.process_timer.start(update_interval)
         self.GUI_main.refresh_timer.stop()
         self.status_text.setText('Running: ' + self.task)
+        self.GUI_main.tab_widget.setTabEnabled(1, False) # Disable experiments tab.
 
 
     def stop_task(self, error=False, stopped_by_task=False):
@@ -334,6 +333,7 @@ class Run_task(QtGui.QWidget):
         self.upload_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         self.status_text.setText('Uploaded : ' + self.task)
+        self.GUI_main.tab_widget.setTabEnabled(1, True) # Enable experiments tab.
 
     # Timer updates
 

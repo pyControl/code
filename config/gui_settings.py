@@ -1,5 +1,7 @@
 # Graphical user interface settings.
 
+VERSION = 1.4
+
 update_interval = 20 # Interval between calls to the GUIs update function (ms).
 
 event_history_len  = 200  # Length of event history to plot (# events).
