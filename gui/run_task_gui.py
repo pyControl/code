@@ -2,7 +2,7 @@ import os
 import sys
 from pyqtgraph.Qt import QtGui, QtCore
 from datetime import datetime
-from serial import SerialException
+from serial import SerialException, SerialTimeoutException
 from serial.tools import list_ports
 
 # Add parent directory to path to allow imports.
@@ -254,7 +254,7 @@ class Run_task_gui(QtGui.QWidget):
             self.status_text.setText('Connected')
         except SerialException:
             self.status_text.setText('Connection failed')
-            self.print_to_log(' Connection failed.')
+            self.print_to_log('Connection failed.')
             self.connect_button.setEnabled(True)
         if self.connected and not self.board.status['framework']:
             self.board.load_framework()
@@ -365,7 +365,7 @@ class Run_task_gui(QtGui.QWidget):
             self.task_plot.process_data(new_data)
             if not self.board.framework_running:
                 self.stop_task(stopped_by_task=True)
-        except PyboardError as e:
+        except PyboardError:
             self.print_to_log('\nError during framework run.')
             self.stop_task(error=True)
 
@@ -387,10 +387,12 @@ class Run_task_gui(QtGui.QWidget):
 
     def excepthook(self, ex_type, ex_value, ex_traceback):
         # Called whenever an uncaught exception occurs.
-        if ex_type == SerialException:
+        if ex_type in (SerialException, SerialTimeoutException):
             self.print_to_log('\nError: Serial connection with board lost.')
         elif ex_type == PyboardError:
             self.print_to_log('\nError: Unable to execute command.')
+        else:
+            self.print_to_log('\nError: uncaught exception of type: {}'.format(ex_type))
         self.disconnect()
 
 # Main ----------------------------------------------------------------

@@ -221,7 +221,7 @@ class Run_clock():
     # Class for displaying the run time.
 
     def __init__(self, axis):
-        self.clock_text = pg.TextItem(text='')#, color=(255,0,0))
+        self.clock_text = pg.TextItem(text='')
         self.clock_text.setFont(QtGui.QFont('arial',11, QtGui.QFont.Bold))
         axis.getViewBox().addItem(self.clock_text, ignoreBounds=True)
         self.clock_text.setParentItem(axis.getViewBox())
