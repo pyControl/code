@@ -120,8 +120,9 @@ class GUI_main(QtGui.QMainWindow):
         self.boards = []
         self.print_funcs = []
         for i, setup in enumerate(sorted(experiment['subjects'].keys())):
-            print_func = self.summary_tab.subject_summaryboxes[i].print_to_log
+            print_func = self.summary_tab.summaryboxes[i].print_to_log
             data_logger = Data_logger(print_func=print_func)
+            # Connect to board.
             print_func('Connecting to board.. ')
             try:
                 board = Pycboard(setup, print_func=print_func, data_logger=data_logger)
@@ -129,15 +130,28 @@ class GUI_main(QtGui.QMainWindow):
                 print_func('Connection failed.')
                 self.stop_experiment()
                 return
+            # Setup state machine.
             try:
-                sm_info = board.setup_state_machine(experiment['task'])
+                self.sm_info = board.setup_state_machine(experiment['task'])
             except PyboardError:
                 self.stop_experiment()
-                return               
-            self.data_loggers.append(data_logger)
+                return
+            # Set variables.
+            print_func('\nSetting variables. ', end='')
+            try:
+                subject_variables = [v for v in experiment['variables'] 
+                                 if v['subject'] in ('all', experiment['subjects'][setup])]
+                for v in subject_variables:
+                    board.set_variable(v['variable'], eval(v['value']))
+                print_func('OK')
+            except PyboardError:
+                print_func('Failed')
+                self.stop_experiment()
+                return
             self.boards.append(board)
+            self.data_loggers.append(data_logger)
             self.print_funcs.append(print_func)
-            self.plots_tab.subject_plot_tabs[i].task_plot.set_state_machine(sm_info)
+            self.plots_tab.subject_plot_tabs[i].task_plot.set_state_machine(self.sm_info)
         self.summary_tab.startstop_button.setEnabled(True)
         self.plots_tab.startstop_button.setEnabled(True)
 
@@ -214,27 +228,34 @@ class Summary_tab(QtGui.QWidget):
         self.Vlayout = QtGui.QVBoxLayout(self)
         self.Vlayout.addLayout(self.Hlayout)
 
+        self.summaryboxes = []
+
+    def reset(self):
+        '''Remove and delete all subject summary boxes.'''
+        while len(self.summaryboxes) > 0:
+            summarybox = self.summaryboxes.pop() 
+            summarybox.setParent(None)
+            summarybox.deleteLater()
+
     def run_experiment(self, experiment):
         '''Called when experiment is run to setup tab.'''
+        self.reset()
         self.name_text.setText(experiment['name'])
         self.startstop_button.setEnabled(False)
-
-        self.subject_summaryboxes = []
         for setup in sorted(experiment['subjects'].keys()):
-            self.subject_summaryboxes.append(
-                Subject_summarybox('{} : {}'.format(setup, experiment['subjects'][setup]), self))
-            self.Vlayout.addWidget(self.subject_summaryboxes[-1])
+            self.summaryboxes.append(
+                Summarybox('{} : {}'.format(setup, experiment['subjects'][setup]), self))
+            self.Vlayout.addWidget(self.summaryboxes[-1])
 
     def start_experiment(self):
         self.startstop_button.setText('Stop experiment')
-
 
     def stop_experiment(self):
         '''Called when experiment stops.'''
         self.startstop_button.setText('Start experiment')
         self.startstop_button.setEnabled(False)
 
-class Subject_summarybox(QtGui.QGroupBox):
+class Summarybox(QtGui.QGroupBox):
 
     def __init__(self, name, parent=None):
 
@@ -295,12 +316,20 @@ class Plots_tab(QtGui.QWidget):
         self.Vlayout.addLayout(self.Hlayout)
         self.Vlayout.addWidget(self.subject_tabs)
 
+        self.subject_plot_tabs = []
+
+    def reset(self):
+        '''Remove and delete all subject plot tabs.'''
+        while len(self.subject_plot_tabs) > 0:
+            subject_plot_tab = self.subject_plot_tabs.pop() 
+            subject_plot_tab.setParent(None)
+            subject_plot_tab.deleteLater()
+
     def run_experiment(self, experiment):
         '''Called when experiment is run to setup tab.'''
+        self.reset()
         self.name_text.setText(experiment['name'])
         self.startstop_button.setEnabled(False)
-
-        self.subject_plot_tabs = []
         for setup in sorted(experiment['subjects'].keys()):
             self.subject_plot_tabs.append(Subject_plots_tab(self))
             self.subject_tabs.addTab(self.subject_plot_tabs[-1],
