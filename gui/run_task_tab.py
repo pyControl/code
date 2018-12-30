@@ -28,7 +28,6 @@ class Run_task_tab(QtGui.QWidget):
         self.task_hash = None  # Used to check if file has changed.
         self.sm_info = None    # Information about current state machine.
         self.data_dir = None 
-        self.data_logger = Data_logger(print_func=self.print_to_log)
         self.connected = False # Whether gui is conencted to pyboard.
         self.uploaded = False # Whether selected task file is on board.
         self.fresh_task = None # Whether task has been run or variables edited.
@@ -141,6 +140,8 @@ class Run_task_tab(QtGui.QWidget):
         self.log_textbox.setReadOnly(True)
 
         self.task_plot = Task_plotter()
+        self.data_logger = Data_logger(print_func=self.print_to_log,
+                                       data_consumers=[self.task_plot])
 
         # Main layout
 
@@ -168,8 +169,8 @@ class Run_task_tab(QtGui.QWidget):
 
         # Create timers
 
-        self.process_timer = QtCore.QTimer() # Timer to regularly call process_data() during run.        
-        self.process_timer.timeout.connect(self.process_data)
+        self.update_timer = QtCore.QTimer() # Timer to regularly call update() during run.        
+        self.update_timer.timeout.connect(self.update)
 
         # Initial setup.
 
@@ -311,18 +312,18 @@ class Run_task_tab(QtGui.QWidget):
         self.print_to_log(
             '\nRun started at: {}\n'.format(
             datetime.now().strftime('%Y/%m/%d %H:%M:%S')))
-        self.process_timer.start(update_interval)
+        self.update_timer.start(update_interval)
         self.GUI_main.refresh_timer.stop()
         self.status_text.setText('Running: ' + self.task)
         self.GUI_main.tab_widget.setTabEnabled(1, False) # Disable experiments tab.
 
 
     def stop_task(self, error=False, stopped_by_task=False):
-        self.process_timer.stop()
+        self.update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
         if not (error or stopped_by_task): 
             self.board.stop_framework()
-            QtCore.QTimer.singleShot(100, self.process_data) # Catch output after framework stops.
+            QtCore.QTimer.singleShot(100, self.update) # Catch output after framework stops.
         self.data_logger.close_files()
         self.task_plot.run_stop()
         self.board_groupbox.setEnabled(True)
@@ -337,16 +338,16 @@ class Run_task_tab(QtGui.QWidget):
 
     # Timer updates
 
-    def process_data(self):
-        # Called regularly during run to process data from board.
+    def update(self):
+        # Called regularly during run to process data from board and update plots.
         try:
-            new_data = self.board.process_data()
-            self.task_plot.process_data(new_data)
+            self.board.process_data()
             if not self.board.framework_running:
                 self.stop_task(stopped_by_task=True)
         except PyboardError:
             self.print_to_log('\nError during framework run.')
             self.stop_task(error=True)
+        self.task_plot.update()
 
     # Cleanup.
 
@@ -359,12 +360,12 @@ class Run_task_tab(QtGui.QWidget):
 
     # Exception handling.
 
-    def excepthook(self, ex_type, ex_value, ex_traceback):
-        # Called whenever an uncaught exception occurs.
-        if ex_type in (SerialException, SerialTimeoutException):
-            self.print_to_log('\nError: Serial connection with board lost.')
-        elif ex_type == PyboardError:
-            self.print_to_log('\nError: Unable to execute command.')
-        else:
-            self.print_to_log('\nError: uncaught exception of type: {}'.format(ex_type))
-        self.disconnect()
+    # def excepthook(self, ex_type, ex_value, ex_traceback):
+    #     # Called whenever an uncaught exception occurs.
+    #     if ex_type in (SerialException, SerialTimeoutException):
+    #         self.print_to_log('\nError: Serial connection with board lost.')
+    #     elif ex_type == PyboardError:
+    #         self.print_to_log('\nError: Unable to execute command.')
+    #     else:
+    #         self.print_to_log('\nError: uncaught exception of type: {}'.format(ex_type))
+    #     self.disconnect()

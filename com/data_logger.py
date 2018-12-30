@@ -4,9 +4,10 @@ from datetime import datetime
 class Data_logger():
     '''Class for logging data from a pyControl setup to disk'''
 
-    def __init__(self, sm_info=None, print_func=None):
+    def __init__(self, sm_info=None, print_func=None, data_consumers=[]):
         self.data_file = None
         self.print_func = print_func
+        self.data_consumers = data_consumers
         if sm_info:
             self.set_state_machine(sm_info)
 
@@ -51,6 +52,9 @@ class Data_logger():
             self.write_to_file(new_data)
         if self.print_func:
             self.print_func(self.data_to_string(new_data, verbose=True), end='')
+        if self.data_consumers:
+            for data_consumer in self.data_consumers:
+                data_consumer.process_data(new_data)
 
     def write_to_file(self, new_data):
         data_string = self.data_to_string(new_data)
