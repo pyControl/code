@@ -6,7 +6,9 @@ from pyqtgraph.Qt import QtGui
 
 from config.gui_settings import event_history_len, state_history_len, analog_history_dur
 
-# Task_plotter -----------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------
+# Task_plotter 
+# ----------------------------------------------------------------------------------------
 
 class Task_plotter(QtGui.QWidget):
     ''' Widget for plotting the states, events and analog inputs output by a state machine.'''
@@ -60,13 +62,18 @@ class Task_plotter(QtGui.QWidget):
         self.run_clock.run_stop()
 
     def process_data(self, new_data):
-        # Update plots.
-        run_time = time.time() - self.start_time
-        self.states_plot.update(new_data, run_time)
-        self.events_plot.update(new_data, run_time)
-        self.analog_plot.update(new_data, run_time)
-        self.run_clock.update(run_time)
+        '''Store new data from board.'''
+        self.states_plot.process_data(new_data)
+        self.events_plot.process_data(new_data)
+        self.analog_plot.process_data(new_data)
 
+    def update(self):
+        '''Update plots.'''
+        run_time = time.time() - self.start_time
+        self.states_plot.update(run_time)
+        self.events_plot.update(run_time)
+        self.analog_plot.update(run_time)
+        self.run_clock.update(run_time)
 
 # States_plot --------------------------------------------------------
 
@@ -98,23 +105,27 @@ class States_plot():
         for plot in self.plots.values():
             plot.clear()
         self.cs = self.state_IDs[0]
+        self.updated_states = []
 
-    def update(self, new_data, run_time):
+    def process_data(self, new_data):
+        '''Store new data from board'''
         new_states = [nd for nd in new_data if nd[0] == 'D' and nd[2] in self.state_IDs]
-        # New state entries.
-        updated_states = [self.cs]
+        self.updated_states = [self.cs]
         if new_states:
             n_new =len(new_states)
             self.data = np.roll(self.data, -2*n_new, axis=0)
             for i, ns in enumerate(new_states): # Update data array.
                 timestamp, ID = ns[1:]
-                updated_states.append(ID)
+                self.updated_states.append(ID)
                 j = 2*(-n_new+i)  # Index of state entry in self.data
                 self.data[j-1:,0] = timestamp
                 self.data[j:  ,1] = ID  
             self.cs = ID
+
+    def update(self, run_time):
+        '''Update plots.'''
         self.data[-1,0] = 1000*run_time # Update exit time of current state to current time.
-        for us in updated_states: # Set data for updated state plots.
+        for us in self.updated_states: # Set data for updated state plots.
             state_data = self.data[self.data[:,1]==us,:]
             timestamps, ID = (state_data[:,0]/1000, state_data[:,1])
             self.plots[us].setData(x=timestamps, y=ID, connect='pairs')
@@ -152,10 +163,10 @@ class Events_plot():
         self.plot.clear()
         self.data = np.zeros([self.data_len, 2])
 
-    def update(self, new_data, run_time):
+    def process_data(self, new_data):
+        '''Store new data from board.'''
         if not self.event_IDs: return # State machine can have no events.
         new_events = [nd for nd in new_data if nd[0] == 'D' and nd[2] in self.event_IDs]
-        # Add new events.
         if new_events:
             n_new = len(new_events)
             self.data = np.roll(self.data, -n_new, axis=0)
@@ -163,7 +174,11 @@ class Events_plot():
                 timestamp, ID = ne[1:]
                 self.data[-n_new+i,0] = timestamp / 1000
                 self.data[-n_new+i,1] = ID
-        # Shift plot - should not need to setData but setPos does not cause redraw otherwise.
+
+    def update(self, run_time):
+        '''Update plots'''
+        # Should not need to setData but setPos does not cause redraw otherwise.
+        if not self.event_IDs: return
         self.plot.setData(self.data, symbolBrush=[pg.intColor(ID) for ID in self.data[:,1]])
         self.plot.setPos(-run_time, 0)
 
@@ -201,16 +216,24 @@ class Analog_plot():
             plot.clear()
         self.data = {ai['ID']: np.zeros([ai['Fs']*self.data_dur, 2])
                      for ai in self.inputs.values()}
+        self.updated_inputs = []
 
-    def update(self, new_data, run_time):
+    def process_data(self, new_data):
+        '''Store new data from board.'''
         if not self.inputs: return # State machine may not have analog inputs.
         new_analog = [nd for nd in new_data if nd[0] == 'A']
+        self.updated_inputs = [na[1] for na in new_analog]
         for na in new_analog:
             ID, sampling_rate, timestamp, data_array = na[1:]
             new_len = len(data_array)
             t = timestamp/1000 + np.arange(new_len)/sampling_rate
             self.data[ID] = np.roll(self.data[ID], -new_len, axis=0)
             self.data[ID][-new_len:,:] = np.vstack([t,data_array]).T
+
+    def update(self, run_time):
+        '''Update plots.'''
+        if not self.inputs: return # State machine may not have analog inputs.
+        for ID in self.updated_inputs:
             self.plots[ID].setData(self.data[ID])
         for plot in self.plots.values():
             plot.setPos(-run_time, 0)   
@@ -241,3 +264,41 @@ class Run_clock():
     def run_stop(self):
         self.clock_text.setText('')
         self.recording_text.setText('')
+
+# --------------------------------------------------------------------------------
+# Experiment plotter
+# --------------------------------------------------------------------------------
+
+class Experiment_plotter(QtGui.QMainWindow):
+    '''Window for plotting data during experiment run where each subjects plots
+    are displayed in a seperate tab.'''
+
+    def __init__(self, parent=None):
+        super(QtGui.QWidget, self).__init__(parent)
+
+        self.GUI_main = self.parent()
+
+        self.subject_tabs = QtGui.QTabWidget(self)        
+        self.setCentralWidget(self.subject_tabs)
+
+        self.subject_plotters = []
+
+
+    def setup_experiment(self, experiment):
+        '''Called when experiment is run to setup window.'''
+        self.reset()
+        for setup in sorted(experiment['subjects'].keys()):
+            self.subject_plotters.append(Task_plotter(self))
+            self.subject_tabs.addTab(self.subject_plotters[-1],
+                '{} : {}'.format(setup, experiment['subjects'][setup]))
+
+    def start_experiment(self):
+        for subject_plot_tab in self.subject_plotters:
+            subject_plot_tab.task_plot.run_start(False)
+
+    def close_experiment(self):
+        '''Remove and delete all subject plot tabs.'''
+        while len(self.subject_plotters) > 0:
+            subject_plot_tab = self.subject_plotters.pop() 
+            subject_plot_tab.setParent(None)
+            subject_plot_tab.deleteLater()

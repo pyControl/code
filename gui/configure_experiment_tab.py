@@ -10,7 +10,7 @@ from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item
 # Experiments_tab
 # --------------------------------------------------------------------------------
 
-class Experiments_tab(QtGui.QWidget):
+class Configure_experiment_tab(QtGui.QWidget):
 
     def __init__(self, parent=None):
         super(QtGui.QWidget, self).__init__(parent)
@@ -78,7 +78,7 @@ class Experiments_tab(QtGui.QWidget):
         self.experiment_select.currentIndexChanged[str].connect(self.experiment_changed)
         self.task_select.currentIndexChanged[str].connect(self.task_changed)
         self.save_button.clicked.connect(self.save_experiment)
-        self.run_button.clicked.connect(self.run_experiment)
+        self.run_button.clicked.connect(self.setup_experiment)
 
         # Main layout
         self.vertical_layout = QtGui.QVBoxLayout(self)
@@ -143,9 +143,8 @@ class Experiments_tab(QtGui.QWidget):
         self.subjects_table.set_from_dict(experiment['subjects'])
         self.variables_table.set_from_list(experiment['variables'])
 
-    def run_experiment(self):
-        '''Run an experiment by calling the GUI_main run_experiment method.
-        Prompts user to save experiment if it is new or has been edited.'''
+    def setup_experiment(self):
+        '''Run an experiment. Prompts user to save experiment if it is new or has been edited.'''
         experiment = self.experiment_dict()
         exp_path = os.path.join(experiments_dir, self.name_text.text()+'.pcx')
         if not os.path.exists(exp_path):
@@ -155,7 +154,7 @@ class Experiments_tab(QtGui.QWidget):
                 saved_experiment = json.loads(exp_file.read())
             if experiment != saved_experiment:
                 print('Experiment edited, save experiment?')
-        self.GUI_main.run_experiment(experiment)
+        self.GUI_main.run_experiment_tab.setup_experiment(experiment)
 
 # ---------------------------------------------------------------------------------
 
