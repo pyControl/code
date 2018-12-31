@@ -10,7 +10,7 @@ from config.paths import data_dir, tasks_dir
 from config.gui_settings import update_interval
 
 from gui.dialogs import Settings_dialog, Board_config_dialog, Variables_dialog
-from gui.plotting import Task_plotter
+from gui.plotting import Task_plot
 
 # Run_task_gui ------------------------------------------------------------------------
 
@@ -31,6 +31,7 @@ class Run_task_tab(QtGui.QWidget):
         self.connected = False # Whether gui is conencted to pyboard.
         self.uploaded = False # Whether selected task file is on board.
         self.fresh_task = None # Whether task has been run or variables edited.
+        self.running = False
         self.subject_changed = False
 
         # GUI groupbox.
@@ -139,7 +140,7 @@ class Run_task_tab(QtGui.QWidget):
         self.log_textbox.setFont(QtGui.QFont('Courier', 9))
         self.log_textbox.setReadOnly(True)
 
-        self.task_plot = Task_plotter()
+        self.task_plot = Task_plot()
         self.data_logger = Data_logger(print_func=self.print_to_log,
                                        data_consumers=[self.task_plot])
 
@@ -300,6 +301,7 @@ class Run_task_tab(QtGui.QWidget):
             subject_ID = str(self.subject_text.text())
             self.data_logger.open_data_file(self.data_dir, 'run_task', subject_ID)
         self.fresh_task = False
+        self.running = True
         self.board.start_framework()
         self.task_plot.run_start(recording)
         self.task_select.setEnabled(False)
@@ -319,6 +321,7 @@ class Run_task_tab(QtGui.QWidget):
 
 
     def stop_task(self, error=False, stopped_by_task=False):
+        self.running = False
         self.update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
         if not (error or stopped_by_task): 
@@ -360,12 +363,14 @@ class Run_task_tab(QtGui.QWidget):
 
     # Exception handling.
 
-    # def excepthook(self, ex_type, ex_value, ex_traceback):
-    #     # Called whenever an uncaught exception occurs.
-    #     if ex_type in (SerialException, SerialTimeoutException):
-    #         self.print_to_log('\nError: Serial connection with board lost.')
-    #     elif ex_type == PyboardError:
-    #         self.print_to_log('\nError: Unable to execute command.')
-    #     else:
-    #         self.print_to_log('\nError: uncaught exception of type: {}'.format(ex_type))
-    #     self.disconnect()
+    def excepthook(self, ex_type, ex_value, ex_traceback):
+        # Called whenever an uncaught exception occurs.
+        if ex_type in (SerialException, SerialTimeoutException):
+            self.print_to_log('\nError: Serial connection with board lost.')
+        elif ex_type == PyboardError:
+            self.print_to_log('\nError: Unable to execute command.')
+        else:
+            self.print_to_log('\nError: uncaught exception of type: {}'.format(ex_type))
+        if self.running:
+            self.stop_task(error=True)
+        self.disconnect()
