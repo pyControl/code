@@ -1,5 +1,6 @@
 import os
 import sys
+import traceback
 from serial.tools import list_ports
 from pyqtgraph.Qt import QtGui, QtCore
 
@@ -10,7 +11,6 @@ if not top_dir in sys.path: sys.path.insert(0, top_dir)
 from run_task_tab import Run_task_tab
 from config.paths import tasks_dir, experiments_dir
 from config.gui_settings import  VERSION
-from gui.plotting import Task_plotter
 from gui.configure_experiment_tab import Configure_experiment_tab
 from gui.run_experiment_tab import Run_experiment_tab
 
@@ -44,7 +44,7 @@ class GUI_main(QtGui.QMainWindow):
         self.experiments_tab = QtGui.QStackedWidget(self)
 
         self.configure_experiment_tab = Configure_experiment_tab(self)
-        self.run_experiment_tab = Run_experiment_tab(self) 
+        self.run_experiment_tab = Run_experiment_tab(self)
 
         self.experiments_tab.addWidget(self.configure_experiment_tab)
         self.experiments_tab.addWidget(self.run_experiment_tab)
@@ -100,9 +100,7 @@ class GUI_main(QtGui.QMainWindow):
         '''Called whenever an uncaught exception occurs.'''
         if hasattr(self.tab_widget.currentWidget(), 'excepthook'):
            self.tab_widget.currentWidget().excepthook(ex_type, ex_value, ex_traceback)
-        else:
-            print(str(ex_value))
-            ex_traceback.print_tb()
+        traceback.print_exception(ex_type, ex_value, ex_traceback)
 
 # --------------------------------------------------------------------------------
 # Main

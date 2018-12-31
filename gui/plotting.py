@@ -7,10 +7,10 @@ from pyqtgraph.Qt import QtGui
 from config.gui_settings import event_history_len, state_history_len, analog_history_dur
 
 # ----------------------------------------------------------------------------------------
-# Task_plotter 
+# Task_plot 
 # ----------------------------------------------------------------------------------------
 
-class Task_plotter(QtGui.QWidget):
+class Task_plot(QtGui.QWidget):
     ''' Widget for plotting the states, events and analog inputs output by a state machine.'''
 
     def __init__(self, parent=None):
@@ -269,36 +269,40 @@ class Run_clock():
 # Experiment plotter
 # --------------------------------------------------------------------------------
 
-class Experiment_plotter(QtGui.QMainWindow):
+class Experiment_plot(QtGui.QMainWindow):
     '''Window for plotting data during experiment run where each subjects plots
     are displayed in a seperate tab.'''
 
     def __init__(self, parent=None):
         super(QtGui.QWidget, self).__init__(parent)
-
-        self.GUI_main = self.parent()
-
+        self.setWindowTitle('Experiment plot')
         self.subject_tabs = QtGui.QTabWidget(self)        
         self.setCentralWidget(self.subject_tabs)
-
-        self.subject_plotters = []
-
+        self.subject_plots = []
 
     def setup_experiment(self, experiment):
-        '''Called when experiment is run to setup window.'''
-        self.reset()
+        '''Create task plotters in seperate tabs for each subject.'''
         for setup in sorted(experiment['subjects'].keys()):
-            self.subject_plotters.append(Task_plotter(self))
-            self.subject_tabs.addTab(self.subject_plotters[-1],
+            self.subject_plots.append(Task_plot(self))
+            self.subject_tabs.addTab(self.subject_plots[-1],
                 '{} : {}'.format(setup, experiment['subjects'][setup]))
 
+    def set_state_machine(self, sm_info):
+        '''Provide the task plotters with the state machine info.'''
+        for subject_plot in self.subject_plots:
+            subject_plot.set_state_machine(sm_info)
+
     def start_experiment(self):
-        for subject_plot_tab in self.subject_plotters:
-            subject_plot_tab.task_plot.run_start(False)
+        for subject_plot in self.subject_plots:
+            subject_plot.run_start(False)
 
     def close_experiment(self):
         '''Remove and delete all subject plot tabs.'''
-        while len(self.subject_plotters) > 0:
-            subject_plot_tab = self.subject_plotters.pop() 
-            subject_plot_tab.setParent(None)
-            subject_plot_tab.deleteLater()
+        while len(self.subject_plots) > 0:
+            subject_plot = self.subject_plots.pop() 
+            subject_plot.setParent(None)
+            subject_plot.deleteLater()
+
+    def update(self):
+        '''Update the plots of the active tab.'''
+        self.subject_tabs.currentWidget().update()

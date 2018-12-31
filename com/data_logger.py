@@ -13,8 +13,7 @@ class Data_logger():
 
     def set_state_machine(self, sm_info):
         self.sm_info = sm_info
-        self.ID2name_fw = {ID: name for name, ID       # Dict mapping framework IDs to names.
-                           in {**self.sm_info['states'], **self.sm_info['events']}.items()}
+        self.ID2name_fw = {**self.sm_info['stateID2name'], **self.sm_info['eventID2name']} # Dict mapping framework IDs to names.
         self.ID2name_hw = {ai['ID']: name for name, ai # Dict mapping hardware IDs to names.
                            in self.sm_info['analog_inputs'].items()}
         self.analog_files = {ai['ID']: None for ai in self.sm_info['analog_inputs'].values()}

@@ -304,9 +304,13 @@ class Pycboard(Pyboard):
             self.print('\n\nError: Unable to setup state machine.\n\n' + e.args[2].decode())
             raise PyboardError('Unable to setup state machine.', e.args[2])
         # Get information about state machine.
+        states = self.get_states()
+        events = self.get_events()
         self.sm_info = {'name'  : sm_name,
-                        'states': self.get_states(), # {name: ID}
-                        'events': self.get_events(), # {name: ID}
+                        'states': states, # {name:ID}
+                        'events': events, # {name:ID}
+                        'stateID2name': {ID: name for name, ID in states.items()}, # {ID:name}
+                        'eventID2name': {ID: name for name, ID in events.items()}, # {ID:name}
                         'analog_inputs': self.get_analog_inputs(), # {name: {'ID': ID, 'Fs':sampling rate}}
                         'variables': self.get_variables()} # {name: repr(value)}
         if self.data_logger:
@@ -395,7 +399,6 @@ class Pycboard(Pyboard):
             self.data_logger.process_data(new_data)
         if error_message:
             raise PyboardError(error_message)
-        return new_data
 
     # ------------------------------------------------------------------------------------
     # Getting and setting variables.
