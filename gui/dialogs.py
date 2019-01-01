@@ -88,32 +88,32 @@ class Board_config_dialog(QtGui.QDialog):
 
 class Variables_dialog(QtGui.QDialog):
     # Dialog for setting and getting task variables.
-    def __init__(self, parent=None): # Should split into seperate init and provide info.
+    def __init__(self, parent, board):
         super(QtGui.QDialog, self).__init__(parent)
         self.setWindowTitle('Set variables')
         self.scroll_area = QtGui.QScrollArea(parent=self)
         self.scroll_area.setWidgetResizable(True)
-        self.variables_grid = Variables_grid(self.scroll_area)
+        self.variables_grid = Variables_grid(self.scroll_area, board)
         self.scroll_area.setWidget(self.variables_grid)
         self.layout = QtGui.QVBoxLayout(self)
         self.layout.addWidget(self.scroll_area)
         self.setLayout(self.layout)
 
 class Variables_grid(QtGui.QWidget):
-    # Grid of variables to set/get, displayed within scross area of dialog.
-    def __init__(self, parent=None):
+    # Grid of variables to set/get, displayed within scroll area of dialog.
+    def __init__(self, parent, board):
         super(QtGui.QWidget, self).__init__(parent)
-        variables = self.parent().parent().parent().sm_info['variables']
+        variables = board.sm_info['variables']
         self.grid_layout = QtGui.QGridLayout()
         for i, (v_name, v_value_str) in enumerate(sorted(variables.items())):
-            Variable_setter(v_name, v_value_str, self.grid_layout, i, parent=self)
+            Variable_setter(v_name, v_value_str, self.grid_layout, i, self, board)
         self.setLayout(self.grid_layout)
 
 class Variable_setter(QtGui.QWidget):
     # For setting and getting a single variable.
-    def __init__(self, v_name, v_value_str, grid_layout, i, parent=None): # Should split into seperate init and provide info.
+    def __init__(self, v_name, v_value_str, grid_layout, i, parent, board): # Should split into seperate init and provide info.
         super(QtGui.QWidget, self).__init__(parent)
-        self.board = self.parent().parent().parent().parent().board
+        self.board = board
         self.v_name = v_name
         self.label = QtGui.QLabel(v_name)
         self.get_button = QtGui.QPushButton('Get value')

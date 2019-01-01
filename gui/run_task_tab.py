@@ -26,13 +26,17 @@ class Run_task_tab(QtGui.QWidget):
         self.board = None      # Pycboard class instance.
         self.task = None       # Task currently uploaded on pyboard. 
         self.task_hash = None  # Used to check if file has changed.
-        self.sm_info = None    # Information about current state machine.
         self.data_dir = None 
         self.connected = False # Whether gui is conencted to pyboard.
         self.uploaded = False # Whether selected task file is on board.
         self.fresh_task = None # Whether task has been run or variables edited.
         self.running = False
         self.subject_changed = False
+
+        # Dialogs.
+
+        self.settings_dialog = Settings_dialog(parent=self)
+        self.config_dialog = Board_config_dialog(parent=self)
 
         # GUI groupbox.
 
@@ -49,7 +53,7 @@ class Run_task_tab(QtGui.QWidget):
         self.guigroup_layout.addWidget(self.status_text)
         self.gui_groupbox.setLayout(self.guigroup_layout)  
 
-        self.settings_button.clicked.connect(lambda: self.settings_dialog.exec_())
+        self.settings_button.clicked.connect(self.settings_dialog.exec_)
 
         # Board groupbox
 
@@ -71,8 +75,7 @@ class Run_task_tab(QtGui.QWidget):
 
         self.connect_button.clicked.connect(
             lambda: self.disconnect() if self.connected else self.connect())
-        self.config_button.clicked.connect(
-            lambda: self.config_dialog.exec_())
+        self.config_button.clicked.connect(self.config_dialog.exec_)
 
         # File groupbox
 
@@ -117,7 +120,6 @@ class Run_task_tab(QtGui.QWidget):
 
         self.task_select.currentTextChanged.connect(self.task_changed)
         self.upload_button.clicked.connect(self.setup_task)        
-        self.variables_button.clicked.connect(lambda x: self.variables_dialog.exec_())
 
         # Session groupbox.
 
@@ -162,11 +164,6 @@ class Run_task_tab(QtGui.QWidget):
         self.vertical_layout.addWidget(self.log_textbox , 20)
         self.vertical_layout.addWidget(self.task_plot, 80)
         self.setLayout(self.vertical_layout)
-
-        # Create dialogs.
-
-        self.settings_dialog = Settings_dialog(parent=self)
-        self.config_dialog = Board_config_dialog(parent=self)
 
         # Create timers
 
@@ -268,10 +265,11 @@ class Run_task_tab(QtGui.QWidget):
             self.start_button.setEnabled(False)
             self.variables_button.setEnabled(False)
             self.repaint()
-            self.sm_info = self.board.setup_state_machine(task, uploaded=self.uploaded)
-            self.variables_dialog = Variables_dialog(self)
+            self.board.setup_state_machine(task, uploaded=self.uploaded)
+            self.variables_dialog = Variables_dialog(self, self.board)
+            self.variables_button.clicked.connect(self.variables_dialog.exec_)
             self.variables_button.setEnabled(True)
-            self.task_plot.set_state_machine(self.sm_info)
+            self.task_plot.set_state_machine(self.board.sm_info)
             self.file_groupbox.setEnabled(True)
             self.session_groupbox.setEnabled(True)
             self.start_button.setEnabled(True)

@@ -309,13 +309,11 @@ class Pycboard(Pyboard):
         self.sm_info = {'name'  : sm_name,
                         'states': states, # {name:ID}
                         'events': events, # {name:ID}
-                        'stateID2name': {ID: name for name, ID in states.items()}, # {ID:name}
-                        'eventID2name': {ID: name for name, ID in events.items()}, # {ID:name}
+                        'ID2name': {ID: name for name, ID in {**states, **events}.items()}, # {ID:name}
                         'analog_inputs': self.get_analog_inputs(), # {name: {'ID': ID, 'Fs':sampling rate}}
                         'variables': self.get_variables()} # {name: repr(value)}
         if self.data_logger:
             self.data_logger.set_state_machine(self.sm_info)
-        return self.sm_info
 
     def get_states(self):
         '''Return states as a dictionary {state_name: state_ID}'''
