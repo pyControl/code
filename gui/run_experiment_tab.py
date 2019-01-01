@@ -17,6 +17,7 @@ class Run_experiment_tab(QtGui.QWidget):
 
         self.name_label = QtGui.QLabel('Experiment name:')
         self.name_text  = QtGui.QLineEdit()
+        self.name_text.setReadOnly(True)
         self.plots_button =  QtGui.QPushButton('Plots')
         self.plots_button.clicked.connect(self.experiment_plot.show)
         self.logs_button = QtGui.QPushButton('Hide logs')
@@ -31,10 +32,19 @@ class Run_experiment_tab(QtGui.QWidget):
         self.Hlayout.addWidget(self.plots_button)
         self.Hlayout.addWidget(self.startstopclose_button)
 
+        self.scroll_area = QtGui.QScrollArea(parent=self)
+        self.scroll_area.horizontalScrollBar().setEnabled(False)
+        self.scroll_inner = QtGui.QFrame(self)
+        # self.scroll_area.setStyleSheet('background-color:transparent;')
+        self.boxes_layout = QtGui.QVBoxLayout(self.scroll_inner)
+        self.scroll_area.setWidget(self.scroll_inner)
+        self.scroll_area.setWidgetResizable(True)
+
         self.Vlayout = QtGui.QVBoxLayout(self)
         self.Vlayout.addLayout(self.Hlayout)
+        self.Vlayout.addWidget(self.scroll_area)
 
-        self.summaryboxes = []
+        self.subjectboxes = []
 
         self.update_timer = QtCore.QTimer() # Timer to regularly call update() during run.        
         self.update_timer.timeout.connect(self.update)
@@ -45,28 +55,29 @@ class Run_experiment_tab(QtGui.QWidget):
         self.experiment = experiment
         self.GUI_main.tab_widget.setTabEnabled(0, False)
         self.GUI_main.experiments_tab.setCurrentWidget(self)
-        self.startstopclose_button.setText('Start experiment')
+        self.startstopclose_button.setText('Start')
         self.experiment_plot.setup_experiment(experiment)
         self.state = 'pre_run'
         self.logs_visible = True
+        self.logs_button.setText('Hide logs')
         # Setup controls box.
         self.name_text.setText(experiment['name'])
         self.startstopclose_button.setEnabled(False)
         self.logs_button.setEnabled(False)
         self.plots_button.setEnabled(False)
-        # Setup summaryboxes
+        # Setup subjectboxes
         for setup in sorted(experiment['subjects'].keys()):
-            self.summaryboxes.append(
-                Summarybox('{} : {}'.format(setup, experiment['subjects'][setup]), self))
-            self.Vlayout.addWidget(self.summaryboxes[-1])
+            self.subjectboxes.append(
+                Subjectbox('{} : {}'.format(setup, experiment['subjects'][setup]), self))
+            self.boxes_layout.addWidget(self.subjectboxes[-1])
         # Setup boards.
         self.GUI_main.app.processEvents()
         self.boards = []
         for i, setup in enumerate(sorted(experiment['subjects'].keys())):
-            print_func = self.summaryboxes[i].print_to_log
+            print_func = self.subjectboxes[i].print_to_log
             data_logger = Data_logger(print_func=print_func, 
                 data_consumers=[self.experiment_plot.subject_plots[i],
-                                self.summaryboxes[i]])
+                                self.subjectboxes[i]])
             # Connect to boards.
             print_func('Connecting to board.. ')
             try:
@@ -94,14 +105,14 @@ class Run_experiment_tab(QtGui.QWidget):
                 board.print('Failed')
                 self.stop_experiment()
                 return
-            self.summaryboxes[i].assign_board(board)
+            self.subjectboxes[i].assign_board(board)
         self.experiment_plot.set_state_machine(board.sm_info)
         self.startstopclose_button.setEnabled(True)
         self.logs_button.setEnabled(True)
         self.plots_button.setEnabled(True)
 
     def start_experiment(self):
-        self.startstopclose_button.setText('Stop experiment')
+        self.startstopclose_button.setText('Stop')
         self.state = 'running'
         self.experiment_plot.start_experiment()
         for i, board in enumerate(self.boards):
@@ -111,7 +122,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.update_timer.start(update_interval)
 
     def stop_experiment(self):
-        self.startstopclose_button.setText('Close experiment')
+        self.startstopclose_button.setText('Close')
         self.state = 'post_run'
         self.update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
@@ -123,11 +134,11 @@ class Run_experiment_tab(QtGui.QWidget):
         self.GUI_main.tab_widget.setTabEnabled(0, True)
         self.GUI_main.experiments_tab.setCurrentWidget(self.GUI_main.configure_experiment_tab)
         self.experiment_plot.close_experiment()
-        # Clear summaryboxes.
-        while len(self.summaryboxes) > 0:
-            summarybox = self.summaryboxes.pop() 
-            summarybox.setParent(None)
-            summarybox.deleteLater()
+        # Clear subjectboxes.
+        while len(self.subjectboxes) > 0:
+            subjectbox = self.subjectboxes.pop() 
+            subjectbox.setParent(None)
+            subjectbox.deleteLater()
 
     def startstopclose(self):
         if self.state == 'pre_run': 
@@ -138,17 +149,19 @@ class Run_experiment_tab(QtGui.QWidget):
             self.close_experiment()
 
     def show_hide_logs(self):
+        '''Show/hide the log textboxes in subjectboxes.'''
         if self.logs_visible:
-            for summarybox in self.summaryboxes:
-                summarybox.log_textbox.hide()
+            for subjectbox in self.subjectboxes:
+                subjectbox.log_textbox.hide()
+            self.boxes_layout.addStretch()
             self.logs_visible = False
             self.logs_button.setText('Show logs')
         else:
-            for summarybox in self.summaryboxes:
-                summarybox.log_textbox.show()
+            for subjectbox in self.subjectboxes:
+                subjectbox.log_textbox.show()
+            self.boxes_layout.takeAt(self.boxes_layout.count()-1) # Remove stretch.
             self.logs_visible = True
             self.logs_button.setText('Hide logs')
-            
 
     def update(self):
         '''Called regularly while experiment is running'''
@@ -163,8 +176,8 @@ class Run_experiment_tab(QtGui.QWidget):
 
 # -----------------------------------------------------------------------------
 
-class Summarybox(QtGui.QGroupBox):
-    '''Groupbox for displaying summary data from a single subject.'''
+class Subjectbox(QtGui.QGroupBox):
+    '''Groupbox for displaying data from a single subject.'''
 
     def __init__(self, name, parent=None):
 

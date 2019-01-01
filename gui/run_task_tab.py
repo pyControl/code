@@ -9,7 +9,7 @@ from com.data_logger import Data_logger
 from config.paths import data_dir, tasks_dir
 from config.gui_settings import update_interval
 
-from gui.dialogs import Settings_dialog, Board_config_dialog, Variables_dialog
+from gui.dialogs import Board_config_dialog, Variables_dialog
 from gui.plotting import Task_plot
 
 # Run_task_gui ------------------------------------------------------------------------
@@ -35,7 +35,6 @@ class Run_task_tab(QtGui.QWidget):
 
         # Dialogs.
 
-        self.settings_dialog = Settings_dialog(parent=self)
         self.config_dialog = Board_config_dialog(parent=self)
 
         # GUI groupbox.
@@ -46,14 +45,11 @@ class Run_task_tab(QtGui.QWidget):
         self.status_text = QtGui.QLineEdit('Not connected')
         self.status_text.setStyleSheet('background-color:rgb(210, 210, 210);')
         self.status_text.setReadOnly(True)
-        self.settings_button = QtGui.QPushButton('Settings')
 
         self.guigroup_layout = QtGui.QHBoxLayout()
         self.guigroup_layout.addWidget(self.status_label)
         self.guigroup_layout.addWidget(self.status_text)
         self.gui_groupbox.setLayout(self.guigroup_layout)  
-
-        self.settings_button.clicked.connect(self.settings_dialog.exec_)
 
         # Board groupbox
 
@@ -307,7 +303,6 @@ class Run_task_tab(QtGui.QWidget):
         self.file_groupbox.setEnabled(False)
         self.start_button.setEnabled(False)
         self.board_groupbox.setEnabled(False)
-        self.settings_button.setEnabled(False)
         self.stop_button.setEnabled(True)
         self.print_to_log(
             '\nRun started at: {}\n'.format(
@@ -329,7 +324,6 @@ class Run_task_tab(QtGui.QWidget):
         self.task_plot.run_stop()
         self.board_groupbox.setEnabled(True)
         self.file_groupbox.setEnabled(True)
-        self.settings_button.setEnabled(True)
         self.start_button.setEnabled(True)
         self.task_select.setEnabled(True)
         self.upload_button.setEnabled(True)

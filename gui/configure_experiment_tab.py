@@ -78,7 +78,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.experiment_select.currentIndexChanged[str].connect(self.experiment_changed)
         self.task_select.currentIndexChanged[str].connect(self.task_changed)
         self.save_button.clicked.connect(self.save_experiment)
-        self.run_button.clicked.connect(self.setup_experiment)
+        self.run_button.clicked.connect(self.run_experiment)
 
         # Main layout
         self.vertical_layout = QtGui.QVBoxLayout(self)
@@ -143,17 +143,25 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.subjects_table.set_from_dict(experiment['subjects'])
         self.variables_table.set_from_list(experiment['variables'])
 
-    def setup_experiment(self):
+    def run_experiment(self):
         '''Run an experiment. Prompts user to save experiment if it is new or has been edited.'''
         experiment = self.experiment_dict()
         exp_path = os.path.join(experiments_dir, self.name_text.text()+'.pcx')
+        dialog_text = None
         if not os.path.exists(exp_path):
-            print('Experiment not saved, save experiment?')
+            dialog_text = 'Experiment not saved, save experiment?'
         else:
             with open(exp_path,'r') as exp_file:
                 saved_experiment = json.loads(exp_file.read())
             if experiment != saved_experiment:
-                print('Experiment edited, save experiment?')
+                dialog_text = 'Experiment edited, save experiment?'
+        if dialog_text:
+            reply = QtGui.QMessageBox.question(self, 'Save', dialog_text,
+                QtGui.QMessageBox.Yes | QtGui.QMessageBox.No | QtGui.QMessageBox.Cancel)
+            if reply == QtGui.QMessageBox.Yes:
+                self.save_experiment()
+            elif reply == QtGui.QMessageBox.Cancel:
+                return
         self.GUI_main.run_experiment_tab.setup_experiment(experiment)
 
 # ---------------------------------------------------------------------------------
