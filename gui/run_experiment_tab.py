@@ -5,6 +5,7 @@ from config.gui_settings import  update_interval
 from com.pycboard import Pycboard, PyboardError
 from com.data_logger import Data_logger
 from gui.plotting import Experiment_plot
+from gui.dialogs import Variables_dialog
 
 class Run_experiment_tab(QtGui.QWidget):
 
@@ -75,9 +76,9 @@ class Run_experiment_tab(QtGui.QWidget):
                 self.stop_experiment()
                 return
         # Setup state machines.
-        for board in self.boards:
+        for i, board in enumerate(self.boards):
             try:
-                self.sm_info = board.setup_state_machine(experiment['task'])
+                board.setup_state_machine(experiment['task'])
             except PyboardError:
                 self.stop_experiment()
                 return
@@ -93,7 +94,8 @@ class Run_experiment_tab(QtGui.QWidget):
                 board.print('Failed')
                 self.stop_experiment()
                 return
-        self.experiment_plot.set_state_machine(self.sm_info)
+            self.summaryboxes[i].assign_board(board)
+        self.experiment_plot.set_state_machine(board.sm_info)
         self.startstopclose_button.setEnabled(True)
         self.logs_button.setEnabled(True)
         self.plots_button.setEnabled(True)
@@ -167,6 +169,7 @@ class Summarybox(QtGui.QGroupBox):
     def __init__(self, name, parent=None):
 
         super(QtGui.QGroupBox, self).__init__(name, parent=parent)
+        self.board = None # Overwritten with board once instantiated.
         self.GUI_main = self.parent().GUI_main
         self.run_exp_tab = self.parent()
 
@@ -180,6 +183,7 @@ class Summarybox(QtGui.QGroupBox):
         self.print_text = QtGui.QLineEdit()
         self.print_text.setReadOnly(True)
         self.variables_button = QtGui.QPushButton('Variables')
+        self.variables_button.setEnabled(False)
         self.log_textbox = QtGui.QTextEdit()
         self.log_textbox.setFont(QtGui.QFont('Courier', 9))
         self.log_textbox.setReadOnly(True)
@@ -203,18 +207,23 @@ class Summarybox(QtGui.QGroupBox):
         self.log_textbox.moveCursor(QtGui.QTextCursor.End)
         self.GUI_main.app.processEvents()
 
+    def assign_board(self, board):
+        self.board = board
+        self.variables_dialog = Variables_dialog(self, board)
+        self.variables_button.clicked.connect(self.variables_dialog.exec_)
+        self.variables_button.setEnabled(True)
+
     def process_data(self, new_data):
         '''Update the state, event and print line info.'''
-        sm_info = self.run_exp_tab.sm_info
         try:
-            new_state = next(sm_info['stateID2name'][nd[2]] for nd in reversed(new_data)
-                if nd[0] == 'D' and nd[2] in sm_info['stateID2name'].keys())
+            new_state = next(self.board.sm_info['ID2name'][nd[2]] for nd in reversed(new_data)
+                if nd[0] == 'D' and nd[2] in self.board.sm_info['states'].values())
             self.state_text.setText(new_state)
         except StopIteration:
             pass
         try:
-            new_event = next(sm_info['eventID2name'][nd[2]] for nd in reversed(new_data)
-                if nd[0] == 'D' and nd[2] in sm_info['eventID2name'].keys())
+            new_event = next(self.board.sm_info['ID2name'][nd[2]] for nd in reversed(new_data)
+                if nd[0] == 'D' and nd[2] in self.board.sm_info['events'].values())
             self.event_text.setText(new_event)
         except StopIteration:
             pass
