@@ -139,6 +139,8 @@ class Run_experiment_tab(QtGui.QWidget):
             subjectbox = self.subjectboxes.pop() 
             subjectbox.setParent(None)
             subjectbox.deleteLater()
+        if not self.logs_visible:
+            self.boxes_layout.takeAt(self.boxes_layout.count()-1) # Remove stretch.
 
     def startstopclose(self):
         if self.state == 'pre_run': 

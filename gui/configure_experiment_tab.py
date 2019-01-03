@@ -33,6 +33,7 @@ class Configure_experiment_tab(QtGui.QWidget):
 
         self.run_button = QtGui.QPushButton('Run')
         self.new_button = QtGui.QPushButton('New')
+        self.delete_button = QtGui.QPushButton('Delete')
         self.save_button = QtGui.QPushButton('Save')
         self.name_label = QtGui.QLabel('Experiment name:')
         self.name_text = QtGui.QLineEdit()
@@ -47,6 +48,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.expbox_Hlayout_1.setStretchFactor(self.experiment_select, 2)
         self.expbox_Hlayout_1.addWidget(self.run_button)
         self.expbox_Hlayout_1.addWidget(self.new_button)
+        self.expbox_Hlayout_1.addWidget(self.delete_button)
         self.expbox_Hlayout_1.addWidget(self.save_button)
         self.expbox_Hlayout_2.addWidget(self.name_label)
         self.expbox_Hlayout_2.addWidget(self.name_text)
@@ -75,8 +77,10 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.name_text.textChanged.connect(self.name_edited)
         self.data_dir_text.textEdited.connect(lambda: setattr(self, 'custom_dir', True))
         self.data_dir_button.clicked.connect(self.select_data_dir)
-        self.experiment_select.currentIndexChanged[str].connect(self.experiment_changed)
+        self.experiment_select.activated[str].connect(self.experiment_changed)
         self.task_select.currentIndexChanged[str].connect(self.task_changed)
+        self.new_button.clicked.connect(self.new_experiment)
+        self.delete_button.clicked.connect(self.delete_experiment)
         self.save_button.clicked.connect(self.save_experiment)
         self.run_button.clicked.connect(self.run_experiment)
 
@@ -100,10 +104,12 @@ class Configure_experiment_tab(QtGui.QWidget):
             self.variables_table.task_changed(task_name)
 
     def experiment_changed(self, experiment_name):
+        # if not self.save_dialog(): return
         if experiment_name in self.GUI_main.available_experiments:
             self.load_experiment(experiment_name)
 
     def refresh(self):
+        '''Called periodically when not running to update available task, ports, experiments.'''
         if self.GUI_main.available_tasks_changed:
             cbox_update_options(self.task_select, self.GUI_main.available_tasks)
             self.GUI_main.available_tasks_changed = False
@@ -122,6 +128,28 @@ class Configure_experiment_tab(QtGui.QWidget):
                 'subjects': self.subjects_table.subjects_dict(),
                 'variables': self.variables_table.variables_list()}
 
+    def new_experiment(self, dialog=True):
+        '''Clear experiment configuration.'''
+        if dialog and not self.save_dialog(): return
+        self.name_text.setText('')
+        self.data_dir_text.setText(data_dir)
+        self.custom_dir = False
+        self.subjects_table.reset()
+        self.variables_table.reset()
+        cbox_set_item(self.experiment_select, 'select experiment', insert=True)
+        cbox_set_item(self.task_select, 'select task', insert=True)
+
+    def delete_experiment(self):
+        '''Delete an experiment file after dialog to confirm deletion.'''
+        exp_path = os.path.join(experiments_dir, self.name_text.text()+'.pcx')
+        if os.path.exists(exp_path):
+            reply = QtGui.QMessageBox.question(self, 'Delete experiment', 
+                "Delete experiment '{}'".format(self.name_text.text()),
+                    QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel)
+            if reply == QtGui.QMessageBox.Yes:
+                self.new_experiment(dialog=False)
+                os.remove(exp_path)
+
     def save_experiment(self):
         '''Store the current state of the experiment tab as a JSON object
         saved in the experiments folder as .pcx file.'''
@@ -129,6 +157,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         exp_path = os.path.join(experiments_dir, self.name_text.text()+'.pcx')
         with open(exp_path,'w') as exp_file:
             exp_file.write(json.dumps(experiment, sort_keys=True, indent=4))
+        cbox_set_item(self.experiment_select, experiment['name'], insert=True)
 
     def load_experiment(self, experiment_name):
         '''Load experiment  .pcx file and set fields of experiment tab.'''
@@ -137,7 +166,6 @@ class Configure_experiment_tab(QtGui.QWidget):
             experiment = json.loads(exp_file.read())
         self.name_text.setText(experiment['name'])
         cbox_set_item(self.task_select, experiment['task'])
-        #self.task_changed(experiment['task'])
         self.variables_table.task_changed(experiment['task'])
         self.data_dir_text.setText(experiment['data_dir'])
         self.subjects_table.set_from_dict(experiment['subjects'])
@@ -145,6 +173,12 @@ class Configure_experiment_tab(QtGui.QWidget):
 
     def run_experiment(self):
         '''Run an experiment. Prompts user to save experiment if it is new or has been edited.'''
+        if not self.save_dialog(): return
+        self.GUI_main.run_experiment_tab.setup_experiment(self.experiment_dict())
+
+    def save_dialog(self):
+        '''Dialog to save experiment if it has been edited.  Returns False if
+        cancel is selected, True otherwise.'''        
         experiment = self.experiment_dict()
         exp_path = os.path.join(experiments_dir, self.name_text.text()+'.pcx')
         dialog_text = None
@@ -156,13 +190,13 @@ class Configure_experiment_tab(QtGui.QWidget):
             if experiment != saved_experiment:
                 dialog_text = 'Experiment edited, save experiment?'
         if dialog_text:
-            reply = QtGui.QMessageBox.question(self, 'Save', dialog_text,
+            reply = QtGui.QMessageBox.question(self, 'Save experiment', dialog_text,
                 QtGui.QMessageBox.Yes | QtGui.QMessageBox.No | QtGui.QMessageBox.Cancel)
             if reply == QtGui.QMessageBox.Yes:
                 self.save_experiment()
             elif reply == QtGui.QMessageBox.Cancel:
-                return
-        self.GUI_main.run_experiment_tab.setup_experiment(experiment)
+                return False
+        return True
 
 # ---------------------------------------------------------------------------------
 
@@ -365,8 +399,11 @@ class VariablesTable(QtGui.QTableWidget):
         while self.n_variables > 0:
             self.remove_variable(0)
         pattern = "v\.(?P<vname>\w+)\s*\="
-        with open(os.path.join(tasks_dir, task+'.py'), "r") as file:
-            file_content = file.read()
+        try:
+            with open(os.path.join(tasks_dir, task+'.py'), "r") as file:
+                file_content = file.read()
+        except FileNotFoundError:
+            return
         self.variable_names = []
         for v_name in re.findall(pattern, file_content):
             if not v_name in [var_name for var_name in self.variable_names]:

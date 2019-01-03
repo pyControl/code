@@ -32,11 +32,18 @@ def cbox_update_options(cbox, options):
     cbox.addItems(available)
     cbox.setCurrentIndex(i)
 
-def cbox_set_item(cbox, item_name):
-    '''Set the selected item in a combobox to the name provided'''
+def cbox_set_item(cbox, item_name, insert=False):
+    '''Set the selected item in a combobox to the name provided.  If name is
+    not in item list returns False if insert is False or inserts item if insert 
+    is True.'''
     index = cbox.findText(item_name, QtCore.Qt.MatchFixedString)
     if index >= 0:
          cbox.setCurrentIndex(index)
          return True
     else:
-        return False
+        if insert:
+            cbox.insertItem(0, item_name)
+            cbox.setCurrentIndex(0)
+            return True
+        else:
+            return False
