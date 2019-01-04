@@ -17,6 +17,9 @@ class Run_experiment_tab(QtGui.QWidget):
 
         self.name_label = QtGui.QLabel('Experiment name:')
         self.name_text  = QtGui.QLineEdit()
+        self.status_label = QtGui.QLabel('Status:')
+        self.status_text = QtGui.QLineEdit()
+        self.status_text.setFixedWidth(60)
         self.name_text.setReadOnly(True)
         self.plots_button =  QtGui.QPushButton('Plots')
         self.plots_button.clicked.connect(self.experiment_plot.show)
@@ -28,6 +31,8 @@ class Run_experiment_tab(QtGui.QWidget):
         self.Hlayout = QtGui.QHBoxLayout()
         self.Hlayout.addWidget(self.name_label)
         self.Hlayout.addWidget(self.name_text)
+        self.Hlayout.addWidget(self.status_label)
+        self.Hlayout.addWidget(self.status_text)
         self.Hlayout.addWidget(self.logs_button)
         self.Hlayout.addWidget(self.plots_button)
         self.Hlayout.addWidget(self.startstopclose_button)
@@ -52,6 +57,7 @@ class Run_experiment_tab(QtGui.QWidget):
     def setup_experiment(self, experiment):
         '''Called when an experiment is loaded.'''
         # Setup tabs.
+        self.status_text.setText('Loading')
         self.experiment = experiment
         self.GUI_main.tab_widget.setTabEnabled(0, False)
         self.GUI_main.experiments_tab.setCurrentWidget(self)
@@ -110,8 +116,10 @@ class Run_experiment_tab(QtGui.QWidget):
         self.startstopclose_button.setEnabled(True)
         self.logs_button.setEnabled(True)
         self.plots_button.setEnabled(True)
+        self.status_text.setText('Ready')
 
     def start_experiment(self):
+        self.status_text.setText('Running')
         self.startstopclose_button.setText('Stop')
         self.state = 'running'
         self.experiment_plot.start_experiment()
@@ -122,18 +130,23 @@ class Run_experiment_tab(QtGui.QWidget):
         self.update_timer.start(update_interval)
 
     def stop_experiment(self):
+        self.status_text.setText('Stopped')
         self.startstopclose_button.setText('Close')
         self.state = 'post_run'
         self.update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
         for i, board in enumerate(self.boards):
-            board.stop_framework()
-            board.close()
+            if board.framework_running:
+                board.stop_framework()
+                self.subjectboxes[i].task_stopped()
 
     def close_experiment(self):
         self.GUI_main.tab_widget.setTabEnabled(0, True)
         self.GUI_main.experiments_tab.setCurrentWidget(self.GUI_main.configure_experiment_tab)
         self.experiment_plot.close_experiment()
+        # Close boards.
+        for board in self.boards:
+            board.close()
         # Clear subjectboxes.
         while len(self.subjectboxes) > 0:
             subjectbox = self.subjectboxes.pop() 
@@ -167,14 +180,19 @@ class Run_experiment_tab(QtGui.QWidget):
 
     def update(self):
         '''Called regularly while experiment is running'''
+        boards_running = False
         for i, board in enumerate(self.boards):
-            try:
-                board.process_data()
-                if not board.framework_running:
-                    pass
-            except PyboardError:
-                board.print('\nError during framework run.')
+            if board.framework_running:
+                boards_running = True
+                try:
+                    board.process_data()
+                    if not board.framework_running:
+                        self.subjectboxes[i].task_stopped()
+                except PyboardError:
+                    self.subjectboxes[i].task_crashed()
         self.experiment_plot.update()
+        if not boards_running:
+            self.stop_experiment()
 
 # -----------------------------------------------------------------------------
 
@@ -190,10 +208,12 @@ class Subjectbox(QtGui.QGroupBox):
 
         self.state_label = QtGui.QLabel('State:')
         self.state_text = QtGui.QLineEdit()
+        self.state_text.setFixedWidth(120)
         self.state_text.setReadOnly(True)
         self.event_label = QtGui.QLabel('Event:')
         self.event_text = QtGui.QLineEdit()
         self.event_text.setReadOnly(True)
+        self.event_text.setFixedWidth(120)
         self.print_label = QtGui.QLabel('Print:')
         self.print_text = QtGui.QLineEdit()
         self.print_text.setReadOnly(True)
@@ -227,6 +247,17 @@ class Subjectbox(QtGui.QGroupBox):
         self.variables_dialog = Variables_dialog(self, board)
         self.variables_button.clicked.connect(self.variables_dialog.exec_)
         self.variables_button.setEnabled(True)
+
+    def task_crashed(self):
+        '''Called if task crashes during run.'''
+        self.print_to_log('\nError during framework run.')
+        self.state_text.setText('Error')
+        self.state_text.setStyleSheet('color: red;')
+
+    def task_stopped(self):
+        '''Called when task stops running.'''
+        self.state_text.setText('Stopped')
+        self.state_text.setStyleSheet('color: grey;') 
 
     def process_data(self, new_data):
         '''Update the state, event and print line info.'''

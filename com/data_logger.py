@@ -79,7 +79,7 @@ class Data_logger():
                 error_string = nd[1]
                 if not verbose:
                     error_string = '! ' +error_string.replace('\n', '\n! ')
-                data_string += error_string + '\n'
+                data_string += '\n' + error_string + '\n'
         return data_string
 
     def save_analog_chunk(self, ID, sampling_rate, timestamp, data_array):
