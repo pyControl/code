@@ -147,3 +147,42 @@ class Variable_setter(QtGui.QWidget):
         self.value_text_colour('black')
         self.value_str.setText(str(self.board.sm_info['variables'][self.v_name]))
         QtCore.QTimer.singleShot(1000, self.value_text_colour)
+
+# Summary variables dialog -----------------------------------------------------------
+
+class Summary_variables_dialog(QtGui.QDialog):
+    '''Dialog for displaying summary variables from an experiment as a table.
+    The table is copied to the clipboard as a string that can be pasted into a
+    spreadsheet.'''
+    def __init__(self, parent, sv_dict):
+        super(QtGui.QDialog, self).__init__(parent)
+        self.setWindowTitle('Summary variables')
+
+        self.Vlayout = QtGui.QVBoxLayout(self)
+
+        subjects = sorted(sv_dict.keys())
+        v_names  = sorted(sv_dict[subjects[0]].keys())
+
+        self.table = QtGui.QTableWidget(len(subjects), len(v_names),  parent=self)
+        self.Vlayout.addWidget(self.table)
+        self.table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
+        self.table.setHorizontalHeaderLabels(v_names)
+        self.table.setVerticalHeaderLabels(subjects)
+
+        clip_string = ' \t' + '\t'.join(v_names)
+
+        for s, subject in enumerate(subjects):
+            clip_string += '\n' + subject
+            for v, v_name in enumerate(v_names):
+                v_value_str = repr(sv_dict[subject][v_name])
+                clip_string += '\t' + v_value_str
+                item = QtGui.QTableWidgetItem()
+                item.setText(v_value_str)
+                self.table.setItem(s, v, item)
+
+        clipboard = QtGui.QApplication.clipboard()
+        clipboard.setText(clip_string)
+
+
+
+

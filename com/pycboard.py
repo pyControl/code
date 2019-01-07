@@ -414,10 +414,13 @@ class Pycboard(Pyboard):
             checksum = sum(data).to_bytes(2, 'little')
             self.serial.write(b'V' + data_len +  data + checksum)
             return None
-        else: # Set variable using REPL.
+        else: # Set variable using REPL.  
             checksum = sum(v_str.encode())
-            return eval(self.eval("state_machine._set_variable({}, {}, {})"
-                                  .format(repr(v_name), repr(v_str), checksum)).decode())
+            set_OK = eval(self.eval("state_machine._set_variable({}, {}, {})"
+                .format(repr(v_name), repr(v_str), checksum)).decode())
+            if set_OK:
+                self.sm_info['variables'][v_name] = v_str
+            return set_OK
 
     def get_variable(self, v_name):
         '''Get the value of a state machine variable. If framework not running returns

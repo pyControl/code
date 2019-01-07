@@ -23,7 +23,7 @@ class GUI_main(QtGui.QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('pyControl v{}'.format(VERSION))
-        self.setGeometry(20, 30, 700, 800) # Left, top, width, height.
+        self.setGeometry(10, 30, 700, 800) # Left, top, width, height.
 
         # Variables
         self.refresh_interval = 1000 # How often refresh method is called when not running (ms).
