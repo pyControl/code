@@ -276,6 +276,7 @@ class Experiment_plot(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(QtGui.QWidget, self).__init__(parent)
         self.setWindowTitle('Experiment plot')
+        self.setGeometry(720, 30, 700, 800) # Left, top, width, height.
         self.subject_tabs = QtGui.QTabWidget(self)        
         self.setCentralWidget(self.subject_tabs)
         self.subject_plots = []

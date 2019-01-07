@@ -37,6 +37,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.save_button = QtGui.QPushButton('Save')
         self.name_label = QtGui.QLabel('Experiment name:')
         self.name_text = QtGui.QLineEdit()
+        self.task_label = QtGui.QLabel('Task:')
         self.task_select = QtGui.QComboBox()
         self.task_select.setFixedWidth(180)
         self.data_dir_label = QtGui.QLabel('Data dir:')
@@ -52,6 +53,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.expbox_Hlayout_1.addWidget(self.save_button)
         self.expbox_Hlayout_2.addWidget(self.name_label)
         self.expbox_Hlayout_2.addWidget(self.name_text)
+        self.expbox_Hlayout_2.addWidget(self.task_label)
         self.expbox_Hlayout_2.addWidget(self.task_select)
         self.expbox_Hlayout_3.addWidget(self.data_dir_label)
         self.expbox_Hlayout_3.addWidget(self.data_dir_text)
@@ -339,7 +341,7 @@ class VariablesTable(QtGui.QTableWidget):
         self.setCellWidget(self.n_variables  ,5, remove_button)
         self.setCellWidget(self.n_variables+1,5, add_button)
         if var_dict: # Set cell values from provided dictionary.
-            variable_cbox.addItems([var_dict['variable']])
+            variable_cbox.addItems([var_dict['name']])
             subject_cbox.addItems([var_dict['subject']])
             value_item = QtGui.QTableWidgetItem()
             value_item.setText(var_dict['value'])
@@ -412,7 +414,7 @@ class VariablesTable(QtGui.QTableWidget):
 
     def variables_list(self):
         '''Return the variables table contents as a list of dictionaries.'''
-        return [{'variable'  : str(self.cellWidget(v,0).currentText()),
+        return [{'name'  : str(self.cellWidget(v,0).currentText()),
                  'subject'   : str(self.cellWidget(v,1).currentText()),
                  'value'     : str(self.item(v, 2).text()) if self.item(v,2) else '',
                  'persistent': self.cellWidget(v,3).isChecked(),

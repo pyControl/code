@@ -1,3 +1,8 @@
+import os
+import time
+from pprint import pformat
+from datetime import datetime
+
 from pyqtgraph.Qt import QtGui, QtCore
 from serial import SerialException
 
@@ -5,7 +10,7 @@ from config.gui_settings import  update_interval
 from com.pycboard import Pycboard, PyboardError
 from com.data_logger import Data_logger
 from gui.plotting import Experiment_plot
-from gui.dialogs import Variables_dialog
+from gui.dialogs import Variables_dialog, Summary_variables_dialog
 
 class Run_experiment_tab(QtGui.QWidget):
 
@@ -40,7 +45,6 @@ class Run_experiment_tab(QtGui.QWidget):
         self.scroll_area = QtGui.QScrollArea(parent=self)
         self.scroll_area.horizontalScrollBar().setEnabled(False)
         self.scroll_inner = QtGui.QFrame(self)
-        # self.scroll_area.setStyleSheet('background-color:transparent;')
         self.boxes_layout = QtGui.QVBoxLayout(self.scroll_inner)
         self.scroll_area.setWidget(self.scroll_inner)
         self.scroll_area.setWidgetResizable(True)
@@ -76,6 +80,13 @@ class Run_experiment_tab(QtGui.QWidget):
             self.subjectboxes.append(
                 Subjectbox('{} : {}'.format(setup, experiment['subjects'][setup]), self))
             self.boxes_layout.addWidget(self.subjectboxes[-1])
+        # Create data folders if needed.
+        if not os.path.exists(self.experiment['data_dir']):
+            os.mkdir(self.experiment['data_dir'])
+        if any([v['persistent'] for v in experiment['variables']]):
+            experiment['pv_dir'] = os.path.join(self.experiment['data_dir'], 'persistent_variables')
+            if not os.path.exists(experiment['pv_dir']):
+                os.mkdir(experiment['pv_dir'])
         # Setup boards.
         self.GUI_main.app.processEvents()
         self.boards = []
@@ -92,6 +103,7 @@ class Run_experiment_tab(QtGui.QWidget):
                 print_func('Connection failed.')
                 self.stop_experiment()
                 return
+            self.boards[i].subject = experiment['subjects'][setup]
         # Setup state machines.
         for i, board in enumerate(self.boards):
             try:
@@ -100,15 +112,31 @@ class Run_experiment_tab(QtGui.QWidget):
                 self.stop_experiment()
                 return
             # Set variables.
-            board.print('\nSetting variables. ', end='')
+            board.print('\nSetting variables.\n')
+            board.variables_set_pre_run = []
             try:
-                subject_variables = [v for v in experiment['variables'] 
-                                 if v['subject'] in ('all', experiment['subjects'][setup])]
-                for v in subject_variables:
-                    board.set_variable(v['variable'], eval(v['value']))
-                board.print('OK')
+                board.subject_variables = [v for v in experiment['variables'] 
+                                 if v['subject'] in ('all', board.subject)]
+                persistent_variables = [v for v in board.subject_variables if v['persistent']]
+                pv_dict = {}
+                if persistent_variables:
+                    pv_path = os.path.join(self.experiment['pv_dir'], '{}.txt'.format(board.subject))
+                    if os.path.exists(pv_path):
+                        with open(pv_path, 'r') as pv_file:
+                            pv_dict = eval(pv_file.read())
+                for v in board.subject_variables:
+                    if v['persistent'] and v['name'] in pv_dict.keys(): # Use stored value.
+                        v_value =  pv_dict[v['name']]
+                        self.subjectboxes[i].print_to_log('{} {} (persistent value)'.format(v['name'], v_value))
+                    else:
+                        if v['value'] == '':
+                            continue
+                        v_value = eval(v['value']) # Use value from variables table.
+                        self.subjectboxes[i].print_to_log('{} {}'.format(v['name'], v_value))
+                    board.set_variable(v['name'], v_value)
+                    board.variables_set_pre_run.append((v['name'], v_value))
             except PyboardError:
-                board.print('Failed')
+                board.print('Setting variables failed')
                 self.stop_experiment()
                 return
             self.subjectboxes[i].assign_board(board)
@@ -119,12 +147,20 @@ class Run_experiment_tab(QtGui.QWidget):
         self.status_text.setText('Ready')
 
     def start_experiment(self):
+        '''Open data files, write variables set pre run to file, start framework.'''
         self.status_text.setText('Running')
         self.startstopclose_button.setText('Stop')
         self.state = 'running'
         self.experiment_plot.start_experiment()
+        start_time = datetime.now()
+        ex = self.experiment
         for i, board in enumerate(self.boards):
             board.print('\nStarting experiment.\n')
+            board.data_logger.open_data_file(ex['data_dir'], ex['name'], 
+                ex['subjects'][board.serial_port], start_time)
+            for v_name, v_value in board.variables_set_pre_run:
+                board.data_logger.data_file.write('V 0 {} {}\n'.format(v_name, v_value))
+            board.data_logger.data_file.write('\n')
             board.start_framework()
         self.GUI_main.refresh_timer.stop()
         self.update_timer.start(update_interval)
@@ -135,10 +171,32 @@ class Run_experiment_tab(QtGui.QWidget):
         self.state = 'post_run'
         self.update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
+        summary_variables = [v for v in self.experiment['variables'] if v['summary']]
+        if summary_variables: sv_dict = {}
         for i, board in enumerate(self.boards):
+            # Stop running boards.
             if board.framework_running:
                 board.stop_framework()
+                time.sleep(0.01)
+                board.process_data()
                 self.subjectboxes[i].task_stopped()
+            # Store persistent variables.
+            persistent_variables = [v for v in board.subject_variables if v['persistent']]
+            if persistent_variables:
+                board.print('\nStoring persistent variables.')
+                pv_dict = {v['name']: board.get_variable(v['name'])
+                           for v in persistent_variables}
+                pv_path = os.path.join(self.experiment['pv_dir'], '{}.txt'.format(board.subject))
+                with open(pv_path, 'w') as pv_file:
+                    pv_file.write(pformat(pv_dict))
+            # Read summary variables.
+            if summary_variables:
+                sv_dict[board.subject] = {v['name']: board.get_variable(v['name'])
+                                          for v in summary_variables}
+                for v_name, v_value in sv_dict[board.subject].items():
+                    board.data_logger.data_file.write('\nV -1 {} {}'.format(v_name, v_value))
+        if summary_variables:
+            Summary_variables_dialog(self, sv_dict).show()
 
     def close_experiment(self):
         self.GUI_main.tab_widget.setTabEnabled(0, True)
@@ -146,6 +204,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.experiment_plot.close_experiment()
         # Close boards.
         for board in self.boards:
+            board.data_logger.close_files()
             board.close()
         # Clear subjectboxes.
         while len(self.subjectboxes) > 0:
