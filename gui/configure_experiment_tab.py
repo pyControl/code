@@ -39,7 +39,10 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.name_text = QtGui.QLineEdit()
         self.task_label = QtGui.QLabel('Task:')
         self.task_select = QtGui.QComboBox()
-        self.task_select.setFixedWidth(180)
+        self.task_select.setFixedWidth(150)
+        self.hardware_test_label = QtGui.QLabel('Hardware test:')
+        self.hardware_test_select = QtGui.QComboBox()
+        self.hardware_test_select.setFixedWidth(150)
         self.data_dir_label = QtGui.QLabel('Data dir:')
         self.data_dir_text = QtGui.QLineEdit(data_dir)
         self.data_dir_button = QtGui.QPushButton('...')
@@ -55,6 +58,8 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.expbox_Hlayout_2.addWidget(self.name_text)
         self.expbox_Hlayout_2.addWidget(self.task_label)
         self.expbox_Hlayout_2.addWidget(self.task_select)
+        self.expbox_Hlayout_2.addWidget(self.hardware_test_label)
+        self.expbox_Hlayout_2.addWidget(self.hardware_test_select)
         self.expbox_Hlayout_3.addWidget(self.data_dir_label)
         self.expbox_Hlayout_3.addWidget(self.data_dir_text)
         self.expbox_Hlayout_3.addWidget(self.data_dir_button)
@@ -74,6 +79,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         # Initialise widgets
         self.experiment_select.addItems(['select experiment'])
         self.task_select.addItems(['select task'])
+        self.hardware_test_select.addItems(['none'])
 
         # Connect signals.
         self.name_text.textChanged.connect(self.name_edited)
@@ -114,6 +120,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         '''Called periodically when not running to update available task, ports, experiments.'''
         if self.GUI_main.available_tasks_changed:
             cbox_update_options(self.task_select, self.GUI_main.available_tasks)
+            cbox_update_options(self.hardware_test_select, ['none'] + self.GUI_main.available_tasks)
             self.GUI_main.available_tasks_changed = False
         if self.GUI_main.available_experiments_changed:
             cbox_update_options(self.experiment_select, self.GUI_main.available_experiments)
@@ -126,6 +133,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         '''Return the current state of the experiments tab as a dictionary.'''
         return {'name': self.name_text.text(),
                 'task': str(self.task_select.currentText()),
+                'hardware_test': str(self.hardware_test_select.currentText()),
                 'data_dir': self.data_dir_text.text(),
                 'subjects': self.subjects_table.subjects_dict(),
                 'variables': self.variables_table.variables_list()}
@@ -168,6 +176,7 @@ class Configure_experiment_tab(QtGui.QWidget):
             experiment = json.loads(exp_file.read())
         self.name_text.setText(experiment['name'])
         cbox_set_item(self.task_select, experiment['task'])
+        cbox_set_item(self.hardware_test_select, experiment['hardware_test'])
         self.variables_table.task_changed(experiment['task'])
         self.data_dir_text.setText(experiment['data_dir'])
         self.subjects_table.set_from_dict(experiment['subjects'])
