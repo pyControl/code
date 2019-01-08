@@ -88,7 +88,6 @@ class Run_experiment_tab(QtGui.QWidget):
         for setup in sorted(experiment['subjects'].keys()):
             self.subjectboxes.append(
                 Subjectbox('{} : {}'.format(setup, experiment['subjects'][setup]), self))
-            #self.boxes_layout.addWidget(self.subjectboxes[-1])
             self.boxes_splitter.addWidget(self.subjectboxes[-1])
         # Create data folder if needed.
         if not os.path.exists(self.experiment['data_dir']):
@@ -105,21 +104,40 @@ class Run_experiment_tab(QtGui.QWidget):
         self.boards = []
         for i, setup in enumerate(sorted(experiment['subjects'].keys())):
             print_func = self.subjectboxes[i].print_to_log
-            data_logger = Data_logger(print_func=print_func, 
-                data_consumers=[self.experiment_plot.subject_plots[i],
-                                self.subjectboxes[i]])
             # Connect to boards.
             print_func('Connecting to board.. ')
             try:
-                self.boards.append(Pycboard(setup, print_func=print_func, data_logger=data_logger))
+                self.boards.append(Pycboard(setup, print_func=print_func))
             except SerialException:
                 print_func('Connection failed.')
                 self.stop_experiment()
                 return
             self.boards[i].subject = experiment['subjects'][setup]
+        # Hardware test.
+        if experiment['hardware_test'] != 'none':
+            reply = QtGui.QMessageBox.question(self, 'Hardware test', 'Run hardware test?',
+                QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+            if reply == QtGui.QMessageBox.Yes:
+                for board in self.boards:
+                    try:
+                        board.setup_state_machine(experiment['hardware_test'])
+                    except PyboardError:
+                        self.stop_experiment()
+                        return
+                for board in self.boards:
+                    board.print('\nStarting hardware test.')
+                    board.start_framework(data_output=False)
+                QtGui.QMessageBox.question(self, 'Hardware test', 
+                    'Press OK when finished with hardware test.', QtGui.QMessageBox.Ok)
+                for board in self.boards:
+                    board.stop_framework()
+                    time.sleep(0.01)
+                    board.process_data()
         # Setup state machines.
         for i, board in enumerate(self.boards):
             try:
+                board.data_logger = Data_logger(print_func=print_func, data_consumers=
+                    [self.experiment_plot.subject_plots[i], self.subjectboxes[i]])
                 board.setup_state_machine(experiment['task'])
             except PyboardError:
                 self.stop_experiment()
@@ -149,6 +167,7 @@ class Run_experiment_tab(QtGui.QWidget):
                 board.print('Setting variables failed')
                 self.stop_experiment()
                 return
+        for i, board in enumerate(self.boards):
             self.subjectboxes[i].assign_board(board)
         self.experiment_plot.set_state_machine(board.sm_info)
         self.startstopclose_button.setEnabled(True)
@@ -203,6 +222,7 @@ class Run_experiment_tab(QtGui.QWidget):
                                           for v in summary_variables}
                 for v_name, v_value in sv_dict[board.subject].items():
                     board.data_logger.data_file.write('\nV -1 {} {}'.format(v_name, v_value))
+                    board.data_logger.data_file.flush()
         if persistent_variables:
             with open(self.pv_path, 'w') as pv_file:
                 pv_file.write(json.dumps(persistent_variables, sort_keys=True, indent=4))

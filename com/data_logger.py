@@ -59,6 +59,7 @@ class Data_logger():
         data_string = self.data_to_string(new_data)
         if data_string:
             self.data_file.write(data_string)
+            self.data_file.flush()
         for nd in new_data:
             if nd[0] == 'A':
                 self.save_analog_chunk(*nd[1:]) 
