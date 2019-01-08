@@ -169,7 +169,7 @@ class Summary_variables_dialog(QtGui.QDialog):
         self.table.setHorizontalHeaderLabels(v_names)
         self.table.setVerticalHeaderLabels(subjects)
 
-        clip_string = ' \t' + '\t'.join(v_names)
+        clip_string = 'Subject\t' + '\t'.join(v_names)
 
         for s, subject in enumerate(subjects):
             clip_string += '\n' + subject

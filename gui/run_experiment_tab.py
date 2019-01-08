@@ -1,6 +1,6 @@
 import os
 import time
-from pprint import pformat
+import json
 from datetime import datetime
 
 from pyqtgraph.Qt import QtGui, QtCore
@@ -80,13 +80,16 @@ class Run_experiment_tab(QtGui.QWidget):
             self.subjectboxes.append(
                 Subjectbox('{} : {}'.format(setup, experiment['subjects'][setup]), self))
             self.boxes_layout.addWidget(self.subjectboxes[-1])
-        # Create data folders if needed.
+        # Create data folder if needed.
         if not os.path.exists(self.experiment['data_dir']):
             os.mkdir(self.experiment['data_dir'])
-        if any([v['persistent'] for v in experiment['variables']]):
-            experiment['pv_dir'] = os.path.join(self.experiment['data_dir'], 'persistent_variables')
-            if not os.path.exists(experiment['pv_dir']):
-                os.mkdir(experiment['pv_dir'])
+        # Load persistent variables if they exist.
+        self.pv_path = os.path.join(self.experiment['data_dir'], 'persistent_variables.json')
+        if os.path.exists(self.pv_path):
+            with open(self.pv_path, 'r') as pv_file:
+                persistent_variables =  json.loads(pv_file.read())
+        else:
+            persistent_variables = {}
         # Setup boards.
         self.GUI_main.app.processEvents()
         self.boards = []
@@ -117,16 +120,13 @@ class Run_experiment_tab(QtGui.QWidget):
             try:
                 board.subject_variables = [v for v in experiment['variables'] 
                                  if v['subject'] in ('all', board.subject)]
-                persistent_variables = [v for v in board.subject_variables if v['persistent']]
-                pv_dict = {}
-                if persistent_variables:
-                    pv_path = os.path.join(self.experiment['pv_dir'], '{}.txt'.format(board.subject))
-                    if os.path.exists(pv_path):
-                        with open(pv_path, 'r') as pv_file:
-                            pv_dict = eval(pv_file.read())
+                try:
+                    subject_pv_dict = persistent_variables[board.subject]
+                except KeyError:
+                    subject_pv_dict = {}
                 for v in board.subject_variables:
-                    if v['persistent'] and v['name'] in pv_dict.keys(): # Use stored value.
-                        v_value =  pv_dict[v['name']]
+                    if v['persistent'] and v['name'] in subject_pv_dict.keys(): # Use stored value.
+                        v_value =  subject_pv_dict[v['name']]
                         self.subjectboxes[i].print_to_log('{} {} (persistent value)'.format(v['name'], v_value))
                     else:
                         if v['value'] == '':
@@ -172,6 +172,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
         summary_variables = [v for v in self.experiment['variables'] if v['summary']]
+        persistent_variables = {}
         if summary_variables: sv_dict = {}
         for i, board in enumerate(self.boards):
             # Stop running boards.
@@ -181,20 +182,20 @@ class Run_experiment_tab(QtGui.QWidget):
                 board.process_data()
                 self.subjectboxes[i].task_stopped()
             # Store persistent variables.
-            persistent_variables = [v for v in board.subject_variables if v['persistent']]
-            if persistent_variables:
+            subject_pvs = [v for v in board.subject_variables if v['persistent']]
+            if subject_pvs:
                 board.print('\nStoring persistent variables.')
-                pv_dict = {v['name']: board.get_variable(v['name'])
-                           for v in persistent_variables}
-                pv_path = os.path.join(self.experiment['pv_dir'], '{}.txt'.format(board.subject))
-                with open(pv_path, 'w') as pv_file:
-                    pv_file.write(pformat(pv_dict))
+                persistent_variables[board.subject] = {
+                    v['name']: board.get_variable(v['name']) for v in subject_pvs}
             # Read summary variables.
             if summary_variables:
                 sv_dict[board.subject] = {v['name']: board.get_variable(v['name'])
                                           for v in summary_variables}
                 for v_name, v_value in sv_dict[board.subject].items():
                     board.data_logger.data_file.write('\nV -1 {} {}'.format(v_name, v_value))
+        if persistent_variables:
+            with open(self.pv_path, 'w') as pv_file:
+                pv_file.write(json.dumps(persistent_variables, sort_keys=True, indent=4))
         if summary_variables:
             Summary_variables_dialog(self, sv_dict).show()
 
