@@ -4,7 +4,7 @@ import json
 from pyqtgraph.Qt import QtGui, QtCore
 
 from config.paths import data_dir, tasks_dir, experiments_dir
-from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item
+from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize
 
 # --------------------------------------------------------------------------------
 # Experiments_tab
@@ -47,10 +47,10 @@ class Configure_experiment_tab(QtGui.QWidget):
 
         self.expbox_Hlayout_1.addWidget(self.experiment_select)
         self.expbox_Hlayout_1.setStretchFactor(self.experiment_select, 2)
-        self.expbox_Hlayout_1.addWidget(self.run_button)
         self.expbox_Hlayout_1.addWidget(self.new_button)
         self.expbox_Hlayout_1.addWidget(self.delete_button)
         self.expbox_Hlayout_1.addWidget(self.save_button)
+        self.expbox_Hlayout_1.addWidget(self.run_button)
         self.expbox_Hlayout_2.addWidget(self.name_label)
         self.expbox_Hlayout_2.addWidget(self.name_text)
         self.expbox_Hlayout_2.addWidget(self.task_label)
@@ -217,7 +217,9 @@ class SubjectsTable(QtGui.QTableWidget):
         self.available_setups = []
         self.subjects = []
         self.n_subjects = 0
-        self.add_subject()
+        add_button = QtGui.QPushButton('add')
+        add_button.clicked.connect(self.add_subject)  
+        self.setCellWidget(0,2, add_button)
 
     def reset(self):
         '''Clear all rows of table.'''
@@ -252,10 +254,10 @@ class SubjectsTable(QtGui.QTableWidget):
             subject_item = QtGui.QTableWidgetItem()
             subject_item.setText(subject)
             self.setItem(self.n_subjects, 1, subject_item)
-        else:
-            self.update_available_setups()
         self.n_subjects += 1
-        
+        self.update_available_setups()
+        null_resize(self)
+
     def remove_subject(self, subject_n):
         '''Remove specified row from table'''
         if self.item(subject_n, 1): 
@@ -351,6 +353,8 @@ class VariablesTable(QtGui.QTableWidget):
         else:
             variable_cbox.addItems(['select variable']+self.available_variables)
         self.n_variables += 1
+        null_resize(self)
+
 
     def remove_variable(self, variable_n):
         self.removeRow(variable_n)
@@ -376,7 +380,7 @@ class VariablesTable(QtGui.QTableWidget):
         self.available_variables = sorted(list(set(self.variable_names) - 
             set([v_n for v_n in self.assigned.keys() if 
                 'all' in self.assigned[v_n] or
-                set(self.assigned[v_n]) == set(self.subjects_table.subjects)])))
+                set(self.assigned[v_n]) == set(self.subjects_table.subjects)])), key=str.lower)
         for v in range(self.n_variables):  
             v_name = str(self.cellWidget(v,0).currentText())
             s_name = self.cellWidget(v,1).currentText()
@@ -397,9 +401,7 @@ class VariablesTable(QtGui.QTableWidget):
             cbox_update_options(self.cellWidget(v,0), self.available_variables)  
 
     def task_changed(self, task):
-        '''Reset variables table, get names of task variables.'''
-        while self.n_variables > 0:
-            self.remove_variable(0)
+        '''Remove variables that are not defined in the new task.'''
         pattern = "v\.(?P<vname>\w+)\s*\="
         try:
             with open(os.path.join(tasks_dir, task+'.py'), "r") as file:
@@ -410,7 +412,13 @@ class VariablesTable(QtGui.QTableWidget):
         for v_name in re.findall(pattern, file_content):
             if not v_name in [var_name for var_name in self.variable_names]:
                 self.variable_names.append(v_name)
-        self.available_variables = self.variable_names
+        self.available_variables = sorted(self.variable_names, key=str.lower)
+        # Remove variables that are not in new task.
+        for i in reversed(range(self.n_variables)):
+            if not self.cellWidget(i,0).currentText() in self.available_variables:
+                self.removeRow(i)
+                self.n_variables -= 1
+        self.update_available()
 
     def variables_list(self):
         '''Return the variables table contents as a list of dictionaries.'''

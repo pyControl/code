@@ -25,6 +25,9 @@ class Run_experiment_tab(QtGui.QWidget):
         self.status_label = QtGui.QLabel('Status:')
         self.status_text = QtGui.QLineEdit()
         self.status_text.setFixedWidth(60)
+        self.time_label = QtGui.QLabel('Time:')
+        self.time_text = QtGui.QLineEdit()
+        self.time_text.setFixedWidth(60)
         self.name_text.setReadOnly(True)
         self.plots_button =  QtGui.QPushButton('Plots')
         self.plots_button.clicked.connect(self.experiment_plot.show)
@@ -38,6 +41,8 @@ class Run_experiment_tab(QtGui.QWidget):
         self.Hlayout.addWidget(self.name_text)
         self.Hlayout.addWidget(self.status_label)
         self.Hlayout.addWidget(self.status_text)
+        self.Hlayout.addWidget(self.time_label)
+        self.Hlayout.addWidget(self.time_text)
         self.Hlayout.addWidget(self.logs_button)
         self.Hlayout.addWidget(self.plots_button)
         self.Hlayout.addWidget(self.startstopclose_button)
@@ -46,6 +51,9 @@ class Run_experiment_tab(QtGui.QWidget):
         self.scroll_area.horizontalScrollBar().setEnabled(False)
         self.scroll_inner = QtGui.QFrame(self)
         self.boxes_layout = QtGui.QVBoxLayout(self.scroll_inner)
+        self.boxes_splitter = QtGui.QSplitter(QtCore.Qt.Vertical, parent=self)
+        self.boxes_splitter.setChildrenCollapsible(False)
+        self.boxes_layout.addWidget(self.boxes_splitter)
         self.scroll_area.setWidget(self.scroll_inner)
         self.scroll_area.setWidgetResizable(True)
 
@@ -72,6 +80,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.logs_button.setText('Hide logs')
         # Setup controls box.
         self.name_text.setText(experiment['name'])
+        self.time_text.setText('')
         self.startstopclose_button.setEnabled(False)
         self.logs_button.setEnabled(False)
         self.plots_button.setEnabled(False)
@@ -79,7 +88,8 @@ class Run_experiment_tab(QtGui.QWidget):
         for setup in sorted(experiment['subjects'].keys()):
             self.subjectboxes.append(
                 Subjectbox('{} : {}'.format(setup, experiment['subjects'][setup]), self))
-            self.boxes_layout.addWidget(self.subjectboxes[-1])
+            #self.boxes_layout.addWidget(self.subjectboxes[-1])
+            self.boxes_splitter.addWidget(self.subjectboxes[-1])
         # Create data folder if needed.
         if not os.path.exists(self.experiment['data_dir']):
             os.mkdir(self.experiment['data_dir'])
@@ -152,12 +162,12 @@ class Run_experiment_tab(QtGui.QWidget):
         self.startstopclose_button.setText('Stop')
         self.state = 'running'
         self.experiment_plot.start_experiment()
-        start_time = datetime.now()
+        self.start_time = datetime.now()
         ex = self.experiment
         for i, board in enumerate(self.boards):
             board.print('\nStarting experiment.\n')
             board.data_logger.open_data_file(ex['data_dir'], ex['name'], 
-                ex['subjects'][board.serial_port], start_time)
+                ex['subjects'][board.serial_port], self.start_time)
             for v_name, v_value in board.variables_set_pre_run:
                 board.data_logger.data_file.write('V 0 {} {}\n'.format(v_name, v_value))
             board.data_logger.data_file.write('\n')
@@ -228,7 +238,7 @@ class Run_experiment_tab(QtGui.QWidget):
         if self.logs_visible:
             for subjectbox in self.subjectboxes:
                 subjectbox.log_textbox.hide()
-            self.boxes_layout.addStretch()
+            self.boxes_layout.addStretch(100)
             self.logs_visible = False
             self.logs_button.setText('Show logs')
         else:
@@ -240,6 +250,7 @@ class Run_experiment_tab(QtGui.QWidget):
 
     def update(self):
         '''Called regularly while experiment is running'''
+        self.time_text.setText(str(datetime.now()-self.start_time).split('.')[0])
         boards_running = False
         for i, board in enumerate(self.boards):
             if board.framework_running:

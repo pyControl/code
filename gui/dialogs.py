@@ -158,16 +158,21 @@ class Summary_variables_dialog(QtGui.QDialog):
         super(QtGui.QDialog, self).__init__(parent)
         self.setWindowTitle('Summary variables')
 
-        self.Vlayout = QtGui.QVBoxLayout(self)
-
         subjects = sorted(sv_dict.keys())
         v_names  = sorted(sv_dict[subjects[0]].keys())
 
+        self.label = QtGui.QLabel('Summary variables copied to clipboard.')
+        self.label.setAlignment(QtCore.Qt.AlignCenter)
+
         self.table = QtGui.QTableWidget(len(subjects), len(v_names),  parent=self)
-        self.Vlayout.addWidget(self.table)
+        self.table.setSizeAdjustPolicy(QtGui.QAbstractScrollArea.AdjustToContents)
         self.table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.table.setHorizontalHeaderLabels(v_names)
         self.table.setVerticalHeaderLabels(subjects)
+
+        self.Vlayout = QtGui.QVBoxLayout(self)
+        self.Vlayout.addWidget(self.label)
+        self.Vlayout.addWidget(self.table)
 
         clip_string = 'Subject\t' + '\t'.join(v_names)
 
@@ -179,6 +184,8 @@ class Summary_variables_dialog(QtGui.QDialog):
                 item = QtGui.QTableWidgetItem()
                 item.setText(v_value_str)
                 self.table.setItem(s, v, item)
+
+        self.table.resizeColumnsToContents()
 
         clipboard = QtGui.QApplication.clipboard()
         clipboard.setText(clip_string)
