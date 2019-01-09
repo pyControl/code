@@ -13,6 +13,7 @@ from config.paths import tasks_dir, experiments_dir
 from config.gui_settings import  VERSION
 from gui.configure_experiment_tab import Configure_experiment_tab
 from gui.run_experiment_tab import Run_experiment_tab
+from gui.setups_tab import Setups_tab
 
 # --------------------------------------------------------------------------------
 # GUI_main
@@ -42,6 +43,7 @@ class GUI_main(QtGui.QMainWindow):
 
         self.run_task_tab = Run_task_tab(self)  
         self.experiments_tab = QtGui.QStackedWidget(self)
+        self.setups_tab = Setups_tab(self)
 
         self.configure_experiment_tab = Configure_experiment_tab(self)
         self.run_experiment_tab = Run_experiment_tab(self)
@@ -51,6 +53,7 @@ class GUI_main(QtGui.QMainWindow):
 
         self.tab_widget.addTab(self.run_task_tab,'Run task')
         self.tab_widget.addTab(self.experiments_tab,'Experiments')
+        self.tab_widget.addTab(self.setups_tab, 'Setups')
 
         self.tab_widget.currentChanged.connect(self.tab_changed) 
 
@@ -86,12 +89,14 @@ class GUI_main(QtGui.QMainWindow):
         # Refresh tabs.
         self.run_task_tab.refresh()
         self.configure_experiment_tab.refresh()
+        self.setups_tab.refresh()
 
     def tab_changed(self, new_tab_ind):
         '''Called whenever the active tab is changed.'''
         if self.current_tab_ind == 0: 
-            if self.run_task_tab.connected:
-                self.run_task_tab.disconnect()
+            self.run_task_tab.disconnect()
+        elif self.current_tab_ind == 2:
+            self.setups_tab.disconnect()
         self.current_tab_ind = new_tab_ind
 
     # Exception handling.
