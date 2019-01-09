@@ -11,6 +11,8 @@ from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_
 # --------------------------------------------------------------------------------
 
 class Configure_experiment_tab(QtGui.QWidget):
+    '''The configure experiment tab is used to specify an experiment, i.e. a 
+    set of subjects run on a given task on a set of setups.'''
 
     def __init__(self, parent=None):
         super(QtGui.QWidget, self).__init__(parent)
@@ -125,8 +127,8 @@ class Configure_experiment_tab(QtGui.QWidget):
         if self.GUI_main.available_experiments_changed:
             cbox_update_options(self.experiment_select, self.GUI_main.available_experiments)
             self.GUI_main.available_experiments_changed = False
-        if self.GUI_main.available_ports_changed:
-            self.subjects_table.all_setups = set(self.GUI_main.available_ports)
+        if self.GUI_main.setups_tab.available_setups_changed:
+            self.subjects_table.all_setups = set(self.GUI_main.setups_tab.available_setups)
             self.subjects_table.update_available_setups()
 
     def experiment_dict(self):

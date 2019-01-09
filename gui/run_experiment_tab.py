@@ -13,6 +13,8 @@ from gui.plotting import Experiment_plot
 from gui.dialogs import Variables_dialog, Summary_variables_dialog
 
 class Run_experiment_tab(QtGui.QWidget):
+    '''The run experiment tab is responsible for setting up, running and stopping
+    an experiment that has been defined using the configure experiments tab.'''
 
     def __init__(self, parent=None):
         super(QtGui.QWidget, self).__init__(parent)
@@ -101,10 +103,11 @@ class Run_experiment_tab(QtGui.QWidget):
         self.boards = []
         for i, setup in enumerate(sorted(experiment['subjects'].keys())):
             print_func = self.subjectboxes[i].print_to_log
+            serial_port = self.GUI_main.setups_tab.portdict[setup]
             # Connect to boards.
             print_func('Connecting to board.. ')
             try:
-                self.boards.append(Pycboard(setup, print_func=print_func))
+                self.boards.append(Pycboard(serial_port, print_func=print_func))
             except SerialException:
                 print_func('Connection failed.')
                 self.stop_experiment()
@@ -118,12 +121,11 @@ class Run_experiment_tab(QtGui.QWidget):
                 for board in self.boards:
                     try:
                         board.setup_state_machine(experiment['hardware_test'])
+                        board.print('\nStarting hardware test.')
+                        board.start_framework(data_output=False)
                     except PyboardError:
                         self.stop_experiment()
                         return
-                for board in self.boards:
-                    board.print('\nStarting hardware test.')
-                    board.start_framework(data_output=False)
                 QtGui.QMessageBox.question(self, 'Hardware test', 
                     'Press OK when finished with hardware test.', QtGui.QMessageBox.Ok)
                 for board in self.boards:
@@ -133,7 +135,7 @@ class Run_experiment_tab(QtGui.QWidget):
         # Setup state machines.
         for i, board in enumerate(self.boards):
             try:
-                board.data_logger = Data_logger(print_func=print_func, data_consumers=
+                board.data_logger = Data_logger(print_func=board.print, data_consumers=
                     [self.experiment_plot.subject_plots[i], self.subjectboxes[i]])
                 board.setup_state_machine(experiment['task'])
             except PyboardError:
@@ -182,8 +184,7 @@ class Run_experiment_tab(QtGui.QWidget):
         ex = self.experiment
         for i, board in enumerate(self.boards):
             board.print('\nStarting experiment.\n')
-            board.data_logger.open_data_file(ex['data_dir'], ex['name'], 
-                ex['subjects'][board.serial_port], self.start_time)
+            board.data_logger.open_data_file(ex['data_dir'], ex['name'], board.subject, self.start_time)
             for v_name, v_value in board.variables_set_pre_run:
                 board.data_logger.data_file.write('V 0 {} {}\n'.format(v_name, v_value))
             board.data_logger.data_file.write('\n')

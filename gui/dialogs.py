@@ -1,5 +1,7 @@
 import os
+
 from pyqtgraph.Qt import QtGui, QtCore
+
 from config.paths import config_dir
 
 # Board_config_dialog -------------------------------------------------
@@ -27,36 +29,37 @@ class Board_config_dialog(QtGui.QDialog):
         self.DFU_button.clicked.connect(self.DFU_mode)
         self.flashdrive_button.clicked.connect(self.flashdrive)
 
-    def exec_(self):
-        self.flashdrive_enabled = 'MSC' in self.parent().board.status['usb_mode']
+    def exec_(self, board):
+        self.board = board
+        self.flashdrive_enabled = 'MSC' in self.board.status['usb_mode']
         self.flashdrive_button.setText('{} USB flash drive'
             .format('Disable' if self.flashdrive_enabled else 'Enable'))
         return QtGui.QDialog.exec_(self)
 
     def load_framework(self):
         self.accept()
-        self.parent().board.load_framework()
+        self.board.load_framework()
         self.parent().task_changed()
 
     def load_hardware_definition(self):
         hwd_path = QtGui.QFileDialog.getOpenFileName(self, 'Select hardware definition:',
                     os.path.join(config_dir, 'hardware_definition.py'), filter='*.py')[0]
         self.accept()
-        self.parent().board.load_hardware_definition(hwd_path)
+        self.board.load_hardware_definition(hwd_path)
         self.parent().task_changed()
 
     def DFU_mode(self):
         self.accept()
-        self.parent().board.DFU_mode()
+        self.board.DFU_mode()
         self.parent().disconnect()
         QtCore.QTimer.singleShot(500, self.parent().refresh)
 
     def flashdrive(self):
         self.accept()
         if self.flashdrive_enabled:
-            self.parent().board.disable_mass_storage()
+            self.board.disable_mass_storage()
         else:
-            self.parent().board.enable_mass_storage()
+            self.board.enable_mass_storage()
         self.parent().disconnect()
         QtCore.QTimer.singleShot(500, self.parent().refresh)
 
@@ -189,7 +192,3 @@ class Summary_variables_dialog(QtGui.QDialog):
 
         clipboard = QtGui.QApplication.clipboard()
         clipboard.setText(clip_string)
-
-
-
-

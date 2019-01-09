@@ -71,7 +71,7 @@ class Run_task_tab(QtGui.QWidget):
 
         self.connect_button.clicked.connect(
             lambda: self.disconnect() if self.connected else self.connect())
-        self.config_button.clicked.connect(self.config_dialog.exec_)
+        self.config_button.clicked.connect(lambda: self.config_dialog.exec_(self.board))
 
         # File groupbox
 
