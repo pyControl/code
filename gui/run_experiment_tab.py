@@ -51,9 +51,6 @@ class Run_experiment_tab(QtGui.QWidget):
         self.scroll_area.horizontalScrollBar().setEnabled(False)
         self.scroll_inner = QtGui.QFrame(self)
         self.boxes_layout = QtGui.QVBoxLayout(self.scroll_inner)
-        self.boxes_splitter = QtGui.QSplitter(QtCore.Qt.Vertical, parent=self)
-        self.boxes_splitter.setChildrenCollapsible(False)
-        self.boxes_layout.addWidget(self.boxes_splitter)
         self.scroll_area.setWidget(self.scroll_inner)
         self.scroll_area.setWidgetResizable(True)
 
@@ -88,7 +85,7 @@ class Run_experiment_tab(QtGui.QWidget):
         for setup in sorted(experiment['subjects'].keys()):
             self.subjectboxes.append(
                 Subjectbox('{} : {}'.format(setup, experiment['subjects'][setup]), self))
-            self.boxes_splitter.addWidget(self.subjectboxes[-1])
+            self.boxes_layout.addWidget(self.subjectboxes[-1])
         # Create data folder if needed.
         if not os.path.exists(self.experiment['data_dir']):
             os.mkdir(self.experiment['data_dir'])
@@ -311,6 +308,7 @@ class Subjectbox(QtGui.QGroupBox):
         self.variables_button = QtGui.QPushButton('Variables')
         self.variables_button.setEnabled(False)
         self.log_textbox = QtGui.QTextEdit()
+        self.log_textbox.setMinimumHeight(180)
         self.log_textbox.setFont(QtGui.QFont('Courier', 9))
         self.log_textbox.setReadOnly(True)
 
