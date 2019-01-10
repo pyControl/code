@@ -82,14 +82,14 @@ class Configure_experiment_tab(QtGui.QWidget):
         # Initialise widgets
         self.experiment_select.addItems(['select experiment'])
         self.task_select.addItems(['select task'])
-        self.hardware_test_select.addItems(['No hardware test'])
+        self.hardware_test_select.addItems([' No hardware test'])
 
         # Connect signals.
         self.name_text.textChanged.connect(self.name_edited)
         self.data_dir_text.textEdited.connect(lambda: setattr(self, 'custom_dir', True))
         self.data_dir_button.clicked.connect(self.select_data_dir)
         self.experiment_select.activated[str].connect(self.experiment_changed)
-        self.task_select.currentIndexChanged[str].connect(self.task_changed)
+        self.task_select.activated[str].connect(self.variables_table.task_changed)
         self.new_button.clicked.connect(self.new_experiment)
         self.delete_button.clicked.connect(self.delete_experiment)
         self.save_button.clicked.connect(self.save_experiment)
@@ -110,12 +110,7 @@ class Configure_experiment_tab(QtGui.QWidget):
             QtGui.QFileDialog.getExistingDirectory(self, 'Select data folder', data_dir))
         self.custom_dir = True
 
-    def task_changed(self, task_name):
-        if task_name in self.GUI_main.available_tasks:
-            self.variables_table.task_changed(task_name)
-
     def experiment_changed(self, experiment_name):
-        # if not self.save_dialog(): return
         if experiment_name in self.GUI_main.available_experiments:
             self.load_experiment(experiment_name)
 
@@ -193,6 +188,9 @@ class Configure_experiment_tab(QtGui.QWidget):
             invalid_experiment_dialog(self, 'Experiment must have a name.')
             return
         # Validate task and hardware defintion.
+        if experiment['task'] == 'select task':
+            invalid_experiment_dialog(self, "Task not selected.")
+            return
         if not experiment['task'] in self.GUI_main.available_tasks:
             invalid_experiment_dialog(self, 
                 "Task file '{}.py' not found.".format(experiment['task']))
@@ -200,7 +198,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         if (experiment['hardware_test'] != ' No hardware test' and
             experiment['hardware_test'] not in self.GUI_main.available_tasks):
             invalid_experiment_dialog(self, 
-                "Hardware test file '{}.py' not found.".format(experiment['task']))
+                "Hardware test file '{}.py' not found.".format(experiment['hardware_test']))
             return
         # Validate setups and subjects.
         setups = experiment['subjects'].keys()
@@ -366,6 +364,7 @@ class VariablesTable(QtGui.QTableWidget):
         self.setCellWidget(0,5, add_button)
         self.n_variables = 0
         self.variable_names = []
+        self.available_variables = []
         self.assigned = {v_name:[] for v_name in self.variable_names} # Which subjects have values assigned for each variable.
 
     def reset(self):
@@ -430,10 +429,13 @@ class VariablesTable(QtGui.QTableWidget):
             if v_name != 'select variable':
                 self.assigned[v_name].append(s_name)
         # Update the variables available:
-        self.available_variables = sorted(list(set(self.variable_names) - 
-            set([v_n for v_n in self.assigned.keys() if 
-                'all' in self.assigned[v_n] or
-                set(self.assigned[v_n]) == set(self.subjects_table.subjects)])), key=str.lower)
+        fully_asigned_variables = [v_n for v_n in self.assigned.keys()
+                                   if 'all' in self.assigned[v_n]]
+        if self.subjects_table.subjects:
+            fully_asigned_variables += [v_n for v_n in self.assigned.keys()
+                if set(self.assigned[v_n]) == set(self.subjects_table.subjects)]
+        self.available_variables = sorted(list(
+            set(self.variable_names) - set(fully_asigned_variables)), key=str.lower)
         for v in range(self.n_variables):  
             v_name = str(self.cellWidget(v,0).currentText())
             s_name = self.cellWidget(v,1).currentText()
@@ -451,7 +453,7 @@ class VariablesTable(QtGui.QTableWidget):
                     self.available_variables.remove(v_name)
                 cbox_update_options(self.cellWidget(v,1), available_subjects)
             # Update variable combo box options.
-            cbox_update_options(self.cellWidget(v,0), self.available_variables)  
+            cbox_update_options(self.cellWidget(v,0), self.available_variables) 
 
     def task_changed(self, task):
         '''Remove variables that are not defined in the new task.'''
@@ -465,7 +467,6 @@ class VariablesTable(QtGui.QTableWidget):
         for v_name in re.findall(pattern, file_content):
             if not v_name in [var_name for var_name in self.variable_names]:
                 self.variable_names.append(v_name)
-        self.available_variables = sorted(self.variable_names, key=str.lower)
         # Remove variables that are not in new task.
         for i in reversed(range(self.n_variables)):
             if not self.cellWidget(i,0).currentText() in self.available_variables:
