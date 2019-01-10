@@ -4,7 +4,8 @@ import json
 from pyqtgraph.Qt import QtGui, QtCore
 
 from config.paths import data_dir, tasks_dir, experiments_dir
-from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize
+from gui.dialogs import invalid_experiment_dialog
+from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants
 
 # --------------------------------------------------------------------------------
 # Experiments_tab
@@ -81,7 +82,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         # Initialise widgets
         self.experiment_select.addItems(['select experiment'])
         self.task_select.addItems(['select task'])
-        self.hardware_test_select.addItems(['none'])
+        self.hardware_test_select.addItems(['No hardware test'])
 
         # Connect signals.
         self.name_text.textChanged.connect(self.name_edited)
@@ -122,13 +123,13 @@ class Configure_experiment_tab(QtGui.QWidget):
         '''Called periodically when not running to update available task, ports, experiments.'''
         if self.GUI_main.available_tasks_changed:
             cbox_update_options(self.task_select, self.GUI_main.available_tasks)
-            cbox_update_options(self.hardware_test_select, ['none'] + self.GUI_main.available_tasks)
+            cbox_update_options(self.hardware_test_select, [' No hardware test'] + self.GUI_main.available_tasks)
             self.GUI_main.available_tasks_changed = False
         if self.GUI_main.available_experiments_changed:
             cbox_update_options(self.experiment_select, self.GUI_main.available_experiments)
             self.GUI_main.available_experiments_changed = False
         if self.GUI_main.setups_tab.available_setups_changed:
-            self.subjects_table.all_setups = set(self.GUI_main.setups_tab.available_setups)
+            self.subjects_table.all_setups = set(self.GUI_main.setups_tab.setup_names)
             self.subjects_table.update_available_setups()
 
     def experiment_dict(self):
@@ -185,9 +186,50 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.variables_table.set_from_list(experiment['variables'])
 
     def run_experiment(self):
-        '''Run an experiment. Prompts user to save experiment if it is new or has been edited.'''
+        '''Check that the experiment is valid, prompts user to save experiment if it is
+        new or has been edited, then run experiment.'''
+        experiment = self.experiment_dict()
+        if not experiment['name']:
+            invalid_experiment_dialog(self, 'Experiment must have a name.')
+            return
+        # Validate task and hardware defintion.
+        if not experiment['task'] in self.GUI_main.available_tasks:
+            invalid_experiment_dialog(self, 
+                "Task file '{}.py' not found.".format(experiment['task']))
+            return
+        if (experiment['hardware_test'] != ' No hardware test' and
+            experiment['hardware_test'] not in self.GUI_main.available_tasks):
+            invalid_experiment_dialog(self, 
+                "Hardware test file '{}.py' not found.".format(experiment['task']))
+            return
+        # Validate setups and subjects.
+        setups = experiment['subjects'].keys()
+        subjects = experiment['subjects'].values()
+        if len(setups) == 0:
+                invalid_experiment_dialog(self, 'No subjects specified.')
+                return
+        if len(set(subjects)) < len(subjects):
+                invalid_experiment_dialog(self, 'Repeated subject name.')
+                return
+        if min([len(subject) for subject in subjects]) == 0:
+                invalid_experiment_dialog(self,'All subjects must have names.')
+                return
+        for setup in setups:
+            if not setup in self.GUI_main.setups_tab.setup_names:
+                invalid_experiment_dialog(self, 
+                    "Setup '{}' not available.".format(setup))
+                return
+        # Validate variables.
+        for v in experiment['variables']:
+            if v['value']:
+                try:
+                    eval(v['value'], variable_constants)
+                except:
+                    invalid_experiment_dialog(self, "Invalid value '{}' for variable '{}'."
+                        .format(v['value'], v['name']))
+                    return
         if not self.save_dialog(): return
-        self.GUI_main.run_experiment_tab.setup_experiment(self.experiment_dict())
+        self.GUI_main.run_experiment_tab.setup_experiment(experiment)
 
     def save_dialog(self):
         '''Dialog to save experiment if it has been edited.  Returns False if
