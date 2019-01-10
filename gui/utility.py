@@ -1,7 +1,16 @@
 from pyqtgraph.Qt import QtGui, QtCore
 
 # --------------------------------------------------------------------------------
-# GUI utility functions and classes
+# GUI utility functions, classes, variables.
+# --------------------------------------------------------------------------------
+
+variable_constants = { #  Constants that can be used in setting the value of task variables.
+                        'ms'    : 1,
+                        'second': 1000,
+                        'minute': 60000,
+                        'hour'  : 3600000
+                     }
+
 # --------------------------------------------------------------------------------
 
 class TableCheckbox(QtGui.QWidget):

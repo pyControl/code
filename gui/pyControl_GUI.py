@@ -11,6 +11,7 @@ if not top_dir in sys.path: sys.path.insert(0, top_dir)
 from run_task_tab import Run_task_tab
 from config.paths import tasks_dir, experiments_dir
 from config.gui_settings import  VERSION
+from gui.dialogs import Board_config_dialog
 from gui.configure_experiment_tab import Configure_experiment_tab
 from gui.run_experiment_tab import Run_experiment_tab
 from gui.setups_tab import Setups_tab
@@ -36,6 +37,10 @@ class GUI_main(QtGui.QMainWindow):
         self.available_ports_changed = False
         self.current_tab_ind = 0 # Which tab is currently selected.
         self.app = None # Overwritten with QtGui.QApplication instance in main.
+
+        # Dialogs.
+
+        self.config_dialog = Board_config_dialog(parent=self)
 
         # Widgets.
         self.tab_widget = QtGui.QTabWidget(self)

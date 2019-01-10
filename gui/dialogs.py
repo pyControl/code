@@ -3,6 +3,7 @@ import os
 from pyqtgraph.Qt import QtGui, QtCore
 
 from config.paths import config_dir
+from gui.utility import variable_constants
 
 # Board_config_dialog -------------------------------------------------
 
@@ -34,25 +35,23 @@ class Board_config_dialog(QtGui.QDialog):
         self.flashdrive_enabled = 'MSC' in self.board.status['usb_mode']
         self.flashdrive_button.setText('{} USB flash drive'
             .format('Disable' if self.flashdrive_enabled else 'Enable'))
+        self.disconnect = False # Indicates whether board was disconnected by dialog.
         return QtGui.QDialog.exec_(self)
 
     def load_framework(self):
         self.accept()
         self.board.load_framework()
-        self.parent().task_changed()
 
     def load_hardware_definition(self):
         hwd_path = QtGui.QFileDialog.getOpenFileName(self, 'Select hardware definition:',
                     os.path.join(config_dir, 'hardware_definition.py'), filter='*.py')[0]
         self.accept()
         self.board.load_hardware_definition(hwd_path)
-        self.parent().task_changed()
 
     def DFU_mode(self):
         self.accept()
         self.board.DFU_mode()
-        self.parent().disconnect()
-        QtCore.QTimer.singleShot(500, self.parent().refresh)
+        self.disconnect = True
 
     def flashdrive(self):
         self.accept()
@@ -60,8 +59,7 @@ class Board_config_dialog(QtGui.QDialog):
             self.board.disable_mass_storage()
         else:
             self.board.enable_mass_storage()
-        self.parent().disconnect()
-        QtCore.QTimer.singleShot(500, self.parent().refresh)
+        self.disconnect = True
 
 # Variables_dialog ---------------------------------------------------------------------
 
@@ -130,7 +128,7 @@ class Variable_setter(QtGui.QWidget):
 
     def set(self):
         try:
-            v_value = eval(self.value_str.text())
+            v_value = eval(self.value_str.text(), variable_constants)
         except Exception:
             self.value_str.setText('Invalid value')
             return
@@ -192,3 +190,9 @@ class Summary_variables_dialog(QtGui.QDialog):
 
         clipboard = QtGui.QApplication.clipboard()
         clipboard.setText(clip_string)
+
+# Invalid experiment dialog. ---------------------------------------------------------
+
+def invalid_experiment_dialog(parent, message):
+    QtGui.QMessageBox.question(parent, 'Invalid experiment', 
+        message + '\n\nUnable to run experiment.', QtGui.QMessageBox.Ok)

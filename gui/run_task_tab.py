@@ -9,7 +9,7 @@ from com.data_logger import Data_logger
 from config.paths import data_dir, tasks_dir
 from config.gui_settings import update_interval
 
-from gui.dialogs import Board_config_dialog, Variables_dialog
+from gui.dialogs import Variables_dialog
 from gui.plotting import Task_plot
 
 # Run_task_gui ------------------------------------------------------------------------
@@ -33,45 +33,38 @@ class Run_task_tab(QtGui.QWidget):
         self.running = False
         self.subject_changed = False
 
-        # Dialogs.
-
-        self.config_dialog = Board_config_dialog(parent=self)
-
         # GUI groupbox.
 
-        self.gui_groupbox = QtGui.QGroupBox('GUI')
+        self.status_groupbox = QtGui.QGroupBox('Status')
 
-        self.status_label = QtGui.QLabel('Status:')
         self.status_text = QtGui.QLineEdit('Not connected')
-        self.status_text.setStyleSheet('background-color:rgb(210, 210, 210);')
         self.status_text.setReadOnly(True)
 
         self.guigroup_layout = QtGui.QHBoxLayout()
-        self.guigroup_layout.addWidget(self.status_label)
         self.guigroup_layout.addWidget(self.status_text)
-        self.gui_groupbox.setLayout(self.guigroup_layout)  
+        self.status_groupbox.setLayout(self.guigroup_layout)  
 
         # Board groupbox
 
-        self.board_groupbox = QtGui.QGroupBox('Board')
+        self.board_groupbox = QtGui.QGroupBox('Setup')
 
-        self.port_label = QtGui.QLabel('Serial port:')
-        self.port_select = QtGui.QComboBox()
-        self.port_select.setEditable(True)
-        self.port_select.setFixedWidth(80)
+        self.board_label = QtGui.QLabel('Select:')
+        self.board_select = QtGui.QComboBox()
+        self.board_select.setEditable(True)
+        self.board_select.setFixedWidth(100)
         self.connect_button = QtGui.QPushButton('Connect')
         self.config_button = QtGui.QPushButton('Config')
 
         self.boardgroup_layout = QtGui.QHBoxLayout()
-        self.boardgroup_layout.addWidget(self.port_label)
-        self.boardgroup_layout.addWidget(self.port_select)
+        self.boardgroup_layout.addWidget(self.board_label)
+        self.boardgroup_layout.addWidget(self.board_select)
         self.boardgroup_layout.addWidget(self.connect_button)
         self.boardgroup_layout.addWidget(self.config_button)
         self.board_groupbox.setLayout(self.boardgroup_layout)
 
         self.connect_button.clicked.connect(
             lambda: self.disconnect() if self.connected else self.connect())
-        self.config_button.clicked.connect(lambda: self.config_dialog.exec_(self.board))
+        self.config_button.clicked.connect(self.open_config_dialog)
 
         # File groupbox
 
@@ -149,7 +142,7 @@ class Run_task_tab(QtGui.QWidget):
         self.horizontal_layout_2 = QtGui.QHBoxLayout()
         self.horizontal_layout_3 = QtGui.QHBoxLayout()
 
-        self.horizontal_layout_1.addWidget(self.gui_groupbox)
+        self.horizontal_layout_1.addWidget(self.status_groupbox)
         self.horizontal_layout_1.addWidget(self.board_groupbox)
         self.horizontal_layout_2.addWidget(self.file_groupbox)
         self.horizontal_layout_3.addWidget(self.task_groupbox)
@@ -191,9 +184,9 @@ class Run_task_tab(QtGui.QWidget):
 
     def refresh(self):
         # Called regularly when framework not running.
-        if self.GUI_main.available_ports_changed:
-            self.port_select.clear()
-            self.port_select.addItems(sorted(self.GUI_main.available_ports))
+        if self.GUI_main.setups_tab.available_setups_changed:
+            self.board_select.clear()
+            self.board_select.addItems(self.GUI_main.setups_tab.setup_names)
         if self.GUI_main.available_tasks_changed:
             self.task_select.clear()
             self.task_select.addItems(sorted(self.GUI_main.available_tasks))
@@ -205,19 +198,25 @@ class Run_task_tab(QtGui.QWidget):
             except FileNotFoundError:
                 pass
 
+    def open_config_dialog(self):
+        '''Open the config dialog and update GUI as required by chosen config.'''
+        self.GUI_main.config_dialog.exec_(self.board)
+        self.task_changed()
+        if self.GUI_main.config_dialog.disconnect:
+            self.disconnect()
+
     # Widget methods.
 
     def connect(self):
         # Connect to pyboard.
         try:
             self.status_text.setText('Connecting...')
-            self.port_select.setEnabled(False)
+            self.board_select.setEnabled(False)
             self.variables_button.setEnabled(False)
             self.connect_button.setEnabled(False)
-            self.repaint()            
-            self.board = Pycboard(self.port_select.currentText(),
-                                  print_func=self.print_to_log,
-                                  data_logger=self.data_logger)
+            self.repaint()
+            port = self.GUI_main.setups_tab.get_port(self.board_select.currentText())           
+            self.board = Pycboard(port, print_func=self.print_to_log, data_logger=self.data_logger)
             self.connected = True
             self.config_button.setEnabled(True)
             self.task_groupbox.setEnabled(True)
@@ -239,7 +238,7 @@ class Run_task_tab(QtGui.QWidget):
         self.file_groupbox.setEnabled(False)
         self.session_groupbox.setEnabled(False)
         self.config_button.setEnabled(False)
-        self.port_select.setEnabled(True)
+        self.board_select.setEnabled(True)
         self.connect_button.setText('Connect')
         self.status_text.setText('Not connected')
         self.task_changed()

@@ -11,6 +11,7 @@ from com.pycboard import Pycboard, PyboardError
 from com.data_logger import Data_logger
 from gui.plotting import Experiment_plot
 from gui.dialogs import Variables_dialog, Summary_variables_dialog
+from gui.utility import variable_constants
 
 class Run_experiment_tab(QtGui.QWidget):
     '''The run experiment tab is responsible for setting up, running and stopping
@@ -103,7 +104,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.boards = []
         for i, setup in enumerate(sorted(experiment['subjects'].keys())):
             print_func = self.subjectboxes[i].print_to_log
-            serial_port = self.GUI_main.setups_tab.portdict[setup]
+            serial_port = self.GUI_main.setups_tab.get_port(setup)
             # Connect to boards.
             print_func('Connecting to board.. ')
             try:
@@ -114,7 +115,7 @@ class Run_experiment_tab(QtGui.QWidget):
                 return
             self.boards[i].subject = experiment['subjects'][setup]
         # Hardware test.
-        if experiment['hardware_test'] != 'none':
+        if experiment['hardware_test'] != ' No hardware test':
             reply = QtGui.QMessageBox.question(self, 'Hardware test', 'Run hardware test?',
                 QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
             if reply == QtGui.QMessageBox.Yes:
@@ -142,30 +143,38 @@ class Run_experiment_tab(QtGui.QWidget):
                 self.stop_experiment()
                 return
             # Set variables.
-            board.print('\nSetting variables.\n')
-            board.variables_set_pre_run = []
-            try:
-                board.subject_variables = [v for v in experiment['variables'] 
-                                 if v['subject'] in ('all', board.subject)]
+            board.subject_variables = [v for v in experiment['variables'] 
+                                       if v['subject'] in ('all', board.subject)]
+            if board.subject_variables:
+                board.print('\nSetting variables.\n')
+                board.variables_set_pre_run = []
                 try:
-                    subject_pv_dict = persistent_variables[board.subject]
-                except KeyError:
-                    subject_pv_dict = {}
-                for v in board.subject_variables:
-                    if v['persistent'] and v['name'] in subject_pv_dict.keys(): # Use stored value.
-                        v_value =  subject_pv_dict[v['name']]
-                        self.subjectboxes[i].print_to_log('{} {} (persistent value)'.format(v['name'], v_value))
-                    else:
-                        if v['value'] == '':
-                            continue
-                        v_value = eval(v['value']) # Use value from variables table.
-                        self.subjectboxes[i].print_to_log('{} {}'.format(v['name'], v_value))
-                    board.set_variable(v['name'], v_value)
-                    board.variables_set_pre_run.append((v['name'], v_value))
-            except PyboardError:
-                board.print('Setting variables failed')
-                self.stop_experiment()
-                return
+                    
+                    try:
+                        subject_pv_dict = persistent_variables[board.subject]
+                    except KeyError:
+                        subject_pv_dict = {}
+                    for v in board.subject_variables:
+                        if v['persistent'] and v['name'] in subject_pv_dict.keys(): # Use stored value.
+                            v_value =  subject_pv_dict[v['name']]
+                            board.variables_set_pre_run.append(
+                                (v['name'], str(v_value), '(persistent value)'))
+                        else:
+                            if v['value'] == '':
+                                continue
+                            v_value = eval(v['value'], variable_constants) # Use value from variables table.
+                            board.variables_set_pre_run.append((v['name'], v['value'], ''))
+                        board.set_variable(v['name'], v_value)
+                    # Print set variables to log.    
+                    name_len  = max([len(v[0]) for v in board.variables_set_pre_run])
+                    value_len = max([len(v[1]) for v in board.variables_set_pre_run])
+                    for v_name, v_value, pv_str in board.variables_set_pre_run:
+                        self.subjectboxes[i].print_to_log(
+                            v_name.ljust(name_len+4) + v_value.ljust(value_len+4) + pv_str)
+                except PyboardError:
+                    board.print('Setting variables failed')
+                    self.stop_experiment()
+                    return
         for i, board in enumerate(self.boards):
             self.subjectboxes[i].assign_board(board)
         self.experiment_plot.set_state_machine(board.sm_info)
@@ -185,8 +194,9 @@ class Run_experiment_tab(QtGui.QWidget):
         for i, board in enumerate(self.boards):
             board.print('\nStarting experiment.\n')
             board.data_logger.open_data_file(ex['data_dir'], ex['name'], board.subject, self.start_time)
-            for v_name, v_value in board.variables_set_pre_run:
-                board.data_logger.data_file.write('V 0 {} {}\n'.format(v_name, v_value))
+            if board.subject_variables: # Write variables set pre run to data file.
+                for v_name, v_value, pv in board.variables_set_pre_run:
+                    board.data_logger.data_file.write('V 0 {} {}\n'.format(v_name, v_value))
             board.data_logger.data_file.write('\n')
             board.start_framework()
         self.GUI_main.refresh_timer.stop()
@@ -297,12 +307,12 @@ class Subjectbox(QtGui.QGroupBox):
 
         self.state_label = QtGui.QLabel('State:')
         self.state_text = QtGui.QLineEdit()
-        self.state_text.setFixedWidth(120)
+        self.state_text.setFixedWidth(140)
         self.state_text.setReadOnly(True)
         self.event_label = QtGui.QLabel('Event:')
         self.event_text = QtGui.QLineEdit()
         self.event_text.setReadOnly(True)
-        self.event_text.setFixedWidth(120)
+        self.event_text.setFixedWidth(140)
         self.print_label = QtGui.QLabel('Print:')
         self.print_text = QtGui.QLineEdit()
         self.print_text.setReadOnly(True)
@@ -355,17 +365,20 @@ class Subjectbox(QtGui.QGroupBox):
             new_state = next(self.board.sm_info['ID2name'][nd[2]] for nd in reversed(new_data)
                 if nd[0] == 'D' and nd[2] in self.board.sm_info['states'].values())
             self.state_text.setText(new_state)
+            self.state_text.home(False)
         except StopIteration:
             pass
         try:
             new_event = next(self.board.sm_info['ID2name'][nd[2]] for nd in reversed(new_data)
                 if nd[0] == 'D' and nd[2] in self.board.sm_info['events'].values())
             self.event_text.setText(new_event)
+            self.event_text.home(False)
         except StopIteration:
             pass
         try:
             new_print = next(nd[2] for nd in reversed(new_data) if nd[0] == 'P')
             self.print_text.setText(new_print)
+            self.print_text.home(False)
         except StopIteration:
             pass
             
