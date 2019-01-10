@@ -82,7 +82,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         # Initialise widgets
         self.experiment_select.addItems(['select experiment'])
         self.task_select.addItems(['select task'])
-        self.hardware_test_select.addItems([' No hardware test'])
+        self.hardware_test_select.addItems([' no hardware test'])
 
         # Connect signals.
         self.name_text.textChanged.connect(self.name_edited)
@@ -90,7 +90,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.data_dir_button.clicked.connect(self.select_data_dir)
         self.experiment_select.activated[str].connect(self.experiment_changed)
         self.task_select.activated[str].connect(self.variables_table.task_changed)
-        self.new_button.clicked.connect(self.new_experiment)
+        self.new_button.clicked.connect(lambda: self.new_experiment(dialog=True))
         self.delete_button.clicked.connect(self.delete_experiment)
         self.save_button.clicked.connect(self.save_experiment)
         self.run_button.clicked.connect(self.run_experiment)
@@ -118,7 +118,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         '''Called periodically when not running to update available task, ports, experiments.'''
         if self.GUI_main.available_tasks_changed:
             cbox_update_options(self.task_select, self.GUI_main.available_tasks)
-            cbox_update_options(self.hardware_test_select, [' No hardware test'] + self.GUI_main.available_tasks)
+            cbox_update_options(self.hardware_test_select, [' no hardware test'] + self.GUI_main.available_tasks)
             self.GUI_main.available_tasks_changed = False
         if self.GUI_main.available_experiments_changed:
             cbox_update_options(self.experiment_select, self.GUI_main.available_experiments)
@@ -138,7 +138,8 @@ class Configure_experiment_tab(QtGui.QWidget):
 
     def new_experiment(self, dialog=True):
         '''Clear experiment configuration.'''
-        if dialog and not self.save_dialog(): return
+        if dialog:
+            if not self.save_dialog(): return
         self.name_text.setText('')
         self.data_dir_text.setText(data_dir)
         self.custom_dir = False
@@ -146,6 +147,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.variables_table.reset()
         cbox_set_item(self.experiment_select, 'select experiment', insert=True)
         cbox_set_item(self.task_select, 'select task', insert=True)
+        cbox_set_item(self.hardware_test_select, ' no hardware test', insert=True)
 
     def delete_experiment(self):
         '''Delete an experiment file after dialog to confirm deletion.'''
@@ -195,7 +197,7 @@ class Configure_experiment_tab(QtGui.QWidget):
             invalid_experiment_dialog(self, 
                 "Task file '{}.py' not found.".format(experiment['task']))
             return
-        if (experiment['hardware_test'] != ' No hardware test' and
+        if (experiment['hardware_test'] != ' no hardware test' and
             experiment['hardware_test'] not in self.GUI_main.available_tasks):
             invalid_experiment_dialog(self, 
                 "Hardware test file '{}.py' not found.".format(experiment['hardware_test']))
@@ -231,7 +233,7 @@ class Configure_experiment_tab(QtGui.QWidget):
 
     def save_dialog(self):
         '''Dialog to save experiment if it has been edited.  Returns False if
-        cancel is selected, True otherwise.'''        
+        cancel is selected, True otherwise.'''     
         experiment = self.experiment_dict()
         exp_path = os.path.join(experiments_dir, self.name_text.text()+'.pcx')
         dialog_text = None
@@ -268,9 +270,7 @@ class SubjectsTable(QtGui.QTableWidget):
         self.available_setups = []
         self.subjects = []
         self.n_subjects = 0
-        add_button = QtGui.QPushButton('add')
-        add_button.clicked.connect(self.add_subject)  
-        self.setCellWidget(0,2, add_button)
+        self.add_subject()
 
     def reset(self):
         '''Clear all rows of table.'''
@@ -287,8 +287,8 @@ class SubjectsTable(QtGui.QTableWidget):
     def add_subject(self, setup=None, subject=None):
         '''Add row to table allowing extra subject to be specified.'''
         setup_cbox = QtGui.QComboBox()
-        setup_cbox.setEditable(True)
-        setup_cbox.addItems(self.available_setups)
+        setup_cbox.addItems(self.available_setups if self.available_setups
+                            else ['select setup'])
         setup_cbox.activated.connect(self.update_available_setups)
         remove_button = QtGui.QPushButton('remove')
         ind = QtCore.QPersistentModelIndex(self.model().index(self.n_subjects, 2))
@@ -404,9 +404,14 @@ class VariablesTable(QtGui.QTableWidget):
             summary.setChecked(var_dict['summary'])
         else:
             variable_cbox.addItems(['select variable']+self.available_variables)
+            if self.n_variables > 0: # Set variable to previous variable if available.
+                prev_var = str(self.cellWidget(self.n_variables-1, 0).currentText())
+                print(prev_var)
+                if prev_var in self.available_variables:
+                    cbox_set_item(variable_cbox, prev_var)
         self.n_variables += 1
+        self.update_available()
         null_resize(self)
-
 
     def remove_variable(self, variable_n):
         self.removeRow(variable_n)

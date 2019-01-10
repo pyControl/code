@@ -115,24 +115,27 @@ class Run_experiment_tab(QtGui.QWidget):
                 return
             self.boards[i].subject = experiment['subjects'][setup]
         # Hardware test.
-        if experiment['hardware_test'] != ' No hardware test':
+        if experiment['hardware_test'] != ' no hardware test':
             reply = QtGui.QMessageBox.question(self, 'Hardware test', 'Run hardware test?',
                 QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
             if reply == QtGui.QMessageBox.Yes:
-                for board in self.boards:
-                    try:
-                        board.setup_state_machine(experiment['hardware_test'])
-                        board.print('\nStarting hardware test.')
-                        board.start_framework(data_output=False)
-                    except PyboardError:
-                        self.stop_experiment()
-                        return
-                QtGui.QMessageBox.question(self, 'Hardware test', 
-                    'Press OK when finished with hardware test.', QtGui.QMessageBox.Ok)
-                for board in self.boards:
-                    board.stop_framework()
-                    time.sleep(0.01)
-                    board.process_data()
+                try:
+                    for i, board in enumerate(self.boards):
+                            board.setup_state_machine(experiment['hardware_test'])
+                            board.print('\nStarting hardware test.')
+                            board.start_framework(data_output=False)
+                            time.sleep(0.01)
+                            board.process_data()
+                    QtGui.QMessageBox.question(self, 'Hardware test', 
+                        'Press OK when finished with hardware test.', QtGui.QMessageBox.Ok)
+                    for i, board in enumerate(self.boards):
+                        board.stop_framework()
+                        time.sleep(0.01)
+                        board.process_data()
+                except PyboardError:
+                    self.subjectboxes[i].task_crashed()
+                    self.stop_experiment(error=True)
+                    return
         # Setup state machines.
         for i, board in enumerate(self.boards):
             try:
@@ -202,7 +205,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.GUI_main.refresh_timer.stop()
         self.update_timer.start(update_interval)
 
-    def stop_experiment(self):
+    def stop_experiment(self, error=False):
         self.status_text.setText('Stopped')
         self.startstopclose_button.setText('Close')
         self.state = 'post_run'
@@ -218,6 +221,10 @@ class Run_experiment_tab(QtGui.QWidget):
                 time.sleep(0.01)
                 board.process_data()
                 self.subjectboxes[i].task_stopped()
+        if error:
+            self.startstopclose_button.setEnabled(True)
+            return
+        for i, board in enumerate(self.boards):
             # Store persistent variables.
             subject_pvs = [v for v in board.subject_variables if v['persistent']]
             if subject_pvs:
@@ -243,7 +250,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.experiment_plot.close_experiment()
         # Close boards.
         for board in self.boards:
-            board.data_logger.close_files()
+            if board.data_logger: board.data_logger.close_files()
             board.close()
         # Clear subjectboxes.
         while len(self.subjectboxes) > 0:
