@@ -283,6 +283,7 @@ class SubjectsTable(QtGui.QTableWidget):
     def cell_changed(self, row, column):
         if column == 1:
             self.update_subjects()
+            self.parent().parent().variables_table.update_available()
 
     def add_subject(self, setup=None, subject=None):
         '''Add row to table allowing extra subject to be specified.'''
@@ -318,6 +319,7 @@ class SubjectsTable(QtGui.QTableWidget):
         self.n_subjects -= 1
         self.update_available_setups()
         self.update_subjects()
+        null_resize(self)
 
     def update_available_setups(self, i=None):
         '''Update which setups are available for selection in dropdown menus.'''
@@ -417,6 +419,7 @@ class VariablesTable(QtGui.QTableWidget):
         self.removeRow(variable_n)
         self.n_variables -= 1
         self.update_available()
+        null_resize(self)
 
     def remove_subject(self, subject):
         for i in reversed(range(self.n_variables)):
@@ -424,6 +427,7 @@ class VariablesTable(QtGui.QTableWidget):
                 self.removeRow(i)
                 self.n_variables -= 1
         self.update_available()
+        null_resize(self)
 
     def update_available(self, i=None):
         # Find out what variable-subject combinations already assigned.
@@ -431,6 +435,9 @@ class VariablesTable(QtGui.QTableWidget):
         for v in range(self.n_variables):
             v_name = self.cellWidget(v,0).currentText()
             s_name = self.cellWidget(v,1).currentText()
+            if s_name and s_name not in self.subjects_table.subjects + ['all']:
+                cbox_set_item(self.cellWidget(v,1),'', insert=True)
+                continue
             if v_name != 'select variable' and s_name:
                 self.assigned[v_name].append(s_name)
         # Update the variables available:
@@ -444,6 +451,7 @@ class VariablesTable(QtGui.QTableWidget):
         # Update the available options in the variable and subject comboboxes.
         for v in range(self.n_variables):  
             v_name = self.cellWidget(v,0).currentText()
+            s_name = self.cellWidget(v,1).currentText()
             cbox_update_options(self.cellWidget(v,0), self.available_variables)
             if v_name != 'select variable':
                 # If variable has no subjects assigned, set subjects to 'all'.
@@ -451,12 +459,13 @@ class VariablesTable(QtGui.QTableWidget):
                     self.cellWidget(v,1).addItems(['all'])
                     self.assigned[v_name] = ['all']
                     self.available_variables.remove(v_name)
-                cbox_update_options(self.cellWidget(v,1), self.available_subjects(v_name))
+                cbox_update_options(self.cellWidget(v,1), self.available_subjects(v_name, s_name))
 
-    def available_subjects(self, v_name):
+    def available_subjects(self, v_name, s_name=None):
         '''Return sorted list of the subjects that are available for selection 
-        for the specified variable.'''
-        if not self.assigned[v_name]:
+        for the specified variable v_name given that subject s_name is already
+        selected.'''
+        if (not self.assigned[v_name]) or self.assigned[v_name] == [s_name]:
             available_subjects = ['all']+ sorted(self.subjects_table.subjects)
         else:
             available_subjects = sorted(list(set(self.subjects_table.subjects)-
@@ -480,6 +489,7 @@ class VariablesTable(QtGui.QTableWidget):
             if not self.cellWidget(i,0).currentText() in self.variable_names:
                 self.removeRow(i)
                 self.n_variables -= 1
+        null_resize(self)
         self.update_available()
 
     def variables_list(self):
