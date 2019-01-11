@@ -310,7 +310,7 @@ class Run_task_tab(QtGui.QWidget):
         self.GUI_main.refresh_timer.stop()
         self.status_text.setText('Running: ' + self.task)
         self.GUI_main.tab_widget.setTabEnabled(1, False) # Disable experiments tab.
-
+        self.GUI_main.tab_widget.setTabEnabled(2, False) # Disable setups tab.
 
     def stop_task(self, error=False, stopped_by_task=False):
         self.running = False
@@ -328,7 +328,8 @@ class Run_task_tab(QtGui.QWidget):
         self.upload_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         self.status_text.setText('Uploaded : ' + self.task)
-        self.GUI_main.tab_widget.setTabEnabled(1, True) # Enable experiments tab.
+        self.GUI_main.tab_widget.setTabEnabled(1, True) # Enable setups tab.
+        self.GUI_main.tab_widget.setTabEnabled(2, True) # Enable setups tab.
 
     # Timer updates
 

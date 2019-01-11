@@ -72,7 +72,8 @@ class Run_experiment_tab(QtGui.QWidget):
         self.status_text.setText('Loading')
         self.status_text.setStyleSheet('color: black;')
         self.experiment = experiment
-        self.GUI_main.tab_widget.setTabEnabled(0, False)
+        self.GUI_main.tab_widget.setTabEnabled(0, False) # Disable run task tab.
+        self.GUI_main.tab_widget.setTabEnabled(2, False)  # Disable setups tab.
         self.GUI_main.experiments_tab.setCurrentWidget(self)
         self.startstopclose_button.setText('Start')
         self.experiment_plot.setup_experiment(experiment)
@@ -262,7 +263,8 @@ class Run_experiment_tab(QtGui.QWidget):
         self.startstopclose_button.setEnabled(True)
 
     def close_experiment(self):
-        self.GUI_main.tab_widget.setTabEnabled(0, True)
+        self.GUI_main.tab_widget.setTabEnabled(0, True) # Enable run task tab.
+        self.GUI_main.tab_widget.setTabEnabled(2, True) # Enable setups tab.
         self.GUI_main.experiments_tab.setCurrentWidget(self.GUI_main.configure_experiment_tab)
         self.experiment_plot.close_experiment()
         # Close boards.
