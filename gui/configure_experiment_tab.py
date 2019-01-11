@@ -405,10 +405,10 @@ class VariablesTable(QtGui.QTableWidget):
         else:
             variable_cbox.addItems(['select variable']+self.available_variables)
             if self.n_variables > 0: # Set variable to previous variable if available.
-                prev_var = str(self.cellWidget(self.n_variables-1, 0).currentText())
-                print(prev_var)
-                if prev_var in self.available_variables:
-                    cbox_set_item(variable_cbox, prev_var)
+                v_name = str(self.cellWidget(self.n_variables-1, 0).currentText())
+                if v_name in self.available_variables:
+                    cbox_set_item(variable_cbox, v_name)
+                    subject_cbox.addItems(self.available_subjects(v_name))
         self.n_variables += 1
         self.update_available()
         null_resize(self)
@@ -431,7 +431,7 @@ class VariablesTable(QtGui.QTableWidget):
         for v in range(self.n_variables):
             v_name = self.cellWidget(v,0).currentText()
             s_name = self.cellWidget(v,1).currentText()
-            if v_name != 'select variable':
+            if v_name != 'select variable' and s_name:
                 self.assigned[v_name].append(s_name)
         # Update the variables available:
         fully_asigned_variables = [v_n for v_n in self.assigned.keys()
@@ -441,24 +441,27 @@ class VariablesTable(QtGui.QTableWidget):
                 if set(self.assigned[v_n]) == set(self.subjects_table.subjects)]
         self.available_variables = sorted(list(
             set(self.variable_names) - set(fully_asigned_variables)), key=str.lower)
+        # Update the available options in the variable and subject comboboxes.
         for v in range(self.n_variables):  
-            v_name = str(self.cellWidget(v,0).currentText())
-            s_name = self.cellWidget(v,1).currentText()
-            # Update subjects combo box options.
+            v_name = self.cellWidget(v,0).currentText()
+            cbox_update_options(self.cellWidget(v,0), self.available_variables)
             if v_name != 'select variable':
-                if len(self.assigned[v_name]) <= 1:
-                    available_subjects = ['all']+ sorted(self.subjects_table.subjects)
-                else:
-                    available_subjects = sorted(list(set(self.subjects_table.subjects)-
-                                                     set(self.assigned[v_name])))
                 # If variable has no subjects assigned, set subjects to 'all'.
-                if self.assigned[v_name] == ['']:
+                if not self.assigned[v_name]:
                     self.cellWidget(v,1).addItems(['all'])
                     self.assigned[v_name] = ['all']
                     self.available_variables.remove(v_name)
-                cbox_update_options(self.cellWidget(v,1), available_subjects)
-            # Update variable combo box options.
-            cbox_update_options(self.cellWidget(v,0), self.available_variables) 
+                cbox_update_options(self.cellWidget(v,1), self.available_subjects(v_name))
+
+    def available_subjects(self, v_name):
+        '''Return sorted list of the subjects that are available for selection 
+        for the specified variable.'''
+        if not self.assigned[v_name]:
+            available_subjects = ['all']+ sorted(self.subjects_table.subjects)
+        else:
+            available_subjects = sorted(list(set(self.subjects_table.subjects)-
+                                             set(self.assigned[v_name])))
+        return available_subjects
 
     def task_changed(self, task):
         '''Remove variables that are not defined in the new task.'''
@@ -474,7 +477,7 @@ class VariablesTable(QtGui.QTableWidget):
                 self.variable_names.append(v_name)
         # Remove variables that are not in new task.
         for i in reversed(range(self.n_variables)):
-            if not self.cellWidget(i,0).currentText() in self.available_variables:
+            if not self.cellWidget(i,0).currentText() in self.variable_names:
                 self.removeRow(i)
                 self.n_variables -= 1
         self.update_available()
@@ -491,7 +494,6 @@ class VariablesTable(QtGui.QTableWidget):
     def set_from_list(self, variables_list):
         '''Fill the variables table with values from variables_list'''
         self.reset()
-        #self.update_available() # To update available subjects.
         for var_dict in variables_list:
             self.add_variable(var_dict)
         self.update_available()

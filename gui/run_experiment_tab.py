@@ -32,7 +32,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.time_text = QtGui.QLineEdit()
         self.time_text.setFixedWidth(60)
         self.name_text.setReadOnly(True)
-        self.plots_button =  QtGui.QPushButton('Plots')
+        self.plots_button =  QtGui.QPushButton('Show plots')
         self.plots_button.clicked.connect(self.experiment_plot.show)
         self.logs_button = QtGui.QPushButton('Hide logs')
         self.logs_button.clicked.connect(self.show_hide_logs)    
@@ -70,6 +70,7 @@ class Run_experiment_tab(QtGui.QWidget):
         '''Called when an experiment is loaded.'''
         # Setup tabs.
         self.status_text.setText('Loading')
+        self.status_text.setStyleSheet('color: black;')
         self.experiment = experiment
         self.GUI_main.tab_widget.setTabEnabled(0, False)
         self.GUI_main.experiments_tab.setCurrentWidget(self)
@@ -111,7 +112,7 @@ class Run_experiment_tab(QtGui.QWidget):
                 self.boards.append(Pycboard(serial_port, print_func=print_func))
             except SerialException:
                 print_func('Connection failed.')
-                self.stop_experiment()
+                self.abort_experiment()
                 return
             self.boards[i].subject = experiment['subjects'][setup]
         # Hardware test.
@@ -132,9 +133,10 @@ class Run_experiment_tab(QtGui.QWidget):
                         board.stop_framework()
                         time.sleep(0.01)
                         board.process_data()
-                except PyboardError:
+                except PyboardError as e:
+                    board.print('\n' + str(e))
                     self.subjectboxes[i].task_crashed()
-                    self.stop_experiment(error=True)
+                    self.abort_experiment()
                     return
         # Setup state machines.
         for i, board in enumerate(self.boards):
@@ -143,7 +145,7 @@ class Run_experiment_tab(QtGui.QWidget):
                     [self.experiment_plot.subject_plots[i], self.subjectboxes[i]])
                 board.setup_state_machine(experiment['task'])
             except PyboardError:
-                self.stop_experiment()
+                self.abort_experiment()
                 return
             # Set variables.
             board.subject_variables = [v for v in experiment['variables'] 
@@ -176,7 +178,7 @@ class Run_experiment_tab(QtGui.QWidget):
                             v_name.ljust(name_len+4) + v_value.ljust(value_len+4) + pv_str)
                 except PyboardError:
                     board.print('Setting variables failed')
-                    self.stop_experiment()
+                    self.abort_experiment()
                     return
         for i, board in enumerate(self.boards):
             self.subjectboxes[i].assign_board(board)
@@ -205,15 +207,12 @@ class Run_experiment_tab(QtGui.QWidget):
         self.GUI_main.refresh_timer.stop()
         self.update_timer.start(update_interval)
 
-    def stop_experiment(self, error=False):
+    def stop_experiment(self):
         self.status_text.setText('Stopped')
         self.startstopclose_button.setText('Close')
         self.state = 'post_run'
         self.update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
-        summary_variables = [v for v in self.experiment['variables'] if v['summary']]
-        persistent_variables = {}
-        if summary_variables: sv_dict = {}
         for i, board in enumerate(self.boards):
             # Stop running boards.
             if board.framework_running:
@@ -221,11 +220,12 @@ class Run_experiment_tab(QtGui.QWidget):
                 time.sleep(0.01)
                 board.process_data()
                 self.subjectboxes[i].task_stopped()
-        if error:
-            self.startstopclose_button.setEnabled(True)
-            return
+        # Summary and persistent variables.
+        summary_variables = [v for v in self.experiment['variables'] if v['summary']]
+        if summary_variables: sv_dict = {}
+        persistent_variables = {}
         for i, board in enumerate(self.boards):
-            # Store persistent variables.
+            #  Store persistent variables.
             subject_pvs = [v for v in board.subject_variables if v['persistent']]
             if subject_pvs:
                 board.print('\nStoring persistent variables.')
@@ -243,6 +243,23 @@ class Run_experiment_tab(QtGui.QWidget):
                 pv_file.write(json.dumps(persistent_variables, sort_keys=True, indent=4))
         if summary_variables:
             Summary_variables_dialog(self, sv_dict).show()
+
+    def abort_experiment(self):
+        '''Called if an error occurs while the experiment is being set up.'''
+        self.status_text.setText('Failed')
+        self.status_text.setStyleSheet('color: red;')
+        self.startstopclose_button.setText('Close')
+        self.state = 'post_run'
+        self.update_timer.stop()
+        self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
+        for i, board in enumerate(self.boards):
+            # Stop running boards.
+            if board.framework_running:
+                board.stop_framework()
+                time.sleep(0.01)
+                board.process_data()
+                self.subjectboxes[i].task_stopped()
+        self.startstopclose_button.setEnabled(True)
 
     def close_experiment(self):
         self.GUI_main.tab_widget.setTabEnabled(0, True)
@@ -388,4 +405,3 @@ class Subjectbox(QtGui.QGroupBox):
             self.print_text.home(False)
         except StopIteration:
             pass
-            
