@@ -109,6 +109,8 @@ class Setups_tab(QtGui.QWidget):
         if setup_names != self.setup_names:
             self.available_setups_changed = True
             self.setup_names = setup_names
+        else: 
+            self.available_setups_changed = False
 
     def update_saved_setups(self, setup):
         '''Update the save setup names when a setup name is edited.'''
@@ -171,7 +173,7 @@ class Setups_tab(QtGui.QWidget):
                 if serial_port not in self.GUI_main.available_ports:
                     self.setups[serial_port].unplugged()
             self.setups_table.sortItems(0)
-            self.update_available_setups()
+        self.update_available_setups()
 
 # setup class --------------------------------------------------------------------
 
