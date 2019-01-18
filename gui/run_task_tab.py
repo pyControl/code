@@ -32,6 +32,8 @@ class Run_task_tab(QtGui.QWidget):
         self.fresh_task = None # Whether task has been run or variables edited.
         self.running = False
         self.subject_changed = False
+        self.variables_dialog = None
+
 
         # GUI groupbox.
 
@@ -261,6 +263,9 @@ class Run_task_tab(QtGui.QWidget):
             self.variables_button.setEnabled(False)
             self.repaint()
             self.board.setup_state_machine(task, uploaded=self.uploaded)
+            if self.variables_dialog:
+                self.variables_button.clicked.disconnect()
+                self.variables_dialog.deleteLater()
             self.variables_dialog = Variables_dialog(self, self.board)
             self.variables_button.clicked.connect(self.variables_dialog.exec_)
             self.variables_button.setEnabled(True)

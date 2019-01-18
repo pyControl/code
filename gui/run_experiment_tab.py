@@ -136,7 +136,7 @@ class Run_experiment_tab(QtGui.QWidget):
                         board.process_data()
                 except PyboardError as e:
                     board.print('\n' + str(e))
-                    self.subjectboxes[i].task_crashed()
+                    self.subjectboxes[i].error()
                     self.abort_experiment()
                     return
         # Setup state machines.
@@ -155,7 +155,6 @@ class Run_experiment_tab(QtGui.QWidget):
                 board.print('\nSetting variables.\n')
                 board.variables_set_pre_run = []
                 try:
-                    
                     try:
                         subject_pv_dict = persistent_variables[board.subject]
                     except KeyError:
@@ -177,8 +176,9 @@ class Run_experiment_tab(QtGui.QWidget):
                     for v_name, v_value, pv_str in board.variables_set_pre_run:
                         self.subjectboxes[i].print_to_log(
                             v_name.ljust(name_len+4) + v_value.ljust(value_len+4) + pv_str)
-                except PyboardError:
-                    board.print('Setting variables failed')
+                except PyboardError as e:
+                    board.print('Setting variable failed. ' + str(e))
+                    self.subjectboxes[i].error()
                     self.abort_experiment()
                     return
         for i, board in enumerate(self.boards):
@@ -314,7 +314,7 @@ class Run_experiment_tab(QtGui.QWidget):
                     if not board.framework_running:
                         self.subjectboxes[i].task_stopped()
                 except PyboardError:
-                    self.subjectboxes[i].task_crashed()
+                    self.subjectboxes[i].error()
         self.experiment_plot.update()
         if not boards_running:
             self.stop_experiment()
@@ -374,9 +374,8 @@ class Subjectbox(QtGui.QGroupBox):
         self.variables_button.clicked.connect(self.variables_dialog.exec_)
         self.variables_button.setEnabled(True)
 
-    def task_crashed(self):
-        '''Called if task crashes during run.'''
-        self.print_to_log('\nError during framework run.')
+    def error(self):
+        '''Set state text to error in red.'''
         self.state_text.setText('Error')
         self.state_text.setStyleSheet('color: red;')
 

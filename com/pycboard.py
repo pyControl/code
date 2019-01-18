@@ -406,7 +406,8 @@ class Pycboard(Pyboard):
         '''Set the value of a state machine variable. If framework is not running
         returns True if variable set OK, False if set failed.  Returns None framework
         running, but variable event is later output by board.'''
-        assert v_name in self.sm_info['variables'], 'Invalid variable name'
+        if v_name not in self.sm_info['variables']:
+            raise PyboardError('Invalid variable name: {}'.format(v_name))
         v_str = repr(v_value)
         if self.framework_running: # Set variable with serial command.
             data = repr((v_name, v_str)).encode() + b's'
@@ -426,7 +427,8 @@ class Pycboard(Pyboard):
         '''Get the value of a state machine variable. If framework not running returns
         variable value if got OK, None if get fails.  Returns None if framework 
         running, but variable event is later output by board.'''
-        assert v_name in self.sm_info['variables'], 'Invalid variable name'
+        if v_name not in self.sm_info['variables']:
+            raise PyboardError('Invalid variable name: {}'.format(v_name))        
         if self.framework_running: # Get variable with serial command.
             data = v_name.encode() + b'g'
             data_len = len(data).to_bytes(2, 'little')
