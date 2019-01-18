@@ -474,7 +474,7 @@ class VariablesTable(QtGui.QTableWidget):
 
     def task_changed(self, task):
         '''Remove variables that are not defined in the new task.'''
-        pattern = "v\.(?P<vname>\w+)\s*\="
+        pattern = "[\n\r]v\.(?P<vname>\w+)\s*\="
         try:
             with open(os.path.join(tasks_dir, task+'.py'), "r") as file:
                 file_content = file.read()
