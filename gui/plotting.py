@@ -5,7 +5,7 @@ import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui
 
 from config.gui_settings import event_history_len, state_history_len, analog_history_dur
-from gui.detachableTabWidget import detachableTabWidget
+from gui.utility import detachableTabWidget
 
 # ----------------------------------------------------------------------------------------
 # Task_plot 
