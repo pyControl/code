@@ -5,6 +5,7 @@ import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui
 
 from config.gui_settings import event_history_len, state_history_len, analog_history_dur
+from gui.detachableTabWidget import detachableTabWidget
 
 # ----------------------------------------------------------------------------------------
 # Task_plot 
@@ -276,8 +277,8 @@ class Experiment_plot(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(QtGui.QWidget, self).__init__(parent)
         self.setWindowTitle('Experiment plot')
-        self.setGeometry(720, 30, 700, 800) # Left, top, width, height.
-        self.subject_tabs = QtGui.QTabWidget(self)        
+        self.setGeometry(720, 30, 700, 800) # Left, top, width, height.       
+        self.subject_tabs = detachableTabWidget(self)
         self.setCentralWidget(self.subject_tabs)
         self.subject_plots = []
 
@@ -306,4 +307,6 @@ class Experiment_plot(QtGui.QMainWindow):
 
     def update(self):
         '''Update the plots of the active tab.'''
-        self.subject_tabs.currentWidget().update()
+        for subject_plot in self.subject_plots:
+            if not subject_plot.visibleRegion().isEmpty():
+                subject_plot.update()
