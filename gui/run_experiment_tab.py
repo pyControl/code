@@ -171,11 +171,12 @@ class Run_experiment_tab(QtGui.QWidget):
                             board.variables_set_pre_run.append((v['name'], v['value'], ''))
                         board.set_variable(v['name'], v_value)
                     # Print set variables to log.    
-                    name_len  = max([len(v[0]) for v in board.variables_set_pre_run])
-                    value_len = max([len(v[1]) for v in board.variables_set_pre_run])
-                    for v_name, v_value, pv_str in board.variables_set_pre_run:
-                        self.subjectboxes[i].print_to_log(
-                            v_name.ljust(name_len+4) + v_value.ljust(value_len+4) + pv_str)
+                    if board.variables_set_pre_run:
+                        name_len  = max([len(v[0]) for v in board.variables_set_pre_run])
+                        value_len = max([len(v[1]) for v in board.variables_set_pre_run])
+                        for v_name, v_value, pv_str in board.variables_set_pre_run:
+                            self.subjectboxes[i].print_to_log(
+                                v_name.ljust(name_len+4) + v_value.ljust(value_len+4) + pv_str)
                 except PyboardError as e:
                     board.print('Setting variable failed. ' + str(e))
                     self.subjectboxes[i].error()
