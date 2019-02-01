@@ -183,11 +183,16 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.variables_table.set_from_list(experiment['variables'])
 
     def run_experiment(self):
-        '''Check that the experiment is valid, prompts user to save experiment if it is
-        new or has been edited, then run experiment.'''
+        '''Check that the experiment is valid. Prompt user to save experiment if
+        it is new or has been edited. Then run experiment.'''
         experiment = self.experiment_dict()
         if not experiment['name']:
             invalid_experiment_dialog(self, 'Experiment must have a name.')
+            return
+        # Validate data path.
+        if not (os.path.exists(experiment['data_dir']) or
+                os.path.exists(os.path.split(experiment['data_dir'])[0])):
+            invalid_experiment_dialog(self, "Data directory not available.")
             return
         # Validate task and hardware defintion.
         if experiment['task'] == 'select task':
@@ -281,6 +286,7 @@ class SubjectsTable(QtGui.QTableWidget):
         self.n_subjects = 0
 
     def cell_changed(self, row, column):
+        '''If cell in subject row is changed, update subjects list and variables table.'''
         if column == 1:
             self.update_subjects()
             self.parent().parent().variables_table.update_available()
@@ -351,7 +357,7 @@ class SubjectsTable(QtGui.QTableWidget):
 # -------------------------------------------------------------------------------
 
 class VariablesTable(QtGui.QTableWidget):
-    '''Class for specifying what variables are set to non-default values.'''
+    '''Class for specifying task variables that are set to non-default values.'''
 
     def __init__(self, parent=None):
         super(QtGui.QTableWidget, self).__init__(1,6, parent=parent)
