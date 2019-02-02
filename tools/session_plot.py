@@ -10,7 +10,7 @@ from matplotlib.animation import FuncAnimation
 # session_plot -----------------------------------------------------------------------
 
 def session_plot(file_path, fig_no=1, return_fig=False):
-    '''Plot the state and event times for a pyControl session.'''
+    '''Plot the states, events and analog data for a pyControl session.'''
 
     # Import data file.
 
@@ -97,8 +97,8 @@ def session_plot(file_path, fig_no=1, return_fig=False):
 # play_session -----------------------------------------------------------------------
 
 def play_session(file_path, start_time=0):
-    '''Scrolling plot of states and events starting at start_time seconds after 
-    the session start.'''
+    '''Scrolling plot of states, events and analog data starting at start_time
+    seconds after the session start.'''
 
     fig, ax1 = session_plot(file_path, return_fig=True)
 
