@@ -4,17 +4,17 @@ For more information please see the Docs: http://pycontrol.readthedocs.io/
 
 Repository contents:
 
-cli      : Command line interface.
-gui      : Graphical user interface.
-com      : Serial communication and data logging.
-config   : Configuration files.
-data     : Location where data generated tasks is stored.
-devices  : pyControl hardware classes (uploaded to pyboard).
-pyControl: The pyControl framework    (uploaded to pyboard).
-tasks    : pyControl task files.
-licence  : pyControl-GPL-3 licence.
-tools    : Module for importing task data into Python.
+gui         : Graphical user interface
+cli         : Command line interface
+com         : Serial communication and data logging
+config      : Configuration files edited by user
+data        : Behavioural data.
+experiments : Experiment definition files.
+devices     : pyControl hardware classes (uploaded to pyboard).
+pyControl   : pyControl framework        (uploaded to pyboard).
+tasks       : Task definition files
+tools       : Tools for importing and visualising pycontrol data
 
-Version: v1.3.3
+Version: v1.4
 ---------------
 
