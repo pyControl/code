@@ -1,8 +1,15 @@
 import os
 import sys
 import traceback
-from serial.tools import list_ports
-from pyqtgraph.Qt import QtGui, QtCore
+
+try:
+    import numpy
+    from serial.tools import list_ports
+    from pyqtgraph.Qt import QtGui, QtCore
+except Exception as e:
+    print('Unable to import dependencies:\n\n'+str(e))
+    input('\nPress enter to close.')
+    sys.exit()
 
 # Add parent directory to path to allow imports.
 top_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
