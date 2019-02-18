@@ -159,7 +159,7 @@ class Summary_variables_dialog(QtGui.QDialog):
         super(QtGui.QDialog, self).__init__(parent)
         self.setWindowTitle('Summary variables')
 
-        subjects = sorted(sv_dict.keys())
+        subjects = list(sv_dict.keys())
         v_names  = sorted(sv_dict[subjects[0]].keys())
 
         self.label = QtGui.QLabel('Summary variables copied to clipboard.')
