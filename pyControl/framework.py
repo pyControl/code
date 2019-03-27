@@ -223,7 +223,7 @@ def recieve_data():
                 data_output_queue.put((current_time, varbl_typ, (v_name, v_str)))
         elif data[-1:] == b'g': # Get variable.
             v_name = data[:-1].decode()
-            v_str = str(state_machine._get_variable(v_name))
+            v_str = state_machine._get_variable(v_name)
             data_output_queue.put((current_time, varbl_typ, (v_name, v_str)))
 
 def _update():
