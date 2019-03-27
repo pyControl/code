@@ -123,7 +123,8 @@ class Variable_setter(QtGui.QWidget):
             self.value_str.setText('getting..')
             QtCore.QTimer.singleShot(200, self.reload)
         else: # Value returned immediately.
-            self.value_str.setText(str(self.board.get_variable(self.v_name))) 
+            self.value_text_colour('black')
+            self.value_str.setText(repr(self.board.get_variable(self.v_name))) 
             QtCore.QTimer.singleShot(1000, self.value_text_colour)
 
     def set(self):
@@ -146,7 +147,7 @@ class Variable_setter(QtGui.QWidget):
         '''Reload value from sm_info.  sm_info is updated when variables are output
         during framework run due to get/set.'''
         self.value_text_colour('black')
-        self.value_str.setText(str(self.board.sm_info['variables'][self.v_name]))
+        self.value_str.setText(repr(self.board.sm_info['variables'][self.v_name]))
         QtCore.QTimer.singleShot(1000, self.value_text_colour)
 
 # Summary variables dialog -----------------------------------------------------------

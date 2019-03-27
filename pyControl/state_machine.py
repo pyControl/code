@@ -143,6 +143,6 @@ class State_machine():
 
     def _get_variable(self, v_name):
         try:
-            return getattr(self.smd.v, v_name)
+            return repr(getattr(self.smd.v, v_name))
         except Exception:
             return None
