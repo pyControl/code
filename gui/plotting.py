@@ -21,14 +21,6 @@ class Task_plotter(QtGui.QWidget):
         self.analog_plot = Analog_plot(self, data_dur=analog_history_dur)
         self.run_clock   = Run_clock(self.states_plot.axis)
 
-
-        self.zoom_fit_btn = QtGui.QPushButton('Entire Session')
-        self.zoom_medium_btn = QtGui.QPushButton('1 Minute')
-        self.zoom_close_btn = QtGui.QPushButton('10 Seconds')
-        self.zoom_fit_btn.clicked.connect(self.fit_zoom)
-        self.zoom_medium_btn.clicked.connect(self.medium_zoom)
-        self.zoom_close_btn.clicked.connect(self.close_zoom)
-
         # Setup plots
 
         self.events_plot.axis.setXLink(self.states_plot.axis)
@@ -37,16 +29,10 @@ class Task_plotter(QtGui.QWidget):
 
         # create layout
 
-        self.vertical_layout = QtGui.QGridLayout()
-        self.vertical_layout.addWidget(self.states_plot.axis,0,0,1,3)
-        self.vertical_layout.addWidget(self.events_plot.axis,1,0,1,3)
-        self.vertical_layout.addWidget(self.analog_plot.axis,2,0,1,3)
-        
-        # x-axis range buttons
-        self.vertical_layout.addWidget(self.zoom_fit_btn,3,0,1,1)
-        self.vertical_layout.addWidget(self.zoom_medium_btn,3,1,1,1)
-        self.vertical_layout.addWidget(self.zoom_close_btn,3,2,1,1)
-
+        self.vertical_layout = QtGui.QVBoxLayout()
+        self.vertical_layout.addWidget(self.states_plot.axis,1)
+        self.vertical_layout.addWidget(self.events_plot.axis,1)
+        self.vertical_layout.addWidget(self.analog_plot.axis,1)
         self.setLayout(self.vertical_layout)
 
     def set_state_machine(self, sm_info):
@@ -76,17 +62,6 @@ class Task_plotter(QtGui.QWidget):
         self.analog_plot.update(new_data, run_time)
         self.run_clock.update(run_time)
 
-    # functions for quickly changing x-axis ranges
-    def fit_zoom(self):
-        try:
-            run_time = time.time() - self.start_time
-            self.states_plot.axis.setRange(xRange=[-run_time, 0], padding=0)
-        except:
-            self.states_plot.axis.setRange(xRange=[-10*1.02, 0], padding=0)
-    def medium_zoom(self):
-        self.states_plot.axis.setRange(xRange=[-60*1.02, 0], padding=0)
-    def close_zoom(self):
-        self.states_plot.axis.setRange(xRange=[-10*1.02, 0], padding=0)    
 
 # States_plot --------------------------------------------------------
 
