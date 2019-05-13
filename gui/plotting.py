@@ -7,6 +7,18 @@ from pyqtgraph.Qt import QtGui
 from config.gui_settings import event_history_len, state_history_len, analog_history_dur
 from gui.utility import detachableTabWidget
 
+##jrowland
+import sys
+from pathlib import Path
+import os
+
+#add the umbrella blimp directory to path
+base_path = Path(os.path.dirname(__file__))
+sys.path.append(str(base_path.parent.parent))
+
+from blimp import Blimp
+##jrowland
+
 # ----------------------------------------------------------------------------------------
 # Task_plot 
 # ----------------------------------------------------------------------------------------
@@ -37,6 +49,10 @@ class Task_plot(QtGui.QWidget):
         self.vertical_layout.addWidget(self.events_plot.axis,1)
         self.vertical_layout.addWidget(self.analog_plot.axis,1)
         self.setLayout(self.vertical_layout)
+        
+        ##jrowland
+        self.Blimp = Blimp()
+        ##jrowland
 
     def set_state_machine(self, sm_info):
         # Initialise plots with state machine information.
@@ -67,6 +83,10 @@ class Task_plot(QtGui.QWidget):
         self.states_plot.process_data(new_data)
         self.events_plot.process_data(new_data)
         self.analog_plot.process_data(new_data)
+        
+        ##jrowland
+        self.Blimp.update(new_data, run_time)
+        ##jrowland
 
     def update(self):
         '''Update plots.'''

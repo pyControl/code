@@ -15,12 +15,12 @@ initial_state = 'LED_off'
 # Variables.
 
 v.LED_n  = 4 # Number of LED to use.
-        
+
+
 # Define behaviour. 
 
 def LED_on(event):
     if event == 'entry':
-        timed_goto_state('LED_off', 0.5 * second)
         pyb.LED(v.LED_n).on()
     elif event == 'exit':
         pyb.LED(v.LED_n).off()
