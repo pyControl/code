@@ -26,13 +26,13 @@ class Api_base():
         else:
             return
             #check if the class in _user_class_str can be found in the user_classes module
-    #    try:
-        self.user_class = getattr(api.user_classes, _user_class)()
-        self.api_used = True
-        self.print_to_log('Found api class {}'.format(_user_class))
-    #except:
-    #        self.print_to_log('Could not find class {} in the user_classes folder'.format(_user_class))
-    #        return
+        try:
+            self.user_class = getattr(api.user_classes, _user_class)()
+            self.api_used = True
+            self.print_to_log('Found api class {}'.format(_user_class))
+        except TypeError:
+            self.print_to_log('Could not find class {} in the user_classes folder'.format(_user_class))
+            return
 
         self.user_class.set_state_machine(sm_info)
 
