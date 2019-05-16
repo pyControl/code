@@ -12,6 +12,8 @@ from config.gui_settings import update_interval
 from gui.dialogs import Variables_dialog
 from gui.plotting import Task_plot
 
+from api.api_base import Api_base
+
 # Run_task_gui ------------------------------------------------------------------------
 
 ## Create widgets.
@@ -24,9 +26,9 @@ class Run_task_tab(QtGui.QWidget):
         # Variables.
         self.GUI_main = self.parent()
         self.board = None      # Pycboard class instance.
-        self.task = None       # Task currently uploaded on pyboard. 
+        self.task = None       # Task currently uploaded on pyboard.
         self.task_hash = None  # Used to check if file has changed.
-        self.data_dir = None 
+        self.data_dir = None
         self.connected = False # Whether gui is conencted to pyboard.
         self.uploaded = False # Whether selected task file is on board.
         self.fresh_task = None # Whether task has been run or variables edited.
@@ -44,7 +46,7 @@ class Run_task_tab(QtGui.QWidget):
 
         self.guigroup_layout = QtGui.QHBoxLayout()
         self.guigroup_layout.addWidget(self.status_text)
-        self.status_groupbox.setLayout(self.guigroup_layout)  
+        self.status_groupbox.setLayout(self.guigroup_layout)
 
         # Board groupbox
 
@@ -110,7 +112,7 @@ class Run_task_tab(QtGui.QWidget):
         self.task_groupbox.setLayout(self.taskgroup_layout)
 
         self.task_select.currentTextChanged.connect(self.task_changed)
-        self.upload_button.clicked.connect(self.setup_task)        
+        self.upload_button.clicked.connect(self.setup_task)
 
         # Session groupbox.
 
@@ -134,8 +136,10 @@ class Run_task_tab(QtGui.QWidget):
         self.log_textbox.setReadOnly(True)
 
         self.task_plot = Task_plot()
+        self.api_base = Api_base()
+
         self.data_logger = Data_logger(print_func=self.print_to_log,
-                                       data_consumers=[self.task_plot])
+                                       data_consumers=[self.task_plot, self.api_base])
 
         # Main layout
 
@@ -158,7 +162,7 @@ class Run_task_tab(QtGui.QWidget):
 
         # Create timers
 
-        self.update_timer = QtCore.QTimer() # Timer to regularly call update() during run.        
+        self.update_timer = QtCore.QTimer() # Timer to regularly call update() during run.
         self.update_timer.timeout.connect(self.update)
 
         # Initial setup.
@@ -217,7 +221,7 @@ class Run_task_tab(QtGui.QWidget):
             self.variables_button.setEnabled(False)
             self.connect_button.setEnabled(False)
             self.repaint()
-            port = self.GUI_main.setups_tab.get_port(self.board_select.currentText())           
+            port = self.GUI_main.setups_tab.get_port(self.board_select.currentText())
             self.board = Pycboard(port, print_func=self.print_to_log, data_logger=self.data_logger)
             self.connected = True
             self.config_button.setEnabled(True)
@@ -270,6 +274,7 @@ class Run_task_tab(QtGui.QWidget):
             self.variables_button.clicked.connect(self.variables_dialog.exec_)
             self.variables_button.setEnabled(True)
             self.task_plot.set_state_machine(self.board.sm_info)
+            self.api_base.set_state_machine(self.board.sm_info, print_func = self.print_to_log)
             self.file_groupbox.setEnabled(True)
             self.session_groupbox.setEnabled(True)
             self.start_button.setEnabled(True)
@@ -279,9 +284,11 @@ class Run_task_tab(QtGui.QWidget):
             self.fresh_task = True
             self.uploaded = True
             self.upload_button.setText('Reset')
+            self.api_base.variable_funcs(self.board)
+
         except PyboardError:
             self.status_text.setText('Error setting up state machine.')
-     
+
     def select_data_dir(self):
         self.data_dir_text.setText(
             QtGui.QFileDialog.getExistingDirectory(self, 'Select data folder', data_dir))
@@ -290,7 +297,7 @@ class Run_task_tab(QtGui.QWidget):
         recording = self.test_data_path()
         if recording:
             if not self.fresh_task:
-                reset_task = QtGui.QMessageBox.question(self, 'Reset task', 
+                reset_task = QtGui.QMessageBox.question(self, 'Reset task',
                     'Task has already been run, variables may not have default values.\n\nReset task?'
                     ,QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
                 if reset_task == QtGui.QMessageBox.Yes:
@@ -302,6 +309,7 @@ class Run_task_tab(QtGui.QWidget):
         self.running = True
         self.board.start_framework()
         self.task_plot.run_start(recording)
+        self.api_base.run_start(recording)
         self.task_select.setEnabled(False)
         self.upload_button.setEnabled(False)
         self.file_groupbox.setEnabled(False)
@@ -321,11 +329,12 @@ class Run_task_tab(QtGui.QWidget):
         self.running = False
         self.update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
-        if not (error or stopped_by_task): 
+        if not (error or stopped_by_task):
             self.board.stop_framework()
             QtCore.QTimer.singleShot(100, self.update) # Catch output after framework stops.
         self.data_logger.close_files()
         self.task_plot.run_stop()
+        self.api_base.run_stop()
         self.board_groupbox.setEnabled(True)
         self.file_groupbox.setEnabled(True)
         self.start_button.setEnabled(True)
@@ -348,6 +357,7 @@ class Run_task_tab(QtGui.QWidget):
             self.print_to_log('\nError during framework run.')
             self.stop_task(error=True)
         self.task_plot.update()
+        self.api_base.update()
 
     # Cleanup.
 

@@ -8,7 +8,7 @@ from config.gui_settings import event_history_len, state_history_len, analog_his
 from gui.utility import detachableTabWidget
 
 # ----------------------------------------------------------------------------------------
-# Task_plot 
+# Task_plot
 # ----------------------------------------------------------------------------------------
 
 class Task_plot(QtGui.QWidget):
@@ -120,7 +120,7 @@ class States_plot():
                 self.updated_states.append(ID)
                 j = 2*(-n_new+i)  # Index of state entry in self.data
                 self.data[j-1:,0] = timestamp
-                self.data[j:  ,1] = ID  
+                self.data[j:  ,1] = ID
             self.cs = ID
 
     def update(self, run_time):
@@ -196,7 +196,7 @@ class Analog_plot():
         self.axis.setMouseEnabled(x=True,y=False)
         self.axis.showGrid(x=True,alpha=0.75)
         self.axis.setLimits(xMax=0)
-        self.legend = None 
+        self.legend = None
 
     def set_state_machine(self, sm_info):
         self.inputs = sm_info['analog_inputs']
@@ -205,12 +205,12 @@ class Analog_plot():
             self.legend.close()
         self.legend = self.axis.addLegend(offset=(10, 10))
         self.axis.clear()
-        self.plots = {ai['ID']: self.axis.plot(name=name, 
+        self.plots = {ai['ID']: self.axis.plot(name=name,
                       pen=pg.mkPen(pg.intColor(ai['ID'],len(self.inputs)))) for name, ai in sorted(self.inputs.items())}
         self.axis.getAxis('bottom').setLabel('Time (seconds)')
         max_len = max([len(n) for n in list(sm_info['states'])+list(sm_info['events'])])
         self.axis.getAxis('right').setWidth(5*max_len)
-        
+
     def run_start(self):
         if not self.inputs: return # State machine may not have analog inputs.
         for plot in self.plots.values():
@@ -237,7 +237,7 @@ class Analog_plot():
         for ID in self.updated_inputs:
             self.plots[ID].setData(self.data[ID])
         for plot in self.plots.values():
-            plot.setPos(-run_time, 0)   
+            plot.setPos(-run_time, 0)
 
 # -----------------------------------------------------
 
@@ -277,7 +277,7 @@ class Experiment_plot(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(QtGui.QWidget, self).__init__(parent)
         self.setWindowTitle('Experiment plot')
-        self.setGeometry(720, 30, 700, 800) # Left, top, width, height.       
+        self.setGeometry(720, 30, 700, 800) # Left, top, width, height.
         self.subject_tabs = detachableTabWidget(self)
         self.setCentralWidget(self.subject_tabs)
         self.subject_plots = []
@@ -301,7 +301,7 @@ class Experiment_plot(QtGui.QMainWindow):
     def close_experiment(self):
         '''Remove and delete all subject plot tabs.'''
         while len(self.subject_plots) > 0:
-            subject_plot = self.subject_plots.pop() 
+            subject_plot = self.subject_plots.pop()
             subject_plot.setParent(None)
             subject_plot.deleteLater()
 
