@@ -5,7 +5,7 @@ import seaborn as sns
 sns.set()
 sns.set_style('white')
 
-class Rl_moov_ave(Api):
+class Rl_mov_ave(Api):
     def __init__(self):
         '''class to demonstrate matplotlib plotting using the api'''
         #list of moving averages on every trial
