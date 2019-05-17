@@ -1,7 +1,4 @@
-import numpy as np
-import sys
-sys.path.append('..')
-import api.user_classes
+from importlib import import_module
 
 class Api_base():
     '''
@@ -18,22 +15,24 @@ class Api_base():
         set its state machine
        '''
         self.print_to_log = print_func
-        if 'api_class' in sm_info['variables']:
-            _user_class = sm_info['variables']['api_class']
-            # using eval here to remove extra quote marks could maybe be an issue
-            # if the user puts something weird as the api_class varaible name?
-            _user_class = eval(_user_class)
-        else:
-            return
-            #check if the class in _user_class_str can be found in the user_classes module
+        if not 'api_class' in sm_info['variables']:
+            return # Task does not use API.
+        
+        API_name = eval(sm_info['variables']['api_class'])
+        # Try to import and instantiate the user API.
         try:
-            self.user_class = getattr(api.user_classes, _user_class)()
-            self.api_used = True
-            self.print_to_log('Found api class {}'.format(_user_class))
-        except TypeError:
-            self.print_to_log('Could not find class {} in the user_classes folder'.format(_user_class))
+            user_module_name = 'api.user_classes.{}'.format(API_name)
+            user_module = import_module(user_module_name)
+        except ModuleNotFoundError:
+            self.print_to_log('\nCould not find module: {}'.format(user_module_name))
             return
-
+        if not hasattr(user_module, API_name):
+            self.print_to_log('\nCould not find class "{}" in {}'
+                .format(API_name, user_module_name))
+        self.user_class = getattr(user_module, API_name)()
+        self.api_used = True
+        self.print_to_log('\nFound api class {}'.format(API_name))
+        
         self.user_class.set_state_machine(sm_info)
 
     def variable_funcs(self, board):
