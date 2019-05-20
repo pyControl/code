@@ -2,6 +2,7 @@ import os
 from pyqtgraph.Qt import QtGui, QtCore
 from datetime import datetime
 from serial import SerialException, SerialTimeoutException
+from importlib import import_module, reload
 
 from com.pycboard import Pycboard, PyboardError, _djb2_file
 from com.data_logger import Data_logger
@@ -11,8 +12,6 @@ from config.gui_settings import update_interval
 
 from gui.dialogs import Variables_dialog
 from gui.plotting import Task_plot
-
-from api.api_base import Api_base
 
 # Run_task_gui ------------------------------------------------------------------------
 
@@ -30,8 +29,9 @@ class Run_task_tab(QtGui.QWidget):
         self.task_hash = None  # Used to check if file has changed.
         self.data_dir = None
         self.connected = False # Whether gui is conencted to pyboard.
-        self.uploaded = False # Whether selected task file is on board.
+        self.uploaded = False  # Whether selected task file is on board.
         self.fresh_task = None # Whether task has been run or variables edited.
+        self.user_API = None   # Overwritten by user API class.
         self.running = False
         self.subject_changed = False
         self.variables_dialog = None
@@ -136,10 +136,9 @@ class Run_task_tab(QtGui.QWidget):
         self.log_textbox.setReadOnly(True)
 
         self.task_plot = Task_plot()
-        self.api_base = Api_base()
 
         self.data_logger = Data_logger(print_func=self.print_to_log,
-                                       data_consumers=[self.task_plot, self.api_base])
+                                       data_consumers=[self.task_plot])
 
         # Main layout
 
@@ -267,6 +266,7 @@ class Run_task_tab(QtGui.QWidget):
             self.variables_button.setEnabled(False)
             self.repaint()
             self.board.setup_state_machine(task, uploaded=self.uploaded)
+            self.initialise_API()
             if self.variables_dialog:
                 self.variables_button.clicked.disconnect()
                 self.variables_dialog.deleteLater()
@@ -274,7 +274,6 @@ class Run_task_tab(QtGui.QWidget):
             self.variables_button.clicked.connect(self.variables_dialog.exec_)
             self.variables_button.setEnabled(True)
             self.task_plot.set_state_machine(self.board.sm_info)
-            self.api_base.set_state_machine(self.board.sm_info, print_func = self.print_to_log)
             self.file_groupbox.setEnabled(True)
             self.session_groupbox.setEnabled(True)
             self.start_button.setEnabled(True)
@@ -284,10 +283,37 @@ class Run_task_tab(QtGui.QWidget):
             self.fresh_task = True
             self.uploaded = True
             self.upload_button.setText('Reset')
-            self.api_base.variable_funcs(self.board)
-
         except PyboardError:
             self.status_text.setText('Error setting up state machine.')
+
+    def initialise_API(self):
+        # If task file specifies a user API attempt to initialise it.
+        self.user_API = None # Remove previous API.
+        self.data_logger.data_consumers = [self.task_plot] # Remove previous API from data consumers.
+        if not 'api_class' in self.board.sm_info['variables']:
+            return # Task does not use API.
+        API_name = eval(self.board.sm_info['variables']['api_class'])
+        # Try to import and instantiate the user API.
+        try:
+            user_module_name = 'api.user_classes.{}'.format(API_name)
+            user_module = import_module(user_module_name)
+            reload(user_module)
+        except ModuleNotFoundError:
+            self.print_to_log('\nCould not find user API module: {}'.format(user_module_name))
+            return
+        if not hasattr(user_module, API_name):
+            self.print_to_log('\nCould not find user API class "{}" in {}'
+                .format(API_name, user_module_name))
+            return
+        try:
+            user_API_class = getattr(user_module, API_name)
+            self.user_API = user_API_class()
+            self.user_API.interface(self.board, self.print_to_log)
+            self.data_logger.data_consumers.append(self.user_API)
+            self.print_to_log('\nInitialised API: {}'.format(API_name))
+        except Exception as e:
+            self.print_to_log('Unable to intialise API: {}\n\n'.format(API_name) +
+                              'Traceback: \n\n {}'.format(e))
 
     def select_data_dir(self):
         self.data_dir_text.setText(
@@ -309,7 +335,7 @@ class Run_task_tab(QtGui.QWidget):
         self.running = True
         self.board.start_framework()
         self.task_plot.run_start(recording)
-        self.api_base.run_start(recording)
+        if self.user_API: self.user_API.run_start(recording)
         self.task_select.setEnabled(False)
         self.upload_button.setEnabled(False)
         self.file_groupbox.setEnabled(False)
@@ -334,7 +360,7 @@ class Run_task_tab(QtGui.QWidget):
             QtCore.QTimer.singleShot(100, self.update) # Catch output after framework stops.
         self.data_logger.close_files()
         self.task_plot.run_stop()
-        self.api_base.run_stop()
+        if self.user_API: self.user_API.run_stop()
         self.board_groupbox.setEnabled(True)
         self.file_groupbox.setEnabled(True)
         self.start_button.setEnabled(True)
@@ -357,7 +383,7 @@ class Run_task_tab(QtGui.QWidget):
             self.print_to_log('\nError during framework run.')
             self.stop_task(error=True)
         self.task_plot.update()
-        self.api_base.update()
+        if self.user_API: self.user_API.update()
 
     # Cleanup.
 

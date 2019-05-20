@@ -54,7 +54,7 @@ v.threshold_crossed = False      # Whether performance threshold has been crosse
 v.trials_till_reversal = 0       # Used after threshold crossing to trigger reversal.
 
 #api
-v.api_class = 'Rl_mov_ave'
+v.api_class = 'Reversal_learning'
 
 #-------------------------------------------------------------------------
 # Non-state machine code.

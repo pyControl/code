@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 plt.rcParams['toolbar'] = 'None'              # Disable Matplotlib figure toolbar.
 plt.rc("axes.spines", top=False, right=False) # Disable top and right axis spines.
 
-class Rl_mov_ave(Api):
-    '''class to demonstrate matplotlib plotting using the API'''
+class Reversal_learning(Api):
+    '''API for the reversal_learning task to demonstrate Matplotlib plotting.'''
 
     def __init__(self):
         self.mov_avs = [] # List to hold trial by trial choice moving average.
@@ -37,4 +37,3 @@ class Rl_mov_ave(Api):
             self.line.set_data(x, self.mov_avs)
             self.ax.set_xlim(right=max(x[-1]+0.5, 5.5))
             self.figure.canvas.draw()
-

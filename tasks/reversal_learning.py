@@ -47,6 +47,8 @@ v.mov_ave = exp_mov_ave(tau=v.tau, init_value = 0.5) # Moving average of choices
 v.threshold_crossed = False      # Whether performance threshold has been crossed.
 v.trials_till_reversal = 0       # Used after threshold crossing to trigger reversal.
 
+# v.api_class = 'Reversal_learning' # Uncomment to use plotting API example. 
+
 #-------------------------------------------------------------------------        
 # Non-state machine code.
 #-------------------------------------------------------------------------

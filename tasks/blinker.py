@@ -15,6 +15,8 @@ initial_state = 'LED_off'
 # Variables.
 
 v.LED_n  = 4 # Number of LED to use.
+
+# v.api_class = 'Blinker' # Uncomment to use Blinker API example.
         
 # Define behaviour. 
 
@@ -31,6 +33,3 @@ def LED_off(event):
 
 def run_end():  # Turn off hardware at end of run.
     pyb.LED(v.LED_n).off()
-
-
-
