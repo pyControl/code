@@ -70,7 +70,9 @@ class Rsync_aligner():
         # Assign chunks to matched and non-matched groups by fitting 2 component
         # Gaussian mixture model to log mse distribition of best + second best 
         # alignments.
-        log_mse = np.log(np.hstack([chunk_min_mse,chunk_2nd_mse]))
+        chunk_mse = np.hstack([chunk_min_mse,chunk_2nd_mse]) 
+        chunk_mse[chunk_mse == 0] = np.min(chunk_mse[chunk_mse != 0]) # Replace zeros with smallest non zero value.
+        log_mse = np.log(chunk_mse)
         log_mse = log_mse[np.isfinite(log_mse)].reshape(-1,1)
         gmm = GaussianMixture(n_components=2, covariance_type='spherical')
         gmm.fit(log_mse)
@@ -110,7 +112,8 @@ class Rsync_aligner():
             plt.ylabel('# chunks')
             plt.subplot2grid((3,3),(0,2),rowspan=1,colspan=1)
             timing_errors = np.diff(cor_times_A) - np.diff(pulse_times_B)
-            plt.hist(timing_errors[~np.isnan(timing_errors)],20)
+            plt.hist(timing_errors[~np.isnan(timing_errors)],100)
+            plt.yscale('log', nonposy='clip')
             plt.xlabel('Inter-pulse interval\ndiscrepancy (ms)')
             plt.ylabel('# pulses')
             plt.subplot2grid((3,1),(1,0),rowspan=2,colspan=1)
