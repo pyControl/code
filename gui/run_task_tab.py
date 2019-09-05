@@ -229,6 +229,7 @@ class Run_task_tab(QtGui.QWidget):
             self.status_text.setText('Connection failed')
             self.print_to_log('Connection failed.')
             self.connect_button.setEnabled(True)
+            self.board_select.setEnabled(True)
         if self.connected and not self.board.status['framework']:
             self.board.load_framework()
 
