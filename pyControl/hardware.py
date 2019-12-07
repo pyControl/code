@@ -435,21 +435,6 @@ class Digital_output(IO_object):
         elif self.i == self.off_ind:
             self.toggle()
 
-# Digital Outputs -------------------------------------------------------------
-
-class Digital_output_group():
-    # Grouping of Digital_output objects with methods for turning on or off together.
-    def __init__(self, digital_outputs):
-        self.digital_outputs = digital_outputs
-
-    def on(self):
-        for digital_output in self.digital_outputs:
-            digital_output.on()
-
-    def off(self):
-        for digital_output in self.digital_outputs:
-            digital_output.off()
-
 # Port ------------------------------------------------------------------------
 
 class Port():

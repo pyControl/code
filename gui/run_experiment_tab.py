@@ -2,6 +2,7 @@ import os
 import time
 import json
 from datetime import datetime
+from collections import OrderedDict
 
 from pyqtgraph.Qt import QtGui, QtCore
 from serial import SerialException
@@ -226,7 +227,7 @@ class Run_experiment_tab(QtGui.QWidget):
                 self.subjectboxes[i].task_stopped()
         # Summary and persistent variables.
         summary_variables = [v for v in self.experiment['variables'] if v['summary']]
-        if summary_variables: sv_dict = {}
+        sv_dict = OrderedDict()
         persistent_variables = {}
         for i, board in enumerate(self.boards):
             #  Store persistent variables.
