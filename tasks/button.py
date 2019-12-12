@@ -9,6 +9,8 @@ from devices import *
 
 pyboard_button = Digital_input('X17', falling_event='button_press', pull='up')  # USR button on pyboard.
 
+blue_LED = Digital_output('B4')
+
 # States and events.
   
 states= ['LED_on',
@@ -22,9 +24,9 @@ initial_state = 'LED_off'
 
 def LED_on(event):
     if event == 'entry':
-        pyb.LED(4).on()
+        blue_LED.on()
     elif event == 'exit':
-        pyb.LED(4).off()
+        blue_LED.off()
     elif event == 'button_press':
         goto_state('LED_off')
 
@@ -33,4 +35,4 @@ def LED_off(event):
         goto_state('LED_on')
 
 def run_end():  # Turn off hardware at end of run.
-    pyb.LED(4).off()
+    blue_LED.off()

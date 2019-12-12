@@ -2,6 +2,11 @@
 # Does not require any hardware except micropython board.
 
 from pyControl.utility import *
+from devices import *
+
+# Define hardware (normally done in seperate hardware definition file).
+
+blue_LED = Digital_output('B4')
 
 # States and events.
 
@@ -11,26 +16,22 @@ states = ['LED_on',
 events = []
 
 initial_state = 'LED_off'
-
-# Variables.
-
-v.LED_n  = 4 # Number of LED to use.
         
 # Define behaviour. 
 
 def LED_on(event):
     if event == 'entry':
         timed_goto_state('LED_off', 0.5 * second)
-        pyb.LED(v.LED_n).on()
+        blue_LED.on()
     elif event == 'exit':
-        pyb.LED(v.LED_n).off()
+        blue_LED.off()
 
 def LED_off(event):
     if event == 'entry':
         timed_goto_state('LED_on', 0.5 * second)
 
 def run_end():  # Turn off hardware at end of run.
-    pyb.LED(v.LED_n).off()
+    blue_LED.off()
 
 
 

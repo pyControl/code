@@ -12,6 +12,11 @@ from devices import *
 
 pyboard_button = Digital_input('X17', falling_event='button_press', pull='up')  # USR button on pyboard.
 
+blue_LED   = Digital_output('B4')
+red_LED    = Digital_output('A13')
+green_LED  = Digital_output('A14')
+yellow_LED = Digital_output('A15')
+
 # States and events.
   
 states= ['red_on',
@@ -28,7 +33,7 @@ initial_state = 'red_on'
 
 def run_start():
     # Turn on blue LED and set timer to turn it off in 1 second.
-    pyb.LED(4).on()
+    blue_LED.on()
     set_timer('blue_off', 1*second, output_event=True)
 
 # State behaviour functions.
@@ -36,27 +41,27 @@ def run_start():
 def red_on(event):
     # Red LED on, button press transitions to green_on state.
     if event == 'entry':
-        pyb.LED(1).on()
+        red_LED.on()
     elif event == 'exit':
-        pyb.LED(1).off()
+        red_LED.off()
     elif event == 'button_press':
         goto_state('green_on')
 
 def green_on(event):
     # Green LED on, button press transitions to yellow_on state.
     if event == 'entry':
-        pyb.LED(2).on()
+        green_LED.on()
     elif event == 'exit':
-        pyb.LED(2).off()
+        green_LED.off()
     elif event == 'button_press':
         goto_state('yellow_on')
 
 def yellow_on(event):
     # Yellow LED on, button press transitions to red_on state.
     if event == 'entry':
-        pyb.LED(3).on()
+        yellow_LED.on()
     elif event == 'exit':
-        pyb.LED(3).off()
+        yellow_LED.off()
     elif event == 'button_press':
         goto_state('red_on')
 
@@ -65,15 +70,15 @@ def yellow_on(event):
 def all_states(event):
     # Turn blue LED on and off when the corrsponding timer trigger, set timer for next blue on/off.
     if event == 'blue_on':
-        pyb.LED(4).on()
+        blue_LED.on()
         set_timer('blue_off', 1*second, output_event=True)
     elif event == 'blue_off':
-        pyb.LED(4).off()
+        blue_LED.off()
         set_timer('blue_on' , 1*second, output_event=True)
 
 # Run end behaviour.
 
 def run_end():
     # Turn off LEDs at end of run.
-    for i in range(4):
-        pyb.LED(i+1).off()
+    for LED in [blue_LED, red_LED, green_LED, yellow_LED]:
+        LED.off()
