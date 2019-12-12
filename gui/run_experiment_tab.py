@@ -222,7 +222,7 @@ class Run_experiment_tab(QtGui.QWidget):
             # Stop running boards.
             if board.framework_running:
                 board.stop_framework()
-                time.sleep(0.01)
+                time.sleep(0.05)
                 board.process_data()
                 self.subjectboxes[i].task_stopped()
         # Summary and persistent variables.
