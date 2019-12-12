@@ -16,7 +16,7 @@ top_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if not top_dir in sys.path: sys.path.insert(0, top_dir)
 
 from run_task_tab import Run_task_tab
-from config.paths import tasks_dir, experiments_dir
+from config.paths import tasks_dir, experiments_dir, data_dir
 from config.gui_settings import  VERSION
 from gui.dialogs import Board_config_dialog
 from gui.configure_experiment_tab import Configure_experiment_tab
@@ -78,7 +78,49 @@ class GUI_main(QtGui.QMainWindow):
         # Initial setup.
         self.refresh()    # Refresh tasks and ports lists.
 
+        # Add Menu Bar
+        main_menu = self.menuBar()
+        ## --------Go To menu--------
+        go_menu = main_menu.addMenu('Go To')
+        # View Data Directory
+        data_action = QtGui.QAction("&Data", self)
+        data_action.triggered.connect(self.go_to_data)
+        # View Task Directory
+        go_menu.addAction(data_action)
+        task_action = QtGui.QAction("&Tasks", self)
+        task_action.triggered.connect(self.go_to_tasks)
+        go_menu.addAction(task_action)
+        # ---------Help menu----------
+        help_menu= main_menu.addMenu('Help')
+        # Go to readthedocs
+        documentation_action= QtGui.QAction("&Documentation", self)
+        documentation_action.triggered.connect(self.view_docs)
+        help_menu.addAction(documentation_action)
+        # Go to Google forum
+        forum_action= QtGui.QAction("&Forum", self)
+        forum_action.triggered.connect(self.view_forum)
+        help_menu.addAction(forum_action)
+        # Go to GitHub Repository
+        github_action= QtGui.QAction("&GitHub Repository", self)
+        github_action.triggered.connect(self.view_github)
+        help_menu.addAction(github_action)
+
         self.show()
+
+    def go_to_data(self):
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(data_dir))
+
+    def go_to_tasks(self):
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(tasks_dir))
+
+    def view_docs(self):
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://pycontrol.readthedocs.io/en/latest/"))
+
+    def view_forum(self):
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://groups.google.com/forum/#!forum/pycontrol"))
+
+    def view_github(self):
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://github.com/pyControl/pyControl"))
 
     def refresh(self):
         '''Called regularly when framework not running.'''
