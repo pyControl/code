@@ -80,16 +80,16 @@ class GUI_main(QtGui.QMainWindow):
 
         # Add Menu Bar
         main_menu = self.menuBar()
-        ## --------Go To menu--------
-        go_menu = main_menu.addMenu('Go To')
+        ## --------Folders menu--------
+        folders_menu = main_menu.addMenu('Folders')
         # View Data Directory
         data_action = QtGui.QAction("&Data", self)
         data_action.triggered.connect(self.go_to_data)
         # View Task Directory
-        go_menu.addAction(data_action)
+        folders_menu.addAction(data_action)
         task_action = QtGui.QAction("&Tasks", self)
         task_action.triggered.connect(self.go_to_tasks)
-        go_menu.addAction(task_action)
+        folders_menu.addAction(task_action)
         # ---------Help menu----------
         help_menu= main_menu.addMenu('Help')
         # Go to readthedocs
