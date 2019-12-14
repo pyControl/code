@@ -1,4 +1,5 @@
 import os
+import time
 from pyqtgraph.Qt import QtGui, QtCore
 from datetime import datetime
 from serial import SerialException, SerialTimeoutException
@@ -324,7 +325,8 @@ class Run_task_tab(QtGui.QWidget):
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
         if not (error or stopped_by_task): 
             self.board.stop_framework()
-            QtCore.QTimer.singleShot(100, self.update) # Catch output after framework stops.
+            time.sleep(0.05)
+            self.board.process_data()
         self.data_logger.close_files()
         self.task_plot.run_stop()
         self.board_groupbox.setEnabled(True)

@@ -135,7 +135,7 @@ class Run_experiment_tab(QtGui.QWidget):
                         'Press OK when finished with hardware test.', QtGui.QMessageBox.Ok)
                     for i, board in enumerate(self.boards):
                         board.stop_framework()
-                        time.sleep(0.01)
+                        time.sleep(0.05)
                         board.process_data()
                 except PyboardError as e:
                     board.print('\n' + str(e))
@@ -261,7 +261,7 @@ class Run_experiment_tab(QtGui.QWidget):
             # Stop running boards.
             if board.framework_running:
                 board.stop_framework()
-                time.sleep(0.01)
+                time.sleep(0.05)
                 board.process_data()
                 self.subjectboxes[i].task_stopped()
         self.startstopclose_button.setEnabled(True)
