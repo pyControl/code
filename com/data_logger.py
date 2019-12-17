@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime
 
 class Data_logger():
@@ -29,10 +30,11 @@ class Data_logger():
         self.data_file = open(self.file_path, 'w', newline = '\n')
         self.data_file.write('I Experiment name  : {}\n'.format(self.experiment_name))
         self.data_file.write('I Task name : {}\n'.format(self.sm_info['name']))
+        self.data_file.write('I Task file hash : {}\n'.format(self.sm_info['task_hash']))
         self.data_file.write('I Subject ID : {}\n'.format(self.subject_ID))
         self.data_file.write('I Start date : ' + datetime_now.strftime('%Y/%m/%d %H:%M:%S') + '\n\n')
-        self.data_file.write('S {}\n\n'.format(self.sm_info['states'] ))
-        self.data_file.write('E {}\n\n'.format(self.sm_info['events'] ))
+        self.data_file.write('S {}\n\n'.format(json.dumps(self.sm_info['states'])))
+        self.data_file.write('E {}\n\n'.format(json.dumps(self.sm_info['events'])))
 
     def close_files(self):
         if self.data_file:

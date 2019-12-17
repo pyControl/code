@@ -146,7 +146,7 @@ class Pycboard(Pyboard):
         self.exec('import pyb')
         try:
             self.exec_raw_no_follow('pyb.bootloader()')
-        except PyboardError as e:
+        except PyboardError:
             pass # Error occurs on older versions of micropython but DFU is entered OK.
         self.print('\nEntered DFU mode, closing serial connection.\n')
         self.close()
@@ -181,7 +181,7 @@ class Pycboard(Pyboard):
         '''Get the djb2 hash of a file on the pyboard.'''
         try:
             file_hash = int(self.eval("_djb2_file('{}')".format(target_path)).decode())
-        except PyboardError as e: # File does not exist.
+        except PyboardError: # File does not exist.
             return -1  
         return file_hash
 
@@ -209,7 +209,7 @@ class Pycboard(Pyboard):
                             self.serial.write(chunk)
                             self.serial.read(1)
                     self.follow(5)
-        except PyboardError as e:
+        except PyboardError:
             self.print('\n\nError: Unable to transfer file.')
             raise PyboardError
 
@@ -307,6 +307,7 @@ class Pycboard(Pyboard):
         states = self.get_states()
         events = self.get_events()
         self.sm_info = {'name'  : sm_name,
+                        'task_hash': _djb2_file(sm_path),
                         'states': states, # {name:ID}
                         'events': events, # {name:ID}
                         'ID2name': {ID: name for name, ID in {**states, **events}.items()}, # {ID:name}
