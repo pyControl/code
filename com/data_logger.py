@@ -7,6 +7,7 @@ class Data_logger():
 
     def __init__(self, sm_info=None, print_func=None, data_consumers=[]):
         self.data_file = None
+        self.analog_files = {}
         self.print_func = print_func
         self.data_consumers = data_consumers
         if sm_info:

@@ -103,8 +103,7 @@ class Run_experiment_tab(QtGui.QWidget):
         if not os.path.exists(exp_tasks_dir):
             os.mkdir(exp_tasks_dir)
         # Load persistent variables if they exist.
-        self.pv_path = os.path.join(self.experiment['data_dir'], 
-            self.experiment['name'] + '_persistent_variables.json')
+        self.pv_path = os.path.join(self.experiment['data_dir'], 'persistent_variables.json')
         if os.path.exists(self.pv_path):
             with open(self.pv_path, 'r') as pv_file:
                 persistent_variables =  json.loads(pv_file.read())
@@ -241,7 +240,11 @@ class Run_experiment_tab(QtGui.QWidget):
         # Summary and persistent variables.
         summary_variables = [v for v in self.experiment['variables'] if v['summary']]
         sv_dict = OrderedDict()
-        persistent_variables = {}
+        if os.path.exists(self.pv_path):
+            with open(self.pv_path, 'r') as pv_file:
+                persistent_variables = json.loads(pv_file.read())
+        else:
+            persistent_variables = {}
         for i, board in enumerate(self.boards):
             #  Store persistent variables.
             subject_pvs = [v for v in board.subject_variables if v['persistent']]
