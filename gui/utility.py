@@ -67,6 +67,17 @@ def null_resize(widget):
     widget.resizeEvent(resize)
 
 # ----------------------------------------------------------------------------------
+
+def init_keyboard_shortcuts(widget, shortcut_dict):
+    '''Initialises keyboard shortcuts in the qtgui object ‘widget’.
+       Shortcuts are defined in shortcut_dict where the keys are strings
+       of the keysequence and values are the action (e.g. a function call) to
+       execute when the keysequence is pressed.'''
+    for key_str, action in shortcut_dict.items():
+        key_seq = QtGui.QKeySequence(key_str)
+        shortcut = QtGui.QShortcut(key_seq, widget, action)
+
+# ----------------------------------------------------------------------------------
 # Detachable Tab Widget
 # ----------------------------------------------------------------------------------
 
