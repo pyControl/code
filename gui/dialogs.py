@@ -83,7 +83,7 @@ class Variables_grid(QtGui.QWidget):
         variables = board.sm_info['variables']
         self.grid_layout = QtGui.QGridLayout()
         for i, (v_name, v_value_str) in enumerate(sorted(variables.items())):
-            if '___' not in (v_name):
+            if not v_name[-3:] == '___':
                 Variable_setter(v_name, v_value_str, self.grid_layout, i, self, board)
         self.setLayout(self.grid_layout)
 

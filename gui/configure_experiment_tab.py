@@ -489,7 +489,8 @@ class VariablesTable(QtGui.QTableWidget):
         self.variable_names = []
         for v_name in re.findall(pattern, file_content):
             if not v_name in [var_name for var_name in self.variable_names]:
-                self.variable_names.append(v_name)
+                if not v_name[-3:] == '___':
+                    self.variable_names.append(v_name)
         # Remove variables that are not in new task.
         for i in reversed(range(self.n_variables)):
             if not self.cellWidget(i,0).currentText() in self.variable_names:
