@@ -38,14 +38,14 @@ v.trials_post_threshold = [5,15] # Trials after threshold crossing before revers
 v.good_prob = 0.8                # Reward probabilities on the good side.
 v.bad_prob  = 0.2                # Reward probabilities on the bad side.
 
-# Variables.
-v.n_rewards = 0                  # Number of rewards obtained.
-v.n_trials = 0                   # Number of trials recieved.
-v.n_blocks = 0                   # Number of reversals.
-v.state = withprob(0.5)          # Which side is currently good: True: left, False: right
-v.mov_ave = exp_mov_ave(tau=v.tau, init_value = 0.5) # Moving average of choices.
-v.threshold_crossed = False      # Whether performance threshold has been crossed.
-v.trials_till_reversal = 0       # Used after threshold crossing to trigger reversal.
+# Private Variables. (Ending a variable name with three underscores will make it "private". It will not be accessible through the pyControl GUI)
+v.n_rewards___ = 0                  # Number of rewards obtained.
+v.n_trials___ = 0                   # Number of trials recieved.
+v.n_blocks___ = 0                   # Number of reversals.
+v.state___ = withprob(0.5)          # Which side is currently good: True: left, False: right
+v.mov_ave___ = exp_mov_ave(tau=v.tau, init_value = 0.5) # Moving average of choices.
+v.threshold_crossed___ = False      # Whether performance threshold has been crossed.
+v.trials_till_reversal___ = 0       # Used after threshold crossing to trigger reversal.
 
 #-------------------------------------------------------------------------        
 # Non-state machine code.
@@ -57,36 +57,36 @@ def trial_outcome(choice):
 
     # Determine trial outcome.
     if choice: # Subject chose left.
-        if v.state:
+        if v.state___:
             reward_prob = v.good_prob
         else:
             reward_prob = v.bad_prob
     else: # Subject chose right
-        if v.state:
+        if v.state___:
             reward_prob = v.bad_prob
         else:
             reward_prob = v.good_prob
     outcome = withprob(reward_prob) # Whether trial is rewarded or not.
 
     # Determine when reversal occurs.
-    v.mov_ave.update(choice) # Update moving average of choices.
-    if v.threshold_crossed: # Subject has already crossed threshold.
-        v.trials_till_reversal -= 1
-        if v.trials_till_reversal == 0: # Trigger reversal.
-            v.state = not v.state
-            v.threshold_crossed = False
-            v.n_blocks += 1
+    v.mov_ave___.update(choice) # Update moving average of choices.
+    if v.threshold_crossed___: # Subject has already crossed threshold.
+        v.trials_till_reversal___ -= 1
+        if v.trials_till_reversal___ == 0: # Trigger reversal.
+            v.state___ = not v.state___
+            v.threshold_crossed___ = False
+            v.n_blocks___ += 1
     else: # Check for threshold crossing.
-        if ((    v.state and (v.mov_ave.value > v.threshold)) or
-            (not v.state and (v.mov_ave.value < (1- v.threshold)))):
-            v.threshold_crossed = True
-            v.trials_till_reversal = randint(*v.trials_post_threshold)
+        if ((    v.state___ and (v.mov_ave___.value > v.threshold)) or
+            (not v.state___ and (v.mov_ave___.value < (1- v.threshold)))):
+            v.threshold_crossed___ = True
+            v.trials_till_reversal___ = randint(*v.trials_post_threshold)
 
     # Print trial information.
-    v.n_trials  +=1
-    v.n_rewards += outcome
+    v.n_trials___  +=1
+    v.n_rewards___ += outcome
     print('T#:{} R#:{} B#:{} C:{:d} O:{:d} S:{:d} A:{:.2f}'.format(
-           v.n_trials, v.n_rewards, v.n_blocks, choice, outcome, v.state, v.mov_ave.value))
+           v.n_trials___, v.n_rewards___, v.n_blocks___, choice, outcome, v.state___, v.mov_ave___.value))
 
     return outcome
 
