@@ -1,4 +1,39 @@
 -------------------------------------------------------------------------------
+Version 1.4.1 rc
+-------------------------------------------------------------------------------
+
+GUI:
+
+- Persistent variables implementation now allows running different subjects on
+  different sessions in same experiment data folder without overwriting the
+  persistent variables. 
+
+- Task files are now saved in experiment data folder with a file hash appended 
+  to the file name to indicate file version.  Whenever the task file is changed
+  the new version will be saved when the experiment is run.  The task file hash
+  used for each session is recorded in the session's data file so the exact task
+  file used to run each session can be identified.
+
+- Event and state dictionaries now written to task file using json.dump to make
+  them easier to parse cross platform.
+
+- A menu bar now provides quick access to online help and data/task folders.
+
+- Task variables can now be specified as private by ending the variable name
+  with three underscores, making them invisible to the GUI.
+
+- A meaninful error message is now shown on failure to import dependencies.
+
+- Ordering of subjects in summary variables table is now consistent with that
+  in configure experiment tab.
+
+- Various bugfixes and reliability improvements.
+
+CLI
+
+- Removed command line interface.
+
+-------------------------------------------------------------------------------
 Version 1.4 03/02/2018
 -------------------------------------------------------------------------------
 
