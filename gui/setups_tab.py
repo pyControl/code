@@ -5,7 +5,7 @@ from pyqtgraph.Qt import QtGui, QtCore
 
 from config.paths import config_dir
 from com.pycboard import Pycboard, PyboardError
-from gui.utility import TableCheckbox, init_keyboard_shortcuts
+from gui.utility import TableCheckbox
 
 class Setups_tab(QtGui.QWidget):
     '''The setups tab is used to name and configure setups, where one setup is one
@@ -88,19 +88,6 @@ class Setups_tab(QtGui.QWidget):
         self.VLayout.addWidget(self.select_groupbox)
         self.VLayout.addWidget(self.configure_groupbox)
         self.VLayout.addWidget(self.log_textbox)
-
-        # Keyboard Shortcuts
-
-        shortcut_dict = {
-                        's' : (lambda: self.select_all_setups()),
-                        'Shift+s' : (lambda: self.deselect_all_setups()),
-                        'l' : (lambda: self.load_framework()),
-                        'Shift+l' : (lambda: self.load_hardware_definition()),
-                        'f' : (lambda: self.enable_flashdrive()),
-                        'Shift+f' : (lambda: self.disable_flashdrive()),
-                        }
-
-        init_keyboard_shortcuts(self, shortcut_dict)
 
     def print_to_log(self, print_string, end='\n'):
         self.log_textbox.moveCursor(QtGui.QTextCursor.End)
@@ -223,14 +210,6 @@ class Setup():
         self.setups_tab.setups_table.setItem(0, 1, self.name_item)
         self.setups_tab.setups_table.setCellWidget(0, 2, self.select_checkbox)
         self.setups_tab.setups_table.setCellWidget(0, 3, self.config_button)
-
-        # Keyboard Shortcuts
-
-        shortcut_dict = {
-                        'c' : (lambda: self.open_config_dialog())
-                        }
-
-        init_keyboard_shortcuts(setups_tab, shortcut_dict)
 
     def name_edited(self):
         '''If name entry in table is blank setup name is set to serial port.'''

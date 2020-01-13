@@ -22,7 +22,6 @@ from gui.dialogs import Board_config_dialog
 from gui.configure_experiment_tab import Configure_experiment_tab
 from gui.run_experiment_tab import Run_experiment_tab
 from gui.setups_tab import Setups_tab
-from gui.utility import init_keyboard_shortcuts
 
 # --------------------------------------------------------------------------------
 # GUI_main
@@ -85,10 +84,12 @@ class GUI_main(QtGui.QMainWindow):
         folders_menu = main_menu.addMenu('Folders')
         # View Data Directory
         data_action = QtGui.QAction("&Data", self)
+        data_action.setShortcut("Ctrl+D")
         data_action.triggered.connect(self.go_to_data)
         # View Task Directory
         folders_menu.addAction(data_action)
         task_action = QtGui.QAction("&Tasks", self)
+        task_action.setShortcut("Ctrl+T")
         task_action.triggered.connect(self.go_to_tasks)
         folders_menu.addAction(task_action)
         # ---------Help menu----------
@@ -105,14 +106,6 @@ class GUI_main(QtGui.QMainWindow):
         github_action= QtGui.QAction("&GitHub Repository", self)
         github_action.triggered.connect(self.view_github)
         help_menu.addAction(github_action)
-
-        # Tab change keyboard shortcut
-        shortcut_dict = {
-                        'Ctrl+w' : self.close,
-                        'Ctrl+Tab' : (lambda: self.tab_widget.
-                                              setCurrentIndex((self.current_tab_ind+1)%3)),
-                         }
-        init_keyboard_shortcuts(self.tab_widget, shortcut_dict)
 
         self.show()
 

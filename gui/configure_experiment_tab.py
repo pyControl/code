@@ -95,12 +95,9 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.save_button.clicked.connect(self.save_experiment)
         self.run_button.clicked.connect(self.run_experiment)
 
-        # Keyboard shortcuts (select data dir shortcut carried over from run_task_tab)
+        # Keyboard shortcuts
         shortcut_dict = {
-                        'n' : (lambda: self.new_experiment(dialog=True)),
-                        'd' : (lambda: self.delete_experiment()),
-                        's' : (lambda: self.save_experiment()),
-                        'Space' : (lambda: self.run_experiment()),
+                        'Ctrl+s' : (lambda: self.save_experiment()),
                         }
         init_keyboard_shortcuts(self, shortcut_dict)
 
@@ -177,6 +174,8 @@ class Configure_experiment_tab(QtGui.QWidget):
         with open(exp_path,'w') as exp_file:
             exp_file.write(json.dumps(experiment, sort_keys=True, indent=4))
         cbox_set_item(self.experiment_select, experiment['name'], insert=True)
+        QtGui.QMessageBox.information(self, '', 'Experiment {} Saved'
+                                      .format(experiment['name']))
 
     def load_experiment(self, experiment_name):
         '''Load experiment  .pcx file and set fields of experiment tab.'''
@@ -286,13 +285,6 @@ class SubjectsTable(QtGui.QTableWidget):
         self.n_subjects = 0
         self.add_subject()
 
-        # Keyboard shortcuts (added for completion , maybe not so useful)
-        shortcut_dict = {
-                        'a' : (lambda: self.add_subject()),
-                        'r' : (lambda: self.remove_subject(self.n_subjects)),
-                        }
-        init_keyboard_shortcuts(self, shortcut_dict)
-
     def reset(self):
         '''Clear all rows of table.'''
         for i in reversed(range(self.n_subjects)):
@@ -390,13 +382,6 @@ class VariablesTable(QtGui.QTableWidget):
         self.variable_names = []
         self.available_variables = []
         self.assigned = {v_name:[] for v_name in self.variable_names} # Which subjects have values assigned for each variable.
-
-        # Keyboard shortcuts (added for completion , maybe not so useful)
-        shortcut_dict = {
-                        'v' : (lambda: self.add_variable()),
-                        'Shift+v' : (lambda: self.remove_variable(self.n_variables)),
-                        }
-        init_keyboard_shortcuts(self, shortcut_dict)
 
     def reset(self):
         '''Clear all rows of table.'''
