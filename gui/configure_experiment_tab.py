@@ -21,6 +21,8 @@ class Configure_experiment_tab(QtGui.QWidget):
         # Variables
         self.GUI_main = self.parent()
         self.custom_dir = False # True if data_dir field has been manually edited.
+        self.saved_exp_path = None # Path of last saved/loaded experiment file.
+        self.saved_exp_dict = {}   # Dict of last saved/loaded experiment.
 
         # Experiment Groupbox
         self.experiment_groupbox = QtGui.QGroupBox('Experiment')
@@ -38,6 +40,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.new_button = QtGui.QPushButton('New')
         self.delete_button = QtGui.QPushButton('Delete')
         self.save_button = QtGui.QPushButton('Save')
+        self.save_button.setEnabled(False)
         self.name_label = QtGui.QLabel('Experiment name:')
         self.name_text = QtGui.QLineEdit()
         self.task_label = QtGui.QLabel('Task:')
@@ -101,6 +104,9 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.vertical_layout.addWidget(self.subjects_groupbox)
         self.vertical_layout.addWidget(self.variables_groupbox)
 
+        # Initialise variables.
+        self.saved_exp_dict = self.experiment_dict()
+
     def name_edited(self):
         if not self.custom_dir:
             self.data_dir_text.setText(os.path.join(data_dir, self.name_text.text()))
@@ -126,6 +132,8 @@ class Configure_experiment_tab(QtGui.QWidget):
         if self.GUI_main.setups_tab.available_setups_changed:
             self.subjects_table.all_setups = set(self.GUI_main.setups_tab.setup_names)
             self.subjects_table.update_available_setups()
+        if self.saved_exp_dict != self.experiment_dict():
+            self.save_button.setEnabled(True)
 
     def experiment_dict(self):
         '''Return the current state of the experiments tab as a dictionary.'''
@@ -164,10 +172,20 @@ class Configure_experiment_tab(QtGui.QWidget):
         '''Store the current state of the experiment tab as a JSON object
         saved in the experiments folder as .pcx file.'''
         experiment = self.experiment_dict()
-        exp_path = os.path.join(experiments_dir, self.name_text.text()+'.pcx')
+        file_name = self.name_text.text()+'.pcx'
+        exp_path = os.path.join(experiments_dir, file_name)
+        if os.path.exists(exp_path) and (exp_path != self.saved_exp_path):
+            reply = QtGui.QMessageBox.question(self, 'Replace file', 
+                "File '{}' already exists, do you want to replace it?".format(file_name),
+                QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+            if reply == QtGui.QMessageBox.No:
+                return
         with open(exp_path,'w') as exp_file:
             exp_file.write(json.dumps(experiment, sort_keys=True, indent=4))
         cbox_set_item(self.experiment_select, experiment['name'], insert=True)
+        self.saved_exp_dict = experiment
+        self.saved_exp_path = exp_path
+        self.save_button.setEnabled(False)
 
     def load_experiment(self, experiment_name):
         '''Load experiment  .pcx file and set fields of experiment tab.'''
@@ -181,6 +199,9 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.data_dir_text.setText(experiment['data_dir'])
         self.subjects_table.set_from_dict(experiment['subjects'])
         self.variables_table.set_from_list(experiment['variables'])
+        self.saved_exp_dict = experiment
+        self.saved_exp_path = exp_path
+        self.save_button.setEnabled(False)
 
     def run_experiment(self):
         '''Check that the experiment is valid. Prompt user to save experiment if
