@@ -174,6 +174,7 @@ class GUI_main(QtGui.QMainWindow):
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
+    app.setAttribute(QtCore.Qt.AA_DisableWindowContextHelpButton)
     gui_main = GUI_main()
     gui_main.app = app # To allow app functions to be called from GUI.
     sys.excepthook = gui_main.excepthook

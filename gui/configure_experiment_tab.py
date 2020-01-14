@@ -174,8 +174,6 @@ class Configure_experiment_tab(QtGui.QWidget):
         with open(exp_path,'w') as exp_file:
             exp_file.write(json.dumps(experiment, sort_keys=True, indent=4))
         cbox_set_item(self.experiment_select, experiment['name'], insert=True)
-        QtGui.QMessageBox.information(self, '', 'Experiment {} Saved'
-                                      .format(experiment['name']))
 
     def load_experiment(self, experiment_name):
         '''Load experiment  .pcx file and set fields of experiment tab.'''

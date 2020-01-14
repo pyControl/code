@@ -212,22 +212,25 @@ class Keyboard_shortcuts_dialog(QtGui.QDialog):
 
         self.textbox = QtGui.QTextEdit()
         self.textbox.setReadOnly(True)
+        self.textbox.setFont(QtGui.QFont('Courier New', 9))
+        self.textbox.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff);
 
-        self.textbox.insertHtml('<p><b>Global shortcuts:</b></p>\n')
+        self.textbox.insertHtml('<p><b>Global:</b></p>\n')
 
         self.textbox.insertPlainText('\n'
-            'Ctrl + t : ppen tasks folder\n'
+            'Ctrl + t : Open tasks folder\n'
             'Ctrl + d : Open data folder\n')
-
         self.textbox.insertHtml('<p><b>Run task tab:</b></p>\n')
-
         self.textbox.insertPlainText('\n'
-            'U        : Upload/reset task\n'
+            '    t    : Select task\n'
+            '    u    : Upload/reset task\n'
             'spacebar : Start/stop task\n')
-
         self.textbox.insertHtml('<p><b>Experiments tab:</b></p>\n')
-
         self.textbox.insertPlainText('\n'
-            'Ctrl + s : save experiment\n')        
+            'Ctrl + s : save experiment\n')
 
         self.Vlayout.addWidget(self.textbox)
+        self.resize(240, 270)
+        self.textbox.moveCursor(QtGui.QTextCursor.Start)
+        self.textbox.ensureCursorVisible()
+
