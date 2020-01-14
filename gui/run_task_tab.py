@@ -167,7 +167,6 @@ class Run_task_tab(QtGui.QWidget):
 
         shortcut_dict = {
                         'u' : (lambda: self.setup_task()),
-                        'r' : (lambda: self.setup_task()),
                         'Space' : (lambda: self.start_task() if not self.running
                                        else self.stop_task()),
                         }

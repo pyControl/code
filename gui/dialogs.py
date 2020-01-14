@@ -197,3 +197,37 @@ class Summary_variables_dialog(QtGui.QDialog):
 def invalid_experiment_dialog(parent, message):
     QtGui.QMessageBox.question(parent, 'Invalid experiment', 
         message + '\n\nUnable to run experiment.', QtGui.QMessageBox.Ok)
+
+# Keyboard shortcuts dialog. ---------------------------------------------------------
+
+class Keyboard_shortcuts_dialog(QtGui.QDialog):
+    '''Dialog for displaying summary variables from an experiment as a table.
+    The table is copied to the clipboard as a string that can be pasted into a
+    spreadsheet.'''
+    def __init__(self, parent):
+        super(QtGui.QDialog, self).__init__(parent)
+        self.setWindowTitle('Keyboard shortcuts')
+
+        self.Vlayout = QtGui.QVBoxLayout(self)
+
+        self.textbox = QtGui.QTextEdit()
+        self.textbox.setReadOnly(True)
+
+        self.textbox.insertHtml('<p><b>Global shortcuts:</b></p>\n')
+
+        self.textbox.insertPlainText('\n'
+            'Ctrl + t : ppen tasks folder\n'
+            'Ctrl + d : Open data folder\n')
+
+        self.textbox.insertHtml('<p><b>Run task tab:</b></p>\n')
+
+        self.textbox.insertPlainText('\n'
+            'U        : Upload/reset task\n'
+            'spacebar : Start/stop task\n')
+
+        self.textbox.insertHtml('<p><b>Experiments tab:</b></p>\n')
+
+        self.textbox.insertPlainText('\n'
+            'Ctrl + s : save experiment\n')        
+
+        self.Vlayout.addWidget(self.textbox)
