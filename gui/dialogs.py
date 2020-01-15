@@ -201,36 +201,29 @@ def invalid_experiment_dialog(parent, message):
 # Keyboard shortcuts dialog. ---------------------------------------------------------
 
 class Keyboard_shortcuts_dialog(QtGui.QDialog):
-    '''Dialog for displaying summary variables from an experiment as a table.
-    The table is copied to the clipboard as a string that can be pasted into a
-    spreadsheet.'''
+    '''Dialog for displaying information about keyboard shortcuts.'''
     def __init__(self, parent):
         super(QtGui.QDialog, self).__init__(parent)
         self.setWindowTitle('Keyboard shortcuts')
 
         self.Vlayout = QtGui.QVBoxLayout(self)
 
-        self.textbox = QtGui.QTextEdit()
-        self.textbox.setReadOnly(True)
-        self.textbox.setFont(QtGui.QFont('Courier New', 9))
-        self.textbox.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff);
+        label_strings = [
+            '<b><u>Global:</u></b>',
+            '<b>Ctrl + t</b> : Open tasks folder',
+            '<b>Ctrl + d</b> : Open data folder',
+        
+            '<br></br><b><u>Run task tab:</u></b>',
+            '<b>    t    </b> : Select task',
+            '<b>    u    </b> : Upload/reset task',
+            '<b>spacebar </b> : Start/stop task',
 
-        self.textbox.insertHtml('<p><b>Global:</b></p>\n')
+            '<br></br><b><u>Experiments tab:</u></b>',
+            '<b>Ctrl + s</b> : Save experiment ']
 
-        self.textbox.insertPlainText('\n'
-            'Ctrl + t : Open tasks folder\n'
-            'Ctrl + d : Open data folder\n')
-        self.textbox.insertHtml('<p><b>Run task tab:</b></p>\n')
-        self.textbox.insertPlainText('\n'
-            '    t    : Select task\n'
-            '    u    : Upload/reset task\n'
-            'spacebar : Start/stop task\n')
-        self.textbox.insertHtml('<p><b>Experiments tab:</b></p>\n')
-        self.textbox.insertPlainText('\n'
-            'Ctrl + s : save experiment\n')
+        for ls in label_strings:
+            label = QtGui.QLabel(ls)
+            label.setFont(QtGui.QFont('Helvetica', 10))
+            self.Vlayout.addWidget(label)
 
-        self.Vlayout.addWidget(self.textbox)
-        self.resize(240, 270)
-        self.textbox.moveCursor(QtGui.QTextCursor.Start)
-        self.textbox.ensureCursorVisible()
-
+        self.setFixedSize(self.sizeHint())
