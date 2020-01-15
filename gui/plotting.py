@@ -2,7 +2,8 @@ import time
 import numpy as np
 from datetime import timedelta
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtGui
+from pyqtgraph.Qt import QtGui, QtWidgets
+from PyQt5.QtCore import Qt
 
 from config.gui_settings import event_history_len, state_history_len, analog_history_dur
 from gui.utility import detachableTabWidget
@@ -25,17 +26,20 @@ class Task_plot(QtGui.QWidget):
         self.run_clock   = Run_clock(self.states_plot.axis)
 
         # Setup plots
-
+        self.pause_button = QtGui.QPushButton('Pause plots')
+        self.pause_button.setEnabled(False)
+        self.pause_button.setCheckable(True)
         self.events_plot.axis.setXLink(self.states_plot.axis)
         self.analog_plot.axis.setXLink(self.states_plot.axis)
         self.analog_plot.axis.setVisible(False)
 
         # create layout
 
-        self.vertical_layout = QtGui.QVBoxLayout()
-        self.vertical_layout.addWidget(self.states_plot.axis,1)
-        self.vertical_layout.addWidget(self.events_plot.axis,1)
-        self.vertical_layout.addWidget(self.analog_plot.axis,1)
+        self.vertical_layout = QtGui.QGridLayout()
+        self.vertical_layout.addWidget(self.states_plot.axis,0,0,1,3)
+        self.vertical_layout.addWidget(self.events_plot.axis,1,0,1,3)
+        self.vertical_layout.addWidget(self.analog_plot.axis,2,0,1,3)
+        self.vertical_layout.addWidget(self.pause_button,3,0,1,3,Qt.AlignCenter)
         self.setLayout(self.vertical_layout)
 
     def set_state_machine(self, sm_info):
@@ -52,6 +56,8 @@ class Task_plot(QtGui.QWidget):
             self.events_plot.axis.getAxis('bottom').setLabel('Time (seconds)')
 
     def run_start(self, recording):
+        self.pause_button.setChecked(False)
+        self.pause_button.setEnabled(True)
         self.start_time = time.time()
         self.states_plot.run_start()
         self.events_plot.run_start()
@@ -60,6 +66,7 @@ class Task_plot(QtGui.QWidget):
             self.run_clock.recording()
 
     def run_stop(self):
+        self.pause_button.setEnabled(False)
         self.run_clock.run_stop()
 
     def process_data(self, new_data):
@@ -70,11 +77,13 @@ class Task_plot(QtGui.QWidget):
 
     def update(self):
         '''Update plots.'''
-        run_time = time.time() - self.start_time
-        self.states_plot.update(run_time)
-        self.events_plot.update(run_time)
-        self.analog_plot.update(run_time)
-        self.run_clock.update(run_time)
+        if not self.pause_button.isChecked():
+            run_time = time.time() - self.start_time
+            self.states_plot.update(run_time)
+            self.events_plot.update(run_time)
+            self.analog_plot.update(run_time)
+            self.run_clock.update(run_time)
+
 
 # States_plot --------------------------------------------------------
 
