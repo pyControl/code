@@ -198,3 +198,37 @@ class Summary_variables_dialog(QtGui.QDialog):
 def invalid_experiment_dialog(parent, message):
     QtGui.QMessageBox.question(parent, 'Invalid experiment', 
         message + '\n\nUnable to run experiment.', QtGui.QMessageBox.Ok)
+
+# Keyboard shortcuts dialog. ---------------------------------------------------------
+
+class Keyboard_shortcuts_dialog(QtGui.QDialog):
+    '''Dialog for displaying information about keyboard shortcuts.'''
+    def __init__(self, parent):
+        super(QtGui.QDialog, self).__init__(parent)
+        self.setWindowTitle('Shortcuts')
+
+        self.Vlayout = QtGui.QVBoxLayout(self)
+
+        label = QtGui.QLabel('<center><b>Keyboard Shortcuts</b></center<br></br>')
+        label.setFont(QtGui.QFont('Helvetica', 12))
+        self.Vlayout.addWidget(label)
+
+        label_strings = [
+            '<b><u>Global:</u></b>',
+            '<b style="color:#0220e0;">Ctrl + t</b> : Open tasks folder',
+            '<b style="color:#0220e0;">Ctrl + d</b> : Open data folder',
+        
+            '<br></br><b><u>Run task tab:</u></b>',
+            '<b style="color:#0220e0;">    t    </b> : Select task',
+            '<b style="color:#0220e0;">    u    </b> : Upload/reset task',
+            '<b style="color:#0220e0;">spacebar </b> : Start/stop task',
+
+            '<br></br><b><u>Experiments tab:</u></b>',
+            '<b style="color:#0220e0;">Ctrl + s</b> : Save experiment ']
+
+        for ls in label_strings:
+            label = QtGui.QLabel(ls)
+            label.setFont(QtGui.QFont('Helvetica', 10))
+            self.Vlayout.addWidget(label)
+
+        self.setFixedSize(self.sizeHint())

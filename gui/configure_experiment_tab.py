@@ -5,7 +5,7 @@ from pyqtgraph.Qt import QtGui, QtCore
 
 from config.paths import data_dir, tasks_dir, experiments_dir
 from gui.dialogs import invalid_experiment_dialog
-from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants
+from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants, init_keyboard_shortcuts
 
 # --------------------------------------------------------------------------------
 # Experiments_tab
@@ -97,6 +97,12 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.delete_button.clicked.connect(self.delete_experiment)
         self.save_button.clicked.connect(self.save_experiment)
         self.run_button.clicked.connect(self.run_experiment)
+
+        # Keyboard shortcuts
+        shortcut_dict = {
+                        'Ctrl+s' : lambda: self.save_experiment(),
+                        }
+        init_keyboard_shortcuts(self, shortcut_dict)
 
         # Main layout
         self.vertical_layout = QtGui.QVBoxLayout(self)

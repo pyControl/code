@@ -12,6 +12,7 @@ from config.gui_settings import update_interval
 
 from gui.dialogs import Variables_dialog
 from gui.plotting import Task_plot
+from gui.utility import init_keyboard_shortcuts
 
 # Run_task_gui ------------------------------------------------------------------------
 
@@ -161,6 +162,17 @@ class Run_task_tab(QtGui.QWidget):
 
         self.update_timer = QtCore.QTimer() # Timer to regularly call update() during run.        
         self.update_timer.timeout.connect(self.update)
+
+        # Keyboard Shortcuts
+
+        shortcut_dict = {
+                        't' : lambda: self.task_select.showPopup(),
+                        'u' : lambda: self.setup_task(),
+                        'Space' : (lambda: self.stop_task() if self.running 
+                            else self.start_task() if self.uploaded else None)
+                        }
+
+        init_keyboard_shortcuts(self, shortcut_dict)
 
         # Initial setup.
 
