@@ -208,18 +208,22 @@ class Keyboard_shortcuts_dialog(QtGui.QDialog):
 
         self.Vlayout = QtGui.QVBoxLayout(self)
 
+        label = QtGui.QLabel('<center><b>Keyboard Shortcuts</b></center<br></br>')
+        label.setFont(QtGui.QFont('Helvetica', 12))
+        self.Vlayout.addWidget(label)
+
         label_strings = [
             '<b><u>Global:</u></b>',
-            '<b>Ctrl + t</b> : Open tasks folder',
-            '<b>Ctrl + d</b> : Open data folder',
+            '<b style="color:#0220e0;">Ctrl + t</b> : Open tasks folder',
+            '<b style="color:#0220e0;">Ctrl + d</b> : Open data folder',
         
             '<br></br><b><u>Run task tab:</u></b>',
-            '<b>    t    </b> : Select task',
-            '<b>    u    </b> : Upload/reset task',
-            '<b>spacebar </b> : Start/stop task',
+            '<b style="color:#0220e0;">    t    </b> : Select task',
+            '<b style="color:#0220e0;">    u    </b> : Upload/reset task',
+            '<b style="color:#0220e0;">spacebar </b> : Start/stop task',
 
             '<br></br><b><u>Experiments tab:</u></b>',
-            '<b>Ctrl + s</b> : Save experiment ']
+            '<b style="color:#0220e0;">Ctrl + s</b> : Save experiment ']
 
         for ls in label_strings:
             label = QtGui.QLabel(ls)
