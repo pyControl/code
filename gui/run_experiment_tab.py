@@ -125,7 +125,7 @@ class Run_experiment_tab(QtGui.QWidget):
                 return
             self.boards[i].subject = experiment['subjects'][setup]
         # Hardware test.
-        if experiment['hardware_test'] != ' no hardware test':
+        if experiment['hardware_test'] != 'no hardware test':
             reply = QtGui.QMessageBox.question(self, 'Hardware test', 'Run hardware test?',
                 QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
             if reply == QtGui.QMessageBox.Yes:

@@ -85,7 +85,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         # Initialise widgets
         self.experiment_select.addItems(['select experiment'])
         self.task_select.addItems(['select task'])
-        self.hardware_test_select.addItems([' no hardware test'])
+        self.hardware_test_select.addItems(['no hardware test'])
 
         # Connect signals.
         self.name_text.textChanged.connect(self.name_edited)
@@ -124,13 +124,16 @@ class Configure_experiment_tab(QtGui.QWidget):
 
     def experiment_changed(self, experiment_name):
         if experiment_name in self.GUI_main.available_experiments:
+            cbox_set_item(self.experiment_select, 'select experiment', insert=True)
+            if not self.save_dialog():
+                return
             self.load_experiment(experiment_name)
 
     def refresh(self):
         '''Called periodically when not running to update available task, ports, experiments.'''
         if self.GUI_main.available_tasks_changed:
             cbox_update_options(self.task_select, self.GUI_main.available_tasks)
-            cbox_update_options(self.hardware_test_select, [' no hardware test'] + self.GUI_main.available_tasks)
+            cbox_update_options(self.hardware_test_select, ['no hardware test'] + self.GUI_main.available_tasks)
             self.GUI_main.available_tasks_changed = False
         if self.GUI_main.available_experiments_changed:
             cbox_update_options(self.experiment_select, self.GUI_main.available_experiments)
@@ -161,7 +164,9 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.variables_table.reset()
         cbox_set_item(self.experiment_select, 'select experiment', insert=True)
         cbox_set_item(self.task_select, 'select task', insert=True)
-        cbox_set_item(self.hardware_test_select, ' no hardware test', insert=True)
+        cbox_set_item(self.hardware_test_select, 'no hardware test', insert=True)
+        self.saved_exp_dict = self.experiment_dict()
+        self.saved_exp_path = None
 
     def delete_experiment(self):
         '''Delete an experiment file after dialog to confirm deletion.'''
@@ -174,7 +179,7 @@ class Configure_experiment_tab(QtGui.QWidget):
                 self.new_experiment(dialog=False)
                 os.remove(exp_path)
 
-    def save_experiment(self):
+    def save_experiment(self, from_dialog=False):
         '''Store the current state of the experiment tab as a JSON object
         saved in the experiments folder as .pcx file.'''
         experiment = self.experiment_dict()
@@ -188,7 +193,8 @@ class Configure_experiment_tab(QtGui.QWidget):
                 return
         with open(exp_path,'w') as exp_file:
             exp_file.write(json.dumps(experiment, sort_keys=True, indent=4))
-        cbox_set_item(self.experiment_select, experiment['name'], insert=True)
+        if not from_dialog:
+            cbox_set_item(self.experiment_select, experiment['name'], insert=True)
         self.saved_exp_dict = experiment
         self.saved_exp_path = exp_path
         self.save_button.setEnabled(False)
@@ -201,6 +207,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.name_text.setText(experiment['name'])
         cbox_set_item(self.task_select, experiment['task'])
         cbox_set_item(self.hardware_test_select, experiment['hardware_test'])
+        cbox_set_item(self.experiment_select, experiment['name'])
         self.variables_table.task_changed(experiment['task'])
         self.data_dir_text.setText(experiment['data_dir'])
         self.subjects_table.set_from_dict(experiment['subjects'])
@@ -229,7 +236,7 @@ class Configure_experiment_tab(QtGui.QWidget):
             invalid_experiment_dialog(self, 
                 "Task file '{}.py' not found.".format(experiment['task']))
             return
-        if (experiment['hardware_test'] != ' no hardware test' and
+        if (experiment['hardware_test'] != 'no hardware test' and
             experiment['hardware_test'] not in self.GUI_main.available_tasks):
             invalid_experiment_dialog(self, 
                 "Hardware test file '{}.py' not found.".format(experiment['hardware_test']))
@@ -265,24 +272,21 @@ class Configure_experiment_tab(QtGui.QWidget):
 
     def save_dialog(self):
         '''Dialog to save experiment if it has been edited.  Returns False if
-        cancel is selected, True otherwise.'''     
-        experiment = self.experiment_dict()
+        cancel is selected, True otherwise.'''
+        if self.saved_exp_dict == self.experiment_dict():
+            return True # Experiment has not been edited.  
         exp_path = os.path.join(experiments_dir, self.name_text.text()+'.pcx')
         dialog_text = None
         if not os.path.exists(exp_path):
             dialog_text = 'Experiment not saved, save experiment?'
         else:
-            with open(exp_path,'r') as exp_file:
-                saved_experiment = json.loads(exp_file.read())
-            if experiment != saved_experiment:
-                dialog_text = 'Experiment edited, save experiment?'
-        if dialog_text:
-            reply = QtGui.QMessageBox.question(self, 'Save experiment', dialog_text,
-                QtGui.QMessageBox.Yes | QtGui.QMessageBox.No | QtGui.QMessageBox.Cancel)
-            if reply == QtGui.QMessageBox.Yes:
-                self.save_experiment()
-            elif reply == QtGui.QMessageBox.Cancel:
-                return False
+            dialog_text = 'Experiment edited, save experiment?'
+        reply = QtGui.QMessageBox.question(self, 'Save experiment', dialog_text,
+            QtGui.QMessageBox.Yes | QtGui.QMessageBox.No | QtGui.QMessageBox.Cancel)
+        if reply == QtGui.QMessageBox.Yes:
+            self.save_experiment(from_dialog=True)
+        elif reply == QtGui.QMessageBox.Cancel:
+            return False
         return True
 
 # ---------------------------------------------------------------------------------
