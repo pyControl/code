@@ -1,6 +1,7 @@
 import os
 import json
 from datetime import datetime
+from shutil import copyfile
 
 class Data_logger():
     '''Class for logging data from a pyControl setup to disk'''
@@ -37,6 +38,17 @@ class Data_logger():
         self.data_file.write('S {}\n\n'.format(json.dumps(self.sm_info['states'])))
         self.data_file.write('E {}\n\n'.format(json.dumps(self.sm_info['events'])))
 
+    def copy_task_file(self, data_dir, tasks_dir, dir_name='task_files'):
+        '''If not already present, copy task file to data_dir/dir_name
+        appending the files djb2 hash to the file name.'''
+        exp_tasks_dir = os.path.join(data_dir, dir_name)
+        if not os.path.exists(exp_tasks_dir):
+            os.mkdir(exp_tasks_dir)
+        task_file_path = os.path.join(tasks_dir, self.sm_info['name']+'.py')
+        task_save_name = self.sm_info['name']+'_{}.py'.format(self.sm_info['task_hash'])
+        if not task_save_name in os.listdir(exp_tasks_dir):
+            copyfile(task_file_path, os.path.join(exp_tasks_dir, task_save_name))
+            
     def close_files(self):
         if self.data_file:
             self.data_file.close()
