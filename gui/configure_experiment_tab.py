@@ -143,6 +143,8 @@ class Configure_experiment_tab(QtGui.QWidget):
             self.subjects_table.update_available_setups()
         if self.saved_exp_dict != self.experiment_dict():
             self.save_button.setEnabled(True)
+        else:
+            self.save_button.setEnabled(False)
 
     def experiment_dict(self):
         '''Return the current state of the experiments tab as a dictionary.'''
