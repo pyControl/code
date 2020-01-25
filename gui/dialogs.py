@@ -1,8 +1,9 @@
 import os
+import json
 
 from pyqtgraph.Qt import QtGui, QtCore
 
-from config.paths import config_dir
+from config.paths import dirs, update_paths
 from gui.utility import variable_constants
 
 # Board_config_dialog -------------------------------------------------
@@ -44,7 +45,7 @@ class Board_config_dialog(QtGui.QDialog):
 
     def load_hardware_definition(self):
         hwd_path = QtGui.QFileDialog.getOpenFileName(self, 'Select hardware definition:',
-                    os.path.join(config_dir, 'hardware_definition.py'), filter='*.py')[0]
+                    os.path.join(dirs['config'], 'hardware_definition.py'), filter='*.py')[0]
         self.accept()
         self.board.load_hardware_definition(hwd_path)
 
@@ -232,3 +233,69 @@ class Keyboard_shortcuts_dialog(QtGui.QDialog):
             self.Vlayout.addWidget(label)
 
         self.setFixedSize(self.sizeHint())
+
+# Paths dialog. ---------------------------------------------------------
+
+class Path_setter():
+    def __init__(self, name, path, edited, dialog):
+        self.name = name
+        self.path = os.path.normpath(path)
+        self.edited = edited
+        self.dialog = dialog
+        # Instantiate widgets
+        self.name_label = QtGui.QLabel(name +' folder:')
+        self.path_text = QtGui.QLineEdit(self.path)
+        self.path_text.setReadOnly(True)
+        self.path_text.setFixedWidth(400)
+        self.change_button = QtGui.QPushButton('Change')
+        self.change_button.clicked.connect(self.select_path)
+        # Layout
+        self.hlayout = QtGui.QHBoxLayout()
+        self.hlayout.addWidget(self.name_label)
+        self.hlayout.addWidget(self.path_text)
+        self.hlayout.addWidget(self.change_button)
+        self.dialog.Vlayout.addLayout(self.hlayout)
+
+        self.dialog.setters.append(self)
+
+    def select_path(self):
+        new_path = QtGui.QFileDialog.getExistingDirectory(
+            self.dialog, 'Select {} folder'.format(self.name), self.path)
+        if new_path:
+            new_path = os.path.normpath(new_path)
+            if new_path != self.path:
+                self.path = new_path
+                self.edited = True
+                self.path_text.setText(new_path)
+
+class Paths_dialog(QtGui.QDialog):
+    '''Dialog for displaying information about keyboard shortcuts.'''
+    def __init__(self, parent):
+        super(QtGui.QDialog, self).__init__(parent)
+        self.setWindowTitle('Paths')
+
+        self.Vlayout = QtGui.QVBoxLayout(self)
+        self.setters = []
+
+        # Instantiate setters
+        self.tasks_setter = Path_setter('tasks', dirs['tasks'], False, self)
+        self.data_setter  = Path_setter('data' , dirs['data'] , False, self)
+
+        self.setFixedSize(self.sizeHint())
+
+    def closeEvent(self, event):
+        '''Save any user edited paths as json in config folder.'''
+        edited_paths = {s.name: s.path for s in self.setters if s.edited}
+        if edited_paths:
+            # Store newly edited paths.
+            json_path = os.path.join(dirs['config'],'user_paths.json')
+            if os.path.exists(json_path):
+                with open(json_path,'r') as f:
+                    user_paths = json.loads(f.read())
+            else:
+                user_paths = {}
+            user_paths.update(edited_paths)
+            with open(json_path, 'w') as f:
+                f.write(json.dumps(user_paths))
+            self.parent().data_dir_changed = True
+            update_paths(user_paths)

@@ -8,7 +8,7 @@ from pyqtgraph.Qt import QtGui, QtCore
 from serial import SerialException
 
 from config.gui_settings import  update_interval
-from config.paths import tasks_dir
+from config.paths import dirs
 from com.pycboard import Pycboard, PyboardError
 from com.data_logger import Data_logger
 from gui.plotting import Experiment_plot
@@ -187,7 +187,7 @@ class Run_experiment_tab(QtGui.QWidget):
                     self.abort_experiment()
                     return
         # Copy task file to experiments data folder.
-        self.boards[0].data_logger.copy_task_file(self.experiment['data_dir'], tasks_dir)
+        self.boards[0].data_logger.copy_task_file(self.experiment['data_dir'], dirs['tasks'])
         # Configure GUI ready to run.
         for i, board in enumerate(self.boards):
             self.subjectboxes[i].assign_board(board)

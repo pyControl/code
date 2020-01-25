@@ -3,7 +3,7 @@ import re
 import json
 from pyqtgraph.Qt import QtGui, QtCore
 
-from config.paths import data_dir, tasks_dir, experiments_dir
+from config.paths import dirs
 from gui.dialogs import invalid_experiment_dialog
 from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants, init_keyboard_shortcuts
 
@@ -20,7 +20,7 @@ class Configure_experiment_tab(QtGui.QWidget):
 
         # Variables
         self.GUI_main = self.parent()
-        self.custom_dir = False # True if data_dir field has been manually edited.
+        self.custom_dir = False    # True if data_dir field has been manually edited.
         self.saved_exp_path = None # Path of last saved/loaded experiment file.
         self.saved_exp_dict = {}   # Dict of last saved/loaded experiment.
 
@@ -50,7 +50,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.hardware_test_select = QtGui.QComboBox()
         self.hardware_test_select.setFixedWidth(150)
         self.data_dir_label = QtGui.QLabel('Data dir:')
-        self.data_dir_text = QtGui.QLineEdit(data_dir)
+        self.data_dir_text = QtGui.QLineEdit(dirs['data'])
         self.data_dir_button = QtGui.QPushButton('...')
         self.data_dir_button.setFixedWidth(30)
 
@@ -115,12 +115,13 @@ class Configure_experiment_tab(QtGui.QWidget):
 
     def name_edited(self):
         if not self.custom_dir:
-            self.data_dir_text.setText(os.path.join(data_dir, self.name_text.text()))
+            self.data_dir_text.setText(os.path.join(dirs['data'], self.name_text.text()))
 
     def select_data_dir(self):
-        self.data_dir_text.setText(
-            QtGui.QFileDialog.getExistingDirectory(self, 'Select data folder', data_dir))
-        self.custom_dir = True
+        new_path = QtGui.QFileDialog.getExistingDirectory(self, 'Select data folder', dirs['data'])
+        if new_path:
+            self.data_dir_text.setText(new_path)
+            self.custom_dir = True
 
     def experiment_changed(self, experiment_name):
         if experiment_name in self.GUI_main.available_experiments:
@@ -143,6 +144,11 @@ class Configure_experiment_tab(QtGui.QWidget):
             self.subjects_table.update_available_setups()
         if self.saved_exp_dict != self.experiment_dict():
             self.save_button.setEnabled(True)
+        else:
+            self.save_button.setEnabled(False)
+        if self.GUI_main.data_dir_changed:
+            if (str(self.name_text.text()) == '') and not self.custom_dir:
+                self.data_dir_text.setText(dirs['data'])
 
     def experiment_dict(self):
         '''Return the current state of the experiments tab as a dictionary.'''
@@ -158,7 +164,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         if dialog:
             if not self.save_dialog(): return
         self.name_text.setText('')
-        self.data_dir_text.setText(data_dir)
+        self.data_dir_text.setText(dirs['data'])
         self.custom_dir = False
         self.subjects_table.reset()
         self.variables_table.reset()
@@ -170,7 +176,7 @@ class Configure_experiment_tab(QtGui.QWidget):
 
     def delete_experiment(self):
         '''Delete an experiment file after dialog to confirm deletion.'''
-        exp_path = os.path.join(experiments_dir, self.name_text.text()+'.pcx')
+        exp_path = os.path.join(dirs['experiments'], self.name_text.text()+'.pcx')
         if os.path.exists(exp_path):
             reply = QtGui.QMessageBox.question(self, 'Delete experiment', 
                 "Delete experiment '{}'".format(self.name_text.text()),
@@ -184,7 +190,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         saved in the experiments folder as .pcx file.'''
         experiment = self.experiment_dict()
         file_name = self.name_text.text()+'.pcx'
-        exp_path = os.path.join(experiments_dir, file_name)
+        exp_path = os.path.join(dirs['experiments'], file_name)
         if os.path.exists(exp_path) and (exp_path != self.saved_exp_path):
             reply = QtGui.QMessageBox.question(self, 'Replace file', 
                 "File '{}' already exists, do you want to replace it?".format(file_name),
@@ -201,7 +207,7 @@ class Configure_experiment_tab(QtGui.QWidget):
 
     def load_experiment(self, experiment_name):
         '''Load experiment  .pcx file and set fields of experiment tab.'''
-        exp_path = os.path.join(experiments_dir, experiment_name +'.pcx')
+        exp_path = os.path.join(dirs['experiments'], experiment_name +'.pcx')
         with open(exp_path,'r') as exp_file:
             experiment = json.loads(exp_file.read())
         self.name_text.setText(experiment['name'])
@@ -275,7 +281,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         cancel is selected, True otherwise.'''
         if self.saved_exp_dict == self.experiment_dict():
             return True # Experiment has not been edited.  
-        exp_path = os.path.join(experiments_dir, self.name_text.text()+'.pcx')
+        exp_path = os.path.join(dirs['experiments'], self.name_text.text()+'.pcx')
         dialog_text = None
         if not os.path.exists(exp_path):
             dialog_text = 'Experiment not saved, save experiment?'
@@ -513,7 +519,7 @@ class VariablesTable(QtGui.QTableWidget):
         '''Remove variables that are not defined in the new task.'''
         pattern = "[\n\r]v\.(?P<vname>\w+)\s*\="
         try:
-            with open(os.path.join(tasks_dir, task+'.py'), "r") as file:
+            with open(os.path.join(dirs['tasks'], task+'.py'), "r") as file:
                 file_content = file.read()
         except FileNotFoundError:
             return

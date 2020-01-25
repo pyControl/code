@@ -3,7 +3,7 @@ import json
 
 from pyqtgraph.Qt import QtGui, QtCore
 
-from config.paths import config_dir
+from config.paths import dirs
 from com.pycboard import Pycboard, PyboardError
 from gui.utility import TableCheckbox
 
@@ -23,7 +23,7 @@ class Setups_tab(QtGui.QWidget):
 
         # Load saved setup names.
 
-        self.save_path = os.path.join(config_dir, 'setup_names.json')
+        self.save_path = os.path.join(dirs['config'], 'setup_names.json')
         if os.path.exists(self.save_path):
             with open(self.save_path, 'r') as f:
                 self.saved_names = json.loads(f.read())
@@ -156,7 +156,7 @@ class Setups_tab(QtGui.QWidget):
 
     def load_hardware_definition(self):
         hwd_path = QtGui.QFileDialog.getOpenFileName(self, 'Select hardware definition:',
-            os.path.join(config_dir, 'hardware_definition.py'), filter='*.py')[0]
+            os.path.join(dirs['config'], 'hardware_definition.py'), filter='*.py')[0]
         for setup in self.get_selected_setups():
             setup.load_hardware_definition(hwd_path)
 
