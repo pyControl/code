@@ -57,6 +57,7 @@ class Run_task_tab(QtGui.QWidget):
         self.board_select.setEditable(True)
         self.board_select.setFixedWidth(100)
         self.connect_button = QtGui.QPushButton('Connect')
+        self.connect_button.setEnabled(False)
         self.config_button = QtGui.QPushButton('Config')
 
         self.boardgroup_layout = QtGui.QHBoxLayout()
@@ -202,7 +203,12 @@ class Run_task_tab(QtGui.QWidget):
         # Called regularly when framework not running.
         if self.GUI_main.setups_tab.available_setups_changed:
             self.board_select.clear()
-            self.board_select.addItems(self.GUI_main.setups_tab.setup_names)
+            if self.GUI_main.setups_tab.setup_names:
+                self.board_select.addItems(self.GUI_main.setups_tab.setup_names)
+                if not self.connected:
+                    self.connect_button.setEnabled(True)
+            else: # No setups available to connect to.
+                    self.connect_button.setEnabled(False)
         if self.GUI_main.available_tasks_changed:
             self.task_select.clear()
             self.task_select.addItems(sorted(self.GUI_main.available_tasks))
