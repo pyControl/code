@@ -29,31 +29,16 @@ class Run_experiment_tab(QtGui.QWidget):
         self.name_label = QtGui.QLabel('Experiment name:')
         self.name_text  = QtGui.QLineEdit()
         self.name_text.setReadOnly(True)
-        self.status_label = QtGui.QLabel('Status:')
-        self.status_text = QtGui.QLineEdit()
-        self.status_text.setReadOnly(True)
-        self.status_text.setFixedWidth(60)
-        self.time_label = QtGui.QLabel('Time:')
-        self.time_text = QtGui.QLineEdit()
-        self.time_text.setReadOnly(True)
-        self.time_text.setFixedWidth(60)
         self.plots_button =  QtGui.QPushButton('Show plots')
         self.plots_button.clicked.connect(self.experiment_plot.show)
         self.logs_button = QtGui.QPushButton('Hide logs')
         self.logs_button.clicked.connect(self.show_hide_logs)    
-        self.startstopclose_button = QtGui.QPushButton()
-        self.startstopclose_button.clicked.connect(self.startstopclose)
 
         self.Hlayout = QtGui.QHBoxLayout()
         self.Hlayout.addWidget(self.name_label)
         self.Hlayout.addWidget(self.name_text)
-        self.Hlayout.addWidget(self.status_label)
-        self.Hlayout.addWidget(self.status_text)
-        self.Hlayout.addWidget(self.time_label)
-        self.Hlayout.addWidget(self.time_text)
         self.Hlayout.addWidget(self.logs_button)
         self.Hlayout.addWidget(self.plots_button)
-        self.Hlayout.addWidget(self.startstopclose_button)
 
         self.scroll_area = QtGui.QScrollArea(parent=self)
         self.scroll_area.horizontalScrollBar().setEnabled(False)
@@ -74,27 +59,24 @@ class Run_experiment_tab(QtGui.QWidget):
     def setup_experiment(self, experiment):
         '''Called when an experiment is loaded.'''
         # Setup tabs.
-        self.status_text.setText('Loading')
-        self.status_text.setStyleSheet('color: black;')
         self.experiment = experiment
         self.GUI_main.tab_widget.setTabEnabled(0, False) # Disable run task tab.
         self.GUI_main.tab_widget.setTabEnabled(2, False)  # Disable setups tab.
         self.GUI_main.experiments_tab.setCurrentWidget(self)
-        self.startstopclose_button.setText('Start')
         self.experiment_plot.setup_experiment(experiment)
-        self.state = 'pre_run'
         self.logs_visible = True
         self.logs_button.setText('Hide logs')
         # Setup controls box.
         self.name_text.setText(experiment['name'])
-        self.time_text.setText('')
-        self.startstopclose_button.setEnabled(False)
         self.logs_button.setEnabled(False)
         self.plots_button.setEnabled(False)
         # Setup subjectboxes
-        for setup in sorted(experiment['subjects'].keys()):
+        subject_dict = experiment['subjects']
+        subjects = subject_dict.keys()
+
+        for i,subject in enumerate(sorted(subjects)):
             self.subjectboxes.append(
-                Subjectbox('{} : {}'.format(setup, experiment['subjects'][setup]), self))
+                Subjectbox('{} : {}'.format(subject_dict[subject]['Setup'], subject), i, self))
             self.boxes_layout.addWidget(self.subjectboxes[-1])
         # Create data folders if needed.
         if not os.path.exists(self.experiment['data_dir']):
@@ -109,12 +91,14 @@ class Run_experiment_tab(QtGui.QWidget):
                 persistent_variables =  json.loads(pv_file.read())
         else:
             persistent_variables = {}
+        self.persistent_variables = persistent_variables
         # Setup boards.
         self.GUI_main.app.processEvents()
         self.boards = []
-        for i, setup in enumerate(sorted(experiment['subjects'].keys())):
+        
+        for i, subject in enumerate(sorted(subjects)):
             print_func = self.subjectboxes[i].print_to_log
-            serial_port = self.GUI_main.setups_tab.get_port(setup)
+            serial_port = self.GUI_main.setups_tab.get_port(subject_dict[subject]['Setup'])
             # Connect to boards.
             print_func('Connecting to board.. ')
             try:
@@ -123,7 +107,8 @@ class Run_experiment_tab(QtGui.QWidget):
                 print_func('Connection failed.')
                 self.abort_experiment()
                 return
-            self.boards[i].subject = experiment['subjects'][setup]
+            self.boards[i].subject = subject
+            self.boards[i].board = subject_dict[subject]['Setup']
         # Hardware test.
         if experiment['hardware_test'] != 'no hardware test':
             reply = QtGui.QMessageBox.question(self, 'Hardware test', 'Run hardware test?',
@@ -200,43 +185,20 @@ class Run_experiment_tab(QtGui.QWidget):
         for i, board in enumerate(self.boards):
             self.subjectboxes[i].assign_board(board)
         self.experiment_plot.set_state_machine(board.sm_info)
-        self.startstopclose_button.setEnabled(True)
+        for i, board in enumerate(self.boards):
+            self.subjectboxes[i].start_stop_button.setEnabled(True)
+            self.subjectboxes[i].status_text.setText('Ready')
         self.logs_button.setEnabled(True)
         self.plots_button.setEnabled(True)
-        self.status_text.setText('Ready')
+        self.rigs_finished = 0
 
-    def start_experiment(self):
-        '''Open data files, write variables set pre run to file, start framework.'''
-        self.status_text.setText('Running')
-        self.startstopclose_button.setText('Stop')
-        self.state = 'running'
-        self.experiment_plot.start_experiment()
-        self.start_time = datetime.now()
-        ex = self.experiment
-        for i, board in enumerate(self.boards):
-            board.print('\nStarting experiment.\n')
-            board.data_logger.open_data_file(ex['data_dir'], ex['name'], board.subject, self.start_time)
-            if board.subject_variables: # Write variables set pre run to data file.
-                for v_name, v_value, pv in board.variables_set_pre_run:
-                    board.data_logger.data_file.write('V 0 {} {}\n'.format(v_name, v_value))
-            board.data_logger.data_file.write('\n')
-            board.start_framework()
-        self.GUI_main.refresh_timer.stop()
-        self.update_timer.start(update_interval)
 
     def stop_experiment(self):
-        self.status_text.setText('Stopped')
-        self.startstopclose_button.setText('Close')
-        self.state = 'post_run'
         self.update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
         for i, board in enumerate(self.boards):
-            # Stop running boards.
-            if board.framework_running:
-                board.stop_framework()
-                time.sleep(0.05)
-                board.process_data()
-                self.subjectboxes[i].task_stopped()
+            time.sleep(0.05)
+            board.process_data()
         # Summary and persistent variables.
         summary_variables = [v for v in self.experiment['variables'] if v['summary']]
         sv_dict = OrderedDict()
@@ -250,6 +212,7 @@ class Run_experiment_tab(QtGui.QWidget):
             subject_pvs = [v for v in board.subject_variables if v['persistent']]
             if subject_pvs:
                 board.print('\nStoring persistent variables.')
+                print('{}: storing persistent varibales'.format(board.subject))
                 persistent_variables[board.subject] = {
                     v['name']: board.get_variable(v['name']) for v in subject_pvs}
             # Read summary variables.
@@ -264,13 +227,10 @@ class Run_experiment_tab(QtGui.QWidget):
                 pv_file.write(json.dumps(persistent_variables, sort_keys=True, indent=4))
         if summary_variables:
             Summary_variables_dialog(self, sv_dict).show()
+        self.close_experiment()
 
     def abort_experiment(self):
         '''Called if an error occurs while the experiment is being set up.'''
-        self.status_text.setText('Failed')
-        self.status_text.setStyleSheet('color: red;')
-        self.startstopclose_button.setText('Close')
-        self.state = 'post_run'
         self.update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
         for i, board in enumerate(self.boards):
@@ -280,7 +240,12 @@ class Run_experiment_tab(QtGui.QWidget):
                 time.sleep(0.05)
                 board.process_data()
                 self.subjectboxes[i].task_stopped()
-        self.startstopclose_button.setEnabled(True)
+        msg = QtGui.QMessageBox()
+        msg.setWindowTitle('Error')
+        msg.setText('There was an error. Closing Experiment')
+        msg.setIcon(QtGui.QMessageBox.Warning)
+        msg.exec()
+        self.close_experiment()
 
     def close_experiment(self):
         self.GUI_main.tab_widget.setTabEnabled(0, True) # Enable run task tab.
@@ -299,14 +264,6 @@ class Run_experiment_tab(QtGui.QWidget):
         if not self.logs_visible:
             self.boxes_layout.takeAt(self.boxes_layout.count()-1) # Remove stretch.
 
-    def startstopclose(self):
-        if self.state == 'pre_run': 
-            self.start_experiment()
-        elif self.state == 'running':
-            self.stop_experiment()
-        elif self.state == 'post_run':
-            self.close_experiment()
-
     def show_hide_logs(self):
         '''Show/hide the log textboxes in subjectboxes.'''
         if self.logs_visible:
@@ -324,7 +281,6 @@ class Run_experiment_tab(QtGui.QWidget):
 
     def update(self):
         '''Called regularly while experiment is running'''
-        self.time_text.setText(str(datetime.now()-self.start_time).split('.')[0])
         boards_running = False
         for i, board in enumerate(self.boards):
             if board.framework_running:
@@ -333,10 +289,11 @@ class Run_experiment_tab(QtGui.QWidget):
                     board.process_data()
                     if not board.framework_running:
                         self.subjectboxes[i].task_stopped()
+                    self.subjectboxes[i].time_text.setText(str(datetime.now()-self.subjectboxes[i].start_time).split('.')[0])
                 except PyboardError:
                     self.subjectboxes[i].error()
         self.experiment_plot.update()
-        if not boards_running:
+        if not boards_running and self.rigs_finished == len(self.boards):
             self.stop_experiment()
 
 # -----------------------------------------------------------------------------
@@ -344,13 +301,25 @@ class Run_experiment_tab(QtGui.QWidget):
 class Subjectbox(QtGui.QGroupBox):
     '''Groupbox for displaying data from a single subject.'''
 
-    def __init__(self, name, parent=None):
+    def __init__(self, name, boxNum, parent=None):
 
         super(QtGui.QGroupBox, self).__init__(name, parent=parent)
         self.board = None # Overwritten with board once instantiated.
         self.GUI_main = self.parent().GUI_main
         self.run_exp_tab = self.parent()
+        self.state = 'pre_run'
+        self.boxNum = boxNum
 
+        self.start_stop_button = QtGui.QPushButton('Start')
+        self.start_stop_button.setEnabled(False)
+        self.status_label = QtGui.QLabel('Status:')
+        self.status_text = QtGui.QLineEdit()
+        self.status_text.setReadOnly(True)
+        self.status_text.setFixedWidth(60)
+        self.time_label = QtGui.QLabel('Time:')
+        self.time_text = QtGui.QLineEdit()
+        self.time_text.setReadOnly(True)
+        self.time_text.setFixedWidth(60)
         self.state_label = QtGui.QLabel('State:')
         self.state_text = QtGui.QLineEdit()
         self.state_text.setFixedWidth(140)
@@ -371,6 +340,11 @@ class Subjectbox(QtGui.QGroupBox):
 
         self.Vlayout = QtGui.QVBoxLayout(self)
         self.Hlayout = QtGui.QHBoxLayout()
+        self.Hlayout.addWidget(self.start_stop_button)
+        self.Hlayout.addWidget(self.status_label)
+        self.Hlayout.addWidget(self.status_text)
+        self.Hlayout.addWidget(self.time_label)
+        self.Hlayout.addWidget(self.time_text)
         self.Hlayout.addWidget(self.state_label)
         self.Hlayout.addWidget(self.state_text)
         self.Hlayout.addWidget(self.event_label)
@@ -381,7 +355,7 @@ class Subjectbox(QtGui.QGroupBox):
         self.Hlayout.addWidget(self.variables_button)
         self.Vlayout.addLayout(self.Hlayout)
         self.Vlayout.addWidget(self.log_textbox)
-
+        
     def print_to_log(self, print_string, end='\n'):
         self.log_textbox.moveCursor(QtGui.QTextCursor.End)
         self.log_textbox.insertPlainText(print_string+end)
@@ -393,6 +367,33 @@ class Subjectbox(QtGui.QGroupBox):
         self.variables_dialog = Variables_dialog(self, board)
         self.variables_button.clicked.connect(self.variables_dialog.exec_)
         self.variables_button.setEnabled(True)
+        self.start_stop_button.clicked.connect(self.start_stop_rig)
+
+    def start_stop_rig(self):
+        if self.state == 'pre_run': 
+            self.begin_rig()
+        elif self.state == 'running':
+            self.task_stopped()
+
+    def begin_rig(self):
+        self.status_text.setText('Running')
+        self.state = 'running'
+        self.run_exp_tab.experiment_plot.start_experiment(self.boxNum)
+        self.start_time = datetime.now()
+        ex = self.run_exp_tab.experiment
+        board = self.board
+        board.print('\nStarting experiment.\n')
+        board.data_logger.open_data_file(ex['data_dir'], ex['name'], board.board, board.subject, datetime.now())
+        if board.subject_variables: # Write variables set pre run to data file.
+            for v_name, v_value, pv in self.board.variables_set_pre_run:
+                board.data_logger.data_file.write('V 0 {} {}\n'.format(v_name, v_value))
+        board.data_logger.data_file.write('\n')
+        board.start_framework()
+
+        self.start_stop_button.setText('Stop')
+
+        self.run_exp_tab.GUI_main.refresh_timer.stop()
+        self.run_exp_tab.update_timer.start(update_interval)
 
     def error(self):
         '''Set state text to error in red.'''
@@ -403,6 +404,14 @@ class Subjectbox(QtGui.QGroupBox):
         '''Called when task stops running.'''
         self.state_text.setText('Stopped')
         self.state_text.setStyleSheet('color: grey;') 
+        self.status_text.setText('Stopped')
+        self.start_stop_button.setVisible(False)
+        # Stop running board
+        if self.board.framework_running:
+            self.board.stop_framework()
+        self.run_exp_tab.experiment_plot.active_plots.remove(self.boxNum)
+        self.run_exp_tab.rigs_finished += 1
+        self.variables_button.setEnabled(False)
 
     def process_data(self, new_data):
         '''Update the state, event and print line info.'''

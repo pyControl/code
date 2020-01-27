@@ -195,9 +195,13 @@ class Summary_variables_dialog(QtGui.QDialog):
 
 # Invalid experiment dialog. ---------------------------------------------------------
 
-def invalid_experiment_dialog(parent, message):
-    QtGui.QMessageBox.question(parent, 'Invalid experiment', 
+def invalid_run_experiment_dialog(parent, message):
+    QtGui.QMessageBox.warning(parent, 'Invalid experiment', 
         message + '\n\nUnable to run experiment.', QtGui.QMessageBox.Ok)
+
+def invalid_save_experiment_dialog(parent, message):
+    QtGui.QMessageBox.warning(parent, 'Invalid experiment', 
+        message + '\n\nUnable to save experiment.', QtGui.QMessageBox.Ok)
 
 # Keyboard shortcuts dialog. ---------------------------------------------------------
 
