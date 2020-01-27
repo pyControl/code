@@ -5,10 +5,10 @@ import traceback
 from serial.tools import list_ports
 from pyqtgraph.Qt import QtGui, QtCore
 
-from config.paths import tasks_dir, experiments_dir, data_dir
+from config.paths import dirs
 from config.gui_settings import  VERSION
 from gui.run_task_tab import Run_task_tab
-from gui.dialogs import Board_config_dialog, Keyboard_shortcuts_dialog
+from gui.dialogs import Board_config_dialog, Keyboard_shortcuts_dialog, Paths_dialog
 from gui.configure_experiment_tab import Configure_experiment_tab
 from gui.run_experiment_tab import Run_experiment_tab
 from gui.setups_tab import Setups_tab
@@ -32,6 +32,7 @@ class GUI_main(QtGui.QMainWindow):
         self.available_tasks_changed = False
         self.available_experiments_changed = False
         self.available_ports_changed = False
+        self.data_dir_changed = False
         self.current_tab_ind = 0 # Which tab is currently selected.
         self.app = None # Overwritten with QtGui.QApplication instance in main.
 
@@ -39,6 +40,7 @@ class GUI_main(QtGui.QMainWindow):
 
         self.config_dialog = Board_config_dialog(parent=self)
         self.shortcuts_dialog = Keyboard_shortcuts_dialog(parent=self)
+        self.paths_dialog = Paths_dialog(parent=self)
 
         # Widgets.
         self.tab_widget = QtGui.QTabWidget(self)
@@ -77,12 +79,18 @@ class GUI_main(QtGui.QMainWindow):
         data_action = QtGui.QAction("&Data", self)
         data_action.setShortcut("Ctrl+D")
         data_action.triggered.connect(self.go_to_data)
-        # View Task Directory
         folders_menu.addAction(data_action)
+        # View Task Directory
         task_action = QtGui.QAction("&Tasks", self)
         task_action.setShortcut("Ctrl+T")
         task_action.triggered.connect(self.go_to_tasks)
         folders_menu.addAction(task_action)
+        ## --------Settings menu--------
+        settings_menu = main_menu.addMenu('Settings')
+        # Folder paths
+        paths_action = QtGui.QAction("&Folder paths", self)
+        paths_action.triggered.connect(self.paths_dialog.exec)
+        settings_menu.addAction(paths_action)
         # ---------Help menu----------
         help_menu= main_menu.addMenu('Help')
         # Go to readthedocs
@@ -105,10 +113,10 @@ class GUI_main(QtGui.QMainWindow):
         self.show()
 
     def go_to_data(self):
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(data_dir))
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(dirs['data']))
 
     def go_to_tasks(self):
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(tasks_dir))
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(dirs['tasks']))
 
     def view_docs(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://pycontrol.readthedocs.io/en/latest/"))
@@ -122,12 +130,12 @@ class GUI_main(QtGui.QMainWindow):
     def refresh(self):
         '''Called regularly when framework not running.'''
         # Scan task folder.
-        tasks =  [t.split('.')[0] for t in os.listdir(tasks_dir) if t[-3:] == '.py']
+        tasks = [t.split('.')[0] for t in os.listdir(dirs['tasks']) if t[-3:] == '.py']
         self.available_tasks_changed = tasks != self.available_tasks
         if self.available_tasks_changed:    
             self.available_tasks = tasks
         # Scan experiments folder.
-        experiments = [t.split('.')[0] for t in os.listdir(experiments_dir) if t[-4:] == '.pcx']
+        experiments = [t.split('.')[0] for t in os.listdir(dirs['experiments']) if t[-4:] == '.pcx']
         self.available_experiments_changed = experiments != self.available_experiments
         if self.available_experiments_changed:    
             self.available_experiments = experiments
@@ -141,6 +149,8 @@ class GUI_main(QtGui.QMainWindow):
         self.run_task_tab.refresh()
         self.configure_experiment_tab.refresh()
         self.setups_tab.refresh()
+        # Clear flags.
+        self.data_dir_changed = False
 
     def tab_changed(self, new_tab_ind):
         '''Called whenever the active tab is changed.'''

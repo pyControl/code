@@ -3,13 +3,12 @@ import time
 import json
 from datetime import datetime
 from collections import OrderedDict
-from shutil import copyfile
 
 from pyqtgraph.Qt import QtGui, QtCore
 from serial import SerialException
 
 from config.gui_settings import  update_interval
-from config.paths import tasks_dir
+from config.paths import dirs
 from com.pycboard import Pycboard, PyboardError
 from com.data_logger import Data_logger
 from gui.plotting import Experiment_plot
@@ -78,12 +77,9 @@ class Run_experiment_tab(QtGui.QWidget):
             self.subjectboxes.append(
                 Subjectbox('{} : {}'.format(subject_dict[subject]['Setup'], subject), i, self))
             self.boxes_layout.addWidget(self.subjectboxes[-1])
-        # Create data folders if needed.
+        # Create data folder if needed.
         if not os.path.exists(self.experiment['data_dir']):
             os.mkdir(self.experiment['data_dir'])        
-        exp_tasks_dir = os.path.join(self.experiment['data_dir'],'task_files')
-        if not os.path.exists(exp_tasks_dir):
-            os.mkdir(exp_tasks_dir)
         # Load persistent variables if they exist.
         self.pv_path = os.path.join(self.experiment['data_dir'], 'persistent_variables.json')
         if os.path.exists(self.pv_path):
@@ -175,12 +171,8 @@ class Run_experiment_tab(QtGui.QWidget):
                     self.subjectboxes[i].error()
                     self.abort_experiment()
                     return
-        # Save task file to experiments tasks folder if current version not already saved.
-        task_file_path = os.path.join(tasks_dir, experiment['task']+'.py')
-        task_hash = self.boards[0].sm_info['task_hash'] # djb2 hash of task file.
-        task_save_name = experiment['task']+'_{}.py'.format(task_hash)
-        if not task_save_name in os.listdir(exp_tasks_dir):
-            copyfile(task_file_path, os.path.join(exp_tasks_dir, task_save_name))
+        # Copy task file to experiments data folder.
+        self.boards[0].data_logger.copy_task_file(self.experiment['data_dir'], dirs['tasks'])
         # Configure GUI ready to run.
         for i, board in enumerate(self.boards):
             self.subjectboxes[i].assign_board(board)

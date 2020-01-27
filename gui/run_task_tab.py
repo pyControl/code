@@ -7,7 +7,7 @@ from serial import SerialException, SerialTimeoutException
 from com.pycboard import Pycboard, PyboardError, _djb2_file
 from com.data_logger import Data_logger
 
-from config.paths import data_dir, tasks_dir
+from config.paths import dirs
 from config.gui_settings import update_interval
 
 from gui.dialogs import Variables_dialog
@@ -28,14 +28,14 @@ class Run_task_tab(QtGui.QWidget):
         self.board = None      # Pycboard class instance.
         self.task = None       # Task currently uploaded on pyboard. 
         self.task_hash = None  # Used to check if file has changed.
-        self.data_dir = None 
+        self.data_dir = None   # Folder to save data files.
+        self.custom_dir = False  # True if data_dir field has been changed from default.
         self.connected = False # Whether gui is conencted to pyboard.
         self.uploaded = False # Whether selected task file is on board.
         self.fresh_task = None # Whether task has been run or variables edited.
         self.running = False
         self.subject_changed = False
         self.variables_dialog = None
-
 
         # GUI groupbox.
 
@@ -57,6 +57,7 @@ class Run_task_tab(QtGui.QWidget):
         self.board_select.setEditable(True)
         self.board_select.setFixedWidth(100)
         self.connect_button = QtGui.QPushButton('Connect')
+        self.connect_button.setEnabled(False)
         self.config_button = QtGui.QPushButton('Config')
 
         self.boardgroup_layout = QtGui.QHBoxLayout()
@@ -75,7 +76,7 @@ class Run_task_tab(QtGui.QWidget):
         self.file_groupbox = QtGui.QGroupBox('Data file')
 
         self.data_dir_label = QtGui.QLabel('Data dir:')
-        self.data_dir_text = QtGui.QLineEdit(data_dir)
+        self.data_dir_text = QtGui.QLineEdit(dirs['data'])
         self.data_dir_button = QtGui.QPushButton('...')
         self.data_dir_button.setFixedWidth(30)
         self.subject_label = QtGui.QLabel('Subject ID:')
@@ -92,6 +93,7 @@ class Run_task_tab(QtGui.QWidget):
         self.file_groupbox.setLayout(self.filegroup_layout)
 
         self.data_dir_text.textChanged.connect(self.test_data_path)
+        self.data_dir_text.textEdited.connect(lambda: setattr(self, 'custom_dir', True))
         self.data_dir_button.clicked.connect(self.select_data_dir)
         self.subject_text.textChanged.connect(self.test_data_path)
 
@@ -201,13 +203,20 @@ class Run_task_tab(QtGui.QWidget):
         # Called regularly when framework not running.
         if self.GUI_main.setups_tab.available_setups_changed:
             self.board_select.clear()
-            self.board_select.addItems(self.GUI_main.setups_tab.setup_names)
+            if self.GUI_main.setups_tab.setup_names:
+                self.board_select.addItems(self.GUI_main.setups_tab.setup_names)
+                if not self.connected:
+                    self.connect_button.setEnabled(True)
+            else: # No setups available to connect to.
+                    self.connect_button.setEnabled(False)
         if self.GUI_main.available_tasks_changed:
             self.task_select.clear()
             self.task_select.addItems(sorted(self.GUI_main.available_tasks))
+        if self.GUI_main.data_dir_changed and not self.custom_dir:
+            self.data_dir_text.setText(dirs['data'])
         if self.task:
             try:
-                task_path = os.path.join(tasks_dir, self.task + '.py')
+                task_path = os.path.join(dirs['tasks'], self.task + '.py')
                 if not self.task_hash == _djb2_file(task_path): # Task file modified.
                     self.task_changed()
             except FileNotFoundError:
@@ -272,7 +281,7 @@ class Run_task_tab(QtGui.QWidget):
                 self.status_text.setText('Resetting task..')
             else:
                 self.status_text.setText('Uploading..')
-                self.task_hash = _djb2_file(os.path.join(tasks_dir, task + '.py'))
+                self.task_hash = _djb2_file(os.path.join(dirs['tasks'], task + '.py'))
             self.start_button.setEnabled(False)
             self.variables_button.setEnabled(False)
             self.repaint()
@@ -297,8 +306,10 @@ class Run_task_tab(QtGui.QWidget):
             self.status_text.setText('Error setting up state machine.')
      
     def select_data_dir(self):
-        self.data_dir_text.setText(
-            QtGui.QFileDialog.getExistingDirectory(self, 'Select data folder', data_dir))
+        new_path = QtGui.QFileDialog.getExistingDirectory(self, 'Select data folder', dirs['data'])
+        if new_path:
+            self.data_dir_text.setText(new_path)
+            self.custom_dir = True
 
     def start_task(self):
         recording = self.test_data_path()
@@ -313,6 +324,7 @@ class Run_task_tab(QtGui.QWidget):
             subject_ID = str(self.subject_text.text())
             setup_ID = str(self.board_select.currentText())
             self.data_logger.open_data_file(self.data_dir, 'run_task', setup_ID, subject_ID)
+            self.data_logger.copy_task_file(self.data_dir, dirs['tasks'], 'run_task-task_files')
         self.fresh_task = False
         self.running = True
         self.board.start_framework()
