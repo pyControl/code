@@ -8,6 +8,11 @@ from gui.utility import variable_constants
 
 # Board_config_dialog -------------------------------------------------
 
+flashdrive_message = (
+    'It is recommended to disable the pyboard filesystem from acting as a '
+    'USB flash drive before loading the framework, as this helps prevent the '
+    'filesystem getting corrupted. Do you want to disable the flashdrive?')
+
 class Board_config_dialog(QtGui.QDialog):
 
     def __init__(self, parent=None):
@@ -41,6 +46,13 @@ class Board_config_dialog(QtGui.QDialog):
 
     def load_framework(self):
         self.accept()
+        if self.flashdrive_enabled:
+            reply = QtGui.QMessageBox.question(self, 'Disable flashdrive', 
+                flashdrive_message, QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+            if reply == QtGui.QMessageBox.Yes:
+                self.board.disable_mass_storage()
+                self.disconnect = True
+                return
         self.board.load_framework()
 
     def load_hardware_definition(self):

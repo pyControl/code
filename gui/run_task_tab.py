@@ -228,6 +228,8 @@ class Run_task_tab(QtGui.QWidget):
         self.task_changed()
         if self.GUI_main.config_dialog.disconnect:
             self.disconnect()
+        if self.connected and self.board.status['framework']:
+            self.task_groupbox.setEnabled(True)
 
     # Widget methods.
 
@@ -243,17 +245,20 @@ class Run_task_tab(QtGui.QWidget):
             self.board = Pycboard(port, print_func=self.print_to_log, data_logger=self.data_logger)
             self.connected = True
             self.config_button.setEnabled(True)
-            self.task_groupbox.setEnabled(True)
             self.connect_button.setEnabled(True)
             self.connect_button.setText('Disconnect')
             self.status_text.setText('Connected')
+            if self.board.status['framework']:
+                self.task_groupbox.setEnabled(True)
+            else:
+                self.print_to_log(
+                    "\nLoad pyControl framework using 'Config' button.")
         except SerialException:
             self.status_text.setText('Connection failed')
             self.print_to_log('Connection failed.')
             self.connect_button.setEnabled(True)
             self.board_select.setEnabled(True)
-        if self.connected and not self.board.status['framework']:
-            self.board.load_framework()
+
 
     def disconnect(self):
         # Disconnect from pyboard.

@@ -119,6 +119,10 @@ class Run_experiment_tab(QtGui.QWidget):
                 print_func('Connection failed.')
                 self.abort_experiment()
                 return
+            if not self.boards[i].status['framework']:
+                print_func('\nInstall pyControl framework on board before running experiment.')
+                self.abort_experiment()
+                return                
             self.boards[i].subject = experiment['subjects'][setup]
         # Hardware test.
         if experiment['hardware_test'] != 'no hardware test':
