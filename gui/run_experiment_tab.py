@@ -32,12 +32,15 @@ class Run_experiment_tab(QtGui.QWidget):
         self.plots_button.clicked.connect(self.experiment_plot.show)
         self.logs_button = QtGui.QPushButton('Hide logs')
         self.logs_button.clicked.connect(self.show_hide_logs)    
+        self.startstopclose_all_button = QtGui.QPushButton()
+        self.startstopclose_all_button.clicked.connect(self.startstopclose_all)
 
         self.Hlayout = QtGui.QHBoxLayout()
         self.Hlayout.addWidget(self.name_label)
         self.Hlayout.addWidget(self.name_text)
         self.Hlayout.addWidget(self.logs_button)
         self.Hlayout.addWidget(self.plots_button)
+        self.Hlayout.addWidget(self.startstopclose_all_button)
 
         self.scroll_area = QtGui.QScrollArea(parent=self)
         self.scroll_area.horizontalScrollBar().setEnabled(False)
@@ -65,6 +68,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.experiment_plot.setup_experiment(experiment)
         self.logs_visible = True
         self.logs_button.setText('Hide logs')
+        self.startstopclose_all_button.setText('Start All')
         # Setup controls box.
         self.name_text.setText(experiment['name'])
         self.logs_button.setEnabled(False)
@@ -182,8 +186,18 @@ class Run_experiment_tab(QtGui.QWidget):
             self.subjectboxes[i].status_text.setText('Ready')
         self.logs_button.setEnabled(True)
         self.plots_button.setEnabled(True)
-        self.rigs_finished = 0
+        self.setups_finished = 0
+        self.setups_running  = 0
 
+    def startstopclose_all(self):
+        if self.setups_running == 0:
+            for i, board in enumerate(self.boards):
+                self.subjectboxes[i].start_stop_rig()
+        elif self.setups_finished < len(self.boards):
+            for i, board in enumerate(self.boards):
+                self.subjectboxes[i].start_stop_rig()
+        else:
+            self.close_experiment()
 
     def stop_experiment(self):
         self.update_timer.stop()
@@ -219,7 +233,6 @@ class Run_experiment_tab(QtGui.QWidget):
                 pv_file.write(json.dumps(persistent_variables, sort_keys=True, indent=4))
         if summary_variables:
             Summary_variables_dialog(self, sv_dict).show()
-        self.close_experiment()
 
     def abort_experiment(self):
         '''Called if an error occurs while the experiment is being set up.'''
@@ -285,7 +298,19 @@ class Run_experiment_tab(QtGui.QWidget):
                 except PyboardError:
                     self.subjectboxes[i].error()
         self.experiment_plot.update()
-        if not boards_running and self.rigs_finished == len(self.boards):
+        if self.setups_running > 0:
+            if self.setups_running == len(self.boards) and self.setups_finished == 0:
+                self.startstopclose_all_button.setEnabled(True)
+                self.startstopclose_all_button.setText('Stop All')
+            else:
+                self.startstopclose_all_button.setEnabled(False)
+                if self.setups_finished == 0:
+                    self.startstopclose_all_button.setText('Stop All')
+                else:
+                    self.startstopclose_all_button.setText('Close Experiment')
+
+        if not boards_running and self.setups_finished == len(self.boards):
+            self.startstopclose_all_button.setEnabled(True)
             self.stop_experiment()
 
 # -----------------------------------------------------------------------------
@@ -383,6 +408,7 @@ class Subjectbox(QtGui.QGroupBox):
         board.start_framework()
 
         self.start_stop_button.setText('Stop')
+        self.run_exp_tab.setups_running += 1
 
         self.run_exp_tab.GUI_main.refresh_timer.stop()
         self.run_exp_tab.update_timer.start(update_interval)
@@ -402,7 +428,7 @@ class Subjectbox(QtGui.QGroupBox):
         if self.board.framework_running:
             self.board.stop_framework()
         self.run_exp_tab.experiment_plot.active_plots.remove(self.boxNum)
-        self.run_exp_tab.rigs_finished += 1
+        self.run_exp_tab.setups_finished += 1
         self.variables_button.setEnabled(False)
 
     def process_data(self, new_data):
