@@ -4,7 +4,7 @@ import json
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 from config.paths import dirs
-from gui.dialogs import invalid_run_experiment_dialog, invalid_save_experiment_dialog
+from gui.dialogs import invalid_run_experiment_dialog, invalid_save_experiment_dialog,unrun_subjects_dialog
 from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants, init_keyboard_shortcuts
 
 # --------------------------------------------------------------------------------
@@ -72,9 +72,13 @@ class Configure_experiment_tab(QtGui.QWidget):
 
         # Subjects Groupbox
         self.subjects_groupbox = QtGui.QGroupBox('Subjects')
-        self.subjectsbox_layout = QtGui.QHBoxLayout(self.subjects_groupbox)
+        self.subjectsbox_layout = QtGui.QGridLayout(self.subjects_groupbox)
+        self.subset_warning_checkbox = QtWidgets.QCheckBox('Warn me if any subjects will not be run')
+        self.subset_warning_checkbox.setChecked(True)
+        self.subjectsbox_layout.addWidget(self.subset_warning_checkbox,0,0)
         self.subjects_table = SubjectsTable(self)
-        self.subjectsbox_layout.addWidget(self.subjects_table)
+        self.subjectsbox_layout.addWidget(self.subjects_table,1,0,1,2)
+        self.subjectsbox_layout.setColumnStretch(1,1)
 
         # Variables Groupbox
         self.variables_groupbox = QtGui.QGroupBox('Variables')
@@ -157,7 +161,8 @@ class Configure_experiment_tab(QtGui.QWidget):
                 'hardware_test': str(self.hardware_test_select.currentText()),
                 'data_dir': self.data_dir_text.text(),
                 'subjects': self.subjects_table.subjects_dict(filtered),
-                'variables': self.variables_table.variables_list()}
+                'variables': self.variables_table.variables_list(),
+                'subset_warning':self.subset_warning_checkbox.isChecked()}
 
     def new_experiment(self, dialog=True):
         '''Clear experiment configuration.'''
@@ -171,6 +176,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         cbox_set_item(self.experiment_select, 'select experiment', insert=True)
         cbox_set_item(self.task_select, 'select task', insert=True)
         cbox_set_item(self.hardware_test_select, 'no hardware test', insert=True)
+        self.subset_warning_checkbox.setChecked(True)
         self.saved_exp_dict = self.experiment_dict()
         self.saved_exp_path = None
 
@@ -232,6 +238,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         cbox_set_item(self.task_select, experiment['task'])
         cbox_set_item(self.hardware_test_select, experiment['hardware_test'])
         cbox_set_item(self.experiment_select, experiment['name'])
+        self.subset_warning_checkbox.setChecked(experiment['subset_warning'])
         self.variables_table.task_changed(experiment['task'])
         self.data_dir_text.setText(experiment['data_dir'])
         self.subjects_table.set_from_dict(experiment['subjects'])
@@ -295,6 +302,15 @@ class Configure_experiment_tab(QtGui.QWidget):
                     invalid_run_experiment_dialog(self, "Invalid value '{}' for variable '{}'."
                         .format(v['value'], v['name']))
                     return
+        if self.subset_warning_checkbox.isChecked():
+            all_subjects = self.experiment_dict()['subjects']
+            will_not_run = ''
+            for subject in all_subjects.keys():
+                if all_subjects[subject]['Run'] == False:
+                    will_not_run += ('{}\n'.format(subject))
+            if will_not_run != '':
+                okay = unrun_subjects_dialog(self.subjects_groupbox,will_not_run)
+                if not okay :return
         if not self.save_dialog(): return
         self.GUI_main.run_experiment_tab.setup_experiment(experiment)
 
