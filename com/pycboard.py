@@ -228,7 +228,13 @@ class Pycboard(Pyboard):
         try:
             self.exec('os.mkdir({})'.format(repr(target_folder)))
         except PyboardError:
-            pass # Folder already exists.
+            # Folder already exists, remove any files not in sending folder.
+            target_files = eval(self.eval('os.listdir({})'.format(
+                repr(target_folder))).decode())
+            remove_files = list(set(target_files)-set(files))
+            for f in remove_files:
+                target_path = target_folder + '/' + f
+                self.remove_file(target_path)
         for f in files:
             file_path = os.path.join(folder_path, f)
             target_path = target_folder + '/' + f
