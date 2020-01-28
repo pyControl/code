@@ -365,7 +365,9 @@ class SubjectsTable(QtGui.QTableWidget):
         add_button = QtGui.QPushButton('add')
         add_button.clicked.connect(self.add_subject)
         run_checkbox = TableCheckbox()
-        if do_run:
+        if do_run ==None:
+            run_checkbox.setChecked(True) #new subjects are set to "Run" by default
+        else:
             run_checkbox.setChecked(do_run)
         self.setCellWidget(self.n_subjects,0,run_checkbox)  
         self.setCellWidget(self.n_subjects,1, setup_cbox)
