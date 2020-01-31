@@ -183,7 +183,10 @@ class Pycboard(Pyboard):
             target_path = os.path.split(file_path)[-1]
         file_size = os.path.getsize(file_path)
         file_hash = _djb2_file(file_path)
-        for i in range(3):
+        error_message = '\n\nError: Unable to transfer file. See the troubleshooting docs:\n' \
+                        'https://pycontrol.readthedocs.io/en/latest/user-guide/troubleshooting/'
+        # Try to load file, return once file hash on board matches that on computer.
+        for i in range(10):
             if file_hash == self.get_file_hash(target_path):
                 return
             self.exec_raw_no_follow("_receive_file('{}',{})"
@@ -199,12 +202,15 @@ class Pycboard(Pyboard):
                         if response_bytes == b'NS':
                             self.print('\n\nInsufficient space on pyboard filesystem to transfer file.')
                         else:
-                            self.print('\n\nError: Unable to transfer file. See the troubleshooting docs:\n'
-                                        'https://pycontrol.readthedocs.io/en/latest/user-guide/troubleshooting/')
+                            self.print(error_message)
                         time.sleep(0.01)
                         self.serial.reset_input_buffer()
                         raise PyboardError
                 self.follow(3)
+        # Unable to transfer file.
+        self.print(error_message)
+        raise PyboardError
+
 
     def transfer_folder(self, folder_path, target_folder=None, file_type='all',
                         show_progress=False):
