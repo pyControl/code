@@ -227,6 +227,8 @@ class Run_task_tab(QtGui.QWidget):
         self.GUI_main.config_dialog.exec_(self.board)
         self.task_changed()
         if self.GUI_main.config_dialog.disconnect:
+            time.sleep(0.5)
+            self.GUI_main.refresh()
             self.disconnect()
         if self.connected and self.board.status['framework']:
             self.task_groupbox.setEnabled(True)

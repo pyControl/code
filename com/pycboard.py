@@ -31,11 +31,6 @@ def _fs_free_space(drive='/flash'):
 def _receive_file(file_path, file_size):
     usb = pyb.USB_VCP()
     usb.setinterrupt(-1)
-    if file_size > _fs_free_space():
-        usb.write(b'NS')
-        return
-    else:
-        usb.write(b'OK')
     buf_size = 512
     buf = bytearray(buf_size)
     buf_mv = memoryview(buf)
@@ -49,7 +44,10 @@ def _receive_file(file_path, file_size):
                     bytes_remaining -= bytes_read
                     f.write(buf_mv[:bytes_read])
     except:
-        usb.write(b'ER')
+        if _fs_free_space() < bytes_remaining:
+            usb.write(b'NS') # Out of space.
+        else:
+            usb.write(b'ER')
 
 # ----------------------------------------------------------------------------------------
 #  Pycboard class.
@@ -185,19 +183,14 @@ class Pycboard(Pyboard):
             target_path = os.path.split(file_path)[-1]
         file_size = os.path.getsize(file_path)
         file_hash = _djb2_file(file_path)
-        for i in range(3):
+        error_message = '\n\nError: Unable to transfer file. See the troubleshooting docs:\n' \
+                        'https://pycontrol.readthedocs.io/en/latest/user-guide/troubleshooting/'
+        # Try to load file, return once file hash on board matches that on computer.
+        for i in range(10):
             if file_hash == self.get_file_hash(target_path):
                 return
-            try:
-                self.remove_file(file_path)
-                time.sleep(0.01)
-            except PyboardError:
-                pass
             self.exec_raw_no_follow("_receive_file('{}',{})"
                                     .format(target_path, file_size))
-            if not self.serial.read(2) == b'OK':
-                self.print('\n\nInsufficient space on pyboard filesystem to transfer file.')
-                raise PyboardError
             with open(file_path, 'rb') as f:
                 while True:
                     chunk = f.read(512)
@@ -206,13 +199,17 @@ class Pycboard(Pyboard):
                     self.serial.write(chunk)
                     response_bytes = self.serial.read(2)
                     if response_bytes != b'OK':
-                        self.print('\n\nError: Unable to transfer file. See the troubleshooting docs:\n'
-                                    'https://pycontrol.readthedocs.io/en/latest/user-guide/troubleshooting/')
-
+                        if response_bytes == b'NS':
+                            self.print('\n\nInsufficient space on pyboard filesystem to transfer file.')
+                        else:
+                            self.print(error_message)
                         time.sleep(0.01)
                         self.serial.reset_input_buffer()
                         raise PyboardError
                 self.follow(3)
+        # Unable to transfer file.
+        self.print(error_message)
+        raise PyboardError
 
 
     def transfer_folder(self, folder_path, target_folder=None, file_type='all',
