@@ -37,6 +37,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.time_text.setReadOnly(True)
         self.time_text.setFixedWidth(60)
         self.plots_button =  QtGui.QPushButton('Show plots')
+        self.plots_button.setIcon(QtGui.QIcon("gui/icons/bar-graph.svg"))
         self.plots_button.clicked.connect(self.experiment_plot.show)
         self.logs_button = QtGui.QPushButton('Hide logs')
         self.logs_button.clicked.connect(self.show_hide_logs)    
@@ -80,6 +81,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.GUI_main.tab_widget.setTabEnabled(2, False)  # Disable setups tab.
         self.GUI_main.experiments_tab.setCurrentWidget(self)
         self.startstopclose_button.setText('Start')
+        self.startstopclose_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
         self.experiment_plot.setup_experiment(experiment)
         self.state = 'pre_run'
         self.logs_visible = True
@@ -205,6 +207,7 @@ class Run_experiment_tab(QtGui.QWidget):
         '''Open data files, write variables set pre run to file, start framework.'''
         self.status_text.setText('Running')
         self.startstopclose_button.setText('Stop')
+        self.startstopclose_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
         self.state = 'running'
         self.experiment_plot.start_experiment()
         self.start_time = datetime.now()
@@ -223,6 +226,7 @@ class Run_experiment_tab(QtGui.QWidget):
     def stop_experiment(self):
         self.status_text.setText('Stopped')
         self.startstopclose_button.setText('Close')
+        self.startstopclose_button.setIcon(QtGui.QIcon("gui/icons/close.svg"))
         self.state = 'post_run'
         self.update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
@@ -359,6 +363,7 @@ class Subjectbox(QtGui.QGroupBox):
         self.print_text = QtGui.QLineEdit()
         self.print_text.setReadOnly(True)
         self.variables_button = QtGui.QPushButton('Variables')
+        self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
         self.variables_button.setEnabled(False)
         self.log_textbox = QtGui.QTextEdit()
         self.log_textbox.setMinimumHeight(180)
