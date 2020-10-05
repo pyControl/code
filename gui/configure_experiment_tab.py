@@ -38,7 +38,9 @@ class Configure_experiment_tab(QtGui.QWidget):
 
         self.run_button = QtGui.QPushButton('Run')
         self.new_button = QtGui.QPushButton('New')
+        self.new_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
         self.delete_button = QtGui.QPushButton('Delete')
+        self.delete_button.setIcon(QtGui.QIcon("gui/icons/delete.svg"))
         self.save_button = QtGui.QPushButton('Save')
         self.save_button.setEnabled(False)
         self.name_label = QtGui.QLabel('Experiment name:')
@@ -51,7 +53,8 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.hardware_test_select.setFixedWidth(150)
         self.data_dir_label = QtGui.QLabel('Data dir:')
         self.data_dir_text = QtGui.QLineEdit(dirs['data'])
-        self.data_dir_button = QtGui.QPushButton('...')
+        self.data_dir_button = QtGui.QPushButton('')
+        self.data_dir_button.setIcon(QtGui.QIcon("gui/icons/folder.svg"))
         self.data_dir_button.setFixedWidth(30)
 
         self.expbox_Hlayout_1.addWidget(self.experiment_select)

@@ -201,9 +201,11 @@ class Run_task_tab(QtGui.QWidget):
         subject_ID = self.subject_text.text()
         if  os.path.isdir(self.data_dir) and subject_ID:
             self.start_button.setText('Record')
+            self.start_button.setIcon(QtGui.QIcon("gui/icons/record.svg"))
             return True
         else:
             self.start_button.setText('Start')
+            self.start_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
             return False
 
     def refresh(self):

@@ -203,6 +203,7 @@ class Setup():
 
         self.select_checkbox = TableCheckbox()
         self.config_button = QtGui.QPushButton('Configure')
+        self.config_button.setIcon(QtGui.QIcon("gui/icons/settings.svg"))
         self.config_button.clicked.connect(self.open_config_dialog)
 
         self.setups_tab.setups_table.insertRow(0)
