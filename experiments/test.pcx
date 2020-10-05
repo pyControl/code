@@ -1,0 +1,10 @@
+{
+    "data_dir": "C:\\Users\\Thomas\\Dropbox\\Hardware development\\pyControl contributor repos\\pyControl_al3\\data\\test",
+    "hardware_test": "no hardware test",
+    "name": "test",
+    "subjects": {
+        "COM1": "p1"
+    },
+    "task": "all_states_example",
+    "variables": []
+}

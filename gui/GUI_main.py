@@ -111,6 +111,7 @@ class GUI_main(QtGui.QMainWindow):
         # Keyboard shortcuts dialog.
         shortcuts_action = QtGui.QAction("&Keyboard shortcuts", self)
         shortcuts_action.triggered.connect(self.shortcuts_dialog.show)
+        shortcuts_action.setIcon(QtGui.QIcon("gui/icons/keyboard.svg"))
         help_menu.addAction(shortcuts_action)
 
         self.show()
