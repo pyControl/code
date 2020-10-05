@@ -57,8 +57,10 @@ class Run_task_tab(QtGui.QWidget):
         self.board_select.setEditable(True)
         self.board_select.setFixedWidth(100)
         self.connect_button = QtGui.QPushButton('Connect')
+        self.connect_button.setIcon(QtGui.QIcon("gui/icons/connect.svg"))
         self.connect_button.setEnabled(False)
         self.config_button = QtGui.QPushButton('Config')
+        self.config_button.setIcon(QtGui.QIcon("gui/icons/settings.svg"))
 
         self.boardgroup_layout = QtGui.QHBoxLayout()
         self.boardgroup_layout.addWidget(self.board_label)
@@ -77,7 +79,8 @@ class Run_task_tab(QtGui.QWidget):
 
         self.data_dir_label = QtGui.QLabel('Data dir:')
         self.data_dir_text = QtGui.QLineEdit(dirs['data'])
-        self.data_dir_button = QtGui.QPushButton('...')
+        self.data_dir_button = QtGui.QPushButton()
+        self.data_dir_button.setIcon(QtGui.QIcon("gui/icons/folder.svg"))
         self.data_dir_button.setFixedWidth(30)
         self.subject_label = QtGui.QLabel('Subject ID:')
         self.subject_text = QtGui.QLineEdit()
@@ -104,7 +107,9 @@ class Run_task_tab(QtGui.QWidget):
         self.task_label = QtGui.QLabel('Task:')
         self.task_select = QtGui.QComboBox()
         self.upload_button = QtGui.QPushButton('Upload')
+        self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
         self.variables_button = QtGui.QPushButton('Variables')
+        self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
 
         self.taskgroup_layout = QtGui.QHBoxLayout()
         self.taskgroup_layout.addWidget(self.task_label)
@@ -121,7 +126,9 @@ class Run_task_tab(QtGui.QWidget):
         self.session_groupbox = QtGui.QGroupBox('Session')
 
         self.start_button = QtGui.QPushButton('Start')
+        self.start_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
         self.stop_button = QtGui.QPushButton('Stop')
+        self.stop_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
 
         self.sessiongroup_layout = QtGui.QHBoxLayout()
         self.sessiongroup_layout.addWidget(self.start_button)
@@ -194,9 +201,11 @@ class Run_task_tab(QtGui.QWidget):
         subject_ID = self.subject_text.text()
         if  os.path.isdir(self.data_dir) and subject_ID:
             self.start_button.setText('Record')
+            self.start_button.setIcon(QtGui.QIcon("gui/icons/record.svg"))
             return True
         else:
             self.start_button.setText('Start')
+            self.start_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
             return False
 
     def refresh(self):
@@ -249,6 +258,7 @@ class Run_task_tab(QtGui.QWidget):
             self.config_button.setEnabled(True)
             self.connect_button.setEnabled(True)
             self.connect_button.setText('Disconnect')
+            self.connect_button.setIcon(QtGui.QIcon("gui/icons/disconnect.svg"))
             self.status_text.setText('Connected')
             if self.board.status['framework']:
                 self.task_groupbox.setEnabled(True)
@@ -272,6 +282,7 @@ class Run_task_tab(QtGui.QWidget):
         self.config_button.setEnabled(False)
         self.board_select.setEnabled(True)
         self.connect_button.setText('Connect')
+        self.connect_button.setIcon(QtGui.QIcon("gui/icons/connect.svg"))
         self.status_text.setText('Not connected')
         self.task_changed()
         self.connected = False
@@ -279,6 +290,7 @@ class Run_task_tab(QtGui.QWidget):
     def task_changed(self):
         self.uploaded = False
         self.upload_button.setText('Upload')
+        self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
         self.start_button.setEnabled(False)
 
     def setup_task(self):
@@ -309,6 +321,7 @@ class Run_task_tab(QtGui.QWidget):
             self.fresh_task = True
             self.uploaded = True
             self.upload_button.setText('Reset')
+            self.upload_button.setIcon(QtGui.QIcon("gui/icons/refresh.svg"))
         except PyboardError:
             self.status_text.setText('Error setting up state machine.')
      
