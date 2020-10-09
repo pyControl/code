@@ -351,6 +351,7 @@ class SubjectsTable(QtGui.QTableWidget):
         self.cellChanged.connect(self.cell_changed)
         self.all_setups = set([])
         self.available_setups = []
+        self.unallocated_setups = []
         self.subjects = []
         self.n_subjects = 0
         self.add_subject()
@@ -374,6 +375,9 @@ class SubjectsTable(QtGui.QTableWidget):
         setup_cbox = QtGui.QComboBox()
         setup_cbox.addItems(self.available_setups if self.available_setups
                             else ['select setup'])
+        if self.unallocated_setups:
+            setup_cbox.setCurrentIndex(self.available_setups.index(
+                                       self.unallocated_setups[0]))
         setup_cbox.activated.connect(self.update_available_setups)
         remove_button = QtGui.QPushButton('remove')
         ind = QtCore.QPersistentModelIndex(self.model().index(self.n_subjects, 2))
@@ -416,6 +420,7 @@ class SubjectsTable(QtGui.QTableWidget):
         selected_setups = set([str(self.cellWidget(s,1).currentText())
                                for s in range(self.n_subjects)])
         self.available_setups = sorted(list(self.all_setups))
+        self.unallocated_setups = sorted(list(self.all_setups - selected_setups))
         for s in range(self.n_subjects):
             cbox_update_options(self.cellWidget(s,1), self.available_setups)
 
