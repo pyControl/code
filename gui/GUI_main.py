@@ -131,10 +131,18 @@ class GUI_main(QtGui.QMainWindow):
     def view_github(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://github.com/pyControl/pyControl"))
 
+    def get_task_file_list(self):
+        matches = []
+        for root, dirnames, filenames in os.walk(dirs['tasks']):
+            for filename in filenames:
+                if filename.endswith(('.py')):
+                    matches.append(filename[:-3])
+        return matches
+
     def refresh(self):
         '''Called regularly when framework not running.'''
         # Scan task folder.
-        tasks = [t.split('.')[0] for t in os.listdir(dirs['tasks']) if t[-3:] == '.py']
+        tasks = self.get_task_file_list()
         self.available_tasks_changed = tasks != self.available_tasks
         if self.available_tasks_changed:    
             self.available_tasks = tasks

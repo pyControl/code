@@ -46,11 +46,9 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.name_label = QtGui.QLabel('Experiment name:')
         self.name_text = QtGui.QLineEdit()
         self.task_label = QtGui.QLabel('Task:')
-        self.task_select = QtGui.QComboBox()
-        self.task_select.setFixedWidth(150)
+        self.task_select = QtGui.QPushButton('select task')
         self.hardware_test_label = QtGui.QLabel('Hardware test:')
-        self.hardware_test_select = QtGui.QComboBox()
-        self.hardware_test_select.setFixedWidth(150)
+        self.hardware_test_select = QtGui.QPushButton('no hardware test')
         self.data_dir_label = QtGui.QLabel('Data dir:')
         self.data_dir_text = QtGui.QLineEdit(dirs['data'])
         self.data_dir_button = QtGui.QPushButton('')
@@ -87,15 +85,12 @@ class Configure_experiment_tab(QtGui.QWidget):
 
         # Initialise widgets
         self.experiment_select.addItems(['select experiment'])
-        self.task_select.addItems(['select task'])
-        self.hardware_test_select.addItems(['no hardware test'])
 
         # Connect signals.
         self.name_text.textChanged.connect(self.name_edited)
         self.data_dir_text.textEdited.connect(lambda: setattr(self, 'custom_dir', True))
         self.data_dir_button.clicked.connect(self.select_data_dir)
         self.experiment_select.activated[str].connect(self.experiment_changed)
-        self.task_select.activated[str].connect(self.variables_table.task_changed)
         self.new_button.clicked.connect(lambda: self.new_experiment(dialog=True))
         self.delete_button.clicked.connect(self.delete_experiment)
         self.save_button.clicked.connect(self.save_experiment)
@@ -133,11 +128,50 @@ class Configure_experiment_tab(QtGui.QWidget):
                 return
             self.load_experiment(experiment_name)
 
+    def create_callback(self,btn,text):
+        def fxn():
+            if btn.text() != text:
+                btn.setText(text)
+                btn.adjustSize()
+                self.variables_table.task_changed(text)
+        return fxn
+
+    def create_menu(self,menuButton):
+        taskMenu = QtGui.QMenu()
+        task_root = dirs['tasks']
+
+        if menuButton is self.hardware_test_select:
+            taskMenu.addAction('no hardware test',self.create_callback(menuButton,'no hardware test'))
+            taskMenu.addSeparator()
+        previous_menu = taskMenu
+        current_menu = taskMenu
+        for dirName, subdirList, fileList in os.walk(task_root):
+            subfolder = dirName.split(task_root)[1][1:]
+            if subfolder:
+                if any(".py" in filename for filename in fileList): # only add submenu if there are .py files inside
+                    sub_menu = current_menu.addMenu(subfolder.split(os.path.sep)[-1])
+                    for filename in fileList:
+                        if filename.endswith('.py'):
+                            menuItem = filename[:-3]
+                            sub_menu.addAction(menuItem,self.create_callback(menuButton,os.path.join(subfolder,menuItem)))
+                    if subdirList: # continue down to next level
+                        previous_menu = current_menu
+                        current_menu = sub_menu
+                    else: # return up to previous level
+                        current_menu = previous_menu
+            else: # list top level files
+                for filename in fileList:
+                    if filename.endswith('.py'):
+                        menuItem = filename[:-3]
+                        taskMenu.addAction(menuItem,self.create_callback(menuButton,menuItem))
+        return taskMenu
+
+
     def refresh(self):
         '''Called periodically when not running to update available task, ports, experiments.'''
         if self.GUI_main.available_tasks_changed:
-            cbox_update_options(self.task_select, self.GUI_main.available_tasks)
-            cbox_update_options(self.hardware_test_select, ['no hardware test'] + self.GUI_main.available_tasks)
+            self.task_select.setMenu(self.create_menu(self.task_select))
+            self.hardware_test_select.setMenu(self.create_menu(self.hardware_test_select))
             self.GUI_main.available_tasks_changed = False
         if self.GUI_main.available_experiments_changed:
             cbox_update_options(self.experiment_select, self.GUI_main.available_experiments)
@@ -156,8 +190,8 @@ class Configure_experiment_tab(QtGui.QWidget):
     def experiment_dict(self):
         '''Return the current state of the experiments tab as a dictionary.'''
         return {'name': self.name_text.text(),
-                'task': str(self.task_select.currentText()),
-                'hardware_test': str(self.hardware_test_select.currentText()),
+                'task': str(self.task_select.text()),
+                'hardware_test': str(self.hardware_test_select.text()),
                 'data_dir': self.data_dir_text.text(),
                 'subjects': self.subjects_table.subjects_dict(),
                 'variables': self.variables_table.variables_list()}
@@ -172,8 +206,8 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.subjects_table.reset()
         self.variables_table.reset()
         cbox_set_item(self.experiment_select, 'select experiment', insert=True)
-        cbox_set_item(self.task_select, 'select task', insert=True)
-        cbox_set_item(self.hardware_test_select, 'no hardware test', insert=True)
+        self.task_select.setText('select task')
+        self.hardware_test_select.setText('no hardware test')
         self.saved_exp_dict = self.experiment_dict()
         self.saved_exp_path = None
 
@@ -214,8 +248,14 @@ class Configure_experiment_tab(QtGui.QWidget):
         with open(exp_path,'r') as exp_file:
             experiment = json.loads(exp_file.read())
         self.name_text.setText(experiment['name'])
-        cbox_set_item(self.task_select, experiment['task'])
-        cbox_set_item(self.hardware_test_select, experiment['hardware_test'])
+        if experiment['task'] in self.GUI_main.available_tasks:
+            self.task_select.setText(experiment['task'])
+        else:
+            self.task_select.setText('select task')
+        if experiment['hardware_test'] in self.GUI_main.available_tasks:
+            self.hardware_test_select.setText(experiment['hardware_test'])
+        else:
+            self.hardware_test_select.setText('no hardware test')
         cbox_set_item(self.experiment_select, experiment['name'])
         self.variables_table.task_changed(experiment['task'])
         self.data_dir_text.setText(experiment['data_dir'])
