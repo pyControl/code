@@ -208,7 +208,7 @@ class Configure_experiment_tab(QtGui.QWidget):
                 return False
             setup = str(self.subjects_table.cellWidget(s,1).currentText())
             run = self.subjects_table.cellWidget(s,0).isChecked()
-            d[subject] =  {'Setup':setup,'Run':run} # add dict subject entry
+            d[subject] =  {'setup':setup,'run':run} # add dict subject entry
         '''Store the current state of the experiment tab as a JSON object
         saved in the experiments folder as .pcx file.'''
         experiment = self.experiment_dict()
@@ -277,7 +277,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         if not experiment['subjects']:
             invalid_run_experiment_dialog(self, 'No subjects selected to run')
             return
-        setups = [experiment['subjects'][subject]['Setup'] for subject in experiment['subjects']]
+        setups = [experiment['subjects'][subject]['setup'] for subject in experiment['subjects']]
         subjects = experiment['subjects'].keys()
         if len(setups) == 0:
                 invalid_run_experiment_dialog(self, 'No subjects specified.')
@@ -306,7 +306,7 @@ class Configure_experiment_tab(QtGui.QWidget):
             all_subjects = self.experiment_dict()['subjects']
             will_not_run = ''
             for subject in all_subjects.keys():
-                if all_subjects[subject]['Run'] == False:
+                if all_subjects[subject]['run'] == False:
                     will_not_run += ('{}\n'.format(subject))
             if will_not_run != '':
                 okay = unrun_subjects_dialog(self.subjects_groupbox,will_not_run)
@@ -429,8 +429,8 @@ class SubjectsTable(QtGui.QTableWidget):
         self.subjects = [str(self.item(s, 2).text()) 
                          for s in range(self.n_subjects) if self.item(s, 2)]
 
-    def subjects_dict(self,filtered = False):
-        '''Return setups and subjects as a dictionary {setup:subject}'''
+    def subjects_dict(self,filtered=False):
+        '''Return setups and subjects as a dictionary {subject:{'setup':setup,'run':run}}'''
         d = {}
         for s in range(self.n_subjects):
             try:
@@ -441,17 +441,17 @@ class SubjectsTable(QtGui.QTableWidget):
             run = self.cellWidget(s,0).isChecked()
             if filtered:
                 if run: 
-                    d[subject] =  {'Setup':setup,'Run':run} # add dict subject entry
+                    d[subject] =  {'setup':setup,'run':run} # add dict subject entry
             else:
-                d[subject] =  {'Setup':setup,'Run':run} # add dict subject entry
+                d[subject] =  {'setup':setup,'run':run} # add dict subject entry
         return d
 
     def set_from_dict(self, subjects_dict):
         '''Fill table with subjects and setups from subjects_dict'''
         self.reset()
         for subject in subjects_dict:
-            setup = subjects_dict[subject]['Setup']
-            do_run = subjects_dict[subject]['Run']
+            setup = subjects_dict[subject]['setup']
+            do_run = subjects_dict[subject]['run']
             self.add_subject(setup,subject,do_run)
         self.update_available_setups()
         self.update_subjects()

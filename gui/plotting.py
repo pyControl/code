@@ -299,7 +299,7 @@ class Experiment_plot(QtGui.QMainWindow):
         for subject in sorted(subjects):
             self.subject_plots.append(Task_plot(self))
             self.subject_tabs.addTab(self.subject_plots[-1],
-                '{} : {}'.format(subject_dict[subject]['Setup'], subject))
+                '{} : {}'.format(subject_dict[subject]['setup'], subject))
 
     def set_state_machine(self, sm_info):
         '''Provide the task plotters with the state machine info.'''
