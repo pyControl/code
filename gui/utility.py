@@ -294,6 +294,7 @@ class TabBar(QtWidgets.QTabBar):
         QtWidgets.QTabBar.dropEvent(self, event)
 
 class menuSelect(QtGui.QPushButton):
+    # https://stackoverflow.com/questions/35924235/how-to-create-combobox-with-combobox-inside-using-pyqt
     def __init__(self,root_folder,initial_text,add_default = False):
         self.callback = lambda task: None
         self.menu = QtGui.QMenu()
