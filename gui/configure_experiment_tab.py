@@ -5,7 +5,7 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 from config.paths import dirs
 from gui.dialogs import invalid_run_experiment_dialog, invalid_save_experiment_dialog,unrun_subjects_dialog
-from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants, init_keyboard_shortcuts
+from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants, init_keyboard_shortcuts,menuSelect
 
 # --------------------------------------------------------------------------------
 # Experiments_tab
@@ -46,9 +46,9 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.name_label = QtGui.QLabel('Experiment name:')
         self.name_text = QtGui.QLineEdit()
         self.task_label = QtGui.QLabel('Task:')
-        self.task_select = QtGui.QPushButton('select task')
+        self.task_select = menuSelect(dirs['tasks'],'select task')
         self.hardware_test_label = QtGui.QLabel('Hardware test:')
-        self.hardware_test_select = QtGui.QPushButton('no hardware test')
+        self.hardware_test_select = menuSelect(dirs['tasks'],'no hardware test',add_default=True)
         self.data_dir_label = QtGui.QLabel('Data dir:')
         self.data_dir_text = QtGui.QLineEdit(dirs['data'])
         self.data_dir_button = QtGui.QPushButton('')
@@ -85,6 +85,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.variables_groupbox = QtGui.QGroupBox('Variables')
         self.variablesbox_layout = QtGui.QHBoxLayout(self.variables_groupbox)
         self.variables_table = VariablesTable(self)
+        self.task_select.set_callback(self.variables_table.task_changed)
         self.variablesbox_layout.addWidget(self.variables_table)
 
         # Initialise widgets
@@ -132,50 +133,11 @@ class Configure_experiment_tab(QtGui.QWidget):
                 return
             self.load_experiment(experiment_name)
 
-    def create_callback(self,btn,text):
-        def fxn():
-            if btn.text() != text:
-                btn.setText(text)
-                btn.adjustSize()
-                self.variables_table.task_changed(text)
-        return fxn
-
-    def create_menu(self,menuButton):
-        taskMenu = QtGui.QMenu()
-        task_root = dirs['tasks']
-
-        if menuButton is self.hardware_test_select:
-            taskMenu.addAction('no hardware test',self.create_callback(menuButton,'no hardware test'))
-            taskMenu.addSeparator()
-        previous_menu = taskMenu
-        current_menu = taskMenu
-        for dirName, subdirList, fileList in os.walk(task_root):
-            subfolder = dirName.split(task_root)[1][1:]
-            if subfolder:
-                if any(".py" in filename for filename in fileList): # only add submenu if there are .py files inside
-                    sub_menu = current_menu.addMenu(subfolder.split(os.path.sep)[-1])
-                    for filename in fileList:
-                        if filename.endswith('.py'):
-                            menuItem = filename[:-3]
-                            sub_menu.addAction(menuItem,self.create_callback(menuButton,os.path.join(subfolder,menuItem)))
-                    if subdirList: # continue down to next level
-                        previous_menu = current_menu
-                        current_menu = sub_menu
-                    else: # return up to previous level
-                        current_menu = previous_menu
-            else: # list top level files
-                for filename in fileList:
-                    if filename.endswith('.py'):
-                        menuItem = filename[:-3]
-                        taskMenu.addAction(menuItem,self.create_callback(menuButton,menuItem))
-        return taskMenu
-
-
     def refresh(self):
         '''Called periodically when not running to update available task, ports, experiments.'''
         if self.GUI_main.available_tasks_changed:
-            self.task_select.setMenu(self.create_menu(self.task_select))
-            self.hardware_test_select.setMenu(self.create_menu(self.hardware_test_select))
+            self.task_select.update_menu()
+            self.hardware_test_select.update_menu()
             self.GUI_main.available_tasks_changed = False
         if self.GUI_main.available_experiments_changed:
             cbox_update_options(self.experiment_select, self.GUI_main.available_experiments)

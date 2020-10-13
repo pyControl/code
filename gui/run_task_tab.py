@@ -12,7 +12,7 @@ from config.gui_settings import update_interval
 
 from gui.dialogs import Variables_dialog
 from gui.plotting import Task_plot
-from gui.utility import init_keyboard_shortcuts
+from gui.utility import init_keyboard_shortcuts,menuSelect
 
 # Run_task_gui ------------------------------------------------------------------------
 
@@ -105,7 +105,8 @@ class Run_task_tab(QtGui.QWidget):
         self.task_groupbox = QtGui.QGroupBox('Task')
 
         self.task_label = QtGui.QLabel('Task:')
-        self.task_select = QtGui.QPushButton('select task')
+        self.task_select = menuSelect(dirs['tasks'],'select task')
+        self.task_select.set_callback(self.task_changed)
         self.upload_button = QtGui.QPushButton('Upload')
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
         self.variables_button = QtGui.QPushButton('Variables')
@@ -186,13 +187,6 @@ class Run_task_tab(QtGui.QWidget):
 
         self.disconnect() # Set initial state as disconnected.
 
-    def create_callback(self,text):
-        def fxn():
-            if self.task_select.text() != text:
-                self.task_changed()
-                self.task_select.setText(text)
-        return fxn
-
     # General methods
 
     def print_to_log(self, print_string, end='\n'):
@@ -225,30 +219,7 @@ class Run_task_tab(QtGui.QWidget):
             else: # No setups available to connect to.
                     self.connect_button.setEnabled(False)
         if self.GUI_main.available_tasks_changed:
-            taskMenu = QtGui.QMenu()
-            task_root = dirs['tasks']
-            previous_menu = taskMenu
-            current_menu = taskMenu
-            for dirName, subdirList, fileList in os.walk(task_root):
-                subfolder = dirName.split(task_root)[1][1:]
-                if subfolder:
-                    if any(".py" in filename for filename in fileList): # only add submenu if there are .py files inside
-                        sub_menu = current_menu.addMenu(subfolder.split(os.path.sep)[-1])
-                        for filename in fileList:
-                            if filename.endswith('.py'):
-                                menuItem = filename[:-3]
-                                sub_menu.addAction(menuItem,self.create_callback(os.path.join(subfolder,menuItem)))
-                        if subdirList: # continue down to next level
-                            previous_menu = current_menu
-                            current_menu = sub_menu
-                        else: # return up to previous level
-                            current_menu = previous_menu
-                else: # list top level files
-                    for filename in fileList:
-                        if filename.endswith('.py'):
-                            menuItem = filename[:-3]
-                            taskMenu.addAction(menuItem,self.create_callback(menuItem))
-            self.task_select.setMenu(taskMenu)
+            self.task_select.update_menu()
         if self.GUI_main.data_dir_changed and not self.custom_dir:
             self.data_dir_text.setText(dirs['data'])
         if self.task:
@@ -315,7 +286,7 @@ class Run_task_tab(QtGui.QWidget):
         self.task_changed()
         self.connected = False
 
-    def task_changed(self):
+    def task_changed(self,task=None):
         self.uploaded = False
         self.upload_button.setText('Upload')
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
