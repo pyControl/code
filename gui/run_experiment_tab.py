@@ -30,6 +30,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.name_text  = QtGui.QLineEdit()
         self.name_text.setReadOnly(True)
         self.plots_button =  QtGui.QPushButton('Show plots')
+        self.plots_button.setIcon(QtGui.QIcon("gui/icons/bar-graph.svg"))
         self.plots_button.clicked.connect(self.experiment_plot.show)
         self.logs_button = QtGui.QPushButton('Hide logs')
         self.logs_button.clicked.connect(self.show_hide_logs)    
@@ -162,6 +163,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.logs_visible = True
         self.logs_button.setText('Hide logs')
         self.startstopclose_all_button.setText('Start All')
+        self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
         # Setup controls box.
         self.name_text.setText(experiment['name'])
         self.startstopclose_all_button.setEnabled(False)
@@ -237,7 +239,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.setups_running  = 0
 
     def startstopclose_all(self):
-        if self.setups_running == 0:
+        if self.setups_running == 0: # This logic in not very clear and may have some redundent terms.
             for i, board in enumerate(self.boards):
                 self.subjectboxes[i].start_stop_rig()
         elif self.setups_finished < len(self.boards):
@@ -344,16 +346,19 @@ class Run_experiment_tab(QtGui.QWidget):
                 except PyboardError:
                     self.subjectboxes[i].error()
         self.experiment_plot.update()
-        if self.setups_running > 0:
+        if self.setups_running > 0:  # This logic in not very clear and may have some redundent terms.
             if self.setups_running == len(self.boards) and self.setups_finished == 0:
                 self.startstopclose_all_button.setEnabled(True)
                 self.startstopclose_all_button.setText('Stop All')
+                self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
             else:
                 self.startstopclose_all_button.setEnabled(False)
                 if self.setups_finished == 0:
                     self.startstopclose_all_button.setText('Stop All')
+                    self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
                 else:
                     self.startstopclose_all_button.setText('Close Experiment')
+                    self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/close.svg"))
 
         if not boards_running and self.setups_finished == len(self.boards):
             self.startstopclose_all_button.setEnabled(True)
@@ -381,6 +386,7 @@ class Subjectbox(QtGui.QGroupBox):
         self.delay_printing = False
 
         self.start_stop_button = QtGui.QPushButton('Start')
+        self.start_stop_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
         self.start_stop_button.setEnabled(False)
         self.status_label = QtGui.QLabel('Status:')
         self.status_text = QtGui.QLineEdit()
@@ -402,6 +408,7 @@ class Subjectbox(QtGui.QGroupBox):
         self.print_text = QtGui.QLineEdit()
         self.print_text.setReadOnly(True)
         self.variables_button = QtGui.QPushButton('Variables')
+        self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
         self.variables_button.setEnabled(False)
         self.log_textbox = QtGui.QTextEdit()
         self.log_textbox.setMinimumHeight(180)
@@ -475,6 +482,7 @@ class Subjectbox(QtGui.QGroupBox):
         board.start_framework()
 
         self.start_stop_button.setText('Stop')
+        self.start_stop_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
         self.run_exp_tab.setups_running += 1
 
         self.run_exp_tab.GUI_main.refresh_timer.stop()

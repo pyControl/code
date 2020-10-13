@@ -278,10 +278,12 @@ class Pycboard(Pyboard):
         else:
             self.print('Hardware definition file not found.') 
 
-    def setup_state_machine(self, sm_name, sm_dir=dirs['tasks'], uploaded=False):
+    def setup_state_machine(self, sm_name, sm_dir=None, uploaded=False):
         '''Transfer state machine descriptor file sm_name.py from folder sm_dir
         to board. Instantiate state machine object as state_machine on pyboard.'''
         self.reset()
+        if sm_dir is None:
+            sm_dir = dirs['tasks']
         sm_path = os.path.join(sm_dir, sm_name + '.py')
         if uploaded:
             self.print('\nResetting task. ', end='')
