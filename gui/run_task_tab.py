@@ -371,7 +371,8 @@ class Run_task_tab(QtGui.QWidget):
                     self.setup_task()
                     return
             subject_ID = str(self.subject_text.text())
-            self.data_logger.open_data_file(self.data_dir, 'run_task', subject_ID)
+            setup_ID = str(self.board_select.currentText())
+            self.data_logger.open_data_file(self.data_dir, 'run_task', setup_ID, subject_ID)
             self.data_logger.copy_task_file(self.data_dir, dirs['tasks'], 'run_task-task_files')
         self.fresh_task = False
         self.running = True
