@@ -5,7 +5,7 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 from config.paths import dirs
 from gui.dialogs import invalid_run_experiment_dialog, invalid_save_experiment_dialog,unrun_subjects_dialog
-from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants, init_keyboard_shortcuts,menuSelect
+from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants, init_keyboard_shortcuts,TaskSelectMenu
 
 # --------------------------------------------------------------------------------
 # Experiments_tab
@@ -46,9 +46,9 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.name_label = QtGui.QLabel('Experiment name:')
         self.name_text = QtGui.QLineEdit()
         self.task_label = QtGui.QLabel('Task:')
-        self.task_select = menuSelect(dirs['tasks'],'select task')
+        self.task_select = TaskSelectMenu(dirs['tasks'],'select task')
         self.hardware_test_label = QtGui.QLabel('Hardware test:')
-        self.hardware_test_select = menuSelect(dirs['tasks'],'no hardware test',add_default=True)
+        self.hardware_test_select = TaskSelectMenu(dirs['tasks'],'no hardware test',add_default=True)
         self.data_dir_label = QtGui.QLabel('Data dir:')
         self.data_dir_text = QtGui.QLineEdit(dirs['data'])
         self.data_dir_button = QtGui.QPushButton('')
@@ -153,7 +153,7 @@ class Configure_experiment_tab(QtGui.QWidget):
             if (str(self.name_text.text()) == '') and not self.custom_dir:
                 self.data_dir_text.setText(dirs['data'])
 
-    def experiment_dict(self,filtered = False):
+    def experiment_dict(self, filtered=False):
         '''Return the current state of the experiments tab as a dictionary.'''
         return {'name': self.name_text.text(),
                 'task': str(self.task_select.text()),
@@ -256,7 +256,6 @@ class Configure_experiment_tab(QtGui.QWidget):
         '''Check that the experiment is valid. Prompt user to save experiment if
         it is new or has been edited. Then run experiment.'''
         experiment = self.experiment_dict(filtered=True)
-
         if not experiment['name']:
             invalid_run_experiment_dialog(self, 'Experiment must have a name.')
             return

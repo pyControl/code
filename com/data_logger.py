@@ -47,7 +47,7 @@ class Data_logger():
         if not os.path.exists(exp_tasks_dir):
             os.mkdir(exp_tasks_dir)
         task_file_path = os.path.join(tasks_dir, self.sm_info['name']+'.py')
-        task_save_name = self.sm_info['name']+'_{}.py'.format(self.sm_info['task_hash'])
+        task_save_name = os.path.split(self.sm_info['name'])[1] +'_{}.py'.format(self.sm_info['task_hash'])
         if not task_save_name in os.listdir(exp_tasks_dir):
             copyfile(task_file_path, os.path.join(exp_tasks_dir, task_save_name))
             

@@ -12,7 +12,7 @@ from config.gui_settings import update_interval
 
 from gui.dialogs import Variables_dialog
 from gui.plotting import Task_plot
-from gui.utility import init_keyboard_shortcuts,menuSelect
+from gui.utility import init_keyboard_shortcuts,TaskSelectMenu
 
 # Run_task_gui ------------------------------------------------------------------------
 
@@ -105,7 +105,7 @@ class Run_task_tab(QtGui.QWidget):
         self.task_groupbox = QtGui.QGroupBox('Task')
 
         self.task_label = QtGui.QLabel('Task:')
-        self.task_select = menuSelect(dirs['tasks'],'select task')
+        self.task_select = TaskSelectMenu(dirs['tasks'],'select task')
         self.task_select.set_callback(self.task_changed)
         self.upload_button = QtGui.QPushButton('Upload')
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
@@ -293,35 +293,36 @@ class Run_task_tab(QtGui.QWidget):
         self.start_button.setEnabled(False)
 
     def setup_task(self):
+        task = self.task_select.text()
+        if task == 'select task':
+            return
         try:
-            task = self.task_select.text()
-            if task != 'select task':
-                if self.uploaded:
-                    self.status_text.setText('Resetting task..')
-                else:
-                    self.status_text.setText('Uploading..')
-                    self.task_hash = _djb2_file(os.path.join(dirs['tasks'], task + '.py'))
-                self.start_button.setEnabled(False)
-                self.variables_button.setEnabled(False)
-                self.repaint()
-                self.board.setup_state_machine(task, uploaded=self.uploaded)
-                if self.variables_dialog:
-                    self.variables_button.clicked.disconnect()
-                    self.variables_dialog.deleteLater()
-                self.variables_dialog = Variables_dialog(self, self.board)
-                self.variables_button.clicked.connect(self.variables_dialog.exec_)
-                self.variables_button.setEnabled(True)
-                self.task_plot.set_state_machine(self.board.sm_info)
-                self.file_groupbox.setEnabled(True)
-                self.session_groupbox.setEnabled(True)
-                self.start_button.setEnabled(True)
-                self.stop_button.setEnabled(False)
-                self.status_text.setText('Uploaded : ' + task)
-                self.task = task
-                self.fresh_task = True
-                self.uploaded = True
-                self.upload_button.setText('Reset')
-                self.upload_button.setIcon(QtGui.QIcon("gui/icons/refresh.svg"))
+            if self.uploaded:
+                self.status_text.setText('Resetting task..')
+            else:
+                self.status_text.setText('Uploading..')
+                self.task_hash = _djb2_file(os.path.join(dirs['tasks'], task + '.py'))
+            self.start_button.setEnabled(False)
+            self.variables_button.setEnabled(False)
+            self.repaint()
+            self.board.setup_state_machine(task, uploaded=self.uploaded)
+            if self.variables_dialog:
+                self.variables_button.clicked.disconnect()
+                self.variables_dialog.deleteLater()
+            self.variables_dialog = Variables_dialog(self, self.board)
+            self.variables_button.clicked.connect(self.variables_dialog.exec_)
+            self.variables_button.setEnabled(True)
+            self.task_plot.set_state_machine(self.board.sm_info)
+            self.file_groupbox.setEnabled(True)
+            self.session_groupbox.setEnabled(True)
+            self.start_button.setEnabled(True)
+            self.stop_button.setEnabled(False)
+            self.status_text.setText('Uploaded : ' + task)
+            self.task = task
+            self.fresh_task = True
+            self.uploaded = True
+            self.upload_button.setText('Reset')
+            self.upload_button.setIcon(QtGui.QIcon("gui/icons/refresh.svg"))
         except PyboardError:
             self.status_text.setText('Error setting up state machine.')
      

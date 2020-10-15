@@ -293,9 +293,19 @@ class TabBar(QtWidgets.QTabBar):
         self.dragDropedPos = event.pos()
         QtWidgets.QTabBar.dropEvent(self, event)
 
-class menuSelect(QtGui.QPushButton):
-    # https://stackoverflow.com/questions/35924235/how-to-create-combobox-with-combobox-inside-using-pyqt
-    def __init__(self,root_folder,initial_text,add_default = False):
+# ----------------------------------------------------------------------------------
+# TaskSelectMenu
+# ----------------------------------------------------------------------------------
+
+class TaskSelectMenu(QtGui.QPushButton):
+    '''Nested menu used to select tasks. The menu items are the names of
+    any .py files in root_folder and it's sub-directories.  Items are 
+    nested in the menu according to the sub-directory structure. 
+    initial_text is shown before anything is selected, and if add_default
+    is True, initial_text is included as a menu option.
+    Adapted from: https://stackoverflow.com/questions/35924235
+    '''
+    def __init__(self, root_folder, initial_text, add_default=False):
         self.callback = lambda task: None
         self.menu = QtGui.QMenu()
         self.menu_root = root_folder

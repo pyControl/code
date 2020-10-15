@@ -132,12 +132,13 @@ class GUI_main(QtGui.QMainWindow):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://github.com/pyControl/pyControl"))
 
     def get_task_file_list(self):
-        matches = []
-        for root, dirnames, filenames in os.walk(dirs['tasks']):
-            for filename in filenames:
-                if filename.endswith(('.py')):
-                    matches.append(filename[:-3])
-        return matches
+        '''Return list of .py files in tasks folder and subfolders in format:
+        subdir_1/subdir_2/task_file_name.py'''
+        task_files = []
+        for (dirpath, dirnames, filenames) in os.walk(dirs['tasks']):
+            task_files += [os.path.join(dirpath, file).split(dirs['tasks'])[1][1:-3]
+                           for file in filenames if file.endswith('.py')]
+        return task_files
 
     def refresh(self):
         '''Called regularly when framework not running.'''
