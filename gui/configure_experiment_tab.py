@@ -5,7 +5,7 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 from config.paths import dirs
 from gui.dialogs import invalid_run_experiment_dialog, invalid_save_experiment_dialog,unrun_subjects_dialog
-from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants, init_keyboard_shortcuts
+from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants, init_keyboard_shortcuts,TaskSelectMenu
 
 # --------------------------------------------------------------------------------
 # Experiments_tab
@@ -46,11 +46,9 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.name_label = QtGui.QLabel('Experiment name:')
         self.name_text = QtGui.QLineEdit()
         self.task_label = QtGui.QLabel('Task:')
-        self.task_select = QtGui.QComboBox()
-        self.task_select.setFixedWidth(150)
+        self.task_select = TaskSelectMenu(dirs['tasks'],'select task')
         self.hardware_test_label = QtGui.QLabel('Hardware test:')
-        self.hardware_test_select = QtGui.QComboBox()
-        self.hardware_test_select.setFixedWidth(150)
+        self.hardware_test_select = TaskSelectMenu(dirs['tasks'],'no hardware test',add_default=True)
         self.data_dir_label = QtGui.QLabel('Data dir:')
         self.data_dir_text = QtGui.QLineEdit(dirs['data'])
         self.data_dir_button = QtGui.QPushButton('')
@@ -87,19 +85,17 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.variables_groupbox = QtGui.QGroupBox('Variables')
         self.variablesbox_layout = QtGui.QHBoxLayout(self.variables_groupbox)
         self.variables_table = VariablesTable(self)
+        self.task_select.set_callback(self.variables_table.task_changed)
         self.variablesbox_layout.addWidget(self.variables_table)
 
         # Initialise widgets
         self.experiment_select.addItems(['select experiment'])
-        self.task_select.addItems(['select task'])
-        self.hardware_test_select.addItems(['no hardware test'])
 
         # Connect signals.
         self.name_text.textChanged.connect(self.name_edited)
         self.data_dir_text.textEdited.connect(lambda: setattr(self, 'custom_dir', True))
         self.data_dir_button.clicked.connect(self.select_data_dir)
         self.experiment_select.activated[str].connect(self.experiment_changed)
-        self.task_select.activated[str].connect(self.variables_table.task_changed)
         self.new_button.clicked.connect(lambda: self.new_experiment(dialog=True))
         self.delete_button.clicked.connect(self.delete_experiment)
         self.save_button.clicked.connect(self.save_experiment)
@@ -140,8 +136,8 @@ class Configure_experiment_tab(QtGui.QWidget):
     def refresh(self):
         '''Called periodically when not running to update available task, ports, experiments.'''
         if self.GUI_main.available_tasks_changed:
-            cbox_update_options(self.task_select, self.GUI_main.available_tasks)
-            cbox_update_options(self.hardware_test_select, ['no hardware test'] + self.GUI_main.available_tasks)
+            self.task_select.update_menu()
+            self.hardware_test_select.update_menu()
             self.GUI_main.available_tasks_changed = False
         if self.GUI_main.available_experiments_changed:
             cbox_update_options(self.experiment_select, self.GUI_main.available_experiments)
@@ -157,11 +153,11 @@ class Configure_experiment_tab(QtGui.QWidget):
             if (str(self.name_text.text()) == '') and not self.custom_dir:
                 self.data_dir_text.setText(dirs['data'])
 
-    def experiment_dict(self,filtered = False):
+    def experiment_dict(self, filtered=False):
         '''Return the current state of the experiments tab as a dictionary.'''
         return {'name': self.name_text.text(),
-                'task': str(self.task_select.currentText()),
-                'hardware_test': str(self.hardware_test_select.currentText()),
+                'task': str(self.task_select.text()),
+                'hardware_test': str(self.hardware_test_select.text()),
                 'data_dir': self.data_dir_text.text(),
                 'subjects': self.subjects_table.subjects_dict(filtered),
                 'variables': self.variables_table.variables_list(),
@@ -177,8 +173,8 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.subjects_table.reset()
         self.variables_table.reset()
         cbox_set_item(self.experiment_select, 'select experiment', insert=True)
-        cbox_set_item(self.task_select, 'select task', insert=True)
-        cbox_set_item(self.hardware_test_select, 'no hardware test', insert=True)
+        self.task_select.setText('select task')
+        self.hardware_test_select.setText('no hardware test')
         self.subset_warning_checkbox.setChecked(True)
         self.saved_exp_dict = self.experiment_dict()
         self.saved_exp_path = None
@@ -238,8 +234,14 @@ class Configure_experiment_tab(QtGui.QWidget):
         with open(exp_path,'r') as exp_file:
             experiment = json.loads(exp_file.read())
         self.name_text.setText(experiment['name'])
-        cbox_set_item(self.task_select, experiment['task'])
-        cbox_set_item(self.hardware_test_select, experiment['hardware_test'])
+        if experiment['task'] in self.GUI_main.available_tasks:
+            self.task_select.setText(experiment['task'])
+        else:
+            self.task_select.setText('select task')
+        if experiment['hardware_test'] in self.GUI_main.available_tasks:
+            self.hardware_test_select.setText(experiment['hardware_test'])
+        else:
+            self.hardware_test_select.setText('no hardware test')
         cbox_set_item(self.experiment_select, experiment['name'])
         self.subset_warning_checkbox.setChecked(experiment['subset_warning'])
         self.variables_table.task_changed(experiment['task'])
@@ -254,7 +256,6 @@ class Configure_experiment_tab(QtGui.QWidget):
         '''Check that the experiment is valid. Prompt user to save experiment if
         it is new or has been edited. Then run experiment.'''
         experiment = self.experiment_dict(filtered=True)
-
         if not experiment['name']:
             invalid_run_experiment_dialog(self, 'Experiment must have a name.')
             return

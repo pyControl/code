@@ -12,7 +12,7 @@ from config.gui_settings import update_interval
 
 from gui.dialogs import Variables_dialog
 from gui.plotting import Task_plot
-from gui.utility import init_keyboard_shortcuts
+from gui.utility import init_keyboard_shortcuts,TaskSelectMenu
 
 # Run_task_gui ------------------------------------------------------------------------
 
@@ -105,7 +105,8 @@ class Run_task_tab(QtGui.QWidget):
         self.task_groupbox = QtGui.QGroupBox('Task')
 
         self.task_label = QtGui.QLabel('Task:')
-        self.task_select = QtGui.QComboBox()
+        self.task_select = TaskSelectMenu(dirs['tasks'],'select task')
+        self.task_select.set_callback(self.task_changed)
         self.upload_button = QtGui.QPushButton('Upload')
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
         self.variables_button = QtGui.QPushButton('Variables')
@@ -118,7 +119,6 @@ class Run_task_tab(QtGui.QWidget):
         self.taskgroup_layout.addWidget(self.variables_button)
         self.task_groupbox.setLayout(self.taskgroup_layout)
 
-        self.task_select.currentTextChanged.connect(self.task_changed)
         self.upload_button.clicked.connect(self.setup_task)        
 
         # Session groupbox.
@@ -175,7 +175,7 @@ class Run_task_tab(QtGui.QWidget):
         # Keyboard Shortcuts
 
         shortcut_dict = {
-                        't' : lambda: self.task_select.showPopup(),
+                        't' : lambda: self.task_select.showMenu(),
                         'u' : lambda: self.setup_task(),
                         'Space' : (lambda: self.stop_task() if self.running 
                             else self.start_task() if self.uploaded else None)
@@ -219,8 +219,7 @@ class Run_task_tab(QtGui.QWidget):
             else: # No setups available to connect to.
                     self.connect_button.setEnabled(False)
         if self.GUI_main.available_tasks_changed:
-            self.task_select.clear()
-            self.task_select.addItems(sorted(self.GUI_main.available_tasks))
+            self.task_select.update_menu()
         if self.GUI_main.data_dir_changed and not self.custom_dir:
             self.data_dir_text.setText(dirs['data'])
         if self.task:
@@ -287,15 +286,17 @@ class Run_task_tab(QtGui.QWidget):
         self.task_changed()
         self.connected = False
 
-    def task_changed(self):
+    def task_changed(self,task=None):
         self.uploaded = False
         self.upload_button.setText('Upload')
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
         self.start_button.setEnabled(False)
 
     def setup_task(self):
+        task = self.task_select.text()
+        if task == 'select task':
+            return
         try:
-            task = self.task_select.currentText()
             if self.uploaded:
                 self.status_text.setText('Resetting task..')
             else:
