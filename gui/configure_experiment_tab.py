@@ -46,9 +46,9 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.name_label = QtGui.QLabel('Experiment name:')
         self.name_text = QtGui.QLineEdit()
         self.task_label = QtGui.QLabel('Task:')
-        self.task_select = TaskSelectMenu(dirs['tasks'],'select task')
+        self.task_select = TaskSelectMenu('select task')
         self.hardware_test_label = QtGui.QLabel('Hardware test:')
-        self.hardware_test_select = TaskSelectMenu(dirs['tasks'],'no hardware test',add_default=True)
+        self.hardware_test_select = TaskSelectMenu('no hardware test',add_default=True)
         self.data_dir_label = QtGui.QLabel('Data dir:')
         self.data_dir_text = QtGui.QLineEdit(dirs['data'])
         self.data_dir_button = QtGui.QPushButton('')
@@ -136,8 +136,8 @@ class Configure_experiment_tab(QtGui.QWidget):
     def refresh(self):
         '''Called periodically when not running to update available task, ports, experiments.'''
         if self.GUI_main.available_tasks_changed:
-            self.task_select.update_menu()
-            self.hardware_test_select.update_menu()
+            self.task_select.update_menu(dirs['tasks'])
+            self.hardware_test_select.update_menu(dirs['tasks'])
             self.GUI_main.available_tasks_changed = False
         if self.GUI_main.available_experiments_changed:
             cbox_update_options(self.experiment_select, self.GUI_main.available_experiments)

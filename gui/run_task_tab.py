@@ -105,7 +105,7 @@ class Run_task_tab(QtGui.QWidget):
         self.task_groupbox = QtGui.QGroupBox('Task')
 
         self.task_label = QtGui.QLabel('Task:')
-        self.task_select = TaskSelectMenu(dirs['tasks'],'select task')
+        self.task_select = TaskSelectMenu('select task')
         self.task_select.set_callback(self.task_changed)
         self.upload_button = QtGui.QPushButton('Upload')
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
@@ -219,7 +219,7 @@ class Run_task_tab(QtGui.QWidget):
             else: # No setups available to connect to.
                     self.connect_button.setEnabled(False)
         if self.GUI_main.available_tasks_changed:
-            self.task_select.update_menu()
+            self.task_select.update_menu(dirs['tasks'])
         if self.GUI_main.data_dir_changed and not self.custom_dir:
             self.data_dir_text.setText(dirs['data'])
         if self.task:

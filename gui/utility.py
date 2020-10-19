@@ -305,10 +305,9 @@ class TaskSelectMenu(QtGui.QPushButton):
     is True, initial_text is included as a menu option.
     Adapted from: https://stackoverflow.com/questions/35924235
     '''
-    def __init__(self, root_folder, initial_text, add_default=False):
+    def __init__(self, initial_text, add_default=False):
         self.callback = lambda task: None
         self.menu = QtGui.QMenu()
-        self.menu_root = root_folder
         self.add_default = add_default
         self.default_text = initial_text
         super().__init__(initial_text)
@@ -323,15 +322,15 @@ class TaskSelectMenu(QtGui.QPushButton):
                 self.setText(text)
         return fxn
     
-    def update_menu(self):
+    def update_menu(self, root_folder):
         self.menu.clear()
         if self.add_default:
             self.menu.addAction(self.default_text,self.create_action(self.default_text))
             self.menu.addSeparator() 
         previous_menu = self.menu
         current_menu = self.menu
-        for dirName, subdirList, fileList in os.walk(self.menu_root):
-            subfolder = dirName.split(self.menu_root)[1][1:]
+        for dirName, subdirList, fileList in os.walk(root_folder):
+            subfolder = dirName.split(root_folder)[1][1:]
             if subfolder:
                 if any(".py" in filename for filename in fileList): # only add submenu if there are .py files inside
                     sub_menu = current_menu.addMenu(subfolder.split(os.path.sep)[-1])
