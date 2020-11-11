@@ -171,6 +171,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.plots_button.setEnabled(False)
         # Setup subjectboxes
         self.subjects = list(experiment['subjects'].keys())
+        self.subjects.sort(key=lambda s: experiment['subjects'][s]['setup'])
         for i,subject in enumerate(self.subjects):
             self.subjectboxes.append(
                 Subjectbox('{} : {}'.format(experiment['subjects'][subject]['setup'], subject), i, self))

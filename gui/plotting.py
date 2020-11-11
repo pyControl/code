@@ -295,8 +295,9 @@ class Experiment_plot(QtGui.QMainWindow):
     def setup_experiment(self, experiment):
         '''Create task plotters in seperate tabs for each subject.'''
         subject_dict = experiment['subjects']
-        subjects = subject_dict.keys()
-        for subject in sorted(subjects):
+        subjects = list(experiment['subjects'].keys())
+        subjects.sort(key=lambda s: experiment['subjects'][s]['setup'])
+        for subject in subjects:
             self.subject_plots.append(Task_plot(self))
             self.subject_tabs.addTab(self.subject_plots[-1],
                 '{} : {}'.format(subject_dict[subject]['setup'], subject))
