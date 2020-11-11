@@ -89,7 +89,8 @@ class Run_experiment_tab(QtGui.QWidget):
             return
         if not board.status['framework']:
             print_func('\nInstall pyControl framework on board before running experiment.')
-            self.setup_failed[i] = True    
+            self.setup_failed[i] = True
+            self.subjectboxes[i].error()
         board.subject = subject
         board.setup_ID = setup
         return board
@@ -104,6 +105,7 @@ class Run_experiment_tab(QtGui.QWidget):
             board.process_data()
         except PyboardError:
             self.setup_failed[i] = True
+            self.subjectboxes[i].error()
 
     def setup_task(self, i):
         '''Load the task state machine and set variables on i-th board.'''
@@ -115,6 +117,7 @@ class Run_experiment_tab(QtGui.QWidget):
             board.setup_state_machine(self.experiment['task'])
         except PyboardError:
             self.setup_failed[i] = True
+            self.subjectboxes[i].error()
             return
         # Set variables.
         board.subject_variables = [v for v in self.experiment['variables'] 
@@ -236,18 +239,34 @@ class Run_experiment_tab(QtGui.QWidget):
         self.startstopclose_all_button.setEnabled(True)
         self.logs_button.setEnabled(True)
         self.plots_button.setEnabled(True)
+        self.setups_started  = 0
         self.setups_finished = 0
-        self.setups_running  = 0
 
     def startstopclose_all(self):
-        if self.setups_running == 0: # This logic in not very clear and may have some redundent terms.
-            for i, board in enumerate(self.boards):
-                self.subjectboxes[i].start_stop_rig()
-        elif self.setups_finished < len(self.boards):
-            for i, board in enumerate(self.boards):
-                self.subjectboxes[i].start_stop_rig()
-        else:
+        '''Called when startstopclose_all_button is clicked.  Button is 
+        only active if all setups are in the same state.'''
+        if self.startstopclose_all_button.text() == 'Close Exp.':
             self.close_experiment()
+        elif self.startstopclose_all_button.text() == 'Start All':
+            for i, board in enumerate(self.boards):
+                self.subjectboxes[i].start_task()
+        elif self.startstopclose_all_button.text() == 'Stop All':
+            for i, board in enumerate(self.boards):
+                self.subjectboxes[i].stop_task()
+
+    def update_startstopclose_button(self):
+        '''Called when a setup is started or stopped to update the
+        startstopclose_all button.'''
+        if self.setups_finished == len(self.boards):
+            self.startstopclose_all_button.setText('Close Exp.')
+            self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/close.svg"))
+        else:
+            self.startstopclose_all_button.setText('Stop All')
+            self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
+            if self.setups_started == len(self.boards) and self.setups_finished == 0:
+                self.startstopclose_all_button.setEnabled(True)
+            else:
+                self.startstopclose_all_button.setEnabled(False)
 
     def stop_experiment(self):
         self.update_timer.stop()
@@ -282,6 +301,7 @@ class Run_experiment_tab(QtGui.QWidget):
                 pv_file.write(json.dumps(persistent_variables, sort_keys=True, indent=4))
         if summary_variables:
             Summary_variables_dialog(self, sv_dict).show()
+        self.startstopclose_all_button.setEnabled(True)
 
     def abort_experiment(self):
         '''Called if an error occurs while the experiment is being set up.'''
@@ -293,13 +313,14 @@ class Run_experiment_tab(QtGui.QWidget):
                 board.stop_framework()
                 time.sleep(0.05)
                 board.process_data()
-                self.subjectboxes[i].task_stopped()
+                self.subjectboxes[i].stop_task()
         msg = QtGui.QMessageBox()
         msg.setWindowTitle('Error')
-        msg.setText('There was an error. Closing Experiment')
+        msg.setText('An error occured while setting up experiment')
         msg.setIcon(QtGui.QMessageBox.Warning)
         msg.exec()
-        self.close_experiment()
+        self.startstopclose_all_button.setText('Close Exp.')
+        self.startstopclose_all_button.setEnabled(True)
 
     def close_experiment(self):
         self.GUI_main.tab_widget.setTabEnabled(0, True) # Enable run task tab.
@@ -335,34 +356,10 @@ class Run_experiment_tab(QtGui.QWidget):
 
     def update(self):
         '''Called regularly while experiment is running'''
-        boards_running = False
-        for i, board in enumerate(self.boards):
-            if board.framework_running:
-                boards_running = True
-                try:
-                    board.process_data()
-                    if not board.framework_running:
-                        self.subjectboxes[i].task_stopped()
-                    self.subjectboxes[i].time_text.setText(str(datetime.now()-self.subjectboxes[i].start_time).split('.')[0])
-                except PyboardError:
-                    self.subjectboxes[i].error()
+        for subjectbox in self.subjectboxes:
+            subjectbox.update()
         self.experiment_plot.update()
-        if self.setups_running > 0:  # This logic in not very clear and may have some redundent terms.
-            if self.setups_running == len(self.boards) and self.setups_finished == 0:
-                self.startstopclose_all_button.setEnabled(True)
-                self.startstopclose_all_button.setText('Stop All')
-                self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
-            else:
-                self.startstopclose_all_button.setEnabled(False)
-                if self.setups_finished == 0:
-                    self.startstopclose_all_button.setText('Stop All')
-                    self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
-                else:
-                    self.startstopclose_all_button.setText('Close Experiment')
-                    self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/close.svg"))
-
-        if not boards_running and self.setups_finished == len(self.boards):
-            self.startstopclose_all_button.setEnabled(True)
+        if self.setups_finished == len(self.boards):
             self.stop_experiment()
 
     def print_to_logs(self, print_str):
@@ -419,6 +416,7 @@ class Subjectbox(QtGui.QGroupBox):
         self.Vlayout = QtGui.QVBoxLayout(self)
         self.Hlayout = QtGui.QHBoxLayout()
         self.Hlayout.addWidget(self.start_stop_button)
+        self.Hlayout.addWidget(self.variables_button)
         self.Hlayout.addWidget(self.status_label)
         self.Hlayout.addWidget(self.status_text)
         self.Hlayout.addWidget(self.time_label)
@@ -430,7 +428,6 @@ class Subjectbox(QtGui.QGroupBox):
         self.Hlayout.addWidget(self.print_label)
         self.Hlayout.addWidget(self.print_text)
         self.Hlayout.setStretchFactor(self.print_text, 10)
-        self.Hlayout.addWidget(self.variables_button)
         self.Vlayout.addLayout(self.Hlayout)
         self.Vlayout.addWidget(self.log_textbox)
         
@@ -459,15 +456,18 @@ class Subjectbox(QtGui.QGroupBox):
         self.variables_dialog = Variables_dialog(self, board)
         self.variables_button.clicked.connect(self.variables_dialog.exec_)
         self.variables_button.setEnabled(True)
-        self.start_stop_button.clicked.connect(self.start_stop_rig)
+        self.start_stop_button.clicked.connect(self.start_stop_task)
 
-    def start_stop_rig(self):
+    def start_stop_task(self):
+        '''Called when start/stop button on Subjectbox pressed or
+        startstopclose_all button is pressed.'''
         if self.state == 'pre_run': 
-            self.begin_rig()
+            self.start_task()
         elif self.state == 'running':
-            self.task_stopped()
+            self.stop_task()
 
-    def begin_rig(self):
+    def start_task(self):
+        '''Start the task running on the Subjectbox's board.'''
         self.status_text.setText('Running')
         self.state = 'running'
         self.run_exp_tab.experiment_plot.start_experiment(self.setup_number)
@@ -484,28 +484,41 @@ class Subjectbox(QtGui.QGroupBox):
 
         self.start_stop_button.setText('Stop')
         self.start_stop_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
-        self.run_exp_tab.setups_running += 1
+        self.run_exp_tab.setups_started += 1
 
         self.run_exp_tab.GUI_main.refresh_timer.stop()
         self.run_exp_tab.update_timer.start(update_interval)
+        self.run_exp_tab.update_startstopclose_button()
 
     def error(self):
         '''Set state text to error in red.'''
-        self.state_text.setText('Error')
-        self.state_text.setStyleSheet('color: red;')
+        self.status_text.setText('Error')
+        self.status_text.setStyleSheet('color: red;')
 
-    def task_stopped(self):
-        '''Called when task stops running.'''
+    def stop_task(self):
+        '''Called to stop task or if task stops automatically.'''
+        if self.board.framework_running:
+            self.board.stop_framework()
         self.state_text.setText('Stopped')
         self.state_text.setStyleSheet('color: grey;') 
         self.status_text.setText('Stopped')
-        self.start_stop_button.setVisible(False)
-        # Stop running board
-        if self.board.framework_running:
-            self.board.stop_framework()
+        self.start_stop_button.setEnabled(False)
         self.run_exp_tab.experiment_plot.active_plots.remove(self.setup_number)
         self.run_exp_tab.setups_finished += 1
         self.variables_button.setEnabled(False)
+        self.run_exp_tab.update_startstopclose_button()
+
+    def update(self):
+        '''Called regularly while experiment is running.'''
+        if self.board.framework_running:
+            try:
+                self.board.process_data()
+                if not self.board.framework_running:
+                    self.stop_task()
+                self.time_text.setText(str(datetime.now()-self.start_time).split('.')[0])
+            except PyboardError:
+                self.stop_task()
+                self.error()
 
     def process_data(self, new_data):
         '''Update the state, event and print line info.'''
