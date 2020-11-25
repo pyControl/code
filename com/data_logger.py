@@ -21,11 +21,12 @@ class Data_logger():
                            in self.sm_info['analog_inputs'].items()}
         self.analog_files = {ai['ID']: None for ai in self.sm_info['analog_inputs'].values()}
 
-    def open_data_file(self, data_dir, experiment_name, subject_ID, datetime_now=None):
+    def open_data_file(self, data_dir, experiment_name, setup_ID, subject_ID, datetime_now=None):
         '''Open data file and write header information.'''
         self.data_dir = data_dir
         self.experiment_name = experiment_name
         self.subject_ID = subject_ID
+        self.setup_ID = setup_ID
         if datetime_now is None: datetime_now = datetime.now()
         file_name = os.path.join(self.subject_ID + datetime_now.strftime('-%Y-%m-%d-%H%M%S') + '.txt')
         self.file_path = os.path.join(self.data_dir, file_name)
@@ -33,6 +34,7 @@ class Data_logger():
         self.data_file.write('I Experiment name  : {}\n'.format(self.experiment_name))
         self.data_file.write('I Task name : {}\n'.format(self.sm_info['name']))
         self.data_file.write('I Task file hash : {}\n'.format(self.sm_info['task_hash']))
+        self.data_file.write('I Setup ID : {}\n'.format(self.setup_ID))
         self.data_file.write('I Subject ID : {}\n'.format(self.subject_ID))
         self.data_file.write('I Start date : ' + datetime_now.strftime('%Y/%m/%d %H:%M:%S') + '\n\n')
         self.data_file.write('S {}\n\n'.format(json.dumps(self.sm_info['states'])))
@@ -45,7 +47,7 @@ class Data_logger():
         if not os.path.exists(exp_tasks_dir):
             os.mkdir(exp_tasks_dir)
         task_file_path = os.path.join(tasks_dir, self.sm_info['name']+'.py')
-        task_save_name = self.sm_info['name']+'_{}.py'.format(self.sm_info['task_hash'])
+        task_save_name = os.path.split(self.sm_info['name'])[1] +'_{}.py'.format(self.sm_info['task_hash'])
         if not task_save_name in os.listdir(exp_tasks_dir):
             copyfile(task_file_path, os.path.join(exp_tasks_dir, task_save_name))
             

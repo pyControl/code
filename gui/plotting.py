@@ -290,22 +290,26 @@ class Experiment_plot(QtGui.QMainWindow):
         self.subject_tabs = detachableTabWidget(self)
         self.setCentralWidget(self.subject_tabs)
         self.subject_plots = []
+        self.active_plots = []
 
     def setup_experiment(self, experiment):
         '''Create task plotters in seperate tabs for each subject.'''
-        for setup in sorted(experiment['subjects'].keys()):
+        subject_dict = experiment['subjects']
+        subjects = list(experiment['subjects'].keys())
+        subjects.sort(key=lambda s: experiment['subjects'][s]['setup'])
+        for subject in subjects:
             self.subject_plots.append(Task_plot(self))
             self.subject_tabs.addTab(self.subject_plots[-1],
-                '{} : {}'.format(setup, experiment['subjects'][setup]))
+                '{} : {}'.format(subject_dict[subject]['setup'], subject))
 
     def set_state_machine(self, sm_info):
         '''Provide the task plotters with the state machine info.'''
         for subject_plot in self.subject_plots:
             subject_plot.set_state_machine(sm_info)
 
-    def start_experiment(self):
-        for subject_plot in self.subject_plots:
-            subject_plot.run_start(False)
+    def start_experiment(self,rig):
+        self.subject_plots[rig].run_start(False)
+        self.active_plots.append(rig)
 
     def close_experiment(self):
         '''Remove and delete all subject plot tabs.'''
@@ -313,9 +317,10 @@ class Experiment_plot(QtGui.QMainWindow):
             subject_plot = self.subject_plots.pop() 
             subject_plot.setParent(None)
             subject_plot.deleteLater()
-
+        self.close()
+        
     def update(self):
         '''Update the plots of the active tab.'''
-        for subject_plot in self.subject_plots:
-            if not subject_plot.visibleRegion().isEmpty():
+        for i,subject_plot in enumerate(self.subject_plots):
+            if not subject_plot.visibleRegion().isEmpty() and i in self.active_plots:
                 subject_plot.update()

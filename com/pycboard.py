@@ -278,10 +278,12 @@ class Pycboard(Pyboard):
         else:
             self.print('Hardware definition file not found.') 
 
-    def setup_state_machine(self, sm_name, sm_dir=dirs['tasks'], uploaded=False):
+    def setup_state_machine(self, sm_name, sm_dir=None, uploaded=False):
         '''Transfer state machine descriptor file sm_name.py from folder sm_dir
         to board. Instantiate state machine object as state_machine on pyboard.'''
         self.reset()
+        if sm_dir is None:
+            sm_dir = dirs['tasks']
         sm_path = os.path.join(sm_dir, sm_name + '.py')
         if uploaded:
             self.print('\nResetting task. ', end='')
@@ -350,7 +352,10 @@ class Pycboard(Pyboard):
             new_byte = self.serial.read(1)  
             if new_byte == b'A': # Analog data, 13 byte header + variable size content.
                 data_header = self.serial.read(13)
-                typecode      = data_header[0:1].decode()             
+                typecode      = data_header[0:1].decode() 
+                if typecode not in ('b','B','h','H','l','L'):
+                    new_data.append(('!','bad typecode A'))
+                    continue   
                 ID            = int.from_bytes(data_header[1:3], 'little')
                 sampling_rate = int.from_bytes(data_header[3:5], 'little')
                 data_len      = int.from_bytes(data_header[5:7], 'little')

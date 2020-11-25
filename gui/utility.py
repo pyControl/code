@@ -1,4 +1,5 @@
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
+import os
 
 # --------------------------------------------------------------------------------
 # GUI utility functions, classes, variables.
@@ -291,3 +292,60 @@ class TabBar(QtWidgets.QTabBar):
          '''
         self.dragDropedPos = event.pos()
         QtWidgets.QTabBar.dropEvent(self, event)
+
+# ----------------------------------------------------------------------------------
+# TaskSelectMenu
+# ----------------------------------------------------------------------------------
+
+class TaskSelectMenu(QtGui.QPushButton):
+    '''Nested menu used to select tasks. The menu items are the names of
+    any .py files in root_folder and it's sub-directories.  Items are 
+    nested in the menu according to the sub-directory structure. 
+    initial_text is shown before anything is selected, and if add_default
+    is True, initial_text is included as a menu option.
+    Adapted from: https://stackoverflow.com/questions/35924235
+    '''
+    def __init__(self, initial_text, add_default=False):
+        self.callback = lambda task: None
+        self.menu = QtGui.QMenu()
+        self.add_default = add_default
+        self.default_text = initial_text
+        super().__init__(initial_text)
+
+    def set_callback(self,callback_fxn):
+        self.callback = callback_fxn
+
+    def create_action(self,text):
+        def fxn():
+            if self.text() != text:
+                self.callback(text)
+                self.setText(text)
+        return fxn
+    
+    def update_menu(self, root_folder):
+        self.menu.clear()
+        if self.add_default:
+            self.menu.addAction(self.default_text,self.create_action(self.default_text))
+            self.menu.addSeparator() 
+        previous_menu = self.menu
+        current_menu = self.menu
+        for dirName, subdirList, fileList in os.walk(root_folder):
+            subfolder = dirName.split(root_folder)[1][1:]
+            if subfolder:
+                if any(".py" in filename for filename in fileList): # only add submenu if there are .py files inside
+                    sub_menu = current_menu.addMenu(subfolder.split(os.path.sep)[-1])
+                    for filename in fileList:
+                        if filename.endswith('.py'):
+                            menuItem = filename[:-3]
+                            sub_menu.addAction(menuItem,self.create_action(os.path.join(subfolder,menuItem)))
+                    if subdirList: # continue down to next level
+                        previous_menu = current_menu
+                        current_menu = sub_menu
+                    else: # return up to previous level
+                        current_menu = previous_menu
+            else: # list top level files
+                for filename in fileList:
+                    if filename.endswith('.py'):
+                        menuItem = filename[:-3]
+                        self.menu.addAction(menuItem,self.create_action(menuItem))
+        self.setMenu(self.menu)

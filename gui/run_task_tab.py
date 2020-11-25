@@ -12,7 +12,7 @@ from config.gui_settings import update_interval
 
 from gui.dialogs import Variables_dialog
 from gui.plotting import Task_plot
-from gui.utility import init_keyboard_shortcuts
+from gui.utility import init_keyboard_shortcuts,TaskSelectMenu
 
 # Run_task_gui ------------------------------------------------------------------------
 
@@ -57,8 +57,10 @@ class Run_task_tab(QtGui.QWidget):
         self.board_select.setEditable(True)
         self.board_select.setFixedWidth(100)
         self.connect_button = QtGui.QPushButton('Connect')
+        self.connect_button.setIcon(QtGui.QIcon("gui/icons/connect.svg"))
         self.connect_button.setEnabled(False)
         self.config_button = QtGui.QPushButton('Config')
+        self.config_button.setIcon(QtGui.QIcon("gui/icons/settings.svg"))
 
         self.boardgroup_layout = QtGui.QHBoxLayout()
         self.boardgroup_layout.addWidget(self.board_label)
@@ -77,7 +79,8 @@ class Run_task_tab(QtGui.QWidget):
 
         self.data_dir_label = QtGui.QLabel('Data dir:')
         self.data_dir_text = QtGui.QLineEdit(dirs['data'])
-        self.data_dir_button = QtGui.QPushButton('...')
+        self.data_dir_button = QtGui.QPushButton()
+        self.data_dir_button.setIcon(QtGui.QIcon("gui/icons/folder.svg"))
         self.data_dir_button.setFixedWidth(30)
         self.subject_label = QtGui.QLabel('Subject ID:')
         self.subject_text = QtGui.QLineEdit()
@@ -102,9 +105,12 @@ class Run_task_tab(QtGui.QWidget):
         self.task_groupbox = QtGui.QGroupBox('Task')
 
         self.task_label = QtGui.QLabel('Task:')
-        self.task_select = QtGui.QComboBox()
+        self.task_select = TaskSelectMenu('select task')
+        self.task_select.set_callback(self.task_changed)
         self.upload_button = QtGui.QPushButton('Upload')
+        self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
         self.variables_button = QtGui.QPushButton('Variables')
+        self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
 
         self.taskgroup_layout = QtGui.QHBoxLayout()
         self.taskgroup_layout.addWidget(self.task_label)
@@ -113,7 +119,6 @@ class Run_task_tab(QtGui.QWidget):
         self.taskgroup_layout.addWidget(self.variables_button)
         self.task_groupbox.setLayout(self.taskgroup_layout)
 
-        self.task_select.currentTextChanged.connect(self.task_changed)
         self.upload_button.clicked.connect(self.setup_task)        
 
         # Session groupbox.
@@ -121,7 +126,9 @@ class Run_task_tab(QtGui.QWidget):
         self.session_groupbox = QtGui.QGroupBox('Session')
 
         self.start_button = QtGui.QPushButton('Start')
+        self.start_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
         self.stop_button = QtGui.QPushButton('Stop')
+        self.stop_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
 
         self.sessiongroup_layout = QtGui.QHBoxLayout()
         self.sessiongroup_layout.addWidget(self.start_button)
@@ -168,7 +175,7 @@ class Run_task_tab(QtGui.QWidget):
         # Keyboard Shortcuts
 
         shortcut_dict = {
-                        't' : lambda: self.task_select.showPopup(),
+                        't' : lambda: self.task_select.showMenu(),
                         'u' : lambda: self.setup_task(),
                         'Space' : (lambda: self.stop_task() if self.running 
                             else self.start_task() if self.uploaded else None)
@@ -194,9 +201,11 @@ class Run_task_tab(QtGui.QWidget):
         subject_ID = self.subject_text.text()
         if  os.path.isdir(self.data_dir) and subject_ID:
             self.start_button.setText('Record')
+            self.start_button.setIcon(QtGui.QIcon("gui/icons/record.svg"))
             return True
         else:
             self.start_button.setText('Start')
+            self.start_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
             return False
 
     def refresh(self):
@@ -210,8 +219,7 @@ class Run_task_tab(QtGui.QWidget):
             else: # No setups available to connect to.
                     self.connect_button.setEnabled(False)
         if self.GUI_main.available_tasks_changed:
-            self.task_select.clear()
-            self.task_select.addItems(sorted(self.GUI_main.available_tasks))
+            self.task_select.update_menu(dirs['tasks'])
         if self.GUI_main.data_dir_changed and not self.custom_dir:
             self.data_dir_text.setText(dirs['data'])
         if self.task:
@@ -249,6 +257,7 @@ class Run_task_tab(QtGui.QWidget):
             self.config_button.setEnabled(True)
             self.connect_button.setEnabled(True)
             self.connect_button.setText('Disconnect')
+            self.connect_button.setIcon(QtGui.QIcon("gui/icons/disconnect.svg"))
             self.status_text.setText('Connected')
             if self.board.status['framework']:
                 self.task_groupbox.setEnabled(True)
@@ -272,18 +281,22 @@ class Run_task_tab(QtGui.QWidget):
         self.config_button.setEnabled(False)
         self.board_select.setEnabled(True)
         self.connect_button.setText('Connect')
+        self.connect_button.setIcon(QtGui.QIcon("gui/icons/connect.svg"))
         self.status_text.setText('Not connected')
         self.task_changed()
         self.connected = False
 
-    def task_changed(self):
+    def task_changed(self,task=None):
         self.uploaded = False
         self.upload_button.setText('Upload')
+        self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
         self.start_button.setEnabled(False)
 
     def setup_task(self):
+        task = self.task_select.text()
+        if task == 'select task':
+            return
         try:
-            task = self.task_select.currentText()
             if self.uploaded:
                 self.status_text.setText('Resetting task..')
             else:
@@ -309,6 +322,7 @@ class Run_task_tab(QtGui.QWidget):
             self.fresh_task = True
             self.uploaded = True
             self.upload_button.setText('Reset')
+            self.upload_button.setIcon(QtGui.QIcon("gui/icons/refresh.svg"))
         except PyboardError:
             self.status_text.setText('Error setting up state machine.')
      
@@ -329,7 +343,8 @@ class Run_task_tab(QtGui.QWidget):
                     self.setup_task()
                     return
             subject_ID = str(self.subject_text.text())
-            self.data_logger.open_data_file(self.data_dir, 'run_task', subject_ID)
+            setup_ID = str(self.board_select.currentText())
+            self.data_logger.open_data_file(self.data_dir, 'run_task', setup_ID, subject_ID)
             self.data_logger.copy_task_file(self.data_dir, dirs['tasks'], 'run_task-task_files')
         self.fresh_task = False
         self.running = True

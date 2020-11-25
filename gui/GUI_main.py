@@ -96,18 +96,22 @@ class GUI_main(QtGui.QMainWindow):
         # Go to readthedocs
         documentation_action= QtGui.QAction("&Documentation", self)
         documentation_action.triggered.connect(self.view_docs)
+        documentation_action.setIcon(QtGui.QIcon("gui/icons/book.svg"))
         help_menu.addAction(documentation_action)
         # Go to Google forum
         forum_action= QtGui.QAction("&Forum", self)
         forum_action.triggered.connect(self.view_forum)
+        forum_action.setIcon(QtGui.QIcon("gui/icons/google-groups.svg")) #https://iconscout.com/icon/google-groups-1
         help_menu.addAction(forum_action)
         # Go to GitHub Repository
         github_action= QtGui.QAction("&GitHub Repository", self)
         github_action.triggered.connect(self.view_github)
+        github_action.setIcon(QtGui.QIcon("gui/icons/github.svg")) #https://simpleicons.org/?q=github
         help_menu.addAction(github_action)
         # Keyboard shortcuts dialog.
         shortcuts_action = QtGui.QAction("&Keyboard shortcuts", self)
         shortcuts_action.triggered.connect(self.shortcuts_dialog.show)
+        shortcuts_action.setIcon(QtGui.QIcon("gui/icons/keyboard.svg"))
         help_menu.addAction(shortcuts_action)
 
         self.show()
@@ -127,10 +131,19 @@ class GUI_main(QtGui.QMainWindow):
     def view_github(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://github.com/pyControl/pyControl"))
 
+    def get_task_file_list(self):
+        '''Return list of .py files in tasks folder and subfolders in format:
+        subdir_1/subdir_2/task_file_name.py'''
+        task_files = []
+        for (dirpath, dirnames, filenames) in os.walk(dirs['tasks']):
+            task_files += [os.path.join(dirpath, file).split(dirs['tasks'])[1][1:-3]
+                           for file in filenames if file.endswith('.py')]
+        return task_files
+
     def refresh(self):
         '''Called regularly when framework not running.'''
         # Scan task folder.
-        tasks = [t.split('.')[0] for t in os.listdir(dirs['tasks']) if t[-3:] == '.py']
+        tasks = self.get_task_file_list()
         self.available_tasks_changed = tasks != self.available_tasks
         if self.available_tasks_changed:    
             self.available_tasks = tasks
