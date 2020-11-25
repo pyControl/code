@@ -309,7 +309,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
         for i, board in enumerate(self.boards):
             # Stop running boards.
-            if board.framework_running:
+            if board and board.framework_running:
                 board.stop_framework()
                 time.sleep(0.05)
                 board.process_data()
