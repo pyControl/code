@@ -183,7 +183,7 @@ def get_states():
     print(states)
 
 def get_variables():
-    # Print first instantiated state machines variables as dict {v_name: repr(v_value)}
+    # Print state machines variables as dict {v_name: repr(v_value)}
     print({k: repr(v) for k, v in state_machine.smd.v.__dict__.items()})
 
 def output_data(event):
@@ -226,45 +226,7 @@ def recieve_data():
             v_str = state_machine._get_variable(v_name)
             data_output_queue.put((current_time, varbl_typ, (v_name, v_str)))
 
-def _update():
-    # Perform framework update functions in order of priority.
-    global running
-
-    if hw.interrupt_queue.available: # Priority 1: Process hardware interrupts.
-        hw.IO_dict[hw.interrupt_queue.get()]._process_interrupt()
-
-    elif check_timers: # Priority 2: Check for elapsed timers.
-        timer.check()
-
-    elif event_queue.available: # Priority 3: Process event from queue.
-        event = event_queue.get()
-        data_output_queue.put(event)
-        state_machine._process_event(ID2name[event[2]])
-
-    elif timer.available: # Priority 4: Process timer event.
-        event = timer.get()
-        if  event[1] == timer_typ:
-            state_machine._process_event(ID2name[event[2]])
-        elif event[1] == event_typ:
-            data_output_queue.put(event)
-            state_machine._process_event(ID2name[event[2]])
-        elif event[1] == hardw_typ:
-            hw.IO_dict[event[2]]._timer_callback()
-        elif event[1] == state_typ:
-            state_machine.goto_state(ID2name[event[2]])
-        elif event[1] == stopf_typ:
-            running = False
-
-    elif usb_serial.any(): # Priority 5: Check for serial input from computer.
-        recieve_data()
-
-    elif hw.stream_data_queue.available: # Priority 6: Stream analog data.
-        hw.IO_dict[hw.stream_data_queue.get()]._process_streaming()
-
-    elif data_output_queue.available: # Priority 7: Output framework data.
-        output_data(data_output_queue.get())
-
-def run(duration = None):
+def run(duration=None):
     # Run framework for specified number of seconds.
     # Pre run
     global current_time, start_time, running
@@ -284,7 +246,40 @@ def run(duration = None):
         timer.set(duration*1000, (stopf_typ, None))
     # Run
     while running:
-        _update()
+        # Priority 1: Process hardware interrupts.
+        if hw.interrupt_queue.available: 
+            hw.IO_dict[hw.interrupt_queue.get()]._process_interrupt()
+        # Priority 2: Process event from queue.
+        elif event_queue.available: 
+            event = event_queue.get()
+            data_output_queue.put(event)
+            state_machine._process_event(ID2name[event[2]])
+        # Priority 3: Check for elapsed timers.
+        elif check_timers:
+            timer.check()
+        # Priority 4: Process timer event.
+        elif timer.available: 
+            event = timer.get()
+            if  event[1] == timer_typ:
+                state_machine._process_event(ID2name[event[2]])
+            elif event[1] == event_typ:
+                data_output_queue.put(event)
+                state_machine._process_event(ID2name[event[2]])
+            elif event[1] == hardw_typ:
+                hw.IO_dict[event[2]]._timer_callback()
+            elif event[1] == state_typ:
+                state_machine.goto_state(ID2name[event[2]])
+            elif event[1] == stopf_typ:
+                running = False
+        # Priority 5: Check for serial input from computer.
+        elif usb_serial.any(): 
+            recieve_data()
+        # Priority 6: Stream analog data.
+        elif hw.stream_data_queue.available: 
+            hw.IO_dict[hw.stream_data_queue.get()]._process_streaming()
+        # Priority 7: Output framework data.
+        elif data_output_queue.available: 
+            output_data(data_output_queue.get())
     # Post run
     usb_serial.setinterrupt(3) # Enable 'ctrl+c' on serial raising KeyboardInterrupt.
     clock.deinit()

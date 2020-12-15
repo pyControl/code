@@ -264,7 +264,7 @@ class Run_task_tab(QtGui.QWidget):
             else:
                 self.print_to_log(
                     "\nLoad pyControl framework using 'Config' button.")
-        except SerialException:
+        except (SerialException, PyboardError):
             self.status_text.setText('Connection failed')
             self.print_to_log('Connection failed.')
             self.connect_button.setEnabled(True)

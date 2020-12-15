@@ -23,7 +23,6 @@ class Ring_buffer():
     def put(self, x: int):
         # Put value in buffer.
         if self.full:
-            print('! Ring buffer full')
             return
         self.buffer[self.write_ind] = x
         self.write_ind = (self.write_ind + 1) % self.buffer_length
