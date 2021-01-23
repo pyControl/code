@@ -307,7 +307,7 @@ class TaskSelectMenu(QtGui.QPushButton):
     '''
     def __init__(self, initial_text, add_default=False):
         self.callback = lambda task: None
-        self.menu = QtGui.QMenu()
+        self.root_menu = QtGui.QMenu()
         self.add_default = add_default
         self.default_text = initial_text
         super().__init__(initial_text)
@@ -323,29 +323,33 @@ class TaskSelectMenu(QtGui.QPushButton):
         return fxn
     
     def update_menu(self, root_folder):
-        self.menu.clear()
+        self.root_menu.clear()
+        self.submenus_dictionary = {}
         if self.add_default:
-            self.menu.addAction(self.default_text,self.create_action(self.default_text))
-            self.menu.addSeparator() 
-        previous_menu = self.menu
-        current_menu = self.menu
+            self.root_menu.addAction(self.default_text,self.create_action(self.default_text))
+            self.root_menu.addSeparator() 
         for dirName, subdirList, fileList in os.walk(root_folder):
-            subfolder = dirName.split(root_folder)[1][1:]
-            if subfolder:
-                if any(".py" in filename for filename in fileList): # only add submenu if there are .py files inside
-                    sub_menu = current_menu.addMenu(subfolder.split(os.path.sep)[-1])
-                    for filename in fileList:
-                        if filename.endswith('.py'):
-                            menuItem = filename[:-3]
-                            sub_menu.addAction(menuItem,self.create_action(os.path.join(subfolder,menuItem)))
-                    if subdirList: # continue down to next level
-                        previous_menu = current_menu
-                        current_menu = sub_menu
-                    else: # return up to previous level
-                        current_menu = previous_menu
-            else: # list top level files
-                for filename in fileList:
+            subdirList.sort()
+            sub_dir = dirName.split(root_folder)[1][1:]
+            if sub_dir:
+                parent_menu = self.get_parent_menu(sub_dir)
+                sub_menu_name = sub_dir.split(os.path.sep)[-1]
+                sub_menu = parent_menu.addMenu(sub_menu_name)
+                self.submenus_dictionary[sub_dir] = sub_menu
+                for filename in sorted(fileList):
                     if filename.endswith('.py'):
                         menuItem = filename[:-3]
-                        self.menu.addAction(menuItem,self.create_action(menuItem))
-        self.setMenu(self.menu)
+                        sub_menu.addAction(menuItem,self.create_action(os.path.join(sub_dir,menuItem)))
+            else: # add root level files
+                for filename in sorted(fileList):
+                    if filename.endswith('.py'):
+                        menuItem = filename[:-3]
+                        self.root_menu.addAction(menuItem,self.create_action(menuItem))
+        self.setMenu(self.root_menu)
+
+    def get_parent_menu(self,sub_dir):
+        split_folder = sub_dir.split(os.path.sep)
+        if len(split_folder)==1:
+            return self.root_menu
+        else:
+            return self.submenus_dictionary[os.path.sep.join(split_folder[:-1])]
