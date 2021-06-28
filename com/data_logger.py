@@ -111,5 +111,5 @@ class Data_logger():
         for i, x in enumerate(data_array):
             t = int(timestamp + i*ms_per_sample)
             self.analog_files[ID].write(t.to_bytes(4,'little', signed=True))
-            self.analog_files[ID].write(x.to_bytes(4,'little', signed=False))
+            self.analog_files[ID].write(x.to_bytes(4,'little', signed=True))
         self.analog_files[ID].flush()
