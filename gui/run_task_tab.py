@@ -78,6 +78,7 @@ class Run_task_tab(QtGui.QWidget):
         self.file_groupbox = QtGui.QGroupBox('Data file')
 
         self.data_dir_label = QtGui.QLabel('Data dir:')
+        self.data_dir_label.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter)
         self.data_dir_text = QtGui.QLineEdit(dirs['data'])
         self.data_dir_button = QtGui.QPushButton()
         self.data_dir_button.setIcon(QtGui.QIcon("gui/icons/folder.svg"))
@@ -87,12 +88,12 @@ class Run_task_tab(QtGui.QWidget):
         self.subject_text.setFixedWidth(80)
         self.subject_text.setMaxLength(12)
 
-        self.filegroup_layout = QtGui.QHBoxLayout()
-        self.filegroup_layout.addWidget(self.data_dir_label)
-        self.filegroup_layout.addWidget(self.data_dir_text)
-        self.filegroup_layout.addWidget(self.data_dir_button)
-        self.filegroup_layout.addWidget(self.subject_label)
-        self.filegroup_layout.addWidget(self.subject_text)
+        self.filegroup_layout = QtGui.QGridLayout()
+        self.filegroup_layout.addWidget(self.data_dir_label,0,0)
+        self.filegroup_layout.addWidget(self.data_dir_text,0,1)
+        self.filegroup_layout.addWidget(self.data_dir_button,0,2)
+        self.filegroup_layout.addWidget(self.subject_label,1,0)
+        self.filegroup_layout.addWidget(self.subject_text,1,1)
         self.file_groupbox.setLayout(self.filegroup_layout)
 
         self.data_dir_text.textChanged.connect(self.test_data_path)
@@ -104,7 +105,6 @@ class Run_task_tab(QtGui.QWidget):
 
         self.task_groupbox = QtGui.QGroupBox('Task')
 
-        self.task_label = QtGui.QLabel('Task:')
         self.task_select = TaskSelectMenu('select task')
         self.task_select.set_callback(self.task_changed)
         self.upload_button = QtGui.QPushButton('Upload')
@@ -112,11 +112,10 @@ class Run_task_tab(QtGui.QWidget):
         self.variables_button = QtGui.QPushButton('Variables')
         self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
 
-        self.taskgroup_layout = QtGui.QHBoxLayout()
-        self.taskgroup_layout.addWidget(self.task_label)
-        self.taskgroup_layout.addWidget(self.task_select)
-        self.taskgroup_layout.addWidget(self.upload_button)
-        self.taskgroup_layout.addWidget(self.variables_button)
+        self.taskgroup_layout = QtGui.QGridLayout()
+        self.taskgroup_layout.addWidget(self.task_select,0,0,1,2)
+        self.taskgroup_layout.addWidget(self.upload_button,1,0)
+        self.taskgroup_layout.addWidget(self.variables_button,1,1)
         self.task_groupbox.setLayout(self.taskgroup_layout)
 
         self.upload_button.clicked.connect(self.setup_task)        
@@ -130,9 +129,27 @@ class Run_task_tab(QtGui.QWidget):
         self.stop_button = QtGui.QPushButton('Stop')
         self.stop_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
 
-        self.sessiongroup_layout = QtGui.QHBoxLayout()
-        self.sessiongroup_layout.addWidget(self.start_button)
-        self.sessiongroup_layout.addWidget(self.stop_button)
+        self.state_label = QtGui.QLabel('State:')
+        self.state_text = QtGui.QLineEdit('')
+        self.state_text.setReadOnly(True)
+
+        self.event_label = QtGui.QLabel('Event:')
+        self.event_text = QtGui.QLineEdit('')
+        self.event_text.setReadOnly(True)
+
+        self.print_label = QtGui.QLabel('Print:')
+        self.print_text = QtGui.QLineEdit('')
+        self.print_text.setReadOnly(True)
+
+        self.sessiongroup_layout = QtGui.QGridLayout()
+        self.sessiongroup_layout.addWidget(self.print_label,0,1)
+        self.sessiongroup_layout.addWidget(self.print_text,0,2,1,3)
+        self.sessiongroup_layout.addWidget(self.state_label,1,1)
+        self.sessiongroup_layout.addWidget(self.state_text,1,2)
+        self.sessiongroup_layout.addWidget(self.event_label,1,3)
+        self.sessiongroup_layout.addWidget(self.event_text,1,4)
+        self.sessiongroup_layout.addWidget(self.start_button,0,0)
+        self.sessiongroup_layout.addWidget(self.stop_button,1,0)
         self.session_groupbox.setLayout(self.sessiongroup_layout)
 
         self.start_button.clicked.connect(self.start_task)
@@ -146,7 +163,7 @@ class Run_task_tab(QtGui.QWidget):
 
         self.task_plot = Task_plot()
         self.data_logger = Data_logger(print_func=self.print_to_log,
-                                       data_consumers=[self.task_plot])
+                                       data_consumers=[self.task_plot,self])
 
         # Main layout
 
@@ -157,8 +174,8 @@ class Run_task_tab(QtGui.QWidget):
 
         self.horizontal_layout_1.addWidget(self.status_groupbox)
         self.horizontal_layout_1.addWidget(self.board_groupbox)
+        self.horizontal_layout_2.addWidget(self.task_groupbox)
         self.horizontal_layout_2.addWidget(self.file_groupbox)
-        self.horizontal_layout_3.addWidget(self.task_groupbox)
         self.horizontal_layout_3.addWidget(self.session_groupbox)
         self.vertical_layout.addLayout(self.horizontal_layout_1)
         self.vertical_layout.addLayout(self.horizontal_layout_2)
@@ -420,3 +437,26 @@ class Run_task_tab(QtGui.QWidget):
         if self.running:
             self.stop_task(error=True)
         self.disconnect()
+
+    def process_data(self, new_data):
+        '''Update the state, event and print line info.'''
+        try:
+            new_state = next(self.board.sm_info['ID2name'][nd[2]] for nd in reversed(new_data)
+                if nd[0] == 'D' and nd[2] in self.board.sm_info['states'].values())
+            self.state_text.setText(new_state)
+            self.state_text.home(False)
+        except StopIteration:
+            pass
+        try:
+            new_event = next(self.board.sm_info['ID2name'][nd[2]] for nd in reversed(new_data)
+                if nd[0] == 'D' and nd[2] in self.board.sm_info['events'].values())
+            self.event_text.setText(new_event)
+            self.event_text.home(False)
+        except StopIteration:
+            pass
+        try:
+            new_print = next(nd[2] for nd in reversed(new_data) if nd[0] == 'P')
+            self.print_text.setText(new_print)
+            self.print_text.home(False)
+        except StopIteration:
+            pass
