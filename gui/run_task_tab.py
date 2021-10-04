@@ -12,7 +12,7 @@ from config.gui_settings import update_interval
 
 from gui.dialogs import Variables_dialog
 from gui.plotting import Task_plot
-from gui.utility import init_keyboard_shortcuts,TaskSelectMenu
+from gui.utility import init_keyboard_shortcuts,TaskSelectMenu, TaskInfo
 
 # Run_task_gui ------------------------------------------------------------------------
 
@@ -85,8 +85,6 @@ class Run_task_tab(QtGui.QWidget):
         self.data_dir_button.setFixedWidth(30)
         self.subject_label = QtGui.QLabel('Subject ID:')
         self.subject_text = QtGui.QLineEdit()
-        self.subject_text.setFixedWidth(80)
-        self.subject_text.setMaxLength(12)
 
         self.filegroup_layout = QtGui.QGridLayout()
         self.filegroup_layout.addWidget(self.data_dir_label,0,0)
@@ -129,25 +127,15 @@ class Run_task_tab(QtGui.QWidget):
         self.stop_button = QtGui.QPushButton('Stop')
         self.stop_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
 
-        self.state_label = QtGui.QLabel('State:')
-        self.state_text = QtGui.QLineEdit('')
-        self.state_text.setReadOnly(True)
-
-        self.event_label = QtGui.QLabel('Event:')
-        self.event_text = QtGui.QLineEdit('')
-        self.event_text.setReadOnly(True)
-
-        self.print_label = QtGui.QLabel('Print:')
-        self.print_text = QtGui.QLineEdit('')
-        self.print_text.setReadOnly(True)
+        self.task_info = TaskInfo()
 
         self.sessiongroup_layout = QtGui.QGridLayout()
-        self.sessiongroup_layout.addWidget(self.print_label,0,1)
-        self.sessiongroup_layout.addWidget(self.print_text,0,2,1,3)
-        self.sessiongroup_layout.addWidget(self.state_label,1,1)
-        self.sessiongroup_layout.addWidget(self.state_text,1,2)
-        self.sessiongroup_layout.addWidget(self.event_label,1,3)
-        self.sessiongroup_layout.addWidget(self.event_text,1,4)
+        self.sessiongroup_layout.addWidget(self.task_info.print_label,0,1)
+        self.sessiongroup_layout.addWidget(self.task_info.print_text,0,2,1,3)
+        self.sessiongroup_layout.addWidget(self.task_info.state_label,1,1)
+        self.sessiongroup_layout.addWidget(self.task_info.state_text,1,2)
+        self.sessiongroup_layout.addWidget(self.task_info.event_label,1,3)
+        self.sessiongroup_layout.addWidget(self.task_info.event_text,1,4)
         self.sessiongroup_layout.addWidget(self.start_button,0,0)
         self.sessiongroup_layout.addWidget(self.stop_button,1,0)
         self.session_groupbox.setLayout(self.sessiongroup_layout)
@@ -163,7 +151,7 @@ class Run_task_tab(QtGui.QWidget):
 
         self.task_plot = Task_plot()
         self.data_logger = Data_logger(print_func=self.print_to_log,
-                                       data_consumers=[self.task_plot,self])
+                                       data_consumers=[self.task_plot, self.task_info])
 
         # Main layout
 
@@ -330,6 +318,7 @@ class Run_task_tab(QtGui.QWidget):
             self.variables_button.clicked.connect(self.variables_dialog.exec_)
             self.variables_button.setEnabled(True)
             self.task_plot.set_state_machine(self.board.sm_info)
+            self.task_info.set_state_machine(self.board.sm_info)
             self.file_groupbox.setEnabled(True)
             self.session_groupbox.setEnabled(True)
             self.start_button.setEnabled(True)
@@ -340,6 +329,7 @@ class Run_task_tab(QtGui.QWidget):
             self.uploaded = True
             self.upload_button.setText('Reset')
             self.upload_button.setIcon(QtGui.QIcon("gui/icons/refresh.svg"))
+
         except PyboardError:
             self.status_text.setText('Error setting up state machine.')
      
@@ -437,26 +427,3 @@ class Run_task_tab(QtGui.QWidget):
         if self.running:
             self.stop_task(error=True)
         self.disconnect()
-
-    def process_data(self, new_data):
-        '''Update the state, event and print line info.'''
-        try:
-            new_state = next(self.board.sm_info['ID2name'][nd[2]] for nd in reversed(new_data)
-                if nd[0] == 'D' and nd[2] in self.board.sm_info['states'].values())
-            self.state_text.setText(new_state)
-            self.state_text.home(False)
-        except StopIteration:
-            pass
-        try:
-            new_event = next(self.board.sm_info['ID2name'][nd[2]] for nd in reversed(new_data)
-                if nd[0] == 'D' and nd[2] in self.board.sm_info['events'].values())
-            self.event_text.setText(new_event)
-            self.event_text.home(False)
-        except StopIteration:
-            pass
-        try:
-            new_print = next(nd[2] for nd in reversed(new_data) if nd[0] == 'P')
-            self.print_text.setText(new_print)
-            self.print_text.home(False)
-        except StopIteration:
-            pass
