@@ -353,3 +353,56 @@ class TaskSelectMenu(QtGui.QPushButton):
             return self.root_menu
         else:
             return self.submenus_dictionary[os.path.sep.join(split_folder[:-1])]
+
+# ----------------------------------------------------------------------------------
+# Task Info
+# ----------------------------------------------------------------------------------
+
+class TaskInfo():
+    '''Class for displaying the current state and most recent event and printed line.
+    Instantiates the GUI elements and has their process data method, but does not
+    handle layout of the elements.
+    '''
+
+    def __init__(self):
+        self.state_label = QtGui.QLabel('State:')
+        self.state_text = QtGui.QLineEdit('')
+        self.state_text.setReadOnly(True)
+
+        self.event_label = QtGui.QLabel('Event:')
+        self.event_text = QtGui.QLineEdit('')
+        self.event_text.setReadOnly(True)
+
+        self.print_label = QtGui.QLabel('Print:')
+        self.print_text = QtGui.QLineEdit('')
+        self.print_text.setReadOnly(True)
+
+    def process_data(self, new_data):
+        '''Update the state, event and print line info.'''
+        try:
+            new_state = next(self.sm_info['ID2name'][nd[2]] for nd in reversed(new_data)
+                if nd[0] == 'D' and nd[2] in self.sm_info['states'].values())
+            self.state_text.setText(new_state)
+            self.state_text.home(False)
+        except StopIteration:
+            pass
+        try:
+            new_event = next(self.sm_info['ID2name'][nd[2]] for nd in reversed(new_data)
+                if nd[0] == 'D' and nd[2] in self.sm_info['events'].values())
+            self.event_text.setText(new_event)
+            self.event_text.home(False)
+        except StopIteration:
+            pass
+        try:
+            new_print = next(nd[2] for nd in reversed(new_data) if nd[0] == 'P')
+            self.print_text.setText(new_print)
+            self.print_text.home(False)
+        except StopIteration:
+            pass
+
+    def set_state_machine(self, sm_info):
+        self.sm_info = sm_info
+        self.state_text.setText('')
+        self.event_text.setText('')
+        self.print_text.setText('')
+
