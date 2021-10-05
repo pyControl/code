@@ -3,6 +3,7 @@ import time
 from pyqtgraph.Qt import QtGui, QtCore
 from datetime import datetime
 from serial import SerialException, SerialTimeoutException
+from importlib import import_module, reload
 
 from com.pycboard import Pycboard, PyboardError, _djb2_file
 from com.data_logger import Data_logger
@@ -314,7 +315,12 @@ class Run_task_tab(QtGui.QWidget):
             if self.variables_dialog:
                 self.variables_button.clicked.disconnect()
                 self.variables_dialog.deleteLater()
-            self.variables_dialog = Variables_dialog(self, self.board)
+
+            self.initialize_custom_var_dialog()
+            if (self.user_custom_variable_dialog):
+                self.variables_dialog = self.user_custom_variable_dialog
+            else:
+                self.variables_dialog = Variables_dialog(self, self.board)
             self.variables_button.clicked.connect(self.variables_dialog.exec_)
             self.variables_button.setEnabled(True)
             self.task_plot.set_state_machine(self.board.sm_info)
@@ -333,6 +339,34 @@ class Run_task_tab(QtGui.QWidget):
         except PyboardError:
             self.status_text.setText('Error setting up state machine.')
      
+    def initialize_custom_var_dialog(self):
+        # If task file specifies a user custom variable dialog, attempt to initialise it.
+        self.user_custom_variable_dialog = None
+        if not 'custom_variable_dialog' in self.board.sm_info['variables']:
+            return # Task does not use custom variable dialog
+        custom_dialog_name = eval(self.board.sm_info['variables']['custom_variable_dialog'])
+        # Try to import and instantiate the user custom variable dialog
+        try:
+            user_module_name = 'gui.user_variable_dialogs.{}'.format(custom_dialog_name)
+            user_module = import_module(user_module_name)
+            reload(user_module)
+        except ModuleNotFoundError:
+            self.print_to_log('\nCould not find user custom variable dialog module: {}'
+                              .format(user_module_name))
+            return
+
+        if not hasattr(user_module, custom_dialog_name):
+            self.print_to_log('\nCould not find user custom variable dialog class "{}" in {}'
+                              .format(custom_dialog_name, user_module_name))
+            return
+        try:
+            user_custom_variable_dialog_class= getattr(user_module, custom_dialog_name)
+            self.user_custom_variable_dialog = user_custom_variable_dialog_class(self,self.board)
+            self.print_to_log('\nInitialised custom variable dialog: {}'.format(custom_dialog_name))
+        except Exception as e:
+            self.print_to_log('Unable to intialise custom variable dialog: {}\n\n'.format(custom_dialog_name)
+                              + 'Traceback: \n\n {}'.format(e))
+
     def select_data_dir(self):
         new_path = QtGui.QFileDialog.getExistingDirectory(self, 'Select data folder', dirs['data'])
         if new_path:

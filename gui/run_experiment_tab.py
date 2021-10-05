@@ -6,6 +6,7 @@ from collections import OrderedDict
 
 from pyqtgraph.Qt import QtGui, QtCore
 from serial import SerialException
+from importlib import import_module, reload
 from concurrent.futures import ThreadPoolExecutor
 
 from config.gui_settings import  update_interval
@@ -222,6 +223,7 @@ class Run_experiment_tab(QtGui.QWidget):
                 if any(self.setup_failed):
                     self.abort_experiment()
                     return
+
         # Setup task
         self.print_to_logs('\nSetting up task.')
         self.thread_map(self.setup_task)
@@ -231,8 +233,9 @@ class Run_experiment_tab(QtGui.QWidget):
         # Copy task file to experiments data folder.
         self.boards[0].data_logger.copy_task_file(self.experiment['data_dir'], dirs['tasks'])
         # Configure GUI ready to run.
+        self.initialize_custom_var_dialog()
         for i, board in enumerate(self.boards):
-            self.subjectboxes[i].assign_board(board)
+            self.subjectboxes[i].assign_board(board,self.user_custom_variable_dialogs[i])
             self.subjectboxes[i].start_stop_button.setEnabled(True)
             self.subjectboxes[i].status_text.setText('Ready')
             self.subjectboxes[i].task_info.set_state_machine(board.sm_info)
@@ -242,6 +245,37 @@ class Run_experiment_tab(QtGui.QWidget):
         self.plots_button.setEnabled(True)
         self.setups_started  = 0
         self.setups_finished = 0
+                                  
+    def initialize_custom_var_dialog(self):
+        # If task file specifies a user custom variable dialog, attempt to initialise it.
+        self.user_custom_variable_dialogs = [None] * len(self.boards)
+        for i, board in enumerate(self.boards):
+            print_to_log = self.subjectboxes[i].print_to_log
+            if not 'custom_variable_dialog' in board.sm_info['variables']:
+                return  #  Setup does not use custom variable dialog
+            custom_dialog_name = eval(board.sm_info['variables']['custom_variable_dialog'])
+            # Try to import and instantiate the user custom variable dialog
+            try:
+                user_module_name = 'gui.user_variable_dialogs.{}'.format(custom_dialog_name)
+                user_module = import_module(user_module_name)
+                reload(user_module)
+            except ModuleNotFoundError:
+                print_to_log('\nCould not find user custom variable dialog module: {}'
+                                  .format(user_module_name))
+                return
+            if not hasattr(user_module, custom_dialog_name):
+                print_to_log('\nCould not find user custom variable dialog class "{}" in {}'
+                    .format(custom_dialog_name, user_module_name))
+                return
+            
+            try:
+                user_custom_variable_dialog_class = getattr(user_module, custom_dialog_name)
+                user_custom_variable_dialog = user_custom_variable_dialog_class(self,board)
+                print_to_log('\nInitialised custom variable dialog: {}'.format(custom_dialog_name))
+                self.user_custom_variable_dialogs[i] = user_custom_variable_dialog
+            except Exception as e:
+                print_to_log('Unable to intialise custom variable dialog: {}\n\n'.format(custom_dialog_name)
+                                  + 'Traceback: \n\n {}'.format(e))
 
     def startstopclose_all(self):
         '''Called when startstopclose_all_button is clicked.  Button is 
@@ -444,9 +478,14 @@ class Subjectbox(QtGui.QGroupBox):
         for p in self.print_queue:
             self.print_to_log(*p)
 
-    def assign_board(self, board):
+    def assign_board(self, board, custom_var_dialog = None):
         self.board = board
-        self.variables_dialog = Variables_dialog(self, board)
+
+        if (custom_var_dialog):
+            self.variables_dialog = custom_var_dialog
+        else:
+            self.variables_dialog = Variables_dialog(self, self.board)
+
         self.variables_button.clicked.connect(self.variables_dialog.exec_)
         self.variables_button.setEnabled(True)
         self.start_stop_button.clicked.connect(self.start_stop_task)
