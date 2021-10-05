@@ -4,9 +4,8 @@ class Blink_gui(QtGui.QDialog):
     # Dialog for setting and getting task variables.
     def __init__(self, parent, board):
         super(QtGui.QDialog, self).__init__(parent)
-        self.setWindowTitle("Set variables")
-        self.layout = QtGui.QVBoxLayout(self)
         self.setWindowTitle("Blink Variable GUI")
+        self.layout = QtGui.QVBoxLayout(self)
         self.variables_grid = Grid(self, board)
         self.layout.addWidget(self.variables_grid)
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -35,10 +34,9 @@ class GUI(QtGui.QWidget):
         layout = QtGui.QGridLayout()
 
         self.enable_red = checkbox_var(init_vars, "🔴 <b>Red Active</b>", "red_enabled")
-        self.enable_green = checkbox_var( init_vars, "🟢 <b>Green Active</b>", "green_enabled")
-
-        self.blink_counts = standard_var( init_vars, "<b>Blink Counts", "blink_counts")
-        self.blink_rate = spin_var( init_vars, "⏱️ <b>Blink Rate</b>", 0.2, 30, 0.5, "blink_rate")
+        self.enable_green = checkbox_var(init_vars, "🟢 <b>Green Active</b>", "green_enabled")
+        self.blink_counts = standard_var(init_vars, "<b>Blink Counts</b>", "blink_counts")
+        self.blink_rate = spin_var(init_vars, "⏱️ <b>Blink Rate</b>", 0.2, 30, 0.5, "blink_rate")
         self.blink_rate.setSuffix(" Hz")
         self.blink_counts.setHint('The number of times each color blinks when active [red,green]')
         self.blink_rate.setHint("Frequency of alternating LED blinks")
