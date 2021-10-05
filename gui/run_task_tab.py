@@ -53,7 +53,6 @@ class Run_task_tab(QtGui.QWidget):
         self.board_groupbox = QtGui.QGroupBox('Setup')
 
         self.board_select = QtGui.QComboBox()
-        self.board_select.setEditable(True)
         self.board_select.addItems(['No setups found'])
         self.board_select.setSizeAdjustPolicy(0)
         self.connect_button = QtGui.QPushButton('Connect')
