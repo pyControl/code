@@ -188,6 +188,28 @@ class GUI_main(QtGui.QMainWindow):
 def launch_GUI():
     '''Launch the pyControl GUI.'''
     app = QtGui.QApplication(sys.argv)
+    app.setStyle('Fusion')
+    style = """
+        QPushButton:hover{
+            background-color:CornflowerBlue;
+        }
+        QComboBox:hover{
+            background-color:CornflowerBlue;
+        }
+        QLineEdit[readOnly=\"false\"]:hover{
+            border: 1px solid CornflowerBlue;
+        }
+        QTabBar:tab:hover{
+            color:  #4881ea;
+        }
+        QCheckBox:hover{
+            color:  #4881ea ;
+        }
+        QTableView:item:hover{
+            border: 1px solid CornflowerBlue;
+        }
+    """
+    app.setStyleSheet(style)
     gui_main = GUI_main()
     gui_main.app = app # To allow app functions to be called from GUI.
     sys.excepthook = gui_main.excepthook

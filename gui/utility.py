@@ -320,6 +320,7 @@ class TaskSelectMenu(QtGui.QPushButton):
             if self.text() != text:
                 self.callback(text)
                 self.setText(text)
+                self.setAttribute(QtCore.Qt.WA_UnderMouse,False) # without this change, even after an item is clicked/selected, the button will stay highlighted as if still in hover state
         return fxn
     
     def update_menu(self, root_folder):
