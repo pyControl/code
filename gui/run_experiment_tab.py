@@ -15,6 +15,10 @@ from com.data_logger import Data_logger
 from gui.plotting import Experiment_plot
 from gui.dialogs import Variables_dialog, Summary_variables_dialog
 from gui.utility import variable_constants, TaskInfo
+try:
+    from config.gui_settings import log_font_size
+except:
+    log_font_size = None
 
 class Run_experiment_tab(QtGui.QWidget):
     '''The run experiment tab is responsible for setting up, running and stopping
@@ -403,7 +407,10 @@ class Subjectbox(QtGui.QGroupBox):
         self.variables_button.setEnabled(False)
         self.log_textbox = QtGui.QTextEdit()
         self.log_textbox.setMinimumHeight(180)
-        self.log_textbox.setFont(QtGui.QFont('Courier', 9))
+        font = QtGui.QFont('Courier')
+        if log_font_size:
+            font.setPixelSize(log_font_size)
+        self.log_textbox.setFont(font)
         self.log_textbox.setReadOnly(True)
 
         self.Vlayout = QtGui.QVBoxLayout(self)

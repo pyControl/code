@@ -13,6 +13,10 @@ from config.gui_settings import update_interval
 from gui.dialogs import Variables_dialog
 from gui.plotting import Task_plot
 from gui.utility import init_keyboard_shortcuts,TaskSelectMenu, TaskInfo
+try:
+    from config.gui_settings import log_font_size
+except:
+    log_font_size = None
 
 # Run_task_gui ------------------------------------------------------------------------
 
@@ -146,7 +150,10 @@ class Run_task_tab(QtGui.QWidget):
         # Log text and task plots.
 
         self.log_textbox = QtGui.QTextEdit()
-        self.log_textbox.setFont(QtGui.QFont('Courier', 9))
+        font = QtGui.QFont('Courier')
+        if isinstance(log_font_size,int):
+            font.setPixelSize(log_font_size)
+        self.log_textbox.setFont(font)
         self.log_textbox.setReadOnly(True)
 
         self.task_plot = Task_plot()

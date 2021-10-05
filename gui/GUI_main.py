@@ -13,6 +13,11 @@ from gui.configure_experiment_tab import Configure_experiment_tab
 from gui.run_experiment_tab import Run_experiment_tab
 from gui.setups_tab import Setups_tab
 
+try:
+    from config.gui_settings import ui_font_size
+except:
+    ui_font_size = None
+
 # --------------------------------------------------------------------------------
 # GUI_main
 # --------------------------------------------------------------------------------
@@ -210,6 +215,10 @@ def launch_GUI():
         }
     """
     app.setStyleSheet(style)
+    font = QtGui.QFont()
+    if ui_font_size:
+        font.setPixelSize(ui_font_size)
+    app.setFont(font)
     gui_main = GUI_main()
     gui_main.app = app # To allow app functions to be called from GUI.
     sys.excepthook = gui_main.excepthook
