@@ -56,10 +56,9 @@ class Run_task_tab(QtGui.QWidget):
 
         self.board_groupbox = QtGui.QGroupBox('Setup')
 
-        self.board_label = QtGui.QLabel('Select:')
         self.board_select = QtGui.QComboBox()
-        self.board_select.setEditable(True)
-        self.board_select.setFixedWidth(100)
+        self.board_select.addItems(['No setups found'])
+        self.board_select.setSizeAdjustPolicy(0)
         self.connect_button = QtGui.QPushButton('Connect')
         self.connect_button.setIcon(QtGui.QIcon("gui/icons/connect.svg"))
         self.connect_button.setEnabled(False)
@@ -67,7 +66,6 @@ class Run_task_tab(QtGui.QWidget):
         self.config_button.setIcon(QtGui.QIcon("gui/icons/settings.svg"))
 
         self.boardgroup_layout = QtGui.QHBoxLayout()
-        self.boardgroup_layout.addWidget(self.board_label)
         self.boardgroup_layout.addWidget(self.board_select)
         self.boardgroup_layout.addWidget(self.connect_button)
         self.boardgroup_layout.addWidget(self.config_button)
@@ -229,6 +227,7 @@ class Run_task_tab(QtGui.QWidget):
                 if not self.connected:
                     self.connect_button.setEnabled(True)
             else: # No setups available to connect to.
+                    self.board_select.addItems(['No setups found'])
                     self.connect_button.setEnabled(False)
         if self.GUI_main.available_tasks_changed:
             self.task_select.update_menu(dirs['tasks'])
