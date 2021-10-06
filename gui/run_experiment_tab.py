@@ -8,7 +8,7 @@ from pyqtgraph.Qt import QtGui, QtCore
 from serial import SerialException
 from concurrent.futures import ThreadPoolExecutor
 
-from config.gui_settings import  update_interval
+from config.gui_settings import  update_interval, log_font_size
 from config.paths import dirs
 from com.pycboard import Pycboard, PyboardError
 from com.data_logger import Data_logger
@@ -403,7 +403,7 @@ class Subjectbox(QtGui.QGroupBox):
         self.variables_button.setEnabled(False)
         self.log_textbox = QtGui.QTextEdit()
         self.log_textbox.setMinimumHeight(180)
-        self.log_textbox.setFont(QtGui.QFont('Courier', 9))
+        self.log_textbox.setFont(QtGui.QFont('Courier New',log_font_size))
         self.log_textbox.setReadOnly(True)
 
         self.Vlayout = QtGui.QVBoxLayout(self)

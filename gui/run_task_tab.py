@@ -8,7 +8,7 @@ from com.pycboard import Pycboard, PyboardError, _djb2_file
 from com.data_logger import Data_logger
 
 from config.paths import dirs
-from config.gui_settings import update_interval
+from config.gui_settings import update_interval, log_font_size
 
 from gui.dialogs import Variables_dialog
 from gui.plotting import Task_plot
@@ -144,7 +144,7 @@ class Run_task_tab(QtGui.QWidget):
         # Log text and task plots.
 
         self.log_textbox = QtGui.QTextEdit()
-        self.log_textbox.setFont(QtGui.QFont('Courier', 9))
+        self.log_textbox.setFont(QtGui.QFont('Courier New',log_font_size))
         self.log_textbox.setReadOnly(True)
 
         self.task_plot = Task_plot()
