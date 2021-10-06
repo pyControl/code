@@ -348,7 +348,7 @@ class Pycboard(Pyboard):
         pass new_data to data_logger and print_func if specified, return new_data.'''
         new_data = []
         error_message = None
-        while self.serial.inWaiting() > 0:
+        while self.serial.in_waiting > 0:
             new_byte = self.serial.read(1)  
             if new_byte == b'A': # Analog data, 13 byte header + variable size content.
                 data_header = self.serial.read(13)
