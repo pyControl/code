@@ -395,6 +395,8 @@ class Pycboard(Pyboard):
                     error_message = data_err[:-3].decode()
                     new_data.append(('!', error_message))                
                 break
+            else:
+                print(new_byte.decode("utf-8"),end='')
         if new_data and self.data_logger:
             self.data_logger.process_data(new_data)
         if error_message:
