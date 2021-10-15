@@ -11,7 +11,7 @@ from com.data_logger import Data_logger
 from config.paths import dirs
 from config.gui_settings import update_interval, log_font_size
 
-from gui.dialogs import Variables_dialog
+from gui.dialogs import Variables_dialog, Gui_generator_dialog, Custom_var_not_found_dialog
 from gui.plotting import Task_plot
 from gui.utility import init_keyboard_shortcuts,TaskSelectMenu, TaskInfo
 
@@ -108,6 +108,7 @@ class Run_task_tab(QtGui.QWidget):
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
         self.variables_button = QtGui.QPushButton('Variables')
         self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
+        self.generator_dialog = Gui_generator_dialog(parent=self)
 
         self.taskgroup_layout = QtGui.QGridLayout()
         self.taskgroup_layout.addWidget(self.task_select,0,0,1,2)
@@ -315,9 +316,10 @@ class Run_task_tab(QtGui.QWidget):
                 self.variables_button.clicked.disconnect()
                 self.variables_dialog.deleteLater()
 
-            self.initialize_custom_var_dialog()
-            if (self.user_custom_variable_dialog):
-                self.variables_dialog = self.user_custom_variable_dialog
+            self.generator_dialog.load_task(task)
+            self.initialize_custom_var_gui()
+            if (self.user_custom_variable_gui):
+                self.variables_dialog = self.user_custom_variable_gui
             else:
                 self.variables_dialog = Variables_dialog(self, self.board)
             self.variables_button.clicked.connect(self.variables_dialog.exec_)
@@ -338,20 +340,25 @@ class Run_task_tab(QtGui.QWidget):
         except PyboardError:
             self.status_text.setText('Error setting up state machine.')
      
-    def initialize_custom_var_dialog(self):
+    def initialize_custom_var_gui(self):
         # If task file specifies a user custom variable dialog, attempt to initialise it.
-        self.user_custom_variable_dialog = None
-        if not 'custom_variable_dialog' in self.board.sm_info['variables']:
+        self.user_custom_variable_gui = None
+        if not 'variable_gui' in self.board.sm_info['variables']:
             return # Task does not use custom variable dialog
-        custom_dialog_name = eval(self.board.sm_info['variables']['custom_variable_dialog'])
+        custom_dialog_name = eval(self.board.sm_info['variables']['variable_gui'])
         # Try to import and instantiate the user custom variable dialog
         try:
-            user_module_name = 'gui.user_variable_dialogs.{}'.format(custom_dialog_name)
+            user_module_name = 'gui.user_variable_GUIs.{}'.format(custom_dialog_name)
             user_module = import_module(user_module_name)
             reload(user_module)
         except ModuleNotFoundError:
             self.print_to_log('\nCould not find user custom variable dialog module: {}'
                               .format(user_module_name))
+            not_found_dialog = Custom_var_not_found_dialog(missing_file = custom_dialog_name, parent=self)
+            create_dialog = not_found_dialog.exec()
+            if create_dialog:
+                self.generator_dialog.variable_generator_table.set_dialog_name(custom_dialog_name)
+                was_generated = self.generator_dialog.exec()
             return
 
         if not hasattr(user_module, custom_dialog_name):
@@ -359,11 +366,11 @@ class Run_task_tab(QtGui.QWidget):
                               .format(custom_dialog_name, user_module_name))
             return
         try:
-            user_custom_variable_dialog_class= getattr(user_module, custom_dialog_name)
-            self.user_custom_variable_dialog = user_custom_variable_dialog_class(self,self.board)
-            self.print_to_log('\nInitialised custom variable dialog: {}'.format(custom_dialog_name))
+            user_custom_variable_gui_class= getattr(user_module, custom_dialog_name)
+            self.user_custom_variable_gui = user_custom_variable_gui_class(self,self.board)
+            self.print_to_log('\nInitialised custom variable GUI: {}'.format(custom_dialog_name))
         except Exception as e:
-            self.print_to_log('Unable to intialise custom variable dialog: {}\n\n'.format(custom_dialog_name)
+            self.print_to_log('Unable to intialise custom variable GUI: {}\n\n'.format(custom_dialog_name)
                               + 'Traceback: \n\n {}'.format(e))
 
     def select_data_dir(self):
@@ -460,3 +467,4 @@ class Run_task_tab(QtGui.QWidget):
         if self.running:
             self.stop_task(error=True)
         self.disconnect()
+

@@ -256,7 +256,7 @@ class Run_experiment_tab(QtGui.QWidget):
             custom_dialog_name = eval(board.sm_info['variables']['custom_variable_dialog'])
             # Try to import and instantiate the user custom variable dialog
             try:
-                user_module_name = 'gui.user_variable_dialogs.{}'.format(custom_dialog_name)
+                user_module_name = 'gui.user_variable_GUIs.{}'.format(custom_dialog_name)
                 user_module = import_module(user_module_name)
                 reload(user_module)
             except ModuleNotFoundError:

@@ -1,10 +1,11 @@
 import os
 import json
+import re
 
 from pyqtgraph.Qt import QtGui, QtCore
 
 from config.paths import dirs, update_paths
-from gui.utility import variable_constants
+from gui.utility import variable_constants,null_resize,cbox_set_item,cbox_update_options
 
 # Board_config_dialog -------------------------------------------------
 
@@ -263,6 +264,7 @@ class Keyboard_shortcuts_dialog(QtGui.QDialog):
 # Paths dialog. ---------------------------------------------------------
 
 class Path_setter():
+    '''Dialog for editing folder paths.'''
     def __init__(self, name, path, edited, dialog):
         self.name = name
         self.path = os.path.normpath(path)
@@ -295,7 +297,6 @@ class Path_setter():
                 self.path_text.setText(new_path)
 
 class Paths_dialog(QtGui.QDialog):
-    '''Dialog for displaying information about keyboard shortcuts.'''
     def __init__(self, parent):
         super(QtGui.QDialog, self).__init__(parent)
         self.setWindowTitle('Paths')
@@ -325,3 +326,379 @@ class Paths_dialog(QtGui.QDialog):
                 f.write(json.dumps(user_paths))
             self.parent().data_dir_changed = True
             update_paths(user_paths)
+
+
+class Gui_generator_dialog(QtGui.QDialog):
+    def __init__(self, parent):
+        super(QtGui.QDialog, self).__init__(parent)
+        self.setWindowTitle('GUI Generator')
+
+        self.Vlayout = QtGui.QGridLayout(self)
+        self.variable_generator_table = GUI_VariablesTable(self)
+        self.dialog_name_lbl = QtGui.QLabel('Dialog Name')
+        self.generate_btn = QtGui.QPushButton('Generate GUI file')
+        self.generate_btn.clicked.connect(self.variable_generator_table.collect_gui_data)
+        self.Vlayout.addWidget(self.variable_generator_table,0,0)
+        self.Vlayout.addWidget(self.dialog_name_lbl,1,0)
+        self.Vlayout.addWidget(self.generate_btn,1,0)
+        self.setMinimumWidth(900)
+        self.setMinimumHeight(450)
+
+        self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+W'), self)
+        self.close_shortcut.activated.connect(self.close)
+
+    def load_task(self,new_task):
+        self.variable_generator_table.task_changed(new_task)
+
+    def change_layout(self):
+        self.setLayout(self.otherlayout)
+
+class GUI_VariablesTable(QtGui.QTableWidget):
+    def __init__(self, parent=None):
+        super(QtGui.QTableWidget, self).__init__(1,11, parent=parent)
+        self.parent = parent
+        self.setHorizontalHeaderLabels(['','','Variable', 'Label', 'Input type','Min','Max','Step','Suffix','Hint',''])
+        self.verticalHeader().setVisible(False)
+        self.setColumnWidth(0, 30)
+        self.setColumnWidth(1, 30)
+        self.setColumnWidth(2, 150)
+        self.setColumnWidth(3, 175)
+        self.setColumnWidth(4, 100)
+        self.setColumnWidth(5, 40)
+        self.setColumnWidth(6, 40)
+        self.setColumnWidth(7, 40)
+        self.setColumnWidth(8, 50)
+
+        add_button = QtGui.QPushButton('   add   ')
+        add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+        add_button.clicked.connect(self.add_variable)
+        self.setCellWidget(0,10, add_button)
+
+        self.n_variables = 0
+        self.variable_names = []
+        self.available_variables = []
+        self.assigned = {v_name:[] for v_name in self.variable_names} # Which subjects have values assigned for each variable.
+
+    def reset(self):
+        '''Clear all rows of table.'''
+        for i in reversed(range(self.n_variables)):
+            self.removeRow(i)
+        self.n_variables = 0
+        self.assigned = {v_name:[] for v_name in self.variable_names} 
+
+    def create_new_widgets(self):
+        up_button = QtGui.QPushButton('⬆️')
+        down_button = QtGui.QPushButton('⬇️')
+        variable_cbox = QtGui.QComboBox()
+        variable_cbox.activated.connect(self.update_available)
+        display_name = QtGui.QLineEdit()
+        control_combo = QtGui.QComboBox()
+        control_combo.activated.connect(self.update_available)
+        control_combo.addItems(['spinbox','line edit','checkbox'])
+        spin_min    = QtGui.QLineEdit()
+        spin_min.setAlignment(QtCore.Qt.AlignCenter)
+        spin_max    = QtGui.QLineEdit()
+        spin_max.setAlignment(QtCore.Qt.AlignCenter)
+        spin_step    = QtGui.QLineEdit()
+        spin_step.setAlignment(QtCore.Qt.AlignCenter)
+        suffix    = QtGui.QLineEdit()
+        suffix.setAlignment(QtCore.Qt.AlignCenter)
+        hint    = QtGui.QLineEdit()
+        hint.setAlignment(QtCore.Qt.AlignCenter)
+        remove_button = QtGui.QPushButton('remove')
+        remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
+
+        widgets = (
+            up_button,
+            down_button,
+            variable_cbox,
+            display_name,
+            control_combo,
+            spin_min,
+            spin_max,
+            spin_step,
+            suffix,
+            hint,
+            remove_button
+        )
+        
+        return widgets
+
+    def add_variable(self, var_dict=None, row = None):
+        '''Add a row to the variables table.'''
+        # populate row with widgets
+        for column,widget in enumerate(self.create_new_widgets()):
+            self.setCellWidget(self.n_variables  ,column, widget)
+        # connect buttons to fucntions
+        ind = QtCore.QPersistentModelIndex(self.model().index(self.n_variables, 2))
+        self.cellWidget(self.n_variables,0).clicked.connect(lambda :self.swap_with_above(ind.row())) # up arrow connection
+        self.cellWidget(self.n_variables,1).clicked.connect(lambda :self.swap_with_below(ind.row())) # down arrow connection
+        self.cellWidget(self.n_variables,10).clicked.connect(lambda :self.remove_variable(ind.row())) # remove button connection
+
+        # inserte another row witha an "add" button
+        self.insertRow(self.n_variables+1)
+        add_button = QtGui.QPushButton('   add   ')
+        add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+        add_button.clicked.connect(self.add_variable)
+        self.setCellWidget(self.n_variables+1,10, add_button)
+
+        self.cellWidget(self.n_variables,2).addItems(['     select variable     ']+self.available_variables)
+
+        self.n_variables += 1
+        self.update_available()
+        null_resize(self)
+
+    def remove_variable(self, variable_n):
+        self.removeRow(variable_n)
+        self.n_variables -= 1
+        self.update_available()
+        null_resize(self)
+    
+    def swap_with_above(self, row):
+        if self.n_variables > row > 0:
+            # grab current row values
+            var_name = str(self.cellWidget(row, 2).currentText())
+            label_text = str(self.cellWidget(row, 3).text())
+            control_type = str(self.cellWidget(row, 4).currentText())
+            min_val = str(self.cellWidget(row, 5).text())
+            max_val = str(self.cellWidget(row, 6).text())
+            step_val = str(self.cellWidget(row, 7).text())
+            suffix_val = str(self.cellWidget(row, 8).text())
+            hint_val = str(self.cellWidget(row, 9).text())
+
+            # create new widgets
+            new_widgets =  self.create_new_widgets()
+            (
+                up_button,
+                down_button,
+                variable_cbox,
+                display_name,
+                control_combo,
+                spin_min,
+                spin_max,
+                spin_step,
+                suffix,
+                hint,
+                remove_button,
+            ) = new_widgets
+
+            # put old values into new widgets
+            variable_cbox.addItems([var_name])
+            cbox_set_item(variable_cbox,var_name)
+            display_name.setText(label_text)
+            cbox_set_item(control_combo,control_type)
+            spin_min.setText(min_val)
+            spin_max.setText(max_val)
+            spin_step.setText(step_val)
+            suffix.setText(suffix_val)
+            hint.setText(hint_val)
+
+            self.removeRow(row) # delete old row
+            above_row = row -1
+            self.insertRow(above_row) # insert new row
+
+            # populate row with widgets
+            for column,widget in enumerate(new_widgets):
+                self.setCellWidget(above_row, column, widget)
+            # connect new buttons to functions
+            ind = QtCore.QPersistentModelIndex(self.model().index(self.n_variables, 2))
+            self.cellWidget(above_row,0).clicked.connect(lambda :self.swap_with_above(above_row)) # up arrow connection
+            self.cellWidget(above_row,1).clicked.connect(lambda :self.swap_with_below(above_row)) # down arrow connection
+            self.cellWidget(above_row,10).clicked.connect(lambda :self.remove_variable(above_row)) # remove button connection
+
+            # disconnect swapped row buttons and reconnect to its new row index
+            self.cellWidget(row,0).clicked.disconnect() # up arrow
+            self.cellWidget(row,0).clicked.connect(lambda : self.swap_with_above(row))
+            self.cellWidget(row,1).clicked.disconnect() # down arrow
+            self.cellWidget(row,1).clicked.connect(lambda :self.swap_with_below(row))
+            self.cellWidget(row,10).clicked.disconnect() # remove button
+            self.cellWidget(row,10).clicked.connect(lambda :self.remove_variable(row))
+
+            self.update_available()
+            null_resize(self)
+
+    def swap_with_below(self, row):
+        self.swap_with_above(row+1)
+
+    def update_available(self, i=None):
+        # Find out what variable-subject combinations already assigned.
+        for v in range(self.n_variables):
+            v_name = self.cellWidget(v,2).currentText()
+            control = self.cellWidget(v,4).currentText()
+            if v_name == '     select variable     ':
+                for i in (3,4,5,6,7,8): # disable inputs until a variable as been selected
+                    self.cellWidget(v,i).setEnabled(False)
+            else:
+                self.cellWidget(v,3).setEnabled(True)
+                self.cellWidget(v,4).setEnabled(True)
+                self.cellWidget(v,8).setEnabled(True)
+                if control == 'spinbox':
+                    for i in (5,6,7,8):
+                        self.cellWidget(v,i).setEnabled(True)
+                        self.cellWidget(v,i).setStyleSheet("background: #ffffff;")
+                else:
+                    for i in (5,6,7,8): 
+                        self.cellWidget(v,i).setEnabled(False)
+                        self.cellWidget(v,i).setText('')
+                        self.cellWidget(v,i).setStyleSheet("background: #dcdcdc;")
+                    
+        # Update the variables available:
+        fully_asigned_variables = []
+        for row in range(self.n_variables):
+            assigned_var = self.cellWidget(row,2).currentText()
+            if assigned_var != '     select variable     ':
+                fully_asigned_variables.append(assigned_var)
+
+        self.available_variables = sorted(list( set(self.variable_names) - set(fully_asigned_variables)), key=str.lower)
+        # Update the available options in the variable and subject comboboxes.
+        for v in range(self.n_variables):  
+            v_name = self.cellWidget(v,2).currentText()
+            cbox_update_options(self.cellWidget(v,2), self.available_variables)
+
+    def task_changed(self, task):
+        '''Remove variables that are not defined in the new task.'''
+        pattern = "[\n\r]v\.(?P<vname>\w+)\s*\="
+        try:
+            with open(os.path.join(dirs['tasks'], task+'.py'), "r") as file:
+                file_content = file.read()
+        except FileNotFoundError:
+            return
+        self.variable_names = list(set([v_name for v_name in 
+            re.findall(pattern, file_content) if not v_name[-3:] == '___' and v_name != 'variable_gui']))
+        # Remove variables that are not in new task.
+        for i in reversed(range(self.n_variables)):
+            if not self.cellWidget(i,2).currentText() in self.variable_names:
+                self.removeRow(i)
+                self.n_variables -= 1
+        null_resize(self)
+        self.update_available()
+
+    def set_dialog_name(self,new_dialog_name):
+        self.new_dialog_name = new_dialog_name
+
+    def collect_gui_data(self):
+        gui_dictionary = {}
+        ordered_elements = []
+        for row in range(self.n_variables):  
+            element_specs = {}
+            varname = self.cellWidget(row,2).currentText()
+            if varname != '     select variable     ':
+                ordered_elements.append(varname) 
+                element_specs['label'] = self.cellWidget(row,3).text()
+                element_specs['hint'] = self.cellWidget(row,9).text()
+                control = self.cellWidget(row,4).currentText()
+                if control == 'spinbox':
+                    element_specs['widget'] = 'spin_var'
+                    element_specs['min'] = self.cellWidget(row,5).text()
+                    element_specs['max'] = self.cellWidget(row,6).text()
+                    element_specs['step'] = self.cellWidget(row,7).text()
+                    element_specs['suffix'] = self.cellWidget(row,8).text()
+                    if element_specs['min']=="" or element_specs['max']=="" or element_specs['step']=="":
+                        msg = QtGui.QMessageBox()
+                        msg.setText("Not all spinbox values are filled in (min,max,step)")
+                        msg.exec()
+                        return
+                elif control == 'checkbox':
+                    element_specs['widget'] = 'checkbox_var'
+                elif control == 'line edit':
+                    element_specs['widget'] = 'standard_var'
+
+                gui_dictionary[varname] = element_specs
+        gui_dictionary['ordered_elements'] = ordered_elements # after Python 3.6, dictionaries became ordered, but to be backwards compatible we add ordering here
+
+        self.create_custom_gui_file(gui_dictionary)
+
+    def create_custom_gui_file(self,data):
+        generator_version = 0 #  be sure to increment this if changes are made
+        start = f'''
+# This file was automatically generated from pyConrtol's GUI Generator version {generator_version} 
+from gui.dialog_elements import *
+
+class {self.new_dialog_name}(QtGui.QDialog):
+    # Dialog for setting and getting task variables.
+    def __init__(self, parent, board):
+        super(QtGui.QDialog, self).__init__(parent)
+        self.setWindowTitle("{self.new_dialog_name} GUI")
+        self.layout = QtGui.QVBoxLayout(self)
+        self.variables_grid = Grid(self, board)
+        self.layout.addWidget(self.variables_grid)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(self.layout)
+
+
+class Grid(QtGui.QWidget):
+    def __init__(self, parent, board):
+        super(QtGui.QWidget, self).__init__(parent)
+        variables = board.sm_info["variables"]
+        self.grid_layout = QtGui.QGridLayout()
+        initial_variables_dict = {{
+            v_name: v_value_str for (v_name, v_value_str) in sorted(variables.items())
+        }}
+        self.gui = GUI(self, self.grid_layout, board, initial_variables_dict)
+        self.setLayout(self.grid_layout)
+
+
+class GUI(QtGui.QWidget):
+    def __init__(self, parent, grid_layout, board, init_vars):
+        super(QtGui.QWidget, self).__init__(parent)
+        self.board = board
+
+        # create widgets
+        widget = QtGui.QWidget()
+        layout = QtGui.QGridLayout()
+'''
+        end = '''
+        widget.setLayout(layout)
+        grid_layout.addWidget(widget, 0, 0, QtCore.Qt.AlignLeft)
+        grid_layout.setRowStretch(15, 1)
+'''
+
+        with open(F'gui/user_variable_GUIs/{self.new_dialog_name}.py', 'w') as custom_dialog_file:
+            custom_dialog_file.write(start)
+            for row,var in enumerate(data['ordered_elements']):
+                widget = data[var]
+                
+                if widget['widget'] == 'spin_var':
+                    create_widget_string = F"        self.{var} = spin_var(init_vars, \"{widget['label']}\", {widget['min']}, {widget['max']}, {widget['step']}, \"{var}\")\n"
+                    set_suffix_string = F"        self.{var}.setSuffix(\"{widget['suffix']}\")\n"
+                elif widget['widget'] == 'checkbox_var':
+                    create_widget_string = F"        self.{var} = checkbox_var(init_vars, \"{widget['label']}\", \"{var}\")\n"
+                    set_suffix_string = ""
+                elif widget['widget'] == 'standard_var':
+                    create_widget_string = F"        self.{var} = standard_var(init_vars, \"{widget['label']}\", \"{var}\")\n"
+                    set_suffix_string = ""
+
+                set_hint_string = F"        self.{var}.setHint(\"{widget['hint']}\")\n\n"
+                set_board_string = F"        self.{var}.setBoard(board)\n"
+                add_to_grid_string = F"        self.{var}.add_to_grid(layout,{row})\n\n"
+
+            # write file content
+                custom_dialog_file.write(create_widget_string)
+                custom_dialog_file.write(set_suffix_string)
+                custom_dialog_file.write(set_hint_string)
+                custom_dialog_file.write(set_board_string)
+                custom_dialog_file.write(add_to_grid_string)
+
+            custom_dialog_file.write(end)
+        self.parent.accept()
+
+
+class Custom_var_not_found_dialog(QtGui.QDialog):
+    def __init__(self,missing_file,parent):
+        super(QtGui.QDialog, self).__init__(parent)
+        self.setWindowTitle('Custom Variable GUI not found')
+
+        message = QtGui.QLabel(F"The custom variable GUI <b>\"{missing_file}\"</b> was not found.<br><br>Would you like to generate a new custom variable GUI, or continue with the default variable GUI?")
+        continue_button = QtGui.QPushButton('Continue with default variable GUI')
+        generate_button = QtGui.QPushButton('Create new custom variable GUI')
+        continue_button.setDefault(True)
+        continue_button.setFocus()
+        self.layout = QtGui.QGridLayout(self)
+        self.layout.addWidget(message,0,0,1,2)
+        self.layout.addWidget(continue_button,1,0)
+        self.layout.addWidget(generate_button,1,1)
+
+        generate_button.clicked.connect(self.accept)
+        continue_button.clicked.connect(self.close)
+
+        self.setFixedSize(self.sizeHint())
