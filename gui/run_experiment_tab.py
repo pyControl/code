@@ -233,9 +233,9 @@ class Run_experiment_tab(QtGui.QWidget):
         # Copy task file to experiments data folder.
         self.boards[0].data_logger.copy_task_file(self.experiment['data_dir'], dirs['tasks'])
         # Configure GUI ready to run.
-        self.initialize_custom_var_dialog()
+        self.initialize_custom_var_gui()
         for i, board in enumerate(self.boards):
-            self.subjectboxes[i].assign_board(board,self.user_custom_variable_dialogs[i])
+            self.subjectboxes[i].assign_board(board,self.user_variable_guis[i])
             self.subjectboxes[i].start_stop_button.setEnabled(True)
             self.subjectboxes[i].status_text.setText('Ready')
             self.subjectboxes[i].task_info.set_state_machine(board.sm_info)
@@ -246,14 +246,14 @@ class Run_experiment_tab(QtGui.QWidget):
         self.setups_started  = 0
         self.setups_finished = 0
                                   
-    def initialize_custom_var_dialog(self):
+    def initialize_custom_var_gui(self):
         # If task file specifies a user custom variable dialog, attempt to initialise it.
-        self.user_custom_variable_dialogs = [None] * len(self.boards)
+        self.user_variable_guis = [None] * len(self.boards)
         for i, board in enumerate(self.boards):
             print_to_log = self.subjectboxes[i].print_to_log
-            if not 'custom_variable_dialog' in board.sm_info['variables']:
+            if not 'variable_gui' in board.sm_info['variables']:
                 return  #  Setup does not use custom variable dialog
-            custom_dialog_name = eval(board.sm_info['variables']['custom_variable_dialog'])
+            custom_dialog_name = eval(board.sm_info['variables']['variable_gui'])
             # Try to import and instantiate the user custom variable dialog
             try:
                 user_module_name = 'gui.user_variable_GUIs.{}'.format(custom_dialog_name)
@@ -269,10 +269,10 @@ class Run_experiment_tab(QtGui.QWidget):
                 return
             
             try:
-                user_custom_variable_dialog_class = getattr(user_module, custom_dialog_name)
-                user_custom_variable_dialog = user_custom_variable_dialog_class(self,board)
+                user_variable_gui_class = getattr(user_module, custom_dialog_name)
+                user_variable_gui = user_variable_gui_class(self,board)
                 print_to_log('\nInitialised custom variable dialog: {}'.format(custom_dialog_name))
-                self.user_custom_variable_dialogs[i] = user_custom_variable_dialog
+                self.user_variable_guis[i] = user_variable_gui
             except Exception as e:
                 print_to_log('Unable to intialise custom variable dialog: {}\n\n'.format(custom_dialog_name)
                                   + 'Traceback: \n\n {}'.format(e))
