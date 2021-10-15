@@ -9,7 +9,7 @@ from com.pycboard import Pycboard, PyboardError, _djb2_file
 from com.data_logger import Data_logger
 
 from config.paths import dirs
-from config.gui_settings import update_interval
+from config.gui_settings import update_interval, log_font_size
 
 from gui.dialogs import Variables_dialog
 from gui.plotting import Task_plot
@@ -53,10 +53,9 @@ class Run_task_tab(QtGui.QWidget):
 
         self.board_groupbox = QtGui.QGroupBox('Setup')
 
-        self.board_label = QtGui.QLabel('Select:')
         self.board_select = QtGui.QComboBox()
-        self.board_select.setEditable(True)
-        self.board_select.setFixedWidth(100)
+        self.board_select.addItems(['No setups found'])
+        self.board_select.setSizeAdjustPolicy(0)
         self.connect_button = QtGui.QPushButton('Connect')
         self.connect_button.setIcon(QtGui.QIcon("gui/icons/connect.svg"))
         self.connect_button.setEnabled(False)
@@ -64,7 +63,6 @@ class Run_task_tab(QtGui.QWidget):
         self.config_button.setIcon(QtGui.QIcon("gui/icons/settings.svg"))
 
         self.boardgroup_layout = QtGui.QHBoxLayout()
-        self.boardgroup_layout.addWidget(self.board_label)
         self.boardgroup_layout.addWidget(self.board_select)
         self.boardgroup_layout.addWidget(self.connect_button)
         self.boardgroup_layout.addWidget(self.config_button)
@@ -147,7 +145,7 @@ class Run_task_tab(QtGui.QWidget):
         # Log text and task plots.
 
         self.log_textbox = QtGui.QTextEdit()
-        self.log_textbox.setFont(QtGui.QFont('Courier', 9))
+        self.log_textbox.setFont(QtGui.QFont('Courier New',log_font_size))
         self.log_textbox.setReadOnly(True)
 
         self.task_plot = Task_plot()
@@ -223,6 +221,7 @@ class Run_task_tab(QtGui.QWidget):
                 if not self.connected:
                     self.connect_button.setEnabled(True)
             else: # No setups available to connect to.
+                    self.board_select.addItems(['No setups found'])
                     self.connect_button.setEnabled(False)
         if self.GUI_main.available_tasks_changed:
             self.task_select.update_menu(dirs['tasks'])
