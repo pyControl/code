@@ -394,7 +394,7 @@ class GUI_VariablesTable(QtGui.QTableWidget):
         display_name = QtGui.QLineEdit()
         control_combo = QtGui.QComboBox()
         control_combo.activated.connect(self.update_available)
-        control_combo.addItems(['spinbox','line edit','checkbox'])
+        control_combo.addItems(['spinbox','slider','checkbox','line edit'])
         spin_min    = QtGui.QLineEdit()
         spin_min.setAlignment(QtCore.Qt.AlignCenter)
         spin_max    = QtGui.QLineEdit()
@@ -532,7 +532,7 @@ class GUI_VariablesTable(QtGui.QTableWidget):
                 self.cellWidget(v,3).setEnabled(True)
                 self.cellWidget(v,4).setEnabled(True)
                 self.cellWidget(v,8).setEnabled(True)
-                if control == 'spinbox':
+                if control == 'spinbox' or control == 'slider':
                     for i in (5,6,7,8):
                         self.cellWidget(v,i).setEnabled(True)
                         self.cellWidget(v,i).setStyleSheet("background: #ffffff;")
@@ -587,8 +587,7 @@ class GUI_VariablesTable(QtGui.QTableWidget):
                 element_specs['label'] = self.cellWidget(row,3).text()
                 element_specs['hint'] = self.cellWidget(row,9).text()
                 control = self.cellWidget(row,4).currentText()
-                if control == 'spinbox':
-                    element_specs['widget'] = 'spin_var'
+                if control == 'spinbox' or control == 'slider':
                     element_specs['min'] = self.cellWidget(row,5).text()
                     element_specs['max'] = self.cellWidget(row,6).text()
                     element_specs['step'] = self.cellWidget(row,7).text()
@@ -598,6 +597,10 @@ class GUI_VariablesTable(QtGui.QTableWidget):
                         msg.setText("Not all spinbox values are filled in (min,max,step)")
                         msg.exec()
                         return
+                    if control == 'spinbox':
+                        element_specs['widget'] = 'spin_var'
+                    else:
+                        element_specs['widget'] = 'slider_var'
                 elif control == 'checkbox':
                     element_specs['widget'] = 'checkbox_var'
                 elif control == 'line edit':
@@ -610,8 +613,7 @@ class GUI_VariablesTable(QtGui.QTableWidget):
 
     def create_custom_gui_file(self,data):
         generator_version = 0 #  be sure to increment this if changes are made
-        start = f'''
-# This file was automatically generated from pyConrtol's GUI Generator version {generator_version} 
+        start = f''' # This file was automatically generated from pyConrtol's GUI Generator version {generator_version} 
 from gui.dialog_elements import *
 
 class {self.new_dialog_name}(QtGui.QDialog):
@@ -651,6 +653,7 @@ class GUI(QtGui.QWidget):
         widget.setLayout(layout)
         grid_layout.addWidget(widget, 0, 0, QtCore.Qt.AlignLeft)
         grid_layout.setRowStretch(15, 1)
+
 '''
 
         with open(F'gui/user_variable_GUIs/{self.new_dialog_name}.py', 'w') as custom_dialog_file:
@@ -661,6 +664,9 @@ class GUI(QtGui.QWidget):
                 if widget['widget'] == 'spin_var':
                     create_widget_string = F"        self.{var} = spin_var(init_vars, \"{widget['label']}\", {widget['min']}, {widget['max']}, {widget['step']}, \"{var}\")\n"
                     set_suffix_string = F"        self.{var}.setSuffix(\"{widget['suffix']}\")\n"
+                elif widget['widget'] == 'slider_var':
+                    create_widget_string = F"        self.{var} = slider_var(init_vars, \"{widget['label']}\", {widget['min']}, {widget['max']}, {widget['step']}, \"{var}\")\n"
+                    set_suffix_string = F"        self.{var}.setSuffix(\"{widget['suffix']}\")\n"
                 elif widget['widget'] == 'checkbox_var':
                     create_widget_string = F"        self.{var} = checkbox_var(init_vars, \"{widget['label']}\", \"{var}\")\n"
                     set_suffix_string = ""
@@ -668,7 +674,7 @@ class GUI(QtGui.QWidget):
                     create_widget_string = F"        self.{var} = standard_var(init_vars, \"{widget['label']}\", \"{var}\")\n"
                     set_suffix_string = ""
 
-                set_hint_string = F"        self.{var}.setHint(\"{widget['hint']}\")\n\n"
+                set_hint_string = F"        self.{var}.setHint(\"{widget['hint']}\")\n"
                 set_board_string = F"        self.{var}.setBoard(board)\n"
                 add_to_grid_string = F"        self.{var}.add_to_grid(layout,{row})\n\n"
 

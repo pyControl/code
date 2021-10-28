@@ -197,3 +197,93 @@ class checkbox_var:
     def setHint(self, hint):
         self.label.setToolTip(hint)
 
+class DoubleSlider(QtGui.QSlider): #https://stackoverflow.com/questions/4827885/qslider-stepping
+    def __init__(self, *args, **kargs):
+        super(DoubleSlider, self).__init__( *args, **kargs)
+        self._min = 0
+        self._max = 99
+        self.interval = 1
+
+    def setValue(self, value):
+        index = round((value - self._min) / self.interval)
+        return super(DoubleSlider, self).setValue(index)
+
+    def value(self):
+        return self.index * self.interval + self._min
+
+    @property
+    def index(self):
+        return super(DoubleSlider, self).sliderPosition()
+
+    def setIndex(self, index):
+        return super(DoubleSlider, self).setValue(index)
+
+    def setRange(self, minval,maxval):
+        self._min = minval
+        self._max = maxval
+        self._range_adjusted()
+
+    def setMinimum(self, value):
+        self._min = value
+        self._range_adjusted()
+
+    def setMaximum(self, value):
+        self._max = value
+        self._range_adjusted()
+
+    def setInterval(self, value):
+        # To avoid division by zero
+        if not value:
+            raise ValueError('Interval of zero specified')
+        self.interval = value
+        self._range_adjusted()
+
+    def _range_adjusted(self):
+        number_of_steps = int((self._max - self._min) / self.interval)
+        super(DoubleSlider, self).setMaximum(number_of_steps)
+
+class slider_var:
+    def __init__(self, init_var_dict, label, min, max, step, varname):
+        self.varname = varname
+
+        self.slider = DoubleSlider(QtCore.Qt.Horizontal)
+        self.slider.setTickPosition(QtGui.QSlider.TicksBelow)
+        self.slider.setInterval(step)
+        self.slider.setValue(eval(init_var_dict[varname]))
+        self.slider.setRange(min,max)
+
+        self.suffix = ""
+        self.label = QtGui.QLabel(label)
+        self.label.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter)
+        self.val_label = QtGui.QLabel(str(self.slider.value()))
+        sizepolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
+        self.val_label.setSizePolicy(sizepolicy)
+
+        self.slider.sliderMoved.connect(self.update_val_lbl)
+        self.slider.sliderReleased.connect(self.set)
+
+    def setBoard(self, board):
+        self.board = board
+    
+    def add_to_grid(self, grid, row):
+        grid.addWidget(self.label, row, 0)
+        grid.addWidget(self.slider, row, 1,1,2)
+        grid.addWidget(self.val_label, row, 3)
+
+    def update_val_lbl(self):
+        self.val_label.setText(f'{str(self.slider.value())}{self.suffix}')
+    
+    def set(self):
+        self.board.set_variable(self.varname,self.slider.value()) 
+        if not self.board.framework_running: # Value returned later.
+            msg = QtGui.QMessageBox()
+            msg.setText("Variable Changed")
+            msg.exec()
+
+
+    def setHint(self, hint):
+        self.label.setToolTip(hint)
+
+    def setSuffix(self, suff):
+        self.suffix = suff
+        self.val_label.setText(f'{str(self.slider.value())}{self.suffix}')
