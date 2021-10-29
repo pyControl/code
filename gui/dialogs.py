@@ -352,7 +352,85 @@ class Gui_generator_dialog(QtGui.QDialog):
 
     def change_layout(self):
         self.setLayout(self.otherlayout)
+    
+class Row_widgets():
+    def __init__(self,parent):
+        self.parent = parent
+        self.up_button = QtGui.QPushButton('⬆️')
 
+        self.down_button = QtGui.QPushButton('⬇️')
+
+        self.variable_cbox = QtGui.QComboBox()
+        self.variable_cbox.activated.connect(self.parent.update_available)
+
+        self.display_name = QtGui.QLineEdit()
+
+        self.control_combo = QtGui.QComboBox()
+        self.control_combo.activated.connect(self.parent.update_available)
+        self.control_combo.addItems(['spinbox','slider','checkbox','line edit'])
+
+        self.spin_min    = QtGui.QLineEdit()
+        self.spin_min.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.spin_max    = QtGui.QLineEdit()
+        self.spin_max.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.spin_step    = QtGui.QLineEdit()
+        self.spin_step.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.suffix    = QtGui.QLineEdit()
+        self.suffix.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.hint    = QtGui.QLineEdit()
+        self.hint.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.remove_button = QtGui.QPushButton('remove')
+        self.remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
+        
+        self.column_order = (
+                self.up_button,
+                self.down_button,
+                self.variable_cbox,
+                self.display_name,
+                self.control_combo,
+                self.spin_min,
+                self.spin_max,
+                self.spin_step,
+                self.suffix,
+                self.hint,
+                self.remove_button,
+            ) 
+
+    def copy_vals_from_row(self,row_index):
+            var_name = str(self.parent.cellWidget(row_index, 2).currentText())
+            self.variable_cbox.addItems([var_name])
+            cbox_set_item(self.variable_cbox,var_name)
+
+            label_text = str(self.parent.cellWidget(row_index, 3).text())
+            self.display_name.setText(label_text)
+
+            control_type = str(self.parent.cellWidget(row_index, 4).currentText())
+            cbox_set_item(self.control_combo,control_type)
+
+            min_val = str(self.parent.cellWidget(row_index, 5).text())
+            self.spin_min.setText(min_val)
+
+            max_val = str(self.parent.cellWidget(row_index, 6).text())
+            self.spin_max.setText(max_val)
+
+            step_val = str(self.parent.cellWidget(row_index, 7).text())
+            self.spin_step.setText(step_val)
+
+            suffix_val = str(self.parent.cellWidget(row_index, 8).text())
+            self.suffix.setText(suffix_val)
+
+            hint_val = str(self.parent.cellWidget(row_index, 9).text())
+            self.hint.setText(hint_val)
+
+    def put_into_table(self,row_index):
+        for column,widget in enumerate(self.column_order):
+            self.parent.setCellWidget(row_index, column, widget)
+            
 class GUI_VariablesTable(QtGui.QTableWidget):
     def __init__(self, parent=None):
         super(QtGui.QTableWidget, self).__init__(1,11, parent=parent)
@@ -386,56 +464,16 @@ class GUI_VariablesTable(QtGui.QTableWidget):
         self.n_variables = 0
         self.assigned = {v_name:[] for v_name in self.variable_names} 
 
-    def create_new_widgets(self):
-        up_button = QtGui.QPushButton('⬆️')
-        down_button = QtGui.QPushButton('⬇️')
-        variable_cbox = QtGui.QComboBox()
-        variable_cbox.activated.connect(self.update_available)
-        display_name = QtGui.QLineEdit()
-        control_combo = QtGui.QComboBox()
-        control_combo.activated.connect(self.update_available)
-        control_combo.addItems(['spinbox','slider','checkbox','line edit'])
-        spin_min    = QtGui.QLineEdit()
-        spin_min.setAlignment(QtCore.Qt.AlignCenter)
-        spin_max    = QtGui.QLineEdit()
-        spin_max.setAlignment(QtCore.Qt.AlignCenter)
-        spin_step    = QtGui.QLineEdit()
-        spin_step.setAlignment(QtCore.Qt.AlignCenter)
-        suffix    = QtGui.QLineEdit()
-        suffix.setAlignment(QtCore.Qt.AlignCenter)
-        hint    = QtGui.QLineEdit()
-        hint.setAlignment(QtCore.Qt.AlignCenter)
-        remove_button = QtGui.QPushButton('remove')
-        remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
-
-        widgets = (
-            up_button,
-            down_button,
-            variable_cbox,
-            display_name,
-            control_combo,
-            spin_min,
-            spin_max,
-            spin_step,
-            suffix,
-            hint,
-            remove_button
-        )
-        
-        return widgets
-
     def add_variable(self, var_dict=None, row = None):
         '''Add a row to the variables table.'''
         # populate row with widgets
-        for column,widget in enumerate(self.create_new_widgets()):
-            self.setCellWidget(self.n_variables  ,column, widget)
-        # connect buttons to fucntions
-        ind = QtCore.QPersistentModelIndex(self.model().index(self.n_variables, 2))
-        self.cellWidget(self.n_variables,0).clicked.connect(lambda :self.swap_with_above(ind.row())) # up arrow connection
-        self.cellWidget(self.n_variables,1).clicked.connect(lambda :self.swap_with_below(ind.row())) # down arrow connection
-        self.cellWidget(self.n_variables,10).clicked.connect(lambda :self.remove_variable(ind.row())) # remove button connection
+        new_widgets = Row_widgets(self)
+        new_widgets.put_into_table(row_index=self.n_variables)
 
-        # inserte another row witha an "add" button
+        # connect buttons to functions
+        self.connect_buttons(self.n_variables)
+
+        # insert another row witha an "add" button
         self.insertRow(self.n_variables+1)
         add_button = QtGui.QPushButton('   add   ')
         add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
@@ -456,69 +494,42 @@ class GUI_VariablesTable(QtGui.QTableWidget):
     
     def swap_with_above(self, row):
         if self.n_variables > row > 0:
-            # grab current row values
-            var_name = str(self.cellWidget(row, 2).currentText())
-            label_text = str(self.cellWidget(row, 3).text())
-            control_type = str(self.cellWidget(row, 4).currentText())
-            min_val = str(self.cellWidget(row, 5).text())
-            max_val = str(self.cellWidget(row, 6).text())
-            step_val = str(self.cellWidget(row, 7).text())
-            suffix_val = str(self.cellWidget(row, 8).text())
-            hint_val = str(self.cellWidget(row, 9).text())
-
-            # create new widgets
-            new_widgets =  self.create_new_widgets()
-            (
-                up_button,
-                down_button,
-                variable_cbox,
-                display_name,
-                control_combo,
-                spin_min,
-                spin_max,
-                spin_step,
-                suffix,
-                hint,
-                remove_button,
-            ) = new_widgets
-
-            # put old values into new widgets
-            variable_cbox.addItems([var_name])
-            cbox_set_item(variable_cbox,var_name)
-            display_name.setText(label_text)
-            cbox_set_item(control_combo,control_type)
-            spin_min.setText(min_val)
-            spin_max.setText(max_val)
-            spin_step.setText(step_val)
-            suffix.setText(suffix_val)
-            hint.setText(hint_val)
+            new_widgets = Row_widgets(self)
+            new_widgets.copy_vals_from_row(row)
 
             self.removeRow(row) # delete old row
             above_row = row -1
             self.insertRow(above_row) # insert new row
 
             # populate row with widgets
-            for column,widget in enumerate(new_widgets):
-                self.setCellWidget(above_row, column, widget)
+            new_widgets.put_into_table(row_index=above_row)
+            
             # connect new buttons to functions
-            ind = QtCore.QPersistentModelIndex(self.model().index(self.n_variables, 2))
-            self.cellWidget(above_row,0).clicked.connect(lambda :self.swap_with_above(above_row)) # up arrow connection
-            self.cellWidget(above_row,1).clicked.connect(lambda :self.swap_with_below(above_row)) # down arrow connection
-            self.cellWidget(above_row,10).clicked.connect(lambda :self.remove_variable(above_row)) # remove button connection
+            self.connect_buttons(above_row)
 
             # disconnect swapped row buttons and reconnect to its new row index
-            self.cellWidget(row,0).clicked.disconnect() # up arrow
-            self.cellWidget(row,0).clicked.connect(lambda : self.swap_with_above(row))
-            self.cellWidget(row,1).clicked.disconnect() # down arrow
-            self.cellWidget(row,1).clicked.connect(lambda :self.swap_with_below(row))
-            self.cellWidget(row,10).clicked.disconnect() # remove button
-            self.cellWidget(row,10).clicked.connect(lambda :self.remove_variable(row))
+            self.reconnect_buttons(row)
 
             self.update_available()
             null_resize(self)
 
     def swap_with_below(self, row):
         self.swap_with_above(row+1)
+
+    def connect_buttons(self,row):
+        ind = QtCore.QPersistentModelIndex(self.model().index(row, 2))
+        self.cellWidget(row,0).clicked.connect(lambda :self.swap_with_above(ind.row())) # up arrow connection
+        self.cellWidget(row,1).clicked.connect(lambda :self.swap_with_below(ind.row())) # down arrow connection
+        self.cellWidget(row,10).clicked.connect(lambda :self.remove_variable(ind.row())) # remove button connection
+
+    def reconnect_buttons(self,row):
+        ind = QtCore.QPersistentModelIndex(self.model().index(row, 2))
+        self.cellWidget(row,0).clicked.disconnect() # up arrow
+        self.cellWidget(row,0).clicked.connect(lambda : self.swap_with_above(ind.row()))
+        self.cellWidget(row,1).clicked.disconnect() # down arrow
+        self.cellWidget(row,1).clicked.connect(lambda :self.swap_with_below(ind.row()))
+        self.cellWidget(row,10).clicked.disconnect() # remove button
+        self.cellWidget(row,10).clicked.connect(lambda :self.remove_variable(ind.row()))
 
     def update_available(self, i=None):
         # Find out what variable-subject combinations already assigned.
