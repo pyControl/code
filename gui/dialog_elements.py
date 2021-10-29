@@ -203,6 +203,7 @@ class DoubleSlider(QtGui.QSlider): #https://stackoverflow.com/questions/4827885/
         self._min = 0
         self._max = 99
         self.interval = 1
+        self.setPageStep(0) # prevents tongue from moving if you click to the right or left of it, must actually click on tongue and drag
 
     def setValue(self, value):
         index = round((value - self._min) / self.interval)
@@ -279,7 +280,6 @@ class slider_var:
             msg = QtGui.QMessageBox()
             msg.setText("Variable Changed")
             msg.exec()
-
 
     def setHint(self, hint):
         self.label.setToolTip(hint)
