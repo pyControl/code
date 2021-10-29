@@ -356,36 +356,30 @@ class Gui_generator_dialog(QtGui.QDialog):
 class Row_widgets():
     def __init__(self,parent):
         self.parent = parent
+        #buttons
         self.up_button = QtGui.QPushButton('⬆️')
-
         self.down_button = QtGui.QPushButton('⬇️')
-
+        self.remove_button = QtGui.QPushButton('remove')
+        self.remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
+        # combo boxes
         self.variable_cbox = QtGui.QComboBox()
         self.variable_cbox.activated.connect(self.parent.update_available)
-
-        self.display_name = QtGui.QLineEdit()
-
+        self.variable_cbox.addItems(['     select variable     ']+self.parent.available_variables)
         self.control_combo = QtGui.QComboBox()
         self.control_combo.activated.connect(self.parent.update_available)
         self.control_combo.addItems(['spinbox','slider','checkbox','line edit'])
-
-        self.spin_min    = QtGui.QLineEdit()
+        # line edits
+        self.display_name = QtGui.QLineEdit()
+        self.spin_min = QtGui.QLineEdit()
         self.spin_min.setAlignment(QtCore.Qt.AlignCenter)
-
-        self.spin_max    = QtGui.QLineEdit()
+        self.spin_max = QtGui.QLineEdit()
         self.spin_max.setAlignment(QtCore.Qt.AlignCenter)
-
-        self.spin_step    = QtGui.QLineEdit()
+        self.spin_step = QtGui.QLineEdit()
         self.spin_step.setAlignment(QtCore.Qt.AlignCenter)
-
-        self.suffix    = QtGui.QLineEdit()
+        self.suffix = QtGui.QLineEdit()
         self.suffix.setAlignment(QtCore.Qt.AlignCenter)
-
-        self.hint    = QtGui.QLineEdit()
+        self.hint = QtGui.QLineEdit()
         self.hint.setAlignment(QtCore.Qt.AlignCenter)
-
-        self.remove_button = QtGui.QPushButton('remove')
-        self.remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
         
         self.column_order = (
                 self.up_button,
@@ -406,26 +400,14 @@ class Row_widgets():
             self.variable_cbox.addItems([var_name])
             cbox_set_item(self.variable_cbox,var_name)
 
-            label_text = str(self.parent.cellWidget(row_index, 3).text())
-            self.display_name.setText(label_text)
+            self.display_name.setText(str(self.parent.cellWidget(row_index, 3).text()))
+            cbox_set_item(self.control_combo,str(self.parent.cellWidget(row_index, 4).currentText()))
 
-            control_type = str(self.parent.cellWidget(row_index, 4).currentText())
-            cbox_set_item(self.control_combo,control_type)
-
-            min_val = str(self.parent.cellWidget(row_index, 5).text())
-            self.spin_min.setText(min_val)
-
-            max_val = str(self.parent.cellWidget(row_index, 6).text())
-            self.spin_max.setText(max_val)
-
-            step_val = str(self.parent.cellWidget(row_index, 7).text())
-            self.spin_step.setText(step_val)
-
-            suffix_val = str(self.parent.cellWidget(row_index, 8).text())
-            self.suffix.setText(suffix_val)
-
-            hint_val = str(self.parent.cellWidget(row_index, 9).text())
-            self.hint.setText(hint_val)
+            self.spin_min.setText(str(self.parent.cellWidget(row_index, 5).text()))
+            self.spin_max.setText(str(self.parent.cellWidget(row_index, 6).text()))
+            self.spin_step.setText(str(self.parent.cellWidget(row_index, 7).text()))
+            self.suffix.setText(str(self.parent.cellWidget(row_index, 8).text()))
+            self.hint.setText(str(self.parent.cellWidget(row_index, 9).text()))
 
     def put_into_table(self,row_index):
         for column,widget in enumerate(self.column_order):
@@ -457,15 +439,7 @@ class GUI_VariablesTable(QtGui.QTableWidget):
         self.available_variables = []
         self.assigned = {v_name:[] for v_name in self.variable_names} # Which subjects have values assigned for each variable.
 
-    def reset(self):
-        '''Clear all rows of table.'''
-        for i in reversed(range(self.n_variables)):
-            self.removeRow(i)
-        self.n_variables = 0
-        self.assigned = {v_name:[] for v_name in self.variable_names} 
-
     def add_variable(self, var_dict=None, row = None):
-        '''Add a row to the variables table.'''
         # populate row with widgets
         new_widgets = Row_widgets(self)
         new_widgets.put_into_table(row_index=self.n_variables)
@@ -479,8 +453,6 @@ class GUI_VariablesTable(QtGui.QTableWidget):
         add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
         add_button.clicked.connect(self.add_variable)
         self.setCellWidget(self.n_variables+1,10, add_button)
-
-        self.cellWidget(self.n_variables,2).addItems(['     select variable     ']+self.available_variables)
 
         self.n_variables += 1
         self.update_available()
@@ -496,20 +468,12 @@ class GUI_VariablesTable(QtGui.QTableWidget):
         if self.n_variables > row > 0:
             new_widgets = Row_widgets(self)
             new_widgets.copy_vals_from_row(row)
-
             self.removeRow(row) # delete old row
             above_row = row -1
             self.insertRow(above_row) # insert new row
-
-            # populate row with widgets
-            new_widgets.put_into_table(row_index=above_row)
-            
-            # connect new buttons to functions
-            self.connect_buttons(above_row)
-
-            # disconnect swapped row buttons and reconnect to its new row index
-            self.reconnect_buttons(row)
-
+            new_widgets.put_into_table(row_index=above_row) # populate new row with widgets
+            self.connect_buttons(above_row) # connect new buttons to functions
+            self.reconnect_buttons(row) # disconnect swapped row buttons and reconnect to its new row index
             self.update_available()
             null_resize(self)
 
@@ -532,7 +496,7 @@ class GUI_VariablesTable(QtGui.QTableWidget):
         self.cellWidget(row,10).clicked.connect(lambda :self.remove_variable(ind.row()))
 
     def update_available(self, i=None):
-        # Find out what variable-subject combinations already assigned.
+        # enable/disable cells depending on control type
         for v in range(self.n_variables):
             v_name = self.cellWidget(v,2).currentText()
             control = self.cellWidget(v,4).currentText()
@@ -559,9 +523,9 @@ class GUI_VariablesTable(QtGui.QTableWidget):
             assigned_var = self.cellWidget(row,2).currentText()
             if assigned_var != '     select variable     ':
                 fully_asigned_variables.append(assigned_var)
-
         self.available_variables = sorted(list( set(self.variable_names) - set(fully_asigned_variables)), key=str.lower)
-        # Update the available options in the variable and subject comboboxes.
+
+        # Update the available options in the variable comboboxes.
         for v in range(self.n_variables):  
             v_name = self.cellWidget(v,2).currentText()
             cbox_update_options(self.cellWidget(v,2), self.available_variables)
@@ -574,6 +538,7 @@ class GUI_VariablesTable(QtGui.QTableWidget):
                 file_content = file.read()
         except FileNotFoundError:
             return
+        # get list of variables. ignore private variables and the variable_gui variable
         self.variable_names = list(set([v_name for v_name in 
             re.findall(pattern, file_content) if not v_name[-3:] == '___' and v_name != 'variable_gui']))
         # Remove variables that are not in new task.
