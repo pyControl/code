@@ -192,13 +192,13 @@ def output_data(event):
         timestamp = event[0].to_bytes(4, 'little') 
         ID        = event[2].to_bytes(2, 'little')
         checksum  = sum(timestamp + ID).to_bytes(2, 'little') 
-        usb_serial.send(b'D' + timestamp + ID + checksum)
+        usb_serial.send(b'\x07D' + timestamp + ID + checksum)
     elif event[1] in (print_typ, varbl_typ): # send user generated output string.
         if event[1] == print_typ: # send user generated output string.
-            start_byte = b'P'
+            start_byte = b'\x07P'
             data_bytes = event[2].encode()
         elif event[1] == varbl_typ: # Variable changed.
-            start_byte = b'V'
+            start_byte = b'\x07V'
             data_bytes = event[2][0].encode() + b' ' + event[2][1].encode()
         data_len = len(data_bytes).to_bytes(2, 'little')  
         timestamp = event[0].to_bytes(4, 'little')
