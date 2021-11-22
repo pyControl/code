@@ -8,13 +8,13 @@ from pyqtgraph.Qt import QtGui, QtCore
 from serial import SerialException
 from concurrent.futures import ThreadPoolExecutor
 
-from config.gui_settings import  update_interval
+from config.gui_settings import  update_interval, log_font_size
 from config.paths import dirs
 from com.pycboard import Pycboard, PyboardError
 from com.data_logger import Data_logger
 from gui.plotting import Experiment_plot
 from gui.dialogs import Variables_dialog, Summary_variables_dialog
-from gui.utility import variable_constants
+from gui.utility import variable_constants, TaskInfo
 
 class Run_experiment_tab(QtGui.QWidget):
     '''The run experiment tab is responsible for setting up, running and stopping
@@ -113,7 +113,7 @@ class Run_experiment_tab(QtGui.QWidget):
         # Setup task state machine.
         try:
             board.data_logger = Data_logger(print_func=board.print, data_consumers=
-                [self.experiment_plot.subject_plots[i], self.subjectboxes[i]])
+                [self.experiment_plot.subject_plots[i], self.subjectboxes[i].task_info])
             board.setup_state_machine(self.experiment['task'])
         except PyboardError:
             self.setup_failed[i] = True
@@ -235,6 +235,7 @@ class Run_experiment_tab(QtGui.QWidget):
             self.subjectboxes[i].assign_board(board)
             self.subjectboxes[i].start_stop_button.setEnabled(True)
             self.subjectboxes[i].status_text.setText('Ready')
+            self.subjectboxes[i].task_info.set_state_machine(board.sm_info)
         self.experiment_plot.set_state_machine(board.sm_info)
         self.startstopclose_all_button.setEnabled(True)
         self.logs_button.setEnabled(True)
@@ -394,23 +395,15 @@ class Subjectbox(QtGui.QGroupBox):
         self.time_text = QtGui.QLineEdit()
         self.time_text.setReadOnly(True)
         self.time_text.setFixedWidth(60)
-        self.state_label = QtGui.QLabel('State:')
-        self.state_text = QtGui.QLineEdit()
-        self.state_text.setFixedWidth(140)
-        self.state_text.setReadOnly(True)
-        self.event_label = QtGui.QLabel('Event:')
-        self.event_text = QtGui.QLineEdit()
-        self.event_text.setReadOnly(True)
-        self.event_text.setFixedWidth(140)
-        self.print_label = QtGui.QLabel('Print:')
-        self.print_text = QtGui.QLineEdit()
-        self.print_text.setReadOnly(True)
+        self.task_info = TaskInfo()
+        self.task_info.state_text.setFixedWidth(140)
+        self.task_info.event_text.setFixedWidth(140)
         self.variables_button = QtGui.QPushButton('Variables')
         self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
         self.variables_button.setEnabled(False)
         self.log_textbox = QtGui.QTextEdit()
         self.log_textbox.setMinimumHeight(180)
-        self.log_textbox.setFont(QtGui.QFont('Courier', 9))
+        self.log_textbox.setFont(QtGui.QFont('Courier New',log_font_size))
         self.log_textbox.setReadOnly(True)
 
         self.Vlayout = QtGui.QVBoxLayout(self)
@@ -421,13 +414,13 @@ class Subjectbox(QtGui.QGroupBox):
         self.Hlayout.addWidget(self.status_text)
         self.Hlayout.addWidget(self.time_label)
         self.Hlayout.addWidget(self.time_text)
-        self.Hlayout.addWidget(self.state_label)
-        self.Hlayout.addWidget(self.state_text)
-        self.Hlayout.addWidget(self.event_label)
-        self.Hlayout.addWidget(self.event_text)
-        self.Hlayout.addWidget(self.print_label)
-        self.Hlayout.addWidget(self.print_text)
-        self.Hlayout.setStretchFactor(self.print_text, 10)
+        self.Hlayout.addWidget(self.task_info.state_label)
+        self.Hlayout.addWidget(self.task_info.state_text)
+        self.Hlayout.addWidget(self.task_info.event_label)
+        self.Hlayout.addWidget(self.task_info.event_text)
+        self.Hlayout.addWidget(self.task_info.print_label)
+        self.Hlayout.addWidget(self.task_info.print_text)
+        self.Hlayout.setStretchFactor(self.task_info.print_text, 10)
         self.Vlayout.addLayout(self.Hlayout)
         self.Vlayout.addWidget(self.log_textbox)
         
@@ -499,8 +492,8 @@ class Subjectbox(QtGui.QGroupBox):
         '''Called to stop task or if task stops automatically.'''
         if self.board.framework_running:
             self.board.stop_framework()
-        self.state_text.setText('Stopped')
-        self.state_text.setStyleSheet('color: grey;') 
+        self.task_info.state_text.setText('Stopped')
+        self.task_info.state_text.setStyleSheet('color: grey;') 
         self.status_text.setText('Stopped')
         self.start_stop_button.setEnabled(False)
         self.run_exp_tab.experiment_plot.active_plots.remove(self.setup_number)
@@ -519,26 +512,3 @@ class Subjectbox(QtGui.QGroupBox):
             except PyboardError:
                 self.stop_task()
                 self.error()
-
-    def process_data(self, new_data):
-        '''Update the state, event and print line info.'''
-        try:
-            new_state = next(self.board.sm_info['ID2name'][nd[2]] for nd in reversed(new_data)
-                if nd[0] == 'D' and nd[2] in self.board.sm_info['states'].values())
-            self.state_text.setText(new_state)
-            self.state_text.home(False)
-        except StopIteration:
-            pass
-        try:
-            new_event = next(self.board.sm_info['ID2name'][nd[2]] for nd in reversed(new_data)
-                if nd[0] == 'D' and nd[2] in self.board.sm_info['events'].values())
-            self.event_text.setText(new_event)
-            self.event_text.home(False)
-        except StopIteration:
-            pass
-        try:
-            new_print = next(nd[2] for nd in reversed(new_data) if nd[0] == 'P')
-            self.print_text.setText(new_print)
-            self.print_text.home(False)
-        except StopIteration:
-            pass

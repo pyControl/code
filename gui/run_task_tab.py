@@ -8,11 +8,11 @@ from com.pycboard import Pycboard, PyboardError, _djb2_file
 from com.data_logger import Data_logger
 
 from config.paths import dirs
-from config.gui_settings import update_interval
+from config.gui_settings import update_interval, log_font_size
 
 from gui.dialogs import Variables_dialog
 from gui.plotting import Task_plot
-from gui.utility import init_keyboard_shortcuts,TaskSelectMenu
+from gui.utility import init_keyboard_shortcuts,TaskSelectMenu, TaskInfo
 
 # Run_task_gui ------------------------------------------------------------------------
 
@@ -52,10 +52,9 @@ class Run_task_tab(QtGui.QWidget):
 
         self.board_groupbox = QtGui.QGroupBox('Setup')
 
-        self.board_label = QtGui.QLabel('Select:')
         self.board_select = QtGui.QComboBox()
-        self.board_select.setEditable(True)
-        self.board_select.setFixedWidth(100)
+        self.board_select.addItems(['No setups found'])
+        self.board_select.setSizeAdjustPolicy(0)
         self.connect_button = QtGui.QPushButton('Connect')
         self.connect_button.setIcon(QtGui.QIcon("gui/icons/connect.svg"))
         self.connect_button.setEnabled(False)
@@ -63,7 +62,6 @@ class Run_task_tab(QtGui.QWidget):
         self.config_button.setIcon(QtGui.QIcon("gui/icons/settings.svg"))
 
         self.boardgroup_layout = QtGui.QHBoxLayout()
-        self.boardgroup_layout.addWidget(self.board_label)
         self.boardgroup_layout.addWidget(self.board_select)
         self.boardgroup_layout.addWidget(self.connect_button)
         self.boardgroup_layout.addWidget(self.config_button)
@@ -78,21 +76,20 @@ class Run_task_tab(QtGui.QWidget):
         self.file_groupbox = QtGui.QGroupBox('Data file')
 
         self.data_dir_label = QtGui.QLabel('Data dir:')
+        self.data_dir_label.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter)
         self.data_dir_text = QtGui.QLineEdit(dirs['data'])
         self.data_dir_button = QtGui.QPushButton()
         self.data_dir_button.setIcon(QtGui.QIcon("gui/icons/folder.svg"))
         self.data_dir_button.setFixedWidth(30)
         self.subject_label = QtGui.QLabel('Subject ID:')
         self.subject_text = QtGui.QLineEdit()
-        self.subject_text.setFixedWidth(80)
-        self.subject_text.setMaxLength(12)
 
-        self.filegroup_layout = QtGui.QHBoxLayout()
-        self.filegroup_layout.addWidget(self.data_dir_label)
-        self.filegroup_layout.addWidget(self.data_dir_text)
-        self.filegroup_layout.addWidget(self.data_dir_button)
-        self.filegroup_layout.addWidget(self.subject_label)
-        self.filegroup_layout.addWidget(self.subject_text)
+        self.filegroup_layout = QtGui.QGridLayout()
+        self.filegroup_layout.addWidget(self.data_dir_label,0,0)
+        self.filegroup_layout.addWidget(self.data_dir_text,0,1)
+        self.filegroup_layout.addWidget(self.data_dir_button,0,2)
+        self.filegroup_layout.addWidget(self.subject_label,1,0)
+        self.filegroup_layout.addWidget(self.subject_text,1,1)
         self.file_groupbox.setLayout(self.filegroup_layout)
 
         self.data_dir_text.textChanged.connect(self.test_data_path)
@@ -104,7 +101,6 @@ class Run_task_tab(QtGui.QWidget):
 
         self.task_groupbox = QtGui.QGroupBox('Task')
 
-        self.task_label = QtGui.QLabel('Task:')
         self.task_select = TaskSelectMenu('select task')
         self.task_select.set_callback(self.task_changed)
         self.upload_button = QtGui.QPushButton('Upload')
@@ -112,11 +108,10 @@ class Run_task_tab(QtGui.QWidget):
         self.variables_button = QtGui.QPushButton('Variables')
         self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
 
-        self.taskgroup_layout = QtGui.QHBoxLayout()
-        self.taskgroup_layout.addWidget(self.task_label)
-        self.taskgroup_layout.addWidget(self.task_select)
-        self.taskgroup_layout.addWidget(self.upload_button)
-        self.taskgroup_layout.addWidget(self.variables_button)
+        self.taskgroup_layout = QtGui.QGridLayout()
+        self.taskgroup_layout.addWidget(self.task_select,0,0,1,2)
+        self.taskgroup_layout.addWidget(self.upload_button,1,0)
+        self.taskgroup_layout.addWidget(self.variables_button,1,1)
         self.task_groupbox.setLayout(self.taskgroup_layout)
 
         self.upload_button.clicked.connect(self.setup_task)        
@@ -130,9 +125,17 @@ class Run_task_tab(QtGui.QWidget):
         self.stop_button = QtGui.QPushButton('Stop')
         self.stop_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
 
-        self.sessiongroup_layout = QtGui.QHBoxLayout()
-        self.sessiongroup_layout.addWidget(self.start_button)
-        self.sessiongroup_layout.addWidget(self.stop_button)
+        self.task_info = TaskInfo()
+
+        self.sessiongroup_layout = QtGui.QGridLayout()
+        self.sessiongroup_layout.addWidget(self.task_info.print_label,0,1)
+        self.sessiongroup_layout.addWidget(self.task_info.print_text,0,2,1,3)
+        self.sessiongroup_layout.addWidget(self.task_info.state_label,1,1)
+        self.sessiongroup_layout.addWidget(self.task_info.state_text,1,2)
+        self.sessiongroup_layout.addWidget(self.task_info.event_label,1,3)
+        self.sessiongroup_layout.addWidget(self.task_info.event_text,1,4)
+        self.sessiongroup_layout.addWidget(self.start_button,0,0)
+        self.sessiongroup_layout.addWidget(self.stop_button,1,0)
         self.session_groupbox.setLayout(self.sessiongroup_layout)
 
         self.start_button.clicked.connect(self.start_task)
@@ -141,12 +144,12 @@ class Run_task_tab(QtGui.QWidget):
         # Log text and task plots.
 
         self.log_textbox = QtGui.QTextEdit()
-        self.log_textbox.setFont(QtGui.QFont('Courier', 9))
+        self.log_textbox.setFont(QtGui.QFont('Courier New',log_font_size))
         self.log_textbox.setReadOnly(True)
 
         self.task_plot = Task_plot()
         self.data_logger = Data_logger(print_func=self.print_to_log,
-                                       data_consumers=[self.task_plot])
+                                       data_consumers=[self.task_plot, self.task_info])
 
         # Main layout
 
@@ -157,8 +160,8 @@ class Run_task_tab(QtGui.QWidget):
 
         self.horizontal_layout_1.addWidget(self.status_groupbox)
         self.horizontal_layout_1.addWidget(self.board_groupbox)
+        self.horizontal_layout_2.addWidget(self.task_groupbox)
         self.horizontal_layout_2.addWidget(self.file_groupbox)
-        self.horizontal_layout_3.addWidget(self.task_groupbox)
         self.horizontal_layout_3.addWidget(self.session_groupbox)
         self.vertical_layout.addLayout(self.horizontal_layout_1)
         self.vertical_layout.addLayout(self.horizontal_layout_2)
@@ -217,6 +220,7 @@ class Run_task_tab(QtGui.QWidget):
                 if not self.connected:
                     self.connect_button.setEnabled(True)
             else: # No setups available to connect to.
+                    self.board_select.addItems(['No setups found'])
                     self.connect_button.setEnabled(False)
         if self.GUI_main.available_tasks_changed:
             self.task_select.update_menu(dirs['tasks'])
@@ -313,6 +317,7 @@ class Run_task_tab(QtGui.QWidget):
             self.variables_button.clicked.connect(self.variables_dialog.exec_)
             self.variables_button.setEnabled(True)
             self.task_plot.set_state_machine(self.board.sm_info)
+            self.task_info.set_state_machine(self.board.sm_info)
             self.file_groupbox.setEnabled(True)
             self.session_groupbox.setEnabled(True)
             self.start_button.setEnabled(True)
@@ -323,6 +328,7 @@ class Run_task_tab(QtGui.QWidget):
             self.uploaded = True
             self.upload_button.setText('Reset')
             self.upload_button.setIcon(QtGui.QIcon("gui/icons/refresh.svg"))
+
         except PyboardError:
             self.status_text.setText('Error setting up state machine.')
      

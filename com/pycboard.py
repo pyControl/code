@@ -348,46 +348,55 @@ class Pycboard(Pyboard):
         pass new_data to data_logger and print_func if specified, return new_data.'''
         new_data = []
         error_message = None
-        while self.serial.inWaiting() > 0:
-            new_byte = self.serial.read(1)  
-            if new_byte == b'A': # Analog data, 13 byte header + variable size content.
-                data_header = self.serial.read(13)
-                typecode      = data_header[0:1].decode() 
-                if typecode not in ('b','B','h','H','l','L'):
-                    new_data.append(('!','bad typecode A'))
-                    continue   
-                ID            = int.from_bytes(data_header[1:3], 'little')
-                sampling_rate = int.from_bytes(data_header[3:5], 'little')
-                data_len      = int.from_bytes(data_header[5:7], 'little')
-                timestamp     = int.from_bytes(data_header[7:11], 'little')
-                checksum      = int.from_bytes(data_header[11:13], 'little')
-                data_array    = array(typecode, self.serial.read(data_len))
-                if checksum == (sum(data_header[:-2]) + sum(data_array)) & 0xffff: # Checksum OK.
-                    new_data.append(('A',ID, sampling_rate, timestamp, data_array))
+        unexpected_input = []
+        while self.serial.in_waiting > 0:
+            new_byte = self.serial.read(1)
+            if new_byte == b'\x07':   # Start of pyControl message.  
+                if unexpected_input: # Output any unexpected characters recived prior to message start.
+                    new_data.append(('!','Unexpected input recieved from board: ' +
+                                         ''.join(unexpected_input)))
+                    unexpected_input = []
+                type_byte = self.serial.read(1) # Message type identifier.
+                if type_byte == b'A': # Analog data, 13 byte header + variable size content.
+                    data_header = self.serial.read(13)
+                    typecode      = data_header[0:1].decode() 
+                    if typecode not in ('b','B','h','H','l','L'):
+                        new_data.append(('!','bad typecode A'))
+                        continue   
+                    ID            = int.from_bytes(data_header[1:3], 'little')
+                    sampling_rate = int.from_bytes(data_header[3:5], 'little')
+                    data_len      = int.from_bytes(data_header[5:7], 'little')
+                    timestamp     = int.from_bytes(data_header[7:11], 'little')
+                    checksum      = int.from_bytes(data_header[11:13], 'little')
+                    data_array    = array(typecode, self.serial.read(data_len))
+                    if checksum == (sum(data_header[:-2]) + sum(data_array)) & 0xffff: # Checksum OK.
+                        new_data.append(('A',ID, sampling_rate, timestamp, data_array))
+                    else:
+                        new_data.append(('!','bad checksum A'))
+                elif type_byte == b'D': # Event or state entry, 8 byte data header only.
+                    data_header = self.serial.read(8)
+                    timestamp = int.from_bytes(data_header[ :4], 'little')
+                    ID        = int.from_bytes(data_header[4:6], 'little')
+                    checksum  = int.from_bytes(data_header[6:8], 'little')
+                    if checksum == sum(data_header[:-2]): # Checksum OK.
+                        new_data.append(('D',timestamp, ID))
+                    else:
+                        new_data.append(('!','bad checksum D'))
+                elif type_byte in (b'P', b'V'): # User print statement or set variable, 8 byte data header + variable size content.
+                    data_header = self.serial.read(8)
+                    data_len  = int.from_bytes(data_header[ :2], 'little')
+                    timestamp = int.from_bytes(data_header[2:6], 'little')
+                    checksum  = int.from_bytes(data_header[6:8], 'little')
+                    data_bytes = self.serial.read(data_len)
+                    if not checksum == (sum(data_header[:-2]) + sum(data_bytes)) & 0xffff: # Bad checksum.
+                        new_data.append(('!','bad checksum ' + type_byte.decode()))
+                        continue
+                    new_data.append((type_byte.decode(),timestamp, data_bytes.decode()))
+                    if type_byte == b'V': # Store new variable value in sm_info
+                        v_name, v_str = data_bytes.decode().split(' ', 1)
+                        self.sm_info['variables'][v_name] = eval(v_str)
                 else:
-                    new_data.append(('!','bad checksum A'))
-            elif new_byte == b'D': # Event or state entry, 8 byte data header only.
-                data_header = self.serial.read(8)
-                timestamp = int.from_bytes(data_header[ :4], 'little')
-                ID        = int.from_bytes(data_header[4:6], 'little')
-                checksum  = int.from_bytes(data_header[6:8], 'little')
-                if checksum == sum(data_header[:-2]): # Checksum OK.
-                    new_data.append(('D',timestamp, ID))
-                else:
-                    new_data.append(('!','bad checksum D'))
-            elif new_byte in (b'P', b'V'): # User print statement or set variable, 8 byte data header + variable size content.
-                data_header = self.serial.read(8)
-                data_len  = int.from_bytes(data_header[ :2], 'little')
-                timestamp = int.from_bytes(data_header[2:6], 'little')
-                checksum  = int.from_bytes(data_header[6:8], 'little')
-                data_bytes = self.serial.read(data_len)
-                if not checksum == (sum(data_header[:-2]) + sum(data_bytes)) & 0xffff: # Bad checksum.
-                    new_data.append(('!','bad checksum ' + new_byte.decode()))
-                    continue
-                new_data.append((new_byte.decode(),timestamp, data_bytes.decode()))
-                if new_byte == b'V': # Store new variable value in sm_info
-                    v_name, v_str = data_bytes.decode().split(' ', 1)
-                    self.sm_info['variables'][v_name] = eval(v_str)
+                    unexpected_input.append(type_byte.decode())
             elif new_byte == b'\x04': # End of framework run.
                 self.framework_running = False
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
@@ -395,6 +404,8 @@ class Pycboard(Pyboard):
                     error_message = data_err[:-3].decode()
                     new_data.append(('!', error_message))                
                 break
+            else:
+                unexpected_input.append(new_byte.decode())
         if new_data and self.data_logger:
             self.data_logger.process_data(new_data)
         if error_message:
