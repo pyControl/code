@@ -250,8 +250,8 @@ class slider_var:
         self.slider = DoubleSlider(QtCore.Qt.Horizontal)
         self.slider.setTickPosition(QtGui.QSlider.TicksBelow)
         self.slider.setInterval(step)
-        self.slider.setValue(eval(init_var_dict[varname]))
         self.slider.setRange(min,max)
+        self.slider.setValue(eval(init_var_dict[varname]))
 
         self.suffix = ""
         self.label = QtGui.QLabel(label)
