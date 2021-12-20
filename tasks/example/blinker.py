@@ -32,6 +32,3 @@ def LED_off(event):
 
 def run_end():  # Turn off hardware at end of run.
     blue_LED.off()
-
-
-
