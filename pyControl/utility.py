@@ -1,3 +1,6 @@
+# Module imported by the user into their task file which contains the 
+# functions, classes and variables used in task files.
+
 import pyb
 import math
 from . import framework as fw
