@@ -1,4 +1,37 @@
 -------------------------------------------------------------------------------
+Version 1.6.2 23/12/2021
+-------------------------------------------------------------------------------
+
+Framework:
+
+- All pyControl specific functions are now imported by the user into the task 
+  file from the pyControl.utility module, rather than some functions being
+  patched onto the task file after it has been imported by the framework.
+
+- The button example task has been modified to match the example task in the 
+  pyControl manuscript.  An additional version of the button task using named 
+  rather than * imports has been added for comparison of the two import methods.
+
+-------------------------------------------------------------------------------
+Version 1.6.1 22/11/2021
+-------------------------------------------------------------------------------
+
+GUI:
+
+- Run task tab now displays current state, most recent event and print line.
+
+- GUI style unified across platforms.
+
+- GUI font sizes now configurable in gui_settings.py.
+
+- Fixed bug which prevented events from plotting in Pyqtgraph version > 0.11.0.
+
+- Made communication from pyboard to computer during framework run more robust
+  to unexpected output from pyboard.
+
+- Various minor bug fixes.
+
+-------------------------------------------------------------------------------
 Version 1.6 25/11/2020
 -------------------------------------------------------------------------------
 

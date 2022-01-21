@@ -5,27 +5,15 @@ from . import hardware as hw
 class pyControlError(BaseException): # Exception for pyControl errors.
     pass
 
-# Constants used to indicate event types:
+# Constants used to indicate event types, corresponding event tuple indicated in comment.
 
-event_typ = const(1) # Framework event.
-state_typ = const(2) # State transition.
-timer_typ = const(3) # User timer.
-print_typ = const(4) # User print.
-hardw_typ = const(5) # Harware callback
-stopf_typ = const(6) # Stop framework.
-varbl_typ = const(7) # Variable change.
-
-# Generic event tuple format used by Event_queue and Timer class: (timestamp, event_type, event_data)
-
-# Specific event tuple types:
-
-# (time, event_typ, event_ID)       # External event.
-# (time, state_typ, state_ID)       # State transition.
-# (time, timer_typ, event_ID)       # User timer.
-# (time, print_typ, print_string)   # User print.
-# (time, hardw_typ, hardware_ID)    # Harware callback
-# (time, stopf_typ, None)           # Stop framework.
-# (time, varbl_typ, (v_name, v_str) # Variable changed.
+event_typ = const(1) # External event   : (time, event_typ, event_ID) 
+state_typ = const(2) # State transition : (time, state_typ, state_ID) 
+timer_typ = const(3) # User timer       : (time, timer_typ, event_ID) 
+print_typ = const(4) # User print       : (time, print_typ, print_string)
+hardw_typ = const(5) # Harware callback : (time, hardw_typ, hardware_ID)
+stopf_typ = const(6) # Stop framework   : (time, stopf_typ, None)
+varbl_typ = const(7) # Variable change  : (time, varbl_typ, (v_name, v_str))
 
 # Event_queue -----------------------------------------------------------------
 
@@ -184,7 +172,7 @@ def get_states():
 
 def get_variables():
     # Print state machines variables as dict {v_name: repr(v_value)}
-    print({k: repr(v) for k, v in state_machine.smd.v.__dict__.items()})
+    print({k: repr(v) for k, v in state_machine.variables.__dict__.items()})
 
 def output_data(event):
     # Output data to computer.
@@ -192,13 +180,13 @@ def output_data(event):
         timestamp = event[0].to_bytes(4, 'little') 
         ID        = event[2].to_bytes(2, 'little')
         checksum  = sum(timestamp + ID).to_bytes(2, 'little') 
-        usb_serial.send(b'D' + timestamp + ID + checksum)
+        usb_serial.send(b'\x07D' + timestamp + ID + checksum)
     elif event[1] in (print_typ, varbl_typ): # send user generated output string.
         if event[1] == print_typ: # send user generated output string.
-            start_byte = b'P'
+            start_byte = b'\x07P'
             data_bytes = event[2].encode()
         elif event[1] == varbl_typ: # Variable changed.
-            start_byte = b'V'
+            start_byte = b'\x07V'
             data_bytes = event[2][0].encode() + b' ' + event[2][1].encode()
         data_len = len(data_bytes).to_bytes(2, 'little')  
         timestamp = event[0].to_bytes(4, 'little')

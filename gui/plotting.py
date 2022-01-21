@@ -2,7 +2,7 @@ import time
 import numpy as np
 from datetime import timedelta
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtGui, QtWidgets
+from pyqtgraph.Qt import QtGui
 from PyQt5.QtCore import Qt
 
 from config.gui_settings import event_history_len, state_history_len, analog_history_dur
@@ -114,34 +114,28 @@ class States_plot():
         self.data = np.zeros([self.data_len*2, 2], int)
         for plot in self.plots.values():
             plot.clear()
-        self.cs = self.state_IDs[0]
-        self.updated_states = []
 
     def process_data(self, new_data):
         '''Store new data from board'''
         new_states = [nd for nd in new_data if nd[0] == 'D' and nd[2] in self.state_IDs]
-        self.updated_states = [self.cs]
         if new_states:
             n_new =len(new_states)
             self.data = np.roll(self.data, -2*n_new, axis=0)
             for i, ns in enumerate(new_states): # Update data array.
                 timestamp, ID = ns[1:]
-                self.updated_states.append(ID)
                 j = 2*(-n_new+i)  # Index of state entry in self.data
                 self.data[j-1:,0] = timestamp
                 self.data[j:  ,1] = ID  
-            self.cs = ID
 
     def update(self, run_time):
         '''Update plots.'''
-        self.data[-1,0] = 1000*run_time # Update exit time of current state to current time.
-        for us in self.updated_states: # Set data for updated state plots.
-            state_data = self.data[self.data[:,1]==us,:]
-            timestamps, ID = (state_data[:,0]/1000, state_data[:,1])
-            self.plots[us].setData(x=timestamps, y=ID, connect='pairs')
-        # Shift all state plots.
-        for plot in self.plots.values():
-            plot.setPos(-run_time, 0)
+        self.data[-1,0] = run_time*1000 # Update exit time of current state to current time.
+        for ID in self.state_IDs:
+            state_data = self.data[self.data[:,1]==ID,:]
+            timestamps, IDs = (state_data[:,0]/1000-run_time, state_data[:,1])
+            if timestamps.size > 0:
+                self.plots[ID].setData(x=timestamps, y=IDs, connect='pairs')
+
 
 # Events_plot--------------------------------------------------------
 
@@ -187,10 +181,8 @@ class Events_plot():
 
     def update(self, run_time):
         '''Update plots'''
-        # Should not need to setData but setPos does not cause redraw otherwise.
         if not self.event_IDs: return
-        self.plot.setData(self.data, symbolBrush=[pg.intColor(ID) for ID in self.data[:,1]])
-        self.plot.setPos(-run_time, 0)
+        self.plot.setData(x=self.data[:,0]-run_time, y=self.data[:,1], symbolBrush=[pg.intColor(ID) for ID in self.data[:,1]])
 
 # ------------------------------------------------------------------------------------------
 
@@ -205,15 +197,12 @@ class Analog_plot():
         self.axis.setMouseEnabled(x=True,y=False)
         self.axis.showGrid(x=True,alpha=0.75)
         self.axis.setLimits(xMax=0)
-        self.legend = None 
 
     def set_state_machine(self, sm_info):
         self.inputs = sm_info['analog_inputs']
         if not self.inputs: return # State machine may not have analog inputs.
-        if self.legend:
-            self.legend.close()
-        self.legend = self.axis.addLegend(offset=(10, 10))
         self.axis.clear()
+        self.legend = self.axis.addLegend(offset=(10, 10))
         self.plots = {ai['ID']: self.axis.plot(name=name, 
                       pen=pg.mkPen(pg.intColor(ai['ID'],len(self.inputs)))) for name, ai in sorted(self.inputs.items())}
         self.axis.getAxis('bottom').setLabel('Time (seconds)')
@@ -232,7 +221,6 @@ class Analog_plot():
         '''Store new data from board.'''
         if not self.inputs: return # State machine may not have analog inputs.
         new_analog = [nd for nd in new_data if nd[0] == 'A']
-        self.updated_inputs = [na[1] for na in new_analog]
         for na in new_analog:
             ID, sampling_rate, timestamp, data_array = na[1:]
             new_len = len(data_array)
@@ -243,10 +231,9 @@ class Analog_plot():
     def update(self, run_time):
         '''Update plots.'''
         if not self.inputs: return # State machine may not have analog inputs.
-        for ID in self.updated_inputs:
-            self.plots[ID].setData(self.data[ID])
-        for plot in self.plots.values():
-            plot.setPos(-run_time, 0)   
+        for ai in self.inputs.values():
+            ID = ai['ID']
+            self.plots[ID].setData(x=self.data[ID][:,0]-run_time, y=self.data[ID][:,1])
 
 # -----------------------------------------------------
 
