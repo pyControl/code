@@ -564,107 +564,28 @@ class GUI_VariablesTable(QtGui.QTableWidget):
                 element_specs['hint'] = self.cellWidget(row,9).text()
                 control = self.cellWidget(row,4).currentText()
                 if control == 'spinbox' or control == 'slider':
-                    element_specs['min'] = self.cellWidget(row,5).text()
-                    element_specs['max'] = self.cellWidget(row,6).text()
-                    element_specs['step'] = self.cellWidget(row,7).text()
-                    element_specs['suffix'] = self.cellWidget(row,8).text()
-                    if element_specs['min']=="" or element_specs['max']=="" or element_specs['step']=="":
+                    try: # store the value as an integer or float. if the string is empty or not a number, an error message will be shown 
+                        value = self.cellWidget(row,5).text()
+                        element_specs['min'] =  float(value) if value.find('.')>-1 else int(value)
+                        value = self.cellWidget(row,6).text()
+                        element_specs['max'] = float(value) if value.find('.')>-1 else int(value)
+                        value = self.cellWidget(row,7).text()
+                        element_specs['step'] = float(value) if value.find('.')>-1 else int(value)
+                    except:
                         msg = QtGui.QMessageBox()
-                        msg.setText("Not all spinbox values are filled in (min,max,step)")
+                        msg.setText("Numbers for min, max, and step are required for spinboxes and sliders")
                         msg.exec()
                         return
-                    if control == 'spinbox':
-                        element_specs['widget'] = 'spin_var'
-                    else:
-                        element_specs['widget'] = 'slider_var'
-                elif control == 'checkbox':
-                    element_specs['widget'] = 'checkbox_var'
-                elif control == 'line edit':
-                    element_specs['widget'] = 'standard_var'
+                    element_specs['suffix'] = self.cellWidget(row,8).text()
+                element_specs['widget'] = control
 
                 gui_dictionary[varname] = element_specs
         gui_dictionary['ordered_elements'] = ordered_elements # after Python 3.6, dictionaries became ordered, but to be backwards compatible we add ordering here
+        gui_dictionary['title'] = self.new_dialog_name
 
-        self.create_custom_gui_file(gui_dictionary)
+        # self.create_custom_gui_file(gui_dictionary)
         with open(F'gui/user_variable_GUIs/{self.new_dialog_name}.json', 'w') as generated_data_file:
-            json.dump(gui_dictionary,generated_data_file)
-
-
-    def create_custom_gui_file(self,data):
-        generator_version = 0 #  be sure to increment this if changes are made
-        start = f''' # This file was automatically generated from pyConrtol's GUI Generator version {generator_version} 
-from gui.dialog_elements import *
-
-class {self.new_dialog_name}(QtGui.QDialog):
-    # Dialog for setting and getting task variables.
-    def __init__(self, parent, board):
-        super(QtGui.QDialog, self).__init__(parent)
-        self.setWindowTitle("{self.new_dialog_name} GUI")
-        self.layout = QtGui.QVBoxLayout(self)
-        self.variables_grid = Grid(self, board)
-        self.layout.addWidget(self.variables_grid)
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(self.layout)
-
-
-class Grid(QtGui.QWidget):
-    def __init__(self, parent, board):
-        super(QtGui.QWidget, self).__init__(parent)
-        variables = board.sm_info["variables"]
-        self.grid_layout = QtGui.QGridLayout()
-        initial_variables_dict = {{
-            v_name: v_value_str for (v_name, v_value_str) in sorted(variables.items())
-        }}
-        self.gui = GUI(self, self.grid_layout, board, initial_variables_dict)
-        self.setLayout(self.grid_layout)
-
-
-class GUI(QtGui.QWidget):
-    def __init__(self, parent, grid_layout, board, init_vars):
-        super(QtGui.QWidget, self).__init__(parent)
-        self.board = board
-
-        # create widgets
-        widget = QtGui.QWidget()
-        layout = QtGui.QGridLayout()
-'''
-        end = '''
-        widget.setLayout(layout)
-        grid_layout.addWidget(widget, 0, 0, QtCore.Qt.AlignLeft)
-        grid_layout.setRowStretch(15, 1)
-
-'''
-
-        with open(F'gui/user_variable_GUIs/{self.new_dialog_name}.py', 'w') as custom_dialog_file:
-            custom_dialog_file.write(start)
-            for row,var in enumerate(data['ordered_elements']):
-                widget = data[var]
-                
-                if widget['widget'] == 'spin_var':
-                    create_widget_string = F"        self.{var} = spin_var(init_vars, \"{widget['label']}\", {widget['min']}, {widget['max']}, {widget['step']}, \"{var}\")\n"
-                    set_suffix_string = F"        self.{var}.setSuffix(\"{widget['suffix']}\")\n"
-                elif widget['widget'] == 'slider_var':
-                    create_widget_string = F"        self.{var} = slider_var(init_vars, \"{widget['label']}\", {widget['min']}, {widget['max']}, {widget['step']}, \"{var}\")\n"
-                    set_suffix_string = F"        self.{var}.setSuffix(\"{widget['suffix']}\")\n"
-                elif widget['widget'] == 'checkbox_var':
-                    create_widget_string = F"        self.{var} = checkbox_var(init_vars, \"{widget['label']}\", \"{var}\")\n"
-                    set_suffix_string = ""
-                elif widget['widget'] == 'standard_var':
-                    create_widget_string = F"        self.{var} = standard_var(init_vars, \"{widget['label']}\", \"{var}\")\n"
-                    set_suffix_string = ""
-
-                set_hint_string = F"        self.{var}.setHint(\"{widget['hint']}\")\n"
-                set_board_string = F"        self.{var}.setBoard(board)\n"
-                add_to_grid_string = F"        self.{var}.add_to_grid(layout,{row})\n\n"
-
-            # write file content
-                custom_dialog_file.write(create_widget_string)
-                custom_dialog_file.write(set_suffix_string)
-                custom_dialog_file.write(set_hint_string)
-                custom_dialog_file.write(set_board_string)
-                custom_dialog_file.write(add_to_grid_string)
-
-            custom_dialog_file.write(end)
+            json.dump(gui_dictionary,generated_data_file,indent=4)
         self.parent.accept()
 
 

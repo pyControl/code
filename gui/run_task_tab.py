@@ -14,6 +14,9 @@ from config.gui_settings import update_interval, log_font_size
 from gui.dialogs import Variables_dialog, Gui_generator_dialog, Custom_var_not_found_dialog
 from gui.plotting import Task_plot
 from gui.utility import init_keyboard_shortcuts,TaskSelectMenu, TaskInfo
+from gui.custom_variable_GUI import Custom_GUI
+
+import json
 
 # Run_task_gui ------------------------------------------------------------------------
 
@@ -318,8 +321,8 @@ class Run_task_tab(QtGui.QWidget):
 
             self.generator_dialog.load_task(task)
             self.initialize_custom_var_gui()
-            if (self.user_custom_variable_gui):
-                self.variables_dialog = self.user_custom_variable_gui
+            if (self.custom_gui_dict):
+                self.variables_dialog = Custom_GUI(self,self.board,self.custom_gui_dict)
             else:
                 self.variables_dialog = Variables_dialog(self, self.board)
             self.variables_button.clicked.connect(self.variables_dialog.exec_)
@@ -342,36 +345,24 @@ class Run_task_tab(QtGui.QWidget):
      
     def initialize_custom_var_gui(self):
         # If task file specifies a user custom variable dialog, attempt to initialise it.
-        self.user_custom_variable_gui = None
+        self.custom_gui_dict = None
         if not 'variable_gui' in self.board.sm_info['variables']:
             return # Task does not use custom variable dialog
         custom_dialog_name = eval(self.board.sm_info['variables']['variable_gui'])
         # Try to import and instantiate the user custom variable dialog
         try:
-            user_module_name = 'gui.user_variable_GUIs.{}'.format(custom_dialog_name)
-            user_module = import_module(user_module_name)
-            reload(user_module)
-        except ModuleNotFoundError:
-            self.print_to_log('\nCould not find user custom variable dialog module: {}'
-                              .format(user_module_name))
+            json_file = os.path.join('gui','user_variable_GUIs',f'{custom_dialog_name}.json')
+            with open(json_file, 'r') as j:
+                self.custom_gui_dict = json.loads(j.read())
+        except FileNotFoundError:
+            self.print_to_log('\nCould not find custom variable GUI data: {}'
+                              .format(json_file))
             not_found_dialog = Custom_var_not_found_dialog(missing_file = custom_dialog_name, parent=self)
             create_dialog = not_found_dialog.exec()
             if create_dialog:
                 self.generator_dialog.variable_generator_table.set_dialog_name(custom_dialog_name)
                 was_generated = self.generator_dialog.exec()
             return
-
-        if not hasattr(user_module, custom_dialog_name):
-            self.print_to_log('\nCould not find user custom variable dialog class "{}" in {}'
-                              .format(custom_dialog_name, user_module_name))
-            return
-        try:
-            user_custom_variable_gui_class= getattr(user_module, custom_dialog_name)
-            self.user_custom_variable_gui = user_custom_variable_gui_class(self,self.board)
-            self.print_to_log('\nInitialised custom variable GUI: {}'.format(custom_dialog_name))
-        except Exception as e:
-            self.print_to_log('Unable to intialise custom variable GUI: {}\n\n'.format(custom_dialog_name)
-                              + 'Traceback: \n\n {}'.format(e))
 
     def select_data_dir(self):
         new_path = QtGui.QFileDialog.getExistingDirectory(self, 'Select data folder', dirs['data'])
