@@ -586,6 +586,9 @@ class GUI_VariablesTable(QtGui.QTableWidget):
         gui_dictionary['ordered_elements'] = ordered_elements # after Python 3.6, dictionaries became ordered, but to be backwards compatible we add ordering here
 
         self.create_custom_gui_file(gui_dictionary)
+        with open(F'gui/user_variable_GUIs/{self.new_dialog_name}.json', 'w') as generated_data_file:
+            json.dump(gui_dictionary,generated_data_file)
+
 
     def create_custom_gui_file(self,data):
         generator_version = 0 #  be sure to increment this if changes are made
