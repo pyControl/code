@@ -519,6 +519,8 @@ class GUI_VariablesTable(QtGui.QTableWidget):
                 for i in (3,4,5,6,7,8): # disable inputs until a variable as been selected
                     self.cellWidget(v,i).setEnabled(False)
             else:
+                if self.cellWidget(v,3).text() == "":
+                    self.cellWidget(v,3).setText(v_name.replace('_',' '))
                 self.cellWidget(v,3).setEnabled(True)
                 self.cellWidget(v,4).setEnabled(True)
                 self.cellWidget(v,8).setEnabled(True)
