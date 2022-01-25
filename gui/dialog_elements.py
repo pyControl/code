@@ -210,7 +210,7 @@ class DoubleSlider(QtGui.QSlider): #https://stackoverflow.com/questions/4827885/
         return super(DoubleSlider, self).setValue(index)
 
     def value(self):
-        return self.index * self.interval + self._min
+        return round(self.index * self.interval + self._min,4)
 
     @property
     def index(self):

@@ -368,9 +368,9 @@ class Row_widgets():
         self.variable_cbox = QtGui.QComboBox()
         self.variable_cbox.activated.connect(self.parent.update_available)
         self.variable_cbox.addItems(['     select variable     ']+self.parent.available_variables)
-        self.control_combo = QtGui.QComboBox()
-        self.control_combo.activated.connect(self.parent.update_available)
-        self.control_combo.addItems(['spinbox','slider','checkbox','line edit'])
+        self.input_type_combo = QtGui.QComboBox()
+        self.input_type_combo.activated.connect(self.parent.update_available)
+        self.input_type_combo.addItems(['line edit','checkbox','spinbox','slider'])
         # line edits
         self.display_name = QtGui.QLineEdit()
         self.spin_min = QtGui.QLineEdit()
@@ -389,7 +389,7 @@ class Row_widgets():
                 self.down_button,
                 self.variable_cbox,
                 self.display_name,
-                self.control_combo,
+                self.input_type_combo,
                 self.spin_min,
                 self.spin_max,
                 self.spin_step,
@@ -406,7 +406,7 @@ class Row_widgets():
             cbox_set_item(self.variable_cbox,var_name)
 
             self.display_name.setText(str(self.parent.cellWidget(row_index, 3).text()))
-            cbox_set_item(self.control_combo,str(self.parent.cellWidget(row_index, 4).currentText()))
+            cbox_set_item(self.input_type_combo,str(self.parent.cellWidget(row_index, 4).currentText()))
 
             self.spin_min.setText(str(self.parent.cellWidget(row_index, 5).text()))
             self.spin_max.setText(str(self.parent.cellWidget(row_index, 6).text()))
@@ -419,13 +419,12 @@ class Row_widgets():
         cbox_set_item(self.variable_cbox,var_name)
 
         self.display_name.setText(row_data['label'])
-        cbox_set_item(self.control_combo,row_data['widget'])
+        cbox_set_item(self.input_type_combo,row_data['widget'])
         self.spin_min.setText(str(row_data['min']))
         self.spin_max.setText(str(row_data['max']))
         self.spin_step.setText(str(row_data['step']))
         self.suffix.setText(row_data['suffix'])
         self.hint.setText(row_data['hint'])
-
 
     def put_into_table(self,row_index):
         for column,widget in enumerate(self.column_order):
@@ -511,20 +510,24 @@ class GUI_VariablesTable(QtGui.QTableWidget):
         self.cellWidget(row,10).clicked.connect(lambda :self.remove_variable(ind.row()))
 
     def update_available(self, i=None):
-        # enable/disable cells depending on control type
+        print('update avaikalbel')
+        # enable/disable cells depending on input_type type
         for v in range(self.n_variables):
             v_name = self.cellWidget(v,2).currentText()
-            control = self.cellWidget(v,4).currentText()
+            input_type = self.cellWidget(v,4).currentText()
             if v_name == '     select variable     ':
-                for i in (3,4,5,6,7,8): # disable inputs until a variable as been selected
+                for i in (3,5,6,7,8,9): # disable inputs until a variable as been selected
                     self.cellWidget(v,i).setEnabled(False)
+                    self.cellWidget(v,i).setStyleSheet("background: #dcdcdc;")
             else:
+                self.cellWidget(v,3).setStyleSheet("background: #ffffff;")
+                self.cellWidget(v,9).setStyleSheet("background: #ffffff;")
                 if self.cellWidget(v,3).text() == "":
                     self.cellWidget(v,3).setText(v_name.replace('_',' '))
                 self.cellWidget(v,3).setEnabled(True)
                 self.cellWidget(v,4).setEnabled(True)
                 self.cellWidget(v,8).setEnabled(True)
-                if control == 'spinbox' or control == 'slider':
+                if input_type == 'spinbox' or input_type == 'slider':
                     for i in (5,6,7,8):
                         self.cellWidget(v,i).setEnabled(True)
                         self.cellWidget(v,i).setStyleSheet("background: #ffffff;")
