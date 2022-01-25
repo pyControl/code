@@ -105,13 +105,12 @@ class Run_task_tab(QtGui.QWidget):
 
         self.task_groupbox = QtGui.QGroupBox('Task')
 
-        self.task_select = TaskSelectMenu('select task')
+        self.task_select = TaskSelectMenu('example/custom_variable_gui')
         self.task_select.set_callback(self.task_changed)
         self.upload_button = QtGui.QPushButton('Upload')
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
         self.variables_button = QtGui.QPushButton('Variables')
         self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
-        self.generator_dialog = Gui_generator_dialog(parent=self)
 
         self.taskgroup_layout = QtGui.QGridLayout()
         self.taskgroup_layout.addWidget(self.task_select,0,0,1,2)
@@ -300,6 +299,7 @@ class Run_task_tab(QtGui.QWidget):
         self.upload_button.setText('Upload')
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
         self.start_button.setEnabled(False)
+        self.variables_button.setEnabled(False)
 
     def setup_task(self):
         task = self.task_select.text()
@@ -318,10 +318,9 @@ class Run_task_tab(QtGui.QWidget):
             if self.variables_dialog:
                 self.variables_button.clicked.disconnect()
                 self.variables_dialog.deleteLater()
-
-            self.generator_dialog.load_task(task)
-            self.initialize_custom_var_gui()
-            if (self.custom_gui_dict):
+            self.task = task
+            self.custom_gui_dict = self.initialize_custom_var_gui()
+            if self.custom_gui_dict:
                 self.variables_dialog = Custom_GUI(self,self.board,self.custom_gui_dict)
             else:
                 self.variables_dialog = Variables_dialog(self, self.board)
@@ -334,7 +333,6 @@ class Run_task_tab(QtGui.QWidget):
             self.start_button.setEnabled(True)
             self.stop_button.setEnabled(False)
             self.status_text.setText('Uploaded : ' + task)
-            self.task = task
             self.fresh_task = True
             self.uploaded = True
             self.upload_button.setText('Reset')
@@ -345,24 +343,40 @@ class Run_task_tab(QtGui.QWidget):
      
     def initialize_custom_var_gui(self):
         # If task file specifies a user custom variable dialog, attempt to initialise it.
-        self.custom_gui_dict = None
+        custom_gui_dict = None
         if not 'variable_gui' in self.board.sm_info['variables']:
             return # Task does not use custom variable dialog
-        custom_dialog_name = eval(self.board.sm_info['variables']['variable_gui'])
+        self.custom_dialog_name = eval(self.board.sm_info['variables']['variable_gui'])
         # Try to import and instantiate the user custom variable dialog
         try:
-            json_file = os.path.join('gui','user_variable_GUIs',f'{custom_dialog_name}.json')
+            json_file = os.path.join('gui','user_variable_GUIs',f'{self.custom_dialog_name}.json')
             with open(json_file, 'r') as j:
-                self.custom_gui_dict = json.loads(j.read())
+                custom_gui_dict = json.loads(j.read())
         except FileNotFoundError:
-            self.print_to_log('\nCould not find custom variable GUI data: {}'
-                              .format(json_file))
-            not_found_dialog = Custom_var_not_found_dialog(missing_file = custom_dialog_name, parent=self)
+            self.print_to_log(f'\nCould not find custom variable GUI data: {json_file}')
+            not_found_dialog = Custom_var_not_found_dialog(missing_file = self.custom_dialog_name, parent=self)
             create_dialog = not_found_dialog.exec()
             if create_dialog:
-                self.generator_dialog.variable_generator_table.set_dialog_name(custom_dialog_name)
-                was_generated = self.generator_dialog.exec()
-            return
+                gui_created = self.open_gui_editor()
+                if gui_created:
+                    with open(json_file, 'r') as j:
+                        custom_gui_dict = json.loads(j.read())
+        return custom_gui_dict
+    
+    def open_gui_editor(self,data_to_load = None):
+        self.generator_dialog = Gui_generator_dialog(parent=self)
+        self.generator_dialog.load_task(self.task)
+        if data_to_load:
+            self.generator_dialog.variable_generator_table.load_gui_data(data_to_load)
+        self.generator_dialog.variable_generator_table.set_dialog_name(self.custom_dialog_name)
+        was_saved = self.generator_dialog.exec()
+        if was_saved:
+            if self.variables_dialog:
+                self.variables_dialog.close()
+            self.task_changed()
+            return True
+        else:
+            return False
 
     def select_data_dir(self):
         new_path = QtGui.QFileDialog.getExistingDirectory(self, 'Select data folder', dirs['data'])
@@ -394,6 +408,7 @@ class Run_task_tab(QtGui.QWidget):
         self.start_button.setEnabled(False)
         self.board_groupbox.setEnabled(False)
         self.stop_button.setEnabled(True)
+        self.variables_dialog.edit_action.setEnabled(False)
         self.print_to_log(
             '\nRun started at: {}\n'.format(
             datetime.now().strftime('%Y/%m/%d %H:%M:%S')))
@@ -419,6 +434,7 @@ class Run_task_tab(QtGui.QWidget):
         self.task_select.setEnabled(True)
         self.upload_button.setEnabled(True)
         self.stop_button.setEnabled(False)
+        self.variables_dialog.edit_action.setEnabled(True)
         self.status_text.setText('Uploaded : ' + self.task)
         self.GUI_main.tab_widget.setTabEnabled(1, True) # Enable setups tab.
         self.GUI_main.tab_widget.setTabEnabled(2, True) # Enable setups tab.

@@ -336,8 +336,8 @@ class Gui_generator_dialog(QtGui.QDialog):
         self.Vlayout = QtGui.QGridLayout(self)
         self.variable_generator_table = GUI_VariablesTable(self)
         self.dialog_name_lbl = QtGui.QLabel('Dialog Name')
-        self.generate_btn = QtGui.QPushButton('Generate GUI file')
-        self.generate_btn.clicked.connect(self.variable_generator_table.collect_gui_data)
+        self.generate_btn = QtGui.QPushButton('Save GUI')
+        self.generate_btn.clicked.connect(self.variable_generator_table.save_gui_data)
         self.Vlayout.addWidget(self.variable_generator_table,0,0)
         self.Vlayout.addWidget(self.dialog_name_lbl,1,0)
         self.Vlayout.addWidget(self.generate_btn,1,0)
@@ -353,8 +353,11 @@ class Gui_generator_dialog(QtGui.QDialog):
     def change_layout(self):
         self.setLayout(self.otherlayout)
     
+    def closeEvent(self, event):
+        self.deleteLater()
+    
 class Row_widgets():
-    def __init__(self,parent):
+    def __init__(self,parent,var_name = None, row_data = None):
         self.parent = parent
         #buttons
         self.up_button = QtGui.QPushButton('⬆️')
@@ -394,6 +397,8 @@ class Row_widgets():
                 self.hint,
                 self.remove_button,
             ) 
+        if var_name:
+            self.load_vals_from_dict(var_name,row_data)
 
     def copy_vals_from_row(self,row_index):
             var_name = str(self.parent.cellWidget(row_index, 2).currentText())
@@ -408,6 +413,19 @@ class Row_widgets():
             self.spin_step.setText(str(self.parent.cellWidget(row_index, 7).text()))
             self.suffix.setText(str(self.parent.cellWidget(row_index, 8).text()))
             self.hint.setText(str(self.parent.cellWidget(row_index, 9).text()))
+    
+    def load_vals_from_dict(self,var_name,row_data):
+        self.variable_cbox.addItems([var_name])
+        cbox_set_item(self.variable_cbox,var_name)
+
+        self.display_name.setText(row_data['label'])
+        cbox_set_item(self.control_combo,row_data['widget'])
+        self.spin_min.setText(str(row_data['min']))
+        self.spin_max.setText(str(row_data['max']))
+        self.spin_step.setText(str(row_data['step']))
+        self.suffix.setText(row_data['suffix'])
+        self.hint.setText(row_data['hint'])
+
 
     def put_into_table(self,row_index):
         for column,widget in enumerate(self.column_order):
@@ -429,19 +447,16 @@ class GUI_VariablesTable(QtGui.QTableWidget):
         self.setColumnWidth(7, 40)
         self.setColumnWidth(8, 50)
 
-        add_button = QtGui.QPushButton('   add   ')
-        add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
-        add_button.clicked.connect(self.add_variable)
-        self.setCellWidget(0,10, add_button)
-
         self.n_variables = 0
         self.variable_names = []
         self.available_variables = []
         self.assigned = {v_name:[] for v_name in self.variable_names} # Which subjects have values assigned for each variable.
+        self.add_variable()
 
-    def add_variable(self, var_dict=None, row = None):
+    def add_variable(self, varname = None, row_dict= None):
         # populate row with widgets
-        new_widgets = Row_widgets(self)
+        new_widgets = Row_widgets(self,varname, row_dict)
+
         new_widgets.put_into_table(row_index=self.n_variables)
 
         # connect buttons to functions
@@ -552,7 +567,7 @@ class GUI_VariablesTable(QtGui.QTableWidget):
     def set_dialog_name(self,new_dialog_name):
         self.new_dialog_name = new_dialog_name
 
-    def collect_gui_data(self):
+    def save_gui_data(self):
         gui_dictionary = {}
         ordered_elements = []
         for row in range(self.n_variables):  
@@ -561,9 +576,14 @@ class GUI_VariablesTable(QtGui.QTableWidget):
             if varname != '     select variable     ':
                 ordered_elements.append(varname) 
                 element_specs['label'] = self.cellWidget(row,3).text()
+                element_specs['widget'] = self.cellWidget(row,4).currentText()
+                element_specs['min'] = ""
+                element_specs['max'] = ""
+                element_specs['step'] = ""
+                element_specs['suffix'] = ""
                 element_specs['hint'] = self.cellWidget(row,9).text()
-                control = self.cellWidget(row,4).currentText()
-                if control == 'spinbox' or control == 'slider':
+
+                if element_specs['widget'] == 'spinbox' or element_specs['widget'] == 'slider':
                     try: # store the value as an integer or float. if the string is empty or not a number, an error message will be shown 
                         value = self.cellWidget(row,5).text()
                         element_specs['min'] =  float(value) if value.find('.')>-1 else int(value)
@@ -577,7 +597,6 @@ class GUI_VariablesTable(QtGui.QTableWidget):
                         msg.exec()
                         return
                     element_specs['suffix'] = self.cellWidget(row,8).text()
-                element_specs['widget'] = control
 
                 gui_dictionary[varname] = element_specs
         gui_dictionary['ordered_elements'] = ordered_elements # after Python 3.6, dictionaries became ordered, but to be backwards compatible we add ordering here
@@ -587,7 +606,12 @@ class GUI_VariablesTable(QtGui.QTableWidget):
         with open(F'gui/user_variable_GUIs/{self.new_dialog_name}.json', 'w') as generated_data_file:
             json.dump(gui_dictionary,generated_data_file,indent=4)
         self.parent.accept()
-
+        self.deleteLater()
+    
+    def load_gui_data(self,gui_dict):
+        for row,element in enumerate(gui_dict['ordered_elements']):
+            self.add_variable(element,gui_dict[element])
+    
 
 class Custom_var_not_found_dialog(QtGui.QDialog):
     def __init__(self,missing_file,parent):

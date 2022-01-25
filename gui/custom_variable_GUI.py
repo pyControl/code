@@ -4,12 +4,23 @@ class Custom_GUI(QtGui.QDialog):
     # Dialog for setting and getting task variables.
     def __init__(self, parent, board, generator_data):
         super(QtGui.QDialog, self).__init__(parent)
-        self.setWindowTitle(f"{generator_data['title']} GUI")
+        self.parent = parent
+        self.generator_data = generator_data
+        self.setWindowTitle(f"{self.generator_data['title']} GUI")
         self.layout = QtGui.QVBoxLayout(self)
+        toolBar = QtGui.QToolBar()
+        self.layout.addWidget(toolBar)
+        self.edit_action = QtGui.QAction("Edit", self)
+        self.edit_action.setEnabled(True)
+        self.edit_action.triggered.connect(self.edit)
+        toolBar.addAction(self.edit_action)
         self.variables_grid = Grid(self, board, generator_data)
         self.layout.addWidget(self.variables_grid)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
+    
+    def edit(self):
+        self.parent.open_gui_editor(self.generator_data)
 
 
 class Grid(QtGui.QWidget):
