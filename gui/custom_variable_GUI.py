@@ -26,19 +26,19 @@ class Custom_GUI(QtGui.QDialog):
 class Grid(QtGui.QWidget):
     def __init__(self, parent, board, generator_data):
         super(QtGui.QWidget, self).__init__(parent)
-        variables = board.sm_info["variables"]
         self.grid_layout = QtGui.QGridLayout()
-        initial_variables_dict = {
-            v_name: v_value_str for (v_name, v_value_str) in sorted(variables.items())
-        }
-        self.gui = GUI(self, self.grid_layout, board, initial_variables_dict, generator_data)
+        self.gui = GUI(self, self.grid_layout, board, generator_data)
         self.setLayout(self.grid_layout)
 
-
 class GUI(QtGui.QWidget):
-    def __init__(self, parent, grid_layout, board, init_vars, generator_data):
+    def __init__(self, parent, grid_layout, board, generator_data):
         super(QtGui.QWidget, self).__init__(parent)
         self.board = board
+        
+        variables = board.sm_info["variables"]
+        init_vars = {
+            v_name: v_value_str for (v_name, v_value_str) in sorted(variables.items())
+        }
 
         # create widgets
         widget = QtGui.QWidget()
@@ -63,8 +63,28 @@ class GUI(QtGui.QWidget):
             globals()[var].setHint(control['hint'])
             globals()[var].setBoard(board)
             globals()[var].add_to_grid(layout,row)
-
         widget.setLayout(layout)
-        grid_layout.addWidget(widget, 0, 0, QtCore.Qt.AlignLeft)
-        grid_layout.setRowStretch(15, 1)
+        
 
+        leftover_widget = QtGui.QWidget()
+        leftover_layout = QtGui.QGridLayout()
+        used_vars = generator_data['ordered_elements']
+        leftover_vars = sorted(list( set(variables) - set(used_vars)), key=str.lower)
+        leftover_vars = [v_name for v_name in leftover_vars if not v_name[-3:] == '___' and v_name != 'variable_gui']
+        if len(leftover_vars) > 0:
+            for row,var in enumerate(leftover_vars):
+                globals()[var] = standard_var(init_vars, var, var)
+                globals()[var].setHint(control['hint'])
+                globals()[var].setBoard(board)
+                globals()[var].add_to_grid(leftover_layout, row )
+            leftover_widget.setLayout(leftover_layout)
+
+            variable_tabs = QtGui.QTabWidget()
+            variable_tabs.addTab(widget,"custom")
+            variable_tabs.addTab(leftover_widget,"standard")
+
+            grid_layout.addWidget(variable_tabs, 0, 0, QtCore.Qt.AlignLeft)
+        else:
+            grid_layout.addWidget(widget, 0, 0, QtCore.Qt.AlignLeft)
+
+        grid_layout.setRowStretch(15, 1)
