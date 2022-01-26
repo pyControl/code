@@ -337,6 +337,7 @@ class Gui_generator_dialog(QtGui.QDialog):
         self.variable_generator_table = GUI_VariablesTable(self)
         self.dialog_name_lbl = QtGui.QLabel('Dialog Name')
         self.generate_btn = QtGui.QPushButton('Save GUI')
+        self.generate_btn.setIcon(QtGui.QIcon("gui/icons/save.svg"))
         self.generate_btn.clicked.connect(self.variable_generator_table.save_gui_data)
         self.Vlayout.addWidget(self.variable_generator_table,0,0)
         self.Vlayout.addWidget(self.dialog_name_lbl,1,0)
@@ -510,7 +511,6 @@ class GUI_VariablesTable(QtGui.QTableWidget):
         self.cellWidget(row,10).clicked.connect(lambda :self.remove_variable(ind.row()))
 
     def update_available(self, i=None):
-        print('update avaikalbel')
         # enable/disable cells depending on input_type type
         for v in range(self.n_variables):
             v_name = self.cellWidget(v,2).currentText()
