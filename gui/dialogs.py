@@ -522,6 +522,7 @@ class GUI_VariablesTable(QtGui.QTableWidget):
             else:
                 self.cellWidget(v,3).setStyleSheet("background: #ffffff;")
                 self.cellWidget(v,9).setStyleSheet("background: #ffffff;")
+                self.cellWidget(v,9).setEnabled(True)
                 if self.cellWidget(v,3).text() == "":
                     self.cellWidget(v,3).setText(v_name.replace('_',' '))
                 self.cellWidget(v,3).setEnabled(True)

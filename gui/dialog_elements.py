@@ -83,6 +83,7 @@ class spin_var:
 
     def setHint(self, hint):
         self.label.setToolTip(hint)
+        self.spn.setToolTip(hint)
 
     def value_text_colour(self, color="gray"):
         self.spn.setStyleSheet("color: {};".format(color))
@@ -167,6 +168,7 @@ class standard_var:
 
     def setHint(self, hint):
         self.label.setToolTip(hint)
+        self.line_edit.setToolTip(hint)
 
     def value_text_colour(self, color="gray"):
         self.line_edit.setStyleSheet("color: {};".format(color))
@@ -196,6 +198,7 @@ class checkbox_var:
 
     def setHint(self, hint):
         self.label.setToolTip(hint)
+        self.checkbox.setToolTip(hint)
 
 class DoubleSlider(QtGui.QSlider): #https://stackoverflow.com/questions/4827885/qslider-stepping
     def __init__(self, *args, **kargs):
@@ -283,6 +286,7 @@ class slider_var:
 
     def setHint(self, hint):
         self.label.setToolTip(hint)
+        self.slider.setToolTip(hint)
 
     def setSuffix(self, suff):
         self.suffix = suff
