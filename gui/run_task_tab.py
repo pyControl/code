@@ -11,10 +11,10 @@ from com.data_logger import Data_logger
 from config.paths import dirs
 from config.gui_settings import update_interval, log_font_size
 
-from gui.dialogs import Variables_dialog, GUI_editor, GUI_not_found
+from gui.dialogs import Variables_dialog
+from gui.custom_variable_GUI import Custom_GUI, GUI_editor, GUI_not_found
 from gui.plotting import Task_plot
 from gui.utility import init_keyboard_shortcuts,TaskSelectMenu, TaskInfo
-from gui.custom_variable_GUI import Custom_GUI
 
 import json
 
