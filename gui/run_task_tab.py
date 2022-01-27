@@ -105,7 +105,7 @@ class Run_task_tab(QtGui.QWidget):
 
         self.task_groupbox = QtGui.QGroupBox('Task')
 
-        self.task_select = TaskSelectMenu('example/custom_variable_gui')
+        self.task_select = TaskSelectMenu('select task')
         self.task_select.set_callback(self.task_changed)
         self.upload_button = QtGui.QPushButton('Upload')
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
@@ -319,11 +319,15 @@ class Run_task_tab(QtGui.QWidget):
                 self.variables_button.clicked.disconnect()
                 self.variables_dialog.deleteLater()
             self.task = task
-            self.custom_gui_dict = self.initialize_custom_var_gui()
-            if self.custom_gui_dict:
-                self.variables_dialog = Custom_GUI(self,self.board,self.custom_gui_dict)
+            if 'variable_gui' in self.board.sm_info['variables']:
+                custom_gui_name = eval(self.board.sm_info['variables']['variable_gui'])
+                custom_gui_dict = self.get_custom_gui_data(custom_gui_name)
+            if custom_gui_dict:
+                self.variables_dialog = Custom_GUI(self,custom_gui_dict)
+                self.using_custom_gui = True
             else:
                 self.variables_dialog = Variables_dialog(self, self.board)
+                self.using_custom_gui = False
             self.variables_button.clicked.connect(self.variables_dialog.exec_)
             self.variables_button.setEnabled(True)
             self.task_plot.set_state_machine(self.board.sm_info)
@@ -341,31 +345,27 @@ class Run_task_tab(QtGui.QWidget):
         except PyboardError:
             self.status_text.setText('Error setting up state machine.')
      
-    def initialize_custom_var_gui(self):
-        # If task file specifies a user custom variable dialog, attempt to initialise it.
+    def get_custom_gui_data(self, gui_name):
         custom_gui_dict = None
-        if not 'variable_gui' in self.board.sm_info['variables']:
-            return # Task does not use custom variable dialog
-        self.custom_dialog_name = eval(self.board.sm_info['variables']['variable_gui'])
-        # Try to import and instantiate the user custom variable dialog
-        try:
-            json_file = os.path.join('gui','user_variable_GUIs',f'{self.custom_dialog_name}.json')
+        try: # Try to import and instantiate the user custom variable dialog
+            json_file = os.path.join('gui','user_variable_GUIs',f'{gui_name}.json')
             with open(json_file, 'r') as j:
                 custom_gui_dict = json.loads(j.read())
-        except FileNotFoundError:
+        except FileNotFoundError: # couldn't find the json data
             self.print_to_log(f'\nCould not find custom variable GUI data: {json_file}')
-            not_found_dialog = GUI_not_found(missing_file = self.custom_dialog_name, parent=self)
-            create_dialog = not_found_dialog.exec()
-            if create_dialog:
-                gui_created = self.open_gui_editor()
+            # ask if they want to create a new custom gui
+            not_found_dialog = GUI_not_found(missing_file=gui_name, parent=self)
+            do_create_custom = not_found_dialog.exec()
+            if do_create_custom:
+                gui_created = self.open_gui_editor(gui_name)
                 if gui_created:
                     with open(json_file, 'r') as j:
                         custom_gui_dict = json.loads(j.read())
         return custom_gui_dict
     
-    def open_gui_editor(self,data_to_load = None):
-        self.gui_editor = GUI_editor(self,self.task,self.custom_dialog_name,data_to_load)
-        was_saved = self.gui_editor.exec()
+    def open_gui_editor(self, gui_name, data_to_load=None):
+        gui_editor = GUI_editor(self,gui_name,data_to_load)
+        was_saved = gui_editor.exec()
         if was_saved:
             if self.variables_dialog:
                 self.variables_dialog.close()
@@ -404,7 +404,8 @@ class Run_task_tab(QtGui.QWidget):
         self.start_button.setEnabled(False)
         self.board_groupbox.setEnabled(False)
         self.stop_button.setEnabled(True)
-        self.variables_dialog.edit_action.setEnabled(False)
+        if self.using_custom_gui:
+            self.variables_dialog.edit_action.setEnabled(False)
         self.print_to_log(
             '\nRun started at: {}\n'.format(
             datetime.now().strftime('%Y/%m/%d %H:%M:%S')))
@@ -430,7 +431,8 @@ class Run_task_tab(QtGui.QWidget):
         self.task_select.setEnabled(True)
         self.upload_button.setEnabled(True)
         self.stop_button.setEnabled(False)
-        self.variables_dialog.edit_action.setEnabled(True)
+        if self.using_custom_gui:
+            self.variables_dialog.edit_action.setEnabled(True)
         self.status_text.setText('Uploaded : ' + self.task)
         self.GUI_main.tab_widget.setTabEnabled(1, True) # Enable setups tab.
         self.GUI_main.tab_widget.setTabEnabled(2, True) # Enable setups tab.

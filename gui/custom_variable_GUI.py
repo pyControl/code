@@ -301,9 +301,10 @@ class slider_var:
 
 # GUI created from dictionary describing custom widgets and layout ------------
 class Custom_GUI(QtGui.QDialog):
-    def __init__(self, parent, board, generator_data):
+    def __init__(self, parent, generator_data, editable=True):
         super(QtGui.QDialog, self).__init__(parent)
         self.parent = parent
+        self.gui_name = eval(parent.board.sm_info['variables']['variable_gui'])
         self.generator_data = generator_data
         self.setWindowTitle("Set Variables")
         self.layout = QtGui.QVBoxLayout(self)
@@ -313,15 +314,16 @@ class Custom_GUI(QtGui.QDialog):
         self.layout.addWidget(toolBar)
         self.edit_action = QtGui.QAction(QtGui.QIcon("gui/icons/edit.svg"),"&edit", self)
         self.edit_action.setEnabled(True)
-        self.edit_action.triggered.connect(self.edit)
-        toolBar.addAction(self.edit_action)
-        self.variables_grid = Custom_variables_grid(self, board, generator_data)
+        if editable:
+            toolBar.addAction(self.edit_action)
+            self.edit_action.triggered.connect(self.edit)
+        self.variables_grid = Custom_variables_grid(self, parent.board, generator_data)
         self.layout.addWidget(self.variables_grid)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
     
     def edit(self):
-        self.parent.open_gui_editor(self.generator_data)
+        self.parent.open_gui_editor(self.gui_name,self.generator_data)
 
 class Custom_variables_grid(QtGui.QWidget):
     def __init__(self, parent, board, generator_data):
@@ -375,11 +377,11 @@ class Custom_variables_grid(QtGui.QWidget):
 
 # GUI editor dialog. ---------------------------------------------------------
 class GUI_editor(QtGui.QDialog):
-    def __init__(self, parent,task,gui_name,data_to_load=None):
+    def __init__(self, parent,gui_name,data_to_load=None):
         super(QtGui.QDialog, self).__init__(parent)
         self.gui_name = gui_name
         self.available_vars = []
-        self.get_vars(task)
+        self.get_vars(parent.task)
         self.tables = []
 
         self.setWindowTitle('Custom GUI Editor')
@@ -434,7 +436,11 @@ class GUI_editor(QtGui.QDialog):
         for index,table in enumerate(self.tables):
             tab_title = self.tabs.tabText(index)
             ordered_tabs.append(tab_title) 
-            gui_dict[tab_title] = table.save_gui_data()
+            data = table.save_gui_data()
+            if data:
+                gui_dict[tab_title] = data
+            else: # there was an error
+                return
 
         gui_dict['ordered_tabs'] = ordered_tabs
         with open(F'gui/user_variable_GUIs/{self.gui_name}.json', 'w') as generated_data_file:
@@ -720,7 +726,7 @@ class Variables_table(QtGui.QTableWidget):
                         msg = QtGui.QMessageBox()
                         msg.setText("Numbers for min, max, and step are required for spinboxes and sliders")
                         msg.exec()
-                        return
+                        return None
                     input_specs['suffix'] = self.cellWidget(row,8).text()
 
                 tab_dictionary[varname] = input_specs

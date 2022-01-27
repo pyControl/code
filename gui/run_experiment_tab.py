@@ -16,6 +16,7 @@ from com.data_logger import Data_logger
 from gui.plotting import Experiment_plot
 from gui.dialogs import Variables_dialog, Summary_variables_dialog
 from gui.utility import variable_constants, TaskInfo
+from gui.custom_variable_GUI import Custom_GUI, GUI_editor
 
 class Run_experiment_tab(QtGui.QWidget):
     '''The run experiment tab is responsible for setting up, running and stopping
@@ -233,9 +234,8 @@ class Run_experiment_tab(QtGui.QWidget):
         # Copy task file to experiments data folder.
         self.boards[0].data_logger.copy_task_file(self.experiment['data_dir'], dirs['tasks'])
         # Configure GUI ready to run.
-        self.initialize_custom_var_gui()
         for i, board in enumerate(self.boards):
-            self.subjectboxes[i].assign_board(board,self.user_variable_guis[i])
+            self.subjectboxes[i].assign_board(board)
             self.subjectboxes[i].start_stop_button.setEnabled(True)
             self.subjectboxes[i].status_text.setText('Ready')
             self.subjectboxes[i].task_info.set_state_machine(board.sm_info)
@@ -245,37 +245,6 @@ class Run_experiment_tab(QtGui.QWidget):
         self.plots_button.setEnabled(True)
         self.setups_started  = 0
         self.setups_finished = 0
-                                  
-    def initialize_custom_var_gui(self):
-        # If task file specifies a user custom variable dialog, attempt to initialise it.
-        self.user_variable_guis = [None] * len(self.boards)
-        for i, board in enumerate(self.boards):
-            print_to_log = self.subjectboxes[i].print_to_log
-            if not 'variable_gui' in board.sm_info['variables']:
-                return  #  Setup does not use custom variable dialog
-            custom_dialog_name = eval(board.sm_info['variables']['variable_gui'])
-            # Try to import and instantiate the user custom variable dialog
-            try:
-                user_module_name = 'gui.user_variable_GUIs.{}'.format(custom_dialog_name)
-                user_module = import_module(user_module_name)
-                reload(user_module)
-            except ModuleNotFoundError:
-                print_to_log('\nCould not find user custom variable dialog module: {}'
-                                  .format(user_module_name))
-                return
-            if not hasattr(user_module, custom_dialog_name):
-                print_to_log('\nCould not find user custom variable dialog class "{}" in {}'
-                    .format(custom_dialog_name, user_module_name))
-                return
-            
-            try:
-                user_variable_gui_class = getattr(user_module, custom_dialog_name)
-                user_variable_gui = user_variable_gui_class(self,board)
-                print_to_log('\nInitialised custom variable dialog: {}'.format(custom_dialog_name))
-                self.user_variable_guis[i] = user_variable_gui
-            except Exception as e:
-                print_to_log('Unable to intialise custom variable dialog: {}\n\n'.format(custom_dialog_name)
-                                  + 'Traceback: \n\n {}'.format(e))
 
     def startstopclose_all(self):
         '''Called when startstopclose_all_button is clicked.  Button is 
@@ -478,11 +447,13 @@ class Subjectbox(QtGui.QGroupBox):
         for p in self.print_queue:
             self.print_to_log(*p)
 
-    def assign_board(self, board, custom_var_dialog = None):
+    def assign_board(self, board):
         self.board = board
-
-        if (custom_var_dialog):
-            self.variables_dialog = custom_var_dialog
+        if 'variable_gui' in self.board.sm_info['variables']:
+            custom_gui_name = eval(self.board.sm_info['variables']['variable_gui'])
+            custom_gui_dict = self.get_custom_gui_data(custom_gui_name)
+        if custom_gui_dict:
+            self.variables_dialog = Custom_GUI(self,custom_gui_dict, editable=False)
         else:
             self.variables_dialog = Variables_dialog(self, self.board)
 
@@ -490,6 +461,16 @@ class Subjectbox(QtGui.QGroupBox):
         self.variables_button.setEnabled(True)
         self.start_stop_button.clicked.connect(self.start_stop_task)
 
+    def get_custom_gui_data(self, gui_name):
+        custom_gui_dict = None
+        try: # Try to import and instantiate the user custom variable dialog
+            json_file = os.path.join('gui','user_variable_GUIs',f'{gui_name}.json')
+            with open(json_file, 'r') as j:
+                custom_gui_dict = json.loads(j.read())
+        except FileNotFoundError: # couldn't find the json data
+            self.print_to_log(f'\nCould not find custom variable GUI data: {json_file}')
+        return custom_gui_dict
+    
     def start_stop_task(self):
         '''Called when start/stop button on Subjectbox pressed or
         startstopclose_all button is pressed.'''
