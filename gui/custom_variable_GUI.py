@@ -16,7 +16,7 @@ class Custom_GUI(QtGui.QDialog):
         self.edit_action.setEnabled(True)
         self.edit_action.triggered.connect(self.edit)
         toolBar.addAction(self.edit_action)
-        self.variables_grid = Grid(self, board, generator_data)
+        self.variables_grid = Custom_variables_grid(self, board, generator_data)
         self.layout.addWidget(self.variables_grid)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
@@ -25,18 +25,10 @@ class Custom_GUI(QtGui.QDialog):
         self.parent.open_gui_editor(self.generator_data)
 
 
-class Grid(QtGui.QWidget):
+class Custom_variables_grid(QtGui.QWidget):
     def __init__(self, parent, board, generator_data):
         super(QtGui.QWidget, self).__init__(parent)
-        self.grid_layout = QtGui.QGridLayout()
-        self.gui = GUI(self, self.grid_layout, board, generator_data)
-        self.setLayout(self.grid_layout)
-
-class GUI(QtGui.QWidget):
-    def __init__(self, parent, grid_layout, board, generator_data):
-        super(QtGui.QWidget, self).__init__(parent)
-        self.board = board
-        
+        grid_layout = QtGui.QGridLayout()
         variables = board.sm_info["variables"]
         init_vars = {
             v_name: v_value_str for (v_name, v_value_str) in sorted(variables.items())
@@ -86,3 +78,5 @@ class GUI(QtGui.QWidget):
 
         grid_layout.addWidget(variable_tabs, 0, 0, QtCore.Qt.AlignLeft)
         grid_layout.setRowStretch(15, 1)
+
+        self.setLayout(grid_layout)

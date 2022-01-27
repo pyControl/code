@@ -15,7 +15,6 @@ flashdrive_message = (
     'filesystem getting corrupted. Do you want to disable the flashdrive?')
 
 class Board_config_dialog(QtGui.QDialog):
-
     def __init__(self, parent=None):
         super(QtGui.QDialog, self).__init__(parent)
         self.setWindowTitle('Configure pyboard')
@@ -327,51 +326,56 @@ class Paths_dialog(QtGui.QDialog):
             self.parent().data_dir_changed = True
             update_paths(user_paths)
 
-
-class Gui_generator_dialog(QtGui.QDialog):
-    def __init__(self, parent,task,dialog_name,data_to_load=None):
+# GUI editor dialog. ---------------------------------------------------------
+class GUI_editor(QtGui.QDialog):
+    def __init__(self, parent,task,gui_name,data_to_load=None):
         super(QtGui.QDialog, self).__init__(parent)
-        self.setWindowTitle('GUI Generator')
-        self.new_dialog_name = dialog_name
-
-        self.generator_layout = QtGui.QGridLayout(self)
-        
-        self.available_variables = []
+        self.gui_name = gui_name
+        self.available_vars = []
         self.get_vars(task)
         self.tables = []
-        self.variable_tabs = QtGui.QTabWidget()
 
-        self.new_tab = QtGui.QPushButton('Add tab')
-        self.new_tab.clicked.connect(self.add_tab)
-        self.del_tab = QtGui.QPushButton('Remove tab')
-        self.del_tab.clicked.connect(self.remove_tab)
-        self.title_edit = QtGui.QLineEdit()
-        self.update_tab_title_btn = QtGui.QPushButton('update tab title')
-        self.update_tab_title_btn.clicked.connect(self.update_title)
+        self.setWindowTitle('Custom GUI Editor')
+        self.layout = QtGui.QGridLayout(self)
+
+        # main widgets
+        self.tabs = QtGui.QTabWidget()
+        self.add_tab_btn = QtGui.QPushButton('Add tab')
+        self.add_tab_btn.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+        self.add_tab_btn.clicked.connect(self.add_tab)
+        self.del_tab_btn = QtGui.QPushButton('Remove tab')
+        self.del_tab_btn.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
+        self.del_tab_btn.clicked.connect(self.remove_tab)
+        self.tab_title_lbl = QtGui.QLabel('Tab title:')
+        self.tab_title_edit = QtGui.QLineEdit()
+        self.tab_title_edit.setMinimumWidth(200)
+        self.tab_title_btn = QtGui.QPushButton('set tab title')
+        self.tab_title_btn.clicked.connect(self.set_tab_title)
         self.generate_btn = QtGui.QPushButton('Save GUI')
         self.generate_btn.setIcon(QtGui.QIcon("gui/icons/save.svg"))
         self.generate_btn.clicked.connect(self.save_gui_data)
-
         if data_to_load:
             self.load_gui_data(data_to_load)
         else:
             self.add_tab()
+        self.tabs.currentChanged.connect(self.refresh_variable_options)
+        self.refresh_variable_options()
 
-        self.generator_layout.addWidget(self.new_tab,0,0)
-        self.generator_layout.addWidget(self.del_tab,0,1)
-        self.generator_layout.addWidget(self.title_edit,0,2)
-        self.generator_layout.addWidget(self.update_tab_title_btn,0,3)
-        self.generator_layout.addWidget(self.generate_btn,0,4)
-        self.variable_tabs.currentChanged.connect(self.update_variable_cboxes)
-        self.generator_layout.addWidget(self.variable_tabs,1,0,1,5)
+        # layout
+        self.layout.addWidget(self.add_tab_btn,0,0)
+        self.layout.addWidget(self.del_tab_btn,0,1)
+        self.layout.addWidget(self.tab_title_lbl,0,2)
+        self.layout.addWidget(self.tab_title_edit,0,3)
+        self.layout.addWidget(self.tab_title_btn,0,4)
+        self.layout.addWidget(self.generate_btn,0,6)
+        self.layout.addWidget(self.tabs,1,0,1,7)
+        self.layout.setColumnStretch(5,1)
 
-        self.setMinimumWidth(900)
+        self.setMinimumWidth(910)
         self.setMinimumHeight(450)
 
         self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+W'), self)
         self.close_shortcut.activated.connect(self.close)
-
-        self.update_variable_cboxes()
 
     def load_gui_data(self,gui_data):
         for tab_name in gui_data['ordered_tabs']:
@@ -382,18 +386,17 @@ class Gui_generator_dialog(QtGui.QDialog):
         gui_dict = {}
         ordered_tabs = []
         for index,table in enumerate(self.tables):
-            tab_title = self.variable_tabs.tabText(index)
+            tab_title = self.tabs.tabText(index)
             ordered_tabs.append(tab_title) 
             gui_dict[tab_title] = table.save_gui_data()
 
         gui_dict['ordered_tabs'] = ordered_tabs
-        with open(F'gui/user_variable_GUIs/{self.new_dialog_name}.json', 'w') as generated_data_file:
+        with open(F'gui/user_variable_GUIs/{self.gui_name}.json', 'w') as generated_data_file:
             json.dump(gui_dict,generated_data_file,indent=4)
         self.accept()
         self.deleteLater()
     
-
-    def update_variable_cboxes(self):
+    def refresh_variable_options(self):
         fully_asigned_variables = []
         for table in self.tables:
             # determine which variables are already being used
@@ -401,15 +404,15 @@ class Gui_generator_dialog(QtGui.QDialog):
                 assigned_var = table.cellWidget(row,2).currentText()
                 if assigned_var != '     select variable     ':
                     fully_asigned_variables.append(assigned_var)
-            self.available_variables = sorted(list( self.variable_names - set(fully_asigned_variables)), key=str.lower)
+            self.available_vars = sorted(list( self.variable_names - set(fully_asigned_variables)), key=str.lower)
 
         for table in self.tables: # Update the available options in the variable comboboxes
             for row in range(table.n_variables):  
-                cbox_update_options(table.cellWidget(row,2), self.available_variables)
+                cbox_update_options(table.cellWidget(row,2), self.available_vars)
         
-        index = self.variable_tabs.currentIndex()
+        index = self.tabs.currentIndex()
         if index> -1:
-            self.title_edit.setText(self.variable_tabs.tabText(index))
+            self.tab_title_edit.setText(self.tabs.tabText(index))
 
     def get_vars(self,task):
         '''Remove variables that are not defined in the new task.'''
@@ -423,29 +426,37 @@ class Gui_generator_dialog(QtGui.QDialog):
         self.variable_names = set([v_name for v_name in re.findall(pattern, file_content) if not v_name[-3:] == '___' and v_name != 'variable_gui'])
 
     def add_tab(self,data = None, name = None):
-        new_table = GUI_VariablesTable(self,data)
+        new_table = Variables_table(self,data)
         if name:
             tab_title = name
         else:
             tab_title = f"tab-{len(self.tables)+1}"
         self.tables.append(new_table)
-        self.variable_tabs.addTab(new_table,tab_title)
+        self.tabs.addTab(new_table,tab_title)
+        if len(self.tables)<2:
+            self.del_tab_btn.setEnabled(False)
+        else:
+            self.del_tab_btn.setEnabled(True)
     
     def remove_tab(self):
         if len(self.tables)>1:
-            index = self.variable_tabs.currentIndex()
-            self.variable_tabs.removeTab(index)
+            index = self.tabs.currentIndex()
+            self.tabs.removeTab(index)
             del self.tables[index]
-            self.update_variable_cboxes()
+            if len(self.tables)<2:
+                self.del_tab_btn.setEnabled(False)
+            else:
+                self.del_tab_btn.setEnabled(True)
+            self.refresh_variable_options()
 
-    def update_title(self):
-        index = self.variable_tabs.currentIndex()
-        self.variable_tabs.setTabText(index,self.title_edit.text())
+    def set_tab_title(self):
+        index = self.tabs.currentIndex()
+        self.tabs.setTabText(index,self.tab_title_edit.text())
 
     def closeEvent(self, event):
         self.deleteLater()
     
-class Row_widgets():
+class Variable_row():
     def __init__(self,parent,var_name = None, row_data = None):
         self.parent = parent
         #buttons
@@ -453,13 +464,6 @@ class Row_widgets():
         self.down_button = QtGui.QPushButton('⬇️')
         self.remove_button = QtGui.QPushButton('remove')
         self.remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
-        # combo boxes
-        self.variable_cbox = QtGui.QComboBox()
-        self.variable_cbox.activated.connect(self.parent.update_available)
-        self.variable_cbox.addItems(['     select variable     ']+self.parent.parent.available_variables)
-        self.input_type_combo = QtGui.QComboBox()
-        self.input_type_combo.activated.connect(self.parent.update_available)
-        self.input_type_combo.addItems(['line edit','checkbox','spinbox','slider'])
         # line edits
         self.display_name = QtGui.QLineEdit()
         self.spin_min = QtGui.QLineEdit()
@@ -471,7 +475,14 @@ class Row_widgets():
         self.suffix = QtGui.QLineEdit()
         self.suffix.setAlignment(QtCore.Qt.AlignCenter)
         self.hint = QtGui.QLineEdit()
-        self.hint.setAlignment(QtCore.Qt.AlignCenter)
+        # combo boxes
+        self.variable_cbox = QtGui.QComboBox()
+        self.variable_cbox.activated.connect(lambda:self.parent.clear_label(self.display_name.text()))
+        self.variable_cbox.addItems(['     select variable     ']+self.parent.parent.available_vars)
+        self.input_type_combo = QtGui.QComboBox()
+        self.input_type_combo.activated.connect(self.parent.update_available)
+        self.input_type_combo.addItems(['line edit','checkbox','spinbox','slider'])
+
         
         self.column_order = (
                 self.up_button,
@@ -488,6 +499,7 @@ class Row_widgets():
             ) 
         if var_name:
             self.load_vals_from_dict(var_name,row_data)
+        
 
     def copy_vals_from_row(self,row_index):
             var_name = str(self.parent.cellWidget(row_index, 2).currentText())
@@ -519,7 +531,7 @@ class Row_widgets():
         for column,widget in enumerate(self.column_order):
             self.parent.setCellWidget(row_index, column, widget)
             
-class GUI_VariablesTable(QtGui.QTableWidget):
+class Variables_table(QtGui.QTableWidget):
     def __init__(self, parent=None, data=None):
         super(QtGui.QTableWidget, self).__init__(1,11, parent=parent)
         self.parent = parent
@@ -529,40 +541,41 @@ class GUI_VariablesTable(QtGui.QTableWidget):
         self.setColumnWidth(1, 30)
         self.setColumnWidth(2, 150)
         self.setColumnWidth(3, 175)
-        self.setColumnWidth(4, 100)
+        self.setColumnWidth(4, 80)
         self.setColumnWidth(5, 40)
         self.setColumnWidth(6, 40)
         self.setColumnWidth(7, 40)
-        self.setColumnWidth(8, 50)
+        self.setColumnWidth(8, 40)
+        self.setColumnWidth(9, 150)
 
         self.n_variables = 0
+        self.clear_label_flag = None
         if data and data['ordered_inputs']:
             for row,element in enumerate(data['ordered_inputs']):
-                self.add_variable(element,data[element])
+                self.add_row(element,data[element])
         else:
-            self.add_variable()
+            self.add_row()
 
-    def add_variable(self, varname = None, row_dict= None):
+    def add_row(self, varname = None, row_dict= None):
         # populate row with widgets
-        new_widgets = Row_widgets(self,varname, row_dict)
-
+        new_widgets = Variable_row(self,varname, row_dict)
         new_widgets.put_into_table(row_index=self.n_variables)
 
         # connect buttons to functions
         self.connect_buttons(self.n_variables)
 
-        # insert another row witha an "add" button
+        # insert another row with an "add" button
         self.insertRow(self.n_variables+1)
         add_button = QtGui.QPushButton('   add   ')
         add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
-        add_button.clicked.connect(self.add_variable)
+        add_button.clicked.connect(self.add_row)
         self.setCellWidget(self.n_variables+1,10, add_button)
 
         self.n_variables += 1
         self.update_available()
         null_resize(self)
 
-    def remove_variable(self, variable_n):
+    def remove_row(self, variable_n):
         self.removeRow(variable_n)
         self.n_variables -= 1
         self.update_available()
@@ -570,7 +583,7 @@ class GUI_VariablesTable(QtGui.QTableWidget):
     
     def swap_with_above(self, row):
         if self.n_variables > row > 0:
-            new_widgets = Row_widgets(self)
+            new_widgets = Variable_row(self)
             new_widgets.copy_vals_from_row(row)
             self.removeRow(row) # delete old row
             above_row = row -1
@@ -588,7 +601,7 @@ class GUI_VariablesTable(QtGui.QTableWidget):
         ind = QtCore.QPersistentModelIndex(self.model().index(row, 2))
         self.cellWidget(row,0).clicked.connect(lambda :self.swap_with_above(ind.row())) # up arrow connection
         self.cellWidget(row,1).clicked.connect(lambda :self.swap_with_below(ind.row())) # down arrow connection
-        self.cellWidget(row,10).clicked.connect(lambda :self.remove_variable(ind.row())) # remove button connection
+        self.cellWidget(row,10).clicked.connect(lambda :self.remove_row(ind.row())) # remove button connection
 
     def reconnect_buttons(self,row):
         ind = QtCore.QPersistentModelIndex(self.model().index(row, 2))
@@ -597,8 +610,12 @@ class GUI_VariablesTable(QtGui.QTableWidget):
         self.cellWidget(row,1).clicked.disconnect() # down arrow
         self.cellWidget(row,1).clicked.connect(lambda :self.swap_with_below(ind.row()))
         self.cellWidget(row,10).clicked.disconnect() # remove button
-        self.cellWidget(row,10).clicked.connect(lambda :self.remove_variable(ind.row()))
+        self.cellWidget(row,10).clicked.connect(lambda :self.remove_row(ind.row()))
 
+    def clear_label(self,val):
+        self.clear_label_flag = val
+        self.update_available()
+        
     def update_available(self, i=None):
         # enable/disable cells depending on input_type type
         for row in range(self.n_variables):
@@ -612,7 +629,7 @@ class GUI_VariablesTable(QtGui.QTableWidget):
                 self.cellWidget(row,3).setStyleSheet("background: #ffffff;")
                 self.cellWidget(row,9).setStyleSheet("background: #ffffff;")
                 self.cellWidget(row,9).setEnabled(True)
-                if self.cellWidget(row,3).text() == "":
+                if self.cellWidget(row,3).text() == self.clear_label_flag:
                     self.cellWidget(row,3).setText(v_name.replace('_',' '))
                 self.cellWidget(row,3).setEnabled(True)
                 self.cellWidget(row,4).setEnabled(True)
@@ -627,7 +644,7 @@ class GUI_VariablesTable(QtGui.QTableWidget):
                         self.cellWidget(row,i).setText('')
                         self.cellWidget(row,i).setStyleSheet("background: #dcdcdc;")
         
-        self.parent.update_variable_cboxes()
+        self.parent.refresh_variable_options()
                     
     def save_gui_data(self):
         tab_dictionary = {}
@@ -664,17 +681,14 @@ class GUI_VariablesTable(QtGui.QTableWidget):
         tab_dictionary['ordered_inputs'] = ordered_inputs # after Python 3.6, dictionaries became ordered, but to be backwards compatible we add ordering here
 
         return tab_dictionary
-    
 
-    
-
-class Custom_var_not_found_dialog(QtGui.QDialog):
+class GUI_not_found(QtGui.QDialog):
     def __init__(self,missing_file,parent):
         super(QtGui.QDialog, self).__init__(parent)
-        self.setWindowTitle('Custom Variable GUI not found')
+        self.setWindowTitle('Custom variable GUI not found')
 
-        message = QtGui.QLabel(F"The custom variable GUI <b>\"{missing_file}\"</b> was not found.<br><br>Would you like to generate a new custom variable GUI, or continue with the default variable GUI?")
-        continue_button = QtGui.QPushButton('Continue with default variable GUI')
+        message = QtGui.QLabel(F"The custom variable GUI <b>\"{missing_file}\"</b> was not found.<br><br>")
+        continue_button = QtGui.QPushButton('Continue with standard variable GUI')
         generate_button = QtGui.QPushButton('Create new custom variable GUI')
         continue_button.setDefault(True)
         continue_button.setFocus()

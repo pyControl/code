@@ -11,7 +11,7 @@ from com.data_logger import Data_logger
 from config.paths import dirs
 from config.gui_settings import update_interval, log_font_size
 
-from gui.dialogs import Variables_dialog, Gui_generator_dialog, Custom_var_not_found_dialog
+from gui.dialogs import Variables_dialog, GUI_editor, GUI_not_found
 from gui.plotting import Task_plot
 from gui.utility import init_keyboard_shortcuts,TaskSelectMenu, TaskInfo
 from gui.custom_variable_GUI import Custom_GUI
@@ -354,7 +354,7 @@ class Run_task_tab(QtGui.QWidget):
                 custom_gui_dict = json.loads(j.read())
         except FileNotFoundError:
             self.print_to_log(f'\nCould not find custom variable GUI data: {json_file}')
-            not_found_dialog = Custom_var_not_found_dialog(missing_file = self.custom_dialog_name, parent=self)
+            not_found_dialog = GUI_not_found(missing_file = self.custom_dialog_name, parent=self)
             create_dialog = not_found_dialog.exec()
             if create_dialog:
                 gui_created = self.open_gui_editor()
@@ -364,8 +364,8 @@ class Run_task_tab(QtGui.QWidget):
         return custom_gui_dict
     
     def open_gui_editor(self,data_to_load = None):
-        self.generator_dialog = Gui_generator_dialog(self,self.task,self.custom_dialog_name,data_to_load)
-        was_saved = self.generator_dialog.exec()
+        self.gui_editor = GUI_editor(self,self.task,self.custom_dialog_name,data_to_load)
+        was_saved = self.gui_editor.exec()
         if was_saved:
             if self.variables_dialog:
                 self.variables_dialog.close()
