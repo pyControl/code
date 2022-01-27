@@ -27,7 +27,8 @@ v.red_count = 1
 v.current_count___ = 0
 
 # Use custom variable GUI that is defined in gui/user_variable_GUIs/blink_gui.py
-v.variable_gui = 'my_custom_gui' 
+v.variable_gui = 'blinker_gui' 
+# v.variable_gui = 'blinker_gui_tabs'
 
 # Define behaviour. 
 def red_off(event):
