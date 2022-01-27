@@ -329,31 +329,119 @@ class Paths_dialog(QtGui.QDialog):
 
 
 class Gui_generator_dialog(QtGui.QDialog):
-    def __init__(self, parent):
+    def __init__(self, parent,task,dialog_name,data_to_load=None):
         super(QtGui.QDialog, self).__init__(parent)
         self.setWindowTitle('GUI Generator')
+        self.new_dialog_name = dialog_name
 
-        self.Vlayout = QtGui.QGridLayout(self)
-        self.variable_generator_table = GUI_VariablesTable(self)
-        self.dialog_name_lbl = QtGui.QLabel('Dialog Name')
+        self.generator_layout = QtGui.QGridLayout(self)
+        
+        self.available_variables = []
+        self.get_vars(task)
+        self.tables = []
+        self.variable_tabs = QtGui.QTabWidget()
+
+        self.new_tab = QtGui.QPushButton('Add tab')
+        self.new_tab.clicked.connect(self.add_tab)
+        self.del_tab = QtGui.QPushButton('Remove tab')
+        self.del_tab.clicked.connect(self.remove_tab)
+        self.title_edit = QtGui.QLineEdit()
+        self.update_tab_title_btn = QtGui.QPushButton('update tab title')
+        self.update_tab_title_btn.clicked.connect(self.update_title)
         self.generate_btn = QtGui.QPushButton('Save GUI')
         self.generate_btn.setIcon(QtGui.QIcon("gui/icons/save.svg"))
-        self.generate_btn.clicked.connect(self.variable_generator_table.save_gui_data)
-        self.Vlayout.addWidget(self.variable_generator_table,0,0)
-        self.Vlayout.addWidget(self.dialog_name_lbl,1,0)
-        self.Vlayout.addWidget(self.generate_btn,1,0)
+        self.generate_btn.clicked.connect(self.save_gui_data)
+
+        if data_to_load:
+            self.load_gui_data(data_to_load)
+        else:
+            self.add_tab()
+
+        self.generator_layout.addWidget(self.new_tab,0,0)
+        self.generator_layout.addWidget(self.del_tab,0,1)
+        self.generator_layout.addWidget(self.title_edit,0,2)
+        self.generator_layout.addWidget(self.update_tab_title_btn,0,3)
+        self.generator_layout.addWidget(self.generate_btn,0,4)
+        self.variable_tabs.currentChanged.connect(self.update_variable_cboxes)
+        self.generator_layout.addWidget(self.variable_tabs,1,0,1,5)
+
         self.setMinimumWidth(900)
         self.setMinimumHeight(450)
 
         self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+W'), self)
         self.close_shortcut.activated.connect(self.close)
 
-    def load_task(self,new_task):
-        self.variable_generator_table.task_changed(new_task)
+        self.update_variable_cboxes()
 
-    def change_layout(self):
-        self.setLayout(self.otherlayout)
+    def load_gui_data(self,gui_data):
+        for tab_name in gui_data['ordered_tabs']:
+            tab_data = gui_data[tab_name]
+            self.add_tab(tab_data,tab_name)
+
+    def save_gui_data(self):
+        gui_dict = {}
+        ordered_tabs = []
+        for index,table in enumerate(self.tables):
+            tab_title = self.variable_tabs.tabText(index)
+            ordered_tabs.append(tab_title) 
+            gui_dict[tab_title] = table.save_gui_data()
+
+        gui_dict['ordered_tabs'] = ordered_tabs
+        with open(F'gui/user_variable_GUIs/{self.new_dialog_name}.json', 'w') as generated_data_file:
+            json.dump(gui_dict,generated_data_file,indent=4)
+        self.accept()
+        self.deleteLater()
     
+
+    def update_variable_cboxes(self):
+        fully_asigned_variables = []
+        for table in self.tables:
+            # determine which variables are already being used
+            for row in range(table.n_variables):
+                assigned_var = table.cellWidget(row,2).currentText()
+                if assigned_var != '     select variable     ':
+                    fully_asigned_variables.append(assigned_var)
+            self.available_variables = sorted(list( self.variable_names - set(fully_asigned_variables)), key=str.lower)
+
+        for table in self.tables: # Update the available options in the variable comboboxes
+            for row in range(table.n_variables):  
+                cbox_update_options(table.cellWidget(row,2), self.available_variables)
+        
+        index = self.variable_tabs.currentIndex()
+        if index> -1:
+            self.title_edit.setText(self.variable_tabs.tabText(index))
+
+    def get_vars(self,task):
+        '''Remove variables that are not defined in the new task.'''
+        pattern = "[\n\r]v\.(?P<vname>\w+)\s*\="
+        try:
+            with open(os.path.join(dirs['tasks'], task+'.py'), "r") as file:
+                file_content = file.read()
+        except FileNotFoundError:
+            return
+        # get list of variables. ignore private variables and the variable_gui variable
+        self.variable_names = set([v_name for v_name in re.findall(pattern, file_content) if not v_name[-3:] == '___' and v_name != 'variable_gui'])
+
+    def add_tab(self,data = None, name = None):
+        new_table = GUI_VariablesTable(self,data)
+        if name:
+            tab_title = name
+        else:
+            tab_title = f"tab-{len(self.tables)+1}"
+        self.tables.append(new_table)
+        self.variable_tabs.addTab(new_table,tab_title)
+    
+    def remove_tab(self):
+        if len(self.tables)>1:
+            index = self.variable_tabs.currentIndex()
+            self.variable_tabs.removeTab(index)
+            del self.tables[index]
+            self.update_variable_cboxes()
+
+    def update_title(self):
+        index = self.variable_tabs.currentIndex()
+        self.variable_tabs.setTabText(index,self.title_edit.text())
+
     def closeEvent(self, event):
         self.deleteLater()
     
@@ -368,7 +456,7 @@ class Row_widgets():
         # combo boxes
         self.variable_cbox = QtGui.QComboBox()
         self.variable_cbox.activated.connect(self.parent.update_available)
-        self.variable_cbox.addItems(['     select variable     ']+self.parent.available_variables)
+        self.variable_cbox.addItems(['     select variable     ']+self.parent.parent.available_variables)
         self.input_type_combo = QtGui.QComboBox()
         self.input_type_combo.activated.connect(self.parent.update_available)
         self.input_type_combo.addItems(['line edit','checkbox','spinbox','slider'])
@@ -432,7 +520,7 @@ class Row_widgets():
             self.parent.setCellWidget(row_index, column, widget)
             
 class GUI_VariablesTable(QtGui.QTableWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, data=None):
         super(QtGui.QTableWidget, self).__init__(1,11, parent=parent)
         self.parent = parent
         self.setHorizontalHeaderLabels(['','','Variable', 'Label', 'Input type','Min','Max','Step','Suffix','Hint',''])
@@ -448,10 +536,11 @@ class GUI_VariablesTable(QtGui.QTableWidget):
         self.setColumnWidth(8, 50)
 
         self.n_variables = 0
-        self.variable_names = []
-        self.available_variables = []
-        self.assigned = {v_name:[] for v_name in self.variable_names} # Which subjects have values assigned for each variable.
-        self.add_variable()
+        if data and data['ordered_inputs']:
+            for row,element in enumerate(data['ordered_inputs']):
+                self.add_variable(element,data[element])
+        else:
+            self.add_variable()
 
     def add_variable(self, varname = None, row_dict= None):
         # populate row with widgets
@@ -512,111 +601,71 @@ class GUI_VariablesTable(QtGui.QTableWidget):
 
     def update_available(self, i=None):
         # enable/disable cells depending on input_type type
-        for v in range(self.n_variables):
-            v_name = self.cellWidget(v,2).currentText()
-            input_type = self.cellWidget(v,4).currentText()
+        for row in range(self.n_variables):
+            v_name = self.cellWidget(row,2).currentText()
+            input_type = self.cellWidget(row,4).currentText()
             if v_name == '     select variable     ':
                 for i in (3,5,6,7,8,9): # disable inputs until a variable as been selected
-                    self.cellWidget(v,i).setEnabled(False)
-                    self.cellWidget(v,i).setStyleSheet("background: #dcdcdc;")
+                    self.cellWidget(row,i).setEnabled(False)
+                    self.cellWidget(row,i).setStyleSheet("background: #dcdcdc;")
             else:
-                self.cellWidget(v,3).setStyleSheet("background: #ffffff;")
-                self.cellWidget(v,9).setStyleSheet("background: #ffffff;")
-                self.cellWidget(v,9).setEnabled(True)
-                if self.cellWidget(v,3).text() == "":
-                    self.cellWidget(v,3).setText(v_name.replace('_',' '))
-                self.cellWidget(v,3).setEnabled(True)
-                self.cellWidget(v,4).setEnabled(True)
-                self.cellWidget(v,8).setEnabled(True)
+                self.cellWidget(row,3).setStyleSheet("background: #ffffff;")
+                self.cellWidget(row,9).setStyleSheet("background: #ffffff;")
+                self.cellWidget(row,9).setEnabled(True)
+                if self.cellWidget(row,3).text() == "":
+                    self.cellWidget(row,3).setText(v_name.replace('_',' '))
+                self.cellWidget(row,3).setEnabled(True)
+                self.cellWidget(row,4).setEnabled(True)
+                self.cellWidget(row,8).setEnabled(True)
                 if input_type == 'spinbox' or input_type == 'slider':
                     for i in (5,6,7,8):
-                        self.cellWidget(v,i).setEnabled(True)
-                        self.cellWidget(v,i).setStyleSheet("background: #ffffff;")
+                        self.cellWidget(row,i).setEnabled(True)
+                        self.cellWidget(row,i).setStyleSheet("background: #ffffff;")
                 else:
                     for i in (5,6,7,8): 
-                        self.cellWidget(v,i).setEnabled(False)
-                        self.cellWidget(v,i).setText('')
-                        self.cellWidget(v,i).setStyleSheet("background: #dcdcdc;")
+                        self.cellWidget(row,i).setEnabled(False)
+                        self.cellWidget(row,i).setText('')
+                        self.cellWidget(row,i).setStyleSheet("background: #dcdcdc;")
+        
+        self.parent.update_variable_cboxes()
                     
-        # Update the variables available:
-        fully_asigned_variables = []
-        for row in range(self.n_variables):
-            assigned_var = self.cellWidget(row,2).currentText()
-            if assigned_var != '     select variable     ':
-                fully_asigned_variables.append(assigned_var)
-        self.available_variables = sorted(list( set(self.variable_names) - set(fully_asigned_variables)), key=str.lower)
-
-        # Update the available options in the variable comboboxes.
-        for v in range(self.n_variables):  
-            v_name = self.cellWidget(v,2).currentText()
-            cbox_update_options(self.cellWidget(v,2), self.available_variables)
-
-    def task_changed(self, task):
-        '''Remove variables that are not defined in the new task.'''
-        pattern = "[\n\r]v\.(?P<vname>\w+)\s*\="
-        try:
-            with open(os.path.join(dirs['tasks'], task+'.py'), "r") as file:
-                file_content = file.read()
-        except FileNotFoundError:
-            return
-        # get list of variables. ignore private variables and the variable_gui variable
-        self.variable_names = list(set([v_name for v_name in 
-            re.findall(pattern, file_content) if not v_name[-3:] == '___' and v_name != 'variable_gui']))
-        # Remove variables that are not in new task.
-        for i in reversed(range(self.n_variables)):
-            if not self.cellWidget(i,2).currentText() in self.variable_names:
-                self.removeRow(i)
-                self.n_variables -= 1
-        null_resize(self)
-        self.update_available()
-
-    def set_dialog_name(self,new_dialog_name):
-        self.new_dialog_name = new_dialog_name
-
     def save_gui_data(self):
-        gui_dictionary = {}
-        ordered_elements = []
+        tab_dictionary = {}
+        ordered_inputs = []
         for row in range(self.n_variables):  
-            element_specs = {}
+            input_specs = {}
             varname = self.cellWidget(row,2).currentText()
             if varname != '     select variable     ':
-                ordered_elements.append(varname) 
-                element_specs['label'] = self.cellWidget(row,3).text()
-                element_specs['widget'] = self.cellWidget(row,4).currentText()
-                element_specs['min'] = ""
-                element_specs['max'] = ""
-                element_specs['step'] = ""
-                element_specs['suffix'] = ""
-                element_specs['hint'] = self.cellWidget(row,9).text()
+                ordered_inputs.append(varname) 
+                input_specs['label'] = self.cellWidget(row,3).text()
+                input_specs['widget'] = self.cellWidget(row,4).currentText()
+                input_specs['min'] = ""
+                input_specs['max'] = ""
+                input_specs['step'] = ""
+                input_specs['suffix'] = ""
+                input_specs['hint'] = self.cellWidget(row,9).text()
 
-                if element_specs['widget'] == 'spinbox' or element_specs['widget'] == 'slider':
+                if input_specs['widget'] == 'spinbox' or input_specs['widget'] == 'slider':
                     try: # store the value as an integer or float. if the string is empty or not a number, an error message will be shown 
                         value = self.cellWidget(row,5).text()
-                        element_specs['min'] =  float(value) if value.find('.')>-1 else int(value)
+                        input_specs['min'] =  float(value) if value.find('.')>-1 else int(value)
                         value = self.cellWidget(row,6).text()
-                        element_specs['max'] = float(value) if value.find('.')>-1 else int(value)
+                        input_specs['max'] = float(value) if value.find('.')>-1 else int(value)
                         value = self.cellWidget(row,7).text()
-                        element_specs['step'] = float(value) if value.find('.')>-1 else int(value)
+                        input_specs['step'] = float(value) if value.find('.')>-1 else int(value)
                     except:
                         msg = QtGui.QMessageBox()
                         msg.setText("Numbers for min, max, and step are required for spinboxes and sliders")
                         msg.exec()
                         return
-                    element_specs['suffix'] = self.cellWidget(row,8).text()
+                    input_specs['suffix'] = self.cellWidget(row,8).text()
 
-                gui_dictionary[varname] = element_specs
-        gui_dictionary['ordered_elements'] = ordered_elements # after Python 3.6, dictionaries became ordered, but to be backwards compatible we add ordering here
-        gui_dictionary['title'] = self.new_dialog_name
+                tab_dictionary[varname] = input_specs
+        tab_dictionary['ordered_inputs'] = ordered_inputs # after Python 3.6, dictionaries became ordered, but to be backwards compatible we add ordering here
 
-        # self.create_custom_gui_file(gui_dictionary)
-        with open(F'gui/user_variable_GUIs/{self.new_dialog_name}.json', 'w') as generated_data_file:
-            json.dump(gui_dictionary,generated_data_file,indent=4)
-        self.parent.accept()
-        self.deleteLater()
+        return tab_dictionary
     
-    def load_gui_data(self,gui_dict):
-        for row,element in enumerate(gui_dict['ordered_elements']):
-            self.add_variable(element,gui_dict[element])
+
     
 
 class Custom_var_not_found_dialog(QtGui.QDialog):

@@ -6,7 +6,7 @@ class Custom_GUI(QtGui.QDialog):
         super(QtGui.QDialog, self).__init__(parent)
         self.parent = parent
         self.generator_data = generator_data
-        self.setWindowTitle(f"{self.generator_data['title']} GUI")
+        self.setWindowTitle("Set Variables")
         self.layout = QtGui.QVBoxLayout(self)
         toolBar = QtGui.QToolBar()
         toolBar.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
@@ -42,51 +42,47 @@ class GUI(QtGui.QWidget):
             v_name: v_value_str for (v_name, v_value_str) in sorted(variables.items())
         }
 
-        # create widgets
-        widget = QtGui.QWidget()
-        layout = QtGui.QGridLayout()
+        variable_tabs = QtGui.QTabWidget()
 
-        for row,var in enumerate(generator_data['ordered_elements']):
-            control = generator_data[var]
-            if control['widget'] == 'slider':
-                globals()[var] = slider_var(init_vars, control['label'], control['min'], control['max'], control['step'], var)
-                globals()[var].setSuffix(' '+control['suffix'])
+        used_vars = []
+        for tab in generator_data['ordered_tabs']:        # create widgets
+            widget = QtGui.QWidget()
+            layout = QtGui.QGridLayout()
+            tab_data = generator_data[tab]
+            used_vars.extend(tab_data['ordered_inputs'])
+            for row,var in enumerate(tab_data['ordered_inputs']):
+                control = tab_data[var]
+                if control['widget'] == 'slider':
+                    globals()[var] = slider_var(init_vars, control['label'], control['min'], control['max'], control['step'], var)
+                    globals()[var].setSuffix(' '+control['suffix'])
 
-            elif control['widget'] == 'spinbox':
-                globals()[var] = spin_var(init_vars, control['label'], control['min'], control['max'], control['step'], var)
-                globals()[var].setSuffix(' '+control['suffix'])
-                
-            elif control['widget'] == 'checkbox':
-                globals()[var] = checkbox_var(init_vars, control['label'], var)
+                elif control['widget'] == 'spinbox':
+                    globals()[var] = spin_var(init_vars, control['label'], control['min'], control['max'], control['step'], var)
+                    globals()[var].setSuffix(' '+control['suffix'])
+                    
+                elif control['widget'] == 'checkbox':
+                    globals()[var] = checkbox_var(init_vars, control['label'], var)
 
-            elif control['widget'] == 'line edit':
-                globals()[var] = standard_var(init_vars, control['label'], var)
-        
-            globals()[var].setHint(control['hint'])
-            globals()[var].setBoard(board)
-            globals()[var].add_to_grid(layout,row)
-        widget.setLayout(layout)
-        
+                elif control['widget'] == 'line edit':
+                    globals()[var] = standard_var(init_vars, control['label'], var)
+            
+                globals()[var].setHint(control['hint'])
+                globals()[var].setBoard(board)
+                globals()[var].add_to_grid(layout,row)
+            widget.setLayout(layout)
+            variable_tabs.addTab(widget,tab)
 
         leftover_widget = QtGui.QWidget()
         leftover_layout = QtGui.QGridLayout()
-        used_vars = generator_data['ordered_elements']
         leftover_vars = sorted(list( set(variables) - set(used_vars)), key=str.lower)
         leftover_vars = [v_name for v_name in leftover_vars if not v_name[-3:] == '___' and v_name != 'variable_gui']
         if len(leftover_vars) > 0:
             for row,var in enumerate(leftover_vars):
                 globals()[var] = standard_var(init_vars, var, var)
-                globals()[var].setHint(control['hint'])
                 globals()[var].setBoard(board)
                 globals()[var].add_to_grid(leftover_layout, row )
             leftover_widget.setLayout(leftover_layout)
+            variable_tabs.addTab(leftover_widget,"...")
 
-            variable_tabs = QtGui.QTabWidget()
-            variable_tabs.addTab(widget,"custom")
-            variable_tabs.addTab(leftover_widget,"standard")
-
-            grid_layout.addWidget(variable_tabs, 0, 0, QtCore.Qt.AlignLeft)
-        else:
-            grid_layout.addWidget(widget, 0, 0, QtCore.Qt.AlignLeft)
-
+        grid_layout.addWidget(variable_tabs, 0, 0, QtCore.Qt.AlignLeft)
         grid_layout.setRowStretch(15, 1)

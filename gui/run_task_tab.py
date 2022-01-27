@@ -364,11 +364,7 @@ class Run_task_tab(QtGui.QWidget):
         return custom_gui_dict
     
     def open_gui_editor(self,data_to_load = None):
-        self.generator_dialog = Gui_generator_dialog(parent=self)
-        self.generator_dialog.load_task(self.task)
-        if data_to_load:
-            self.generator_dialog.variable_generator_table.load_gui_data(data_to_load)
-        self.generator_dialog.variable_generator_table.set_dialog_name(self.custom_dialog_name)
+        self.generator_dialog = Gui_generator_dialog(self,self.task,self.custom_dialog_name,data_to_load)
         was_saved = self.generator_dialog.exec()
         if was_saved:
             if self.variables_dialog:
