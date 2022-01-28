@@ -443,7 +443,15 @@ class GUI_editor(QtGui.QDialog):
                 return
 
         gui_dict['ordered_tabs'] = ordered_tabs
-        with open(F'gui/user_variable_GUIs/{self.gui_name}.json', 'w') as generated_data_file:
+
+        user_guis_folder = os.path.join( dirs['gui'], 'user_variable_GUIs')
+        try:
+            os.mkdir(user_guis_folder)
+            print(F'User GUIs folder not found, therefore creating new directory: {user_guis_folder}')
+        except FileExistsError:
+            pass
+        savename = os.path.join(user_guis_folder,f"{self.gui_name}.json")
+        with open(savename, 'w') as generated_data_file:
             json.dump(gui_dict,generated_data_file,indent=4)
         self.accept()
         self.deleteLater()

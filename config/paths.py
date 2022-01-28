@@ -11,7 +11,8 @@ dirs = {
         'devices'     : os.path.join(top_dir, 'devices'),
         'tasks'       : os.path.join(top_dir, 'tasks'), 
         'experiments' : os.path.join(top_dir, 'experiments'),
-        'data'        : os.path.join(top_dir, 'data')
+        'data'        : os.path.join(top_dir, 'data'),
+        'gui'         : os.path.join(top_dir, 'gui')
         }
 
 # User paths - When paths.py is imported on opening GUI, load any 

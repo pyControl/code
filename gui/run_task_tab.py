@@ -3,7 +3,6 @@ import time
 from pyqtgraph.Qt import QtGui, QtCore
 from datetime import datetime
 from serial import SerialException, SerialTimeoutException
-from importlib import import_module, reload
 
 from com.pycboard import Pycboard, PyboardError, _djb2_file
 from com.data_logger import Data_logger
@@ -349,7 +348,7 @@ class Run_task_tab(QtGui.QWidget):
     def get_custom_gui_data(self, gui_name):
         custom_gui_dict = None
         try: # Try to import and instantiate the user custom variable dialog
-            json_file = os.path.join('gui','user_variable_GUIs',f'{gui_name}.json')
+            json_file = os.path.join(dirs['gui'],'user_variable_GUIs',f'{gui_name}.json')
             with open(json_file, 'r') as j:
                 custom_gui_dict = json.loads(j.read())
         except FileNotFoundError: # couldn't find the json data
