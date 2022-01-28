@@ -319,6 +319,7 @@ class Run_task_tab(QtGui.QWidget):
                 self.variables_button.clicked.disconnect()
                 self.variables_dialog.deleteLater()
             self.task = task
+            custom_gui_dict = None
             if 'variable_gui' in self.board.sm_info['variables']:
                 custom_gui_name = eval(self.board.sm_info['variables']['variable_gui'])
                 custom_gui_dict = self.get_custom_gui_data(custom_gui_name)
