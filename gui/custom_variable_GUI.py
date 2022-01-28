@@ -321,6 +321,9 @@ class Custom_GUI(QtGui.QDialog):
         self.layout.addWidget(self.variables_grid)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
+
+        self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+W'), self)
+        self.close_shortcut.activated.connect(self.close)
     
     def edit(self):
         self.parent.open_gui_editor(self.gui_name,self.generator_data)

@@ -88,6 +88,9 @@ class Variables_dialog(QtGui.QDialog):
         self.layout.addWidget(self.scroll_area)
         self.setLayout(self.layout)
 
+        self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+W'), self)
+        self.close_shortcut.activated.connect(self.close)
+
 class Variables_grid(QtGui.QWidget):
     # Grid of variables to set/get, displayed within scroll area of dialog.
     def __init__(self, parent, board):
