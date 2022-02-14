@@ -1,4 +1,6 @@
+from . import utility
 from . import framework as fw
+
 
 class State_machine():
     # State machine behaviour is defined by passing state machine description object smd to 
@@ -8,6 +10,7 @@ class State_machine():
     def __init__(self, smd):
 
         self.smd = smd # State machine definition.
+        self.variables = utility.v # User task variables object.
         self.state_transition_in_progress = False # Set to True during state transitions.
 
         fw.register_machine(self)
@@ -20,25 +23,6 @@ class State_machine():
                 self.event_dispatch_dict[state] = getattr(self.smd, state)
             else:
                 self.event_dispatch_dict[state] = None
-
-        # Attach user methods to discription object namespace, this allows the user
-        # to write e.g. goto_state(state) in the task description to call 
-        # State_machine.goto_state. 
-        smd.goto_state       = self.goto_state
-        smd.goto             = self.goto_state # For backwards compatibility.
-        smd.timed_goto_state = self.timed_goto_state
-        smd.set_timer        = self.set_timer
-        smd.disarm_timer     = self.disarm_timer
-        smd.reset_timer      = self.reset_timer
-        smd.pause_timer      = self.pause_timer
-        smd.unpause_timer    = self.unpause_timer
-        smd.print            = self.print 
-        smd.stop_framework   = self.stop_framework
-        smd.publish_event    = self.publish_event
-        smd.get_current_time = self.get_current_time
-        smd.timer_remaining  = self.timer_remaining
-
-    # Methods called by user
 
     def goto_state(self, next_state):
         # Transition to next state, calling exit action of old state
@@ -55,57 +39,6 @@ class State_machine():
         self.current_state = next_state
         self._process_event('entry')
         self.state_transition_in_progress = False
-
-    def timed_goto_state(self, next_state, interval):
-        # Transition to next_state after interval milliseconds. timed_goto_state()
-        # is cancelled if goto_state() occurs before interval elapses.
-        fw.timer.set(interval, fw.state_typ, fw.states[next_state])
-
-    def set_timer(self, event, interval, output_event=False):
-        # Set a timer to return specified event after interval milliseconds.
-        event_type = fw.event_typ if output_event else fw.timer_typ
-        fw.timer.set(interval, event_type, fw.events[event])    
-
-    def disarm_timer(self, event):
-        # Disable all timers due to return specified event.
-        fw.timer.disarm(fw.events[event])
-
-    def reset_timer(self, event, interval, output_event=False):
-        # Disarm all timers due to return specified event and set new timer
-        # to return specified event after interval milliseconds.
-        fw.timer.disarm(fw.events[event])
-        event_type = fw.event_typ if output_event else fw.timer_typ
-        fw.timer.set(interval, event_type, fw.events[event])
-
-    def pause_timer(self,event):
-        # Pause all timers due to return specified event.
-        fw.timer.pause(fw.events[event])
-
-    def unpause_timer(self,event):
-        # Unpause all timers due to return specified event.
-        fw.timer.unpause(fw.events[event])
-
-    def timer_remaining(self,event):
-        # Return time until timer for specified event elapses, returns 0 if no timer set for event.
-        return fw.timer.remaining(fw.events[event])
-
-    def print(self, print_string):
-        # Used to output data print_string with timestamp.  print_string is stored and only
-        #  printed to serial line once higher priority tasks have all been processed. 
-        if fw.data_output:
-            fw.data_output_queue.put((fw.current_time, fw.print_typ, str(print_string)))
-
-    def publish_event(self, event):
-        # Put event with specified name in the event queue.
-        fw.event_queue.put((fw.current_time, fw.event_typ, fw.events[event]))
-
-    def stop_framework(self):
-        fw.running = False
-
-    def get_current_time(self):
-        return fw.current_time
-
-    # Methods called by pyControl framework.
 
     def _process_event(self, event):
         # Process event given event name by calling appropriate state event handler function.
@@ -136,13 +69,13 @@ class State_machine():
             if not str_sum == checksum:
                 return False # Bad checksum.
         try:
-            setattr(self.smd.v, v_name, eval(v_str))
+            setattr(self.variables, v_name, eval(v_str))
             return True # Variable set OK.
         except Exception:
             return False # Bad variable name or invalid value string.
 
     def _get_variable(self, v_name):
         try:
-            return repr(getattr(self.smd.v, v_name))
+            return repr(getattr(self.variables, v_name))
         except Exception:
             return None

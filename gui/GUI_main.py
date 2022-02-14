@@ -6,7 +6,7 @@ from serial.tools import list_ports
 from pyqtgraph.Qt import QtGui, QtCore
 
 from config.paths import dirs
-from config.gui_settings import  VERSION
+from config.gui_settings import  VERSION, ui_font_size
 from gui.run_task_tab import Run_task_tab
 from gui.dialogs import Board_config_dialog, Keyboard_shortcuts_dialog, Paths_dialog
 from gui.configure_experiment_tab import Configure_experiment_tab
@@ -188,6 +188,10 @@ class GUI_main(QtGui.QMainWindow):
 def launch_GUI():
     '''Launch the pyControl GUI.'''
     app = QtGui.QApplication(sys.argv)
+    app.setStyle('Fusion')
+    font = QtGui.QFont()
+    font.setPixelSize(ui_font_size)
+    app.setFont(font)
     gui_main = GUI_main()
     gui_main.app = app # To allow app functions to be called from GUI.
     sys.excepthook = gui_main.excepthook
