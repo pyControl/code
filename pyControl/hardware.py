@@ -336,7 +336,7 @@ class Analog_input(IO_object):
         self.falling_event = falling_event
         self.timestamp = 0
         self.crossing_direction = False
-        # Data strreaming
+        # Data streaming
         self.data_channel = Data_channel(name, sampling_rate, data_type)
 
 
