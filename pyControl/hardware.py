@@ -231,7 +231,7 @@ class Digital_input(IO_object):
 
 # Analog input ----------------------------------------------------------------
 
-class Analog_input(data_channel):
+class Analog_input(IO_object):
     # Analog_input samples analog voltage from specified pin at specified frequency and can
     # stream data to continously to computer as well as generate framework events when 
     # voltage goes above / below specified value. The Analog_input class is subclassed
@@ -268,6 +268,10 @@ class Analog_input(data_channel):
         self.falling_event = falling_event
         self.timestamp = 0
         self.crossing_direction = False
+
+        # data strreaming
+        self.data_channel = Data_channel(name, sampling_rate, data_type)
+
 
     def _initialise(self):
         # Set event codes for rising and falling events.
@@ -343,8 +347,8 @@ class Analog_input(data_channel):
         else:
             fw.event_queue.put((self.timestamp, fw.event_typ, self.falling_event_ID))
 
-class data_channel(IO_object):
-    # data_channel can stream data to continously to computer as well as generate framework events when 
+class Data_channel(IO_object):
+    # Data_channel can stream data to continously to computer as well as generate framework events when 
     # voltage goes above / below specified value. The Analog_input class is subclassed
     # by other hardware devices that generate continous data such as the Rotory_encoder.
     # Serial data format for sending data to computer: '\x07A c i r l t k D' where:
@@ -360,7 +364,7 @@ class data_channel(IO_object):
     def __init__(self, name, sampling_rate, data_type='l'):
         assert data_type in ('b','B','h','H','l','L'), 'Invalid data_type.'
         assert not any([name == io.name for io in IO_dict.values() 
-                        if isinstance(io, data_channel)]), 'Analog inputs must have unique names.'
+                        if isinstance(io, Data_channel)]), 'Analog inputs must have unique names.'
         self.name = name
         assign_ID(self)
         self.recording = False # Whether data is being sent to computer.
