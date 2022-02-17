@@ -371,8 +371,7 @@ class Analog_input(IO_object):
             fw.usb_serial.send(self.buffers[buffer_n])
 
 class data_channel(IO_object):
-    # Analog_input samples analog voltage from specified pin at specified frequency and can
-    # stream data to continously to computer as well as generate framework events when 
+    # data_channel can stream data to continously to computer as well as generate framework events when 
     # voltage goes above / below specified value. The Analog_input class is subclassed
     # by other hardware devices that generate continous data such as the Rotory_encoder.
     # Serial data format for sending data to computer: '\x07A c i r l t k D' where:
@@ -385,22 +384,13 @@ class data_channel(IO_object):
     # k checksum (2 bytes)
     # D data array bytes (variable)
 
-    def __init__(self, pin, name, sampling_rate, threshold=None, rising_event=None, 
-                 falling_event=None, data_type='H'):
-        if rising_event or falling_event:
-            assert type(threshold) == int, 'Integer threshold must be specified if rising or falling events are defined.'
+    def __init__(self, name, sampling_rate, data_type='l'):
         assert data_type in ('b','B','h','H','l','L'), 'Invalid data_type.'
         assert not any([name == io.name for io in IO_dict.values() 
-                        if isinstance(io, Analog_input)]), 'Analog inputs must have unique names.'
-        if pin: # pin argument can be None when Analog_input subclassed.
-            self.ADC = pyb.ADC(pin)
-            self.read_sample = self.ADC.read
+                        if isinstance(io, data_channel)]), 'Analog inputs must have unique names.'
         self.name = name
         assign_ID(self)
-        # Data acqisition variables
-        self.timer = pyb.Timer(available_timers.pop())
         self.recording = False # Whether data is being sent to computer.
-        self.acquiring = False # Whether input is being monitored.
         self.sampling_rate = sampling_rate
         self.data_type = data_type
         self.bytes_per_sample = {'b':1,'B':1,'h':2,'H':2,'l':4,'L':4}[data_type]
@@ -410,12 +400,6 @@ class data_channel(IO_object):
         self.buffer_start_times = array('i', [0,0])
         self.data_header = array('B', b'\x07A' + data_type.encode() + 
             self.ID.to_bytes(2,'little') + sampling_rate.to_bytes(2,'little') + b'\x00'*8)
-        # Event generation variables
-        self.threshold = threshold
-        self.rising_event = rising_event
-        self.falling_event = falling_event
-        self.timestamp = 0
-        self.crossing_direction = False
 
     def _initialise(self):
         # Set event codes for rising and falling events.
