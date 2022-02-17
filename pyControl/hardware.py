@@ -403,29 +403,15 @@ class data_channel(IO_object):
 
     def _initialise(self):
         # Set event codes for rising and falling events.
-        self.rising_event_ID  = fw.events[self.rising_event ] if self.rising_event  in fw.events else False
-        self.falling_event_ID = fw.events[self.falling_event] if self.falling_event in fw.events else False
-        self.threshold_active = self.rising_event_ID or self.falling_event_ID
+        pass
 
     def _run_start(self):
         self.write_buffer = 0 # Buffer to write new data to.
         self.write_index  = 0 # Buffer index to write new data to. 
-        if self.threshold_active: 
-            self._start_acquisition()
 
     def _run_stop(self):
         if self.recording:
             self.stop()
-        if self.acquiring:
-            self._stop_acquisition()
-
-    def _start_acquisition(self):
-        # Start sampling analog input values.
-        self.timer.init(freq=self.sampling_rate)
-        self.timer.callback(self._timer_ISR)
-        if self.threshold_active:
-            self.above_threshold = self.read_sample() > self.threshold
-        self.acquiring = True
 
     def record(self):
         # Start streaming data to computer.
@@ -433,7 +419,6 @@ class data_channel(IO_object):
             self.write_index = 0  # Buffer index to write new data to. 
             self.buffer_start_times[self.write_buffer] = fw.current_time
             self.recording = True
-            if not self.acquiring: self._start_acquisition()
 
     def stop(self):
         # Stop streaming data to computer.
@@ -443,11 +428,6 @@ class data_channel(IO_object):
             self.recording = False
             if not self.threshold_active: 
                 self._stop_acquisition()
-
-    def _stop_acquisition(self):
-        # Stop sampling analog input values.
-        self.timer.deinit()
-        self.acquiring = False
 
     def _timer_ISR(self, t):
         # Read a sample to the buffer, update write index.
