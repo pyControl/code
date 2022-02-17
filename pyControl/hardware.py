@@ -319,9 +319,13 @@ class Analog_input(IO_object):
                  falling_event=None, data_type='H'):
         if rising_event or falling_event:
             assert type(threshold) == int, 'Integer threshold must be specified if rising or falling events are defined.'
+        assert not any([name == io.name for io in IO_dict.values() 
+                if isinstance(io, Analog_input)]), 'Analog inputs must have unique names.'
         if pin: # pin argument can be None when Analog_input subclassed.
             self.ADC = pyb.ADC(pin)
             self.read_sample = self.ADC.read
+        self.name = name
+        assign_ID(self)
         # Data acqisition variables
         self.timer = pyb.Timer(available_timers.pop())
         self.acquiring = False # Whether input is being monitored.
@@ -333,7 +337,6 @@ class Analog_input(IO_object):
         self.crossing_direction = False
         # Data streaming
         self.data_channel = Data_channel(name, sampling_rate, data_type)
-        self.ID = self.data_channel.ID
 
 
     def _initialise(self):
