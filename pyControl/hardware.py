@@ -231,20 +231,11 @@ class Digital_input(IO_object):
 
 # Analog input ----------------------------------------------------------------
 
-class Analog_input(IO_object):
+class Analog_input(data_channel):
     # Analog_input samples analog voltage from specified pin at specified frequency and can
     # stream data to continously to computer as well as generate framework events when 
     # voltage goes above / below specified value. The Analog_input class is subclassed
     # by other hardware devices that generate continous data such as the Rotory_encoder.
-    # Serial data format for sending data to computer: '\x07A c i r l t k D' where:
-    # \x07A Message start byte and A character indicating start of analog data chunk (2 bytes)
-    # c data array typecode (1 byte)
-    # i ID of analog input  (2 byte)
-    # r sampling rate (Hz) (2 bytes)
-    # l length of data array in bytes (2 bytes)
-    # t timestamp of chunk start (ms)(4 bytes)
-    # k checksum (2 bytes)
-    # D data array bytes (variable)
 
     def __init__(self, pin, name, sampling_rate, threshold=None, rising_event=None, 
                  falling_event=None, data_type='H'):
@@ -351,24 +342,6 @@ class Analog_input(IO_object):
             fw.event_queue.put((self.timestamp, fw.event_typ, self.rising_event_ID))
         else:
             fw.event_queue.put((self.timestamp, fw.event_typ, self.falling_event_ID))
-
-    def _process_streaming(self):
-        # Stream full buffer to computer.
-        self._send_buffer(1-self.write_buffer)
-
-    def _send_buffer(self, buffer_n, n_samples=False):
-        # Send specified buffer to host computer.
-        n_bytes = self.bytes_per_sample*n_samples if n_samples else self.bytes_per_sample*self.buffer_size
-        self.data_header[7:9]  = n_bytes.to_bytes(2,'little')
-        self.data_header[9:13] = self.buffer_start_times[buffer_n].to_bytes(4,'little')
-        checksum = sum(self.buffers_mv[buffer_n][:n_samples] if n_samples else self.buffers[buffer_n])
-        checksum += sum(self.data_header[2:13])
-        self.data_header[13:15] = checksum.to_bytes(2,'little')
-        fw.usb_serial.write(self.data_header)
-        if n_samples: # Send first n_samples from buffer.
-            fw.usb_serial.send(self.buffers_mv[buffer_n][:n_samples])
-        else: # Send entire buffer.
-            fw.usb_serial.send(self.buffers[buffer_n])
 
 class data_channel(IO_object):
     # data_channel can stream data to continously to computer as well as generate framework events when 
