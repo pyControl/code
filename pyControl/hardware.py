@@ -261,18 +261,12 @@ class Data_channel(IO_object):
         self.buffer_start_times = array('i', [0,0])
         self.data_header = array('B', b'\x07A' + data_type.encode() + 
             self.ID.to_bytes(2,'little') + sampling_rate.to_bytes(2,'little') + b'\x00'*8)
-
-    def _initialise(self):
-        # Set event codes for rising and falling events.
-        pass
-
-    def _run_start(self):
         self.write_buffer = 0 # Buffer to write new data to.
         self.write_index  = 0 # Buffer index to write new data to. 
 
-    def _run_stop(self):
-        if self.recording:
-            self.stop()
+    def _initialise(self):
+        pass
+
 
     def record(self):
         # Start streaming data to computer.
@@ -287,8 +281,6 @@ class Data_channel(IO_object):
             if self.write_index != 0:
                 self._send_buffer(self.write_buffer, self.write_index)
             self.recording = False
-            if not self.threshold_active: 
-                self._stop_acquisition()
 
     def put(self, sample: int):
         # load the buffer.
@@ -356,14 +348,13 @@ class Analog_input(IO_object):
         self.threshold_active = self.rising_event_ID or self.falling_event_ID
 
     def _run_start(self):
-        self.write_buffer = 0 # Buffer to write new data to.
-        self.write_index  = 0 # Buffer index to write new data to. 
+        self.data_channel._run_start()
         if self.threshold_active: 
             self._start_acquisition()
 
     def _run_stop(self):
-        if self.recording:
-            self.stop()
+        if self.data_channel.recording:
+            self.data_channel.stop()
         if self.acquiring:
             self._stop_acquisition()
 
@@ -377,7 +368,8 @@ class Analog_input(IO_object):
 
     def record(self):
         # Start streaming data to computer.
-        if not self.recording:
+        self.data_channel.record()
+        if not self.data_channel.recording:
             self.write_index = 0  # Buffer index to write new data to. 
             self.buffer_start_times[self.write_buffer] = fw.current_time
             self.recording = True
