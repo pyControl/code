@@ -356,7 +356,7 @@ class Analog_input(IO_object):
 
     def _start_acquisition(self):
         # Start sampling analog input values.
-        self.timer.init(freq=self.sampling_rate)
+        self.timer.init(freq=self.data_channel.sampling_rate)
         self.timer.callback(self._timer_ISR)
         if self.threshold_active:
             self.above_threshold = self.read_sample() > self.threshold
@@ -380,7 +380,7 @@ class Analog_input(IO_object):
 
     def _timer_ISR(self, t):
         # Read a sample to the buffer, update write index.
-        self.data_channel.put(self.read_sample)
+        self.data_channel.put(self.read_sample())
 
         if self.threshold_active:
             new_above_threshold = self.buffers[self.write_buffer][self.write_index] > self.threshold
