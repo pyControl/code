@@ -229,12 +229,11 @@ class Digital_input(IO_object):
         self.interrupt_timestamp = 0
         self.decimate_counter = -1
 
-# Analog input ----------------------------------------------------------------
+# Analog data ----------------------------------------------------------------
 
 class Data_channel(IO_object):
-    # Data_channel can stream data to continously to computer as well as generate framework events when 
-    # voltage goes above / below specified value. The Analog_input class is subclassed
-    # by other hardware devices that generate continous data such as the Rotory_encoder.
+    # Data_channel can stream data continously to computer. This class can be subclassed or instantiated to stream
+    # any kind of data back to the computer. the `Analog_input` class is an example of instantiating this class and adding functionality (event generation)
     # Serial data format for sending data to computer: '\x07A c i r l t k D' where:
     # \x07A Message start byte and A character indicating start of analog data chunk (2 bytes)
     # c data array typecode (1 byte)
@@ -263,9 +262,6 @@ class Data_channel(IO_object):
             self.ID.to_bytes(2,'little') + sampling_rate.to_bytes(2,'little') + b'\x00'*8)
         self.write_buffer = 0 # Buffer to write new data to.
         self.write_index  = 0 # Buffer index to write new data to. 
-
-    def _initialise(self):
-        pass
 
     def record(self):
         # Start streaming data to computer.
@@ -310,8 +306,8 @@ class Data_channel(IO_object):
             fw.usb_serial.send(self.buffers[buffer_n])
 
 class Analog_input(IO_object):
-    # Analog_input samples analog voltage from specified pin at specified frequency and can
-    # stream data to continously to computer as well as generate framework events when 
+    # Analog_input samples analog voltage from specified pin at specified frequency and uses `Data_channel`
+    # to stream data continously to computer as well as generate framework events when 
     # voltage goes above / below specified value. The Analog_input class is subclassed
     # by other hardware devices that generate continous data such as the Rotory_encoder.
 
