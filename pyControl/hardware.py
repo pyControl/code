@@ -93,7 +93,7 @@ def off():
 def get_analog_inputs():
     # Print dict of analog inputs {name: {'ID': ID, 'Fs':sampling rate}}
     print({io.name:{'ID': io.ID, 'Fs': io.sampling_rate}
-          for io in IO_dict.values() if hasattr(io, 'recording')})
+          for io in IO_dict.values() if hasattr(io, 'recording') and hasattr(io, 'sampling_rate')})
 
 # IO_object -------------------------------------------------------------------
 
