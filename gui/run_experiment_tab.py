@@ -4,10 +4,9 @@ import json
 from datetime import datetime
 from collections import OrderedDict
 
+from concurrent.futures import ThreadPoolExecutor
 from pyqtgraph.Qt import QtGui, QtCore
 from serial import SerialException
-from importlib import import_module, reload
-from concurrent.futures import ThreadPoolExecutor
 
 from config.gui_settings import  update_interval, log_font_size
 from config.paths import dirs
@@ -16,7 +15,7 @@ from com.data_logger import Data_logger
 from gui.plotting import Experiment_plot
 from gui.dialogs import Variables_dialog, Summary_variables_dialog
 from gui.utility import variable_constants, TaskInfo
-from gui.custom_variable_GUI import Custom_GUI, GUI_editor
+from gui.custom_variable_GUI import Custom_GUI
 
 class Run_experiment_tab(QtGui.QWidget):
     '''The run experiment tab is responsible for setting up, running and stopping
@@ -35,7 +34,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.plots_button.setIcon(QtGui.QIcon("gui/icons/bar-graph.svg"))
         self.plots_button.clicked.connect(self.experiment_plot.show)
         self.logs_button = QtGui.QPushButton('Hide logs')
-        self.logs_button.clicked.connect(self.show_hide_logs)    
+        self.logs_button.clicked.connect(self.show_hide_logs)
         self.startstopclose_all_button = QtGui.QPushButton()
         self.startstopclose_all_button.clicked.connect(self.startstopclose_all)
 
@@ -59,14 +58,14 @@ class Run_experiment_tab(QtGui.QWidget):
 
         self.subjectboxes = []
 
-        self.update_timer = QtCore.QTimer() # Timer to regularly call update() during run.        
+        self.update_timer = QtCore.QTimer() # Timer to regularly call update() during run.
         self.update_timer.timeout.connect(self.update)
 
     # Functions used for multithreaded task setup.
 
     def thread_map(self, func):
         '''Map func over range(self.n_setups) using seperate threads for each call.
-        Used to run experiment setup functions on all boards in parallel. Print 
+        Used to run experiment setup functions on all boards in parallel. Print
         output is delayed during multithreaded operations to avoid error message
         when trying to call PyQt method from annother thread.'''
         for subject_box in self.subjectboxes:
@@ -122,7 +121,7 @@ class Run_experiment_tab(QtGui.QWidget):
             self.subjectboxes[i].error()
             return
         # Set variables.
-        board.subject_variables = [v for v in self.experiment['variables'] 
+        board.subject_variables = [v for v in self.experiment['variables']
                                    if v['subject'] in ('all', board.subject)]
         if board.subject_variables:
             board.print('\nSetting variables.\n')
@@ -143,7 +142,7 @@ class Run_experiment_tab(QtGui.QWidget):
                         v_value = eval(v['value'], variable_constants) # Use value from variables table.
                         board.variables_set_pre_run.append((v['name'], v['value'], ''))
                     board.set_variable(v['name'], v_value)
-                # Print set variables to log.    
+                # Print set variables to log.
                 if board.variables_set_pre_run:
                     name_len  = max([len(v[0]) for v in board.variables_set_pre_run])
                     value_len = max([len(v[1]) for v in board.variables_set_pre_run])
@@ -179,11 +178,11 @@ class Run_experiment_tab(QtGui.QWidget):
         self.subjects.sort(key=lambda s: experiment['subjects'][s]['setup'])
         for i,subject in enumerate(self.subjects):
             self.subjectboxes.append(
-                Subjectbox('{} : {}'.format(experiment['subjects'][subject]['setup'], subject), i, self))
+                Subjectbox(f"{experiment['subjects'][subject]['setup']} : {subject}", i, self))
             self.boxes_layout.addWidget(self.subjectboxes[-1])
         # Create data folder if needed.
         if not os.path.exists(self.experiment['data_dir']):
-            os.mkdir(self.experiment['data_dir'])        
+            os.mkdir(self.experiment['data_dir'])
         # Load persistent variables if they exist.
         self.pv_path = os.path.join(self.experiment['data_dir'], 'persistent_variables.json')
         if os.path.exists(self.pv_path):
@@ -210,7 +209,7 @@ class Run_experiment_tab(QtGui.QWidget):
                 if any(self.setup_failed):
                     self.abort_experiment()
                     return
-                QtGui.QMessageBox.question(self, 'Hardware test', 
+                QtGui.QMessageBox.question(self, 'Hardware test',
                     'Press OK when finished with hardware test.', QtGui.QMessageBox.Ok)
                 for i, board in enumerate(self.boards):
                     try:
@@ -247,7 +246,7 @@ class Run_experiment_tab(QtGui.QWidget):
         self.setups_finished = 0
 
     def startstopclose_all(self):
-        '''Called when startstopclose_all_button is clicked.  Button is 
+        '''Called when startstopclose_all_button is clicked.  Button is
         only active if all setups are in the same state.'''
         if self.startstopclose_all_button.text() == 'Close Exp.':
             self.close_experiment()
@@ -298,7 +297,7 @@ class Run_experiment_tab(QtGui.QWidget):
                 sv_dict[board.subject] = {v['name']: board.get_variable(v['name'])
                                           for v in summary_variables}
                 for v_name, v_value in sv_dict[board.subject].items():
-                    board.data_logger.data_file.write('\nV -1 {} {}'.format(v_name, v_value))
+                    board.data_logger.data_file.write(f"\nV -1 {v_name} {v_value}")
                     board.data_logger.data_file.flush()
         if persistent_variables:
             with open(self.pv_path, 'w') as pv_file:
@@ -337,7 +336,7 @@ class Run_experiment_tab(QtGui.QWidget):
             board.close()
         # Clear subjectboxes.
         while len(self.subjectboxes) > 0:
-            subjectbox = self.subjectboxes.pop() 
+            subjectbox = self.subjectboxes.pop()
             subjectbox.setParent(None)
             subjectbox.deleteLater()
         if not self.logs_visible:
@@ -426,10 +425,10 @@ class Subjectbox(QtGui.QGroupBox):
         self.Hlayout.setStretchFactor(self.task_info.print_text, 10)
         self.Vlayout.addLayout(self.Hlayout)
         self.Vlayout.addWidget(self.log_textbox)
-        
+
     def print_to_log(self, print_string, end='\n'):
         if self.delay_printing:
-            self.print_queue.append((print_string, end)) 
+            self.print_queue.append((print_string, end))
             return
         self.log_textbox.moveCursor(QtGui.QTextCursor.End)
         self.log_textbox.insertPlainText(print_string+end)
@@ -437,7 +436,7 @@ class Subjectbox(QtGui.QGroupBox):
         self.GUI_main.app.processEvents()
 
     def start_delayed_print(self):
-        '''Store print output to display later to avoid error 
+        '''Store print output to display later to avoid error
         message when calling print_to_log from different thread.'''
         self.print_queue = []
         self.delay_printing = True
@@ -470,11 +469,11 @@ class Subjectbox(QtGui.QGroupBox):
         except FileNotFoundError: # couldn't find the json data
             self.print_to_log(f'\nCould not find custom variable GUI data: {json_file}')
         return custom_gui_dict
-    
+
     def start_stop_task(self):
         '''Called when start/stop button on Subjectbox pressed or
         startstopclose_all button is pressed.'''
-        if self.state == 'pre_run': 
+        if self.state == 'pre_run':
             self.start_task()
         elif self.state == 'running':
             self.stop_task()
@@ -491,7 +490,7 @@ class Subjectbox(QtGui.QGroupBox):
         board.data_logger.open_data_file(ex['data_dir'], ex['name'], board.setup_ID, board.subject, datetime.now())
         if board.subject_variables: # Write variables set pre run to data file.
             for v_name, v_value, pv in self.board.variables_set_pre_run:
-                board.data_logger.data_file.write('V 0 {} {}\n'.format(v_name, v_value))
+                board.data_logger.data_file.write(f"V 0 {v_name} {v_value}\n")
         board.data_logger.data_file.write('\n')
         board.start_framework()
 
@@ -513,7 +512,7 @@ class Subjectbox(QtGui.QGroupBox):
         if self.board.framework_running:
             self.board.stop_framework()
         self.task_info.state_text.setText('Stopped')
-        self.task_info.state_text.setStyleSheet('color: grey;') 
+        self.task_info.state_text.setStyleSheet('color: grey;')
         self.status_text.setText('Stopped')
         self.start_stop_button.setEnabled(False)
         self.run_exp_tab.experiment_plot.active_plots.remove(self.setup_number)
