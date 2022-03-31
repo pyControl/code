@@ -251,11 +251,11 @@ class Run_experiment_tab(QtGui.QWidget):
         if self.startstopclose_all_button.text() == 'Close Exp.':
             self.close_experiment()
         elif self.startstopclose_all_button.text() == 'Start All':
-            for i, board in enumerate(self.boards):
-                self.subjectboxes[i].start_task()
+            for box in self.subjectboxes:
+                box.start_task()
         elif self.startstopclose_all_button.text() == 'Stop All':
-            for i, board in enumerate(self.boards):
-                self.subjectboxes[i].stop_task()
+            for box in self.subjectboxes:
+                box.stop_task()
 
     def update_startstopclose_button(self):
         '''Called when a setup is started or stopped to update the
@@ -274,7 +274,7 @@ class Run_experiment_tab(QtGui.QWidget):
     def stop_experiment(self):
         self.update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
-        for i, board in enumerate(self.boards):
+        for board in self.boards:
             time.sleep(0.05)
             board.process_data()
         # Summary and persistent variables.
@@ -285,7 +285,7 @@ class Run_experiment_tab(QtGui.QWidget):
                 persistent_variables = json.loads(pv_file.read())
         else:
             persistent_variables = {}
-        for i, board in enumerate(self.boards):
+        for board in self.boards:
             #  Store persistent variables.
             subject_pvs = [v for v in board.subject_variables if v['persistent']]
             if subject_pvs:
@@ -450,25 +450,15 @@ class Subjectbox(QtGui.QGroupBox):
         self.board = board
         if 'variable_gui' in self.board.sm_info['variables']:
             custom_gui_name = eval(self.board.sm_info['variables']['variable_gui'])
-            custom_gui_dict = self.get_custom_gui_data(custom_gui_name)
-        if custom_gui_dict:
-            self.variables_dialog = Custom_GUI(self,custom_gui_dict, editable=False)
+            potential_dialog = Custom_GUI(self,custom_gui_name,is_experiment=True)
+        if potential_dialog.using_custom_gui == True:
+            self.variables_dialog = potential_dialog
         else:
             self.variables_dialog = Variables_dialog(self, self.board)
 
         self.variables_button.clicked.connect(self.variables_dialog.exec_)
         self.variables_button.setEnabled(True)
         self.start_stop_button.clicked.connect(self.start_stop_task)
-
-    def get_custom_gui_data(self, gui_name):
-        custom_gui_dict = None
-        try: # Try to import and instantiate the user custom variable dialog
-            json_file = os.path.join('gui','user_variable_GUIs',f'{gui_name}.json')
-            with open(json_file, 'r') as j:
-                custom_gui_dict = json.loads(j.read())
-        except FileNotFoundError: # couldn't find the json data
-            self.print_to_log(f'\nCould not find custom variable GUI data: {json_file}')
-        return custom_gui_dict
 
     def start_stop_task(self):
         '''Called when start/stop button on Subjectbox pressed or

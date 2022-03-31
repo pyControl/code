@@ -307,32 +307,65 @@ class slider_var:
 
 # GUI created from dictionary describing custom widgets and layout ------------
 class Custom_GUI(QtGui.QDialog):
-    def __init__(self, parent, generator_data, editable=True):
+    def __init__(self, parent, gui_name, is_experiment=False):
         super(QtGui.QDialog, self).__init__(parent)
         self.parent = parent
-        self.gui_name = eval(parent.board.sm_info["variables"]["variable_gui"])
-        self.generator_data = generator_data
-        self.setWindowTitle("Set Variables")
-        self.layout = QtGui.QVBoxLayout(self)
-        toolBar = QtGui.QToolBar()
-        toolBar.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
-        toolBar.setIconSize(QtCore.QSize(15, 15))
-        self.layout.addWidget(toolBar)
-        self.edit_action = QtGui.QAction(QtGui.QIcon("gui/icons/edit.svg"), "&edit", self)
-        self.edit_action.setEnabled(True)
-        if editable:
-            toolBar.addAction(self.edit_action)
-            self.edit_action.triggered.connect(self.edit)
-        self.variables_grid = Custom_variables_grid(self, parent.board, generator_data)
-        self.layout.addWidget(self.variables_grid)
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(self.layout)
+        self.gui_name = gui_name
+        self.generator_data = self.get_custom_gui_data(is_experiment)
+        if self.generator_data:
+            self.setWindowTitle("Set Variables")
+            self.layout = QtGui.QVBoxLayout(self)
+            toolBar = QtGui.QToolBar()
+            toolBar.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
+            toolBar.setIconSize(QtCore.QSize(15, 15))
+            self.layout.addWidget(toolBar)
+            self.edit_action = QtGui.QAction(QtGui.QIcon("gui/icons/edit.svg"), "&edit", self)
+            self.edit_action.setEnabled(True)
+            if not is_experiment:
+                toolBar.addAction(self.edit_action)
+                self.edit_action.triggered.connect(self.edit)
+            self.variables_grid = Custom_variables_grid(self, parent.board, self.generator_data)
+            self.layout.addWidget(self.variables_grid)
+            self.layout.setContentsMargins(0, 0, 0, 0)
+            self.setLayout(self.layout)
 
-        self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+W"), self)
-        self.close_shortcut.activated.connect(self.close)
+            self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+W"), self)
+            self.close_shortcut.activated.connect(self.close)
+            self.using_custom_gui = True
+        else:
+            self.using_custom_gui = False
+
+    def get_custom_gui_data(self, is_experiment):
+        custom_gui_dict = None
+        try:  # Try to import and instantiate the user custom variable dialog
+            json_file = os.path.join(dirs["gui"], "user_variable_GUIs", f"{self.gui_name}.json")
+            with open(json_file, "r") as j:
+                custom_gui_dict = json.loads(j.read())
+        except FileNotFoundError:  # couldn't find the json data
+            self.parent.print_to_log(f"\nCould not find custom variable GUI data: {json_file}")
+            if not is_experiment:
+                # ask if they want to create a new custom gui
+                not_found_dialog = GUI_not_found(missing_file=self.gui_name, parent=self.parent)
+                do_create_custom = not_found_dialog.exec()
+                if do_create_custom:
+                    gui_created = self.open_gui_editor(self.gui_name, None)
+                    if gui_created:
+                        with open(json_file, "r") as j:
+                            custom_gui_dict = json.loads(j.read())
+        return custom_gui_dict
 
     def edit(self):
-        self.parent.open_gui_editor(self.gui_name, self.generator_data)
+        self.open_gui_editor(self.gui_name, self.generator_data)
+
+    def open_gui_editor(self, gui_name, data_to_load):
+        gui_editor = GUI_editor(self.parent, gui_name, data_to_load)
+        was_saved = gui_editor.exec()
+        if was_saved:
+            if self.parent.variables_dialog:
+                self.parent.variables_dialog.close()
+            self.parent.task_changed()
+            return True
+        return False
 
 
 class Custom_variables_grid(QtGui.QWidget):
@@ -340,7 +373,7 @@ class Custom_variables_grid(QtGui.QWidget):
         super(QtGui.QWidget, self).__init__(parent)
         grid_layout = QtGui.QGridLayout()
         variables = board.sm_info["variables"]
-        init_vars = {v_name: v_value_str for (v_name, v_value_str) in sorted(variables.items())}
+        init_vars = dict(sorted(variables.items()))
         variable_tabs = QtGui.QTabWidget()
         used_vars = []
         for tab in generator_data["ordered_tabs"]:  # create widgets
@@ -749,7 +782,9 @@ class Variables_table(QtGui.QTableWidget):
                 input_specs["hint"] = self.cellWidget(row, 9).text()
 
                 if input_specs["widget"] == "spinbox" or input_specs["widget"] == "slider":
-                    try:  # store the value as an integer or float. if the string is empty or not a number, an error message will be shown
+                    # store the value as an integer or float.
+                    # If the string is empty or not a number, an error message will be shown.
+                    try:
                         value = self.cellWidget(row, 5).text()
                         input_specs["min"] = float(value) if value.find(".") > -1 else int(value)
                         value = self.cellWidget(row, 6).text()

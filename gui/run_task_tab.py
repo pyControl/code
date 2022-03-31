@@ -1,6 +1,5 @@
 import os
 import time
-import json
 from datetime import datetime
 from pyqtgraph.Qt import QtGui, QtCore
 from serial import SerialException, SerialTimeoutException
@@ -12,7 +11,7 @@ from config.paths import dirs
 from config.gui_settings import update_interval, log_font_size
 
 from gui.dialogs import Variables_dialog
-from gui.custom_variable_GUI import Custom_GUI, GUI_editor, GUI_not_found
+from gui.custom_variable_GUI import Custom_GUI
 from gui.plotting import Task_plot
 from gui.utility import init_keyboard_shortcuts, TaskSelectMenu, TaskInfo
 
@@ -289,7 +288,7 @@ class Run_task_tab(QtGui.QWidget):
         self.task_changed()
         self.connected = False
 
-    def task_changed(self, task=None):
+    def task_changed(self):
         self.uploaded = False
         self.upload_button.setText("Upload")
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
@@ -317,9 +316,9 @@ class Run_task_tab(QtGui.QWidget):
             custom_gui_dict = None
             if "variable_gui" in self.board.sm_info["variables"]:
                 custom_gui_name = eval(self.board.sm_info["variables"]["variable_gui"])
-                custom_gui_dict = self.get_custom_gui_data(custom_gui_name)
-            if custom_gui_dict:
-                self.variables_dialog = Custom_GUI(self, custom_gui_dict)
+                potential_dialog = Custom_GUI(self,custom_gui_name)
+            if potential_dialog.using_custom_gui:
+                self.variables_dialog = potential_dialog
                 self.using_custom_gui = True
             else:
                 self.variables_dialog = Variables_dialog(self, self.board)
@@ -341,34 +340,6 @@ class Run_task_tab(QtGui.QWidget):
         except PyboardError:
             self.status_text.setText("Error setting up state machine.")
 
-    def get_custom_gui_data(self, gui_name):
-        custom_gui_dict = None
-        try:  # Try to import and instantiate the user custom variable dialog
-            json_file = os.path.join(dirs["gui"], "user_variable_GUIs", f"{gui_name}.json")
-            with open(json_file, "r") as j:
-                custom_gui_dict = json.loads(j.read())
-        except FileNotFoundError:  # couldn't find the json data
-            self.print_to_log(f"\nCould not find custom variable GUI data: {json_file}")
-            # ask if they want to create a new custom gui
-            not_found_dialog = GUI_not_found(missing_file=gui_name, parent=self)
-            do_create_custom = not_found_dialog.exec()
-            if do_create_custom:
-                gui_created = self.open_gui_editor(gui_name)
-                if gui_created:
-                    with open(json_file, "r") as j:
-                        custom_gui_dict = json.loads(j.read())
-        return custom_gui_dict
-
-    def open_gui_editor(self, gui_name, data_to_load=None):
-        gui_editor = GUI_editor(self, gui_name, data_to_load)
-        was_saved = gui_editor.exec()
-        if was_saved:
-            if self.variables_dialog:
-                self.variables_dialog.close()
-            self.task_changed()
-            return True
-        else:
-            return False
 
     def select_data_dir(self):
         new_path = QtGui.QFileDialog.getExistingDirectory(self, "Select data folder", dirs["data"])
