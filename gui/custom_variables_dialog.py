@@ -306,7 +306,7 @@ class slider_var:
 
 
 # GUI created from dictionary describing custom widgets and layout ------------
-class Custom_GUI(QtGui.QDialog):
+class Custom_variables_dialog(QtGui.QDialog):
     def __init__(self, parent, gui_name, is_experiment=False):
         super(QtGui.QDialog, self).__init__(parent)
         self.parent = parent
@@ -336,29 +336,29 @@ class Custom_GUI(QtGui.QDialog):
             self.using_custom_gui = False
 
     def get_custom_gui_data(self, is_experiment):
-        custom_gui_dict = None
+        custom_variables_dict = None
         try:  # Try to import and instantiate the user custom variable dialog
             json_file = os.path.join(dirs["gui"], "user_variable_GUIs", f"{self.gui_name}.json")
             with open(json_file, "r") as j:
-                custom_gui_dict = json.loads(j.read())
+                custom_variables_dict = json.loads(j.read())
         except FileNotFoundError:  # couldn't find the json data
             self.parent.print_to_log(f"\nCould not find custom variable GUI data: {json_file}")
             if not is_experiment:
                 # ask if they want to create a new custom gui
-                not_found_dialog = GUI_not_found(missing_file=self.gui_name, parent=self.parent)
+                not_found_dialog = Custom_variables_not_found_dialog(missing_file=self.gui_name, parent=self.parent)
                 do_create_custom = not_found_dialog.exec()
                 if do_create_custom:
                     gui_created = self.open_gui_editor(self.gui_name, None)
                     if gui_created:
                         with open(json_file, "r") as j:
-                            custom_gui_dict = json.loads(j.read())
-        return custom_gui_dict
+                            custom_variables_dict = json.loads(j.read())
+        return custom_variables_dict
 
     def edit(self):
         self.open_gui_editor(self.gui_name, self.generator_data)
 
     def open_gui_editor(self, gui_name, data_to_load):
-        gui_editor = GUI_editor(self.parent, gui_name, data_to_load)
+        gui_editor = Variables_dialog_editor(self.parent, gui_name, data_to_load)
         was_saved = gui_editor.exec()
         if was_saved:
             if self.parent.variables_dialog:
@@ -407,7 +407,9 @@ class Custom_variables_grid(QtGui.QWidget):
         leftover_widget = QtGui.QWidget()
         leftover_layout = QtGui.QGridLayout()
         leftover_vars = sorted(list(set(variables) - set(used_vars)), key=str.lower)
-        leftover_vars = [v_name for v_name in leftover_vars if not v_name[-3:] == "___" and v_name != "variable_gui"]
+        leftover_vars = [
+            v_name for v_name in leftover_vars if not v_name[-3:] == "___" and v_name != "custom_variables_dialog"
+        ]
         if len(leftover_vars) > 0:
             for row, var in enumerate(leftover_vars):
                 globals()[var] = standard_var(init_vars, var, var)
@@ -422,7 +424,7 @@ class Custom_variables_grid(QtGui.QWidget):
 
 
 # GUI editor dialog. ---------------------------------------------------------
-class GUI_editor(QtGui.QDialog):
+class Variables_dialog_editor(QtGui.QDialog):
     def __init__(self, parent, gui_name, data_to_load=None):
         super(QtGui.QDialog, self).__init__(parent)
         self.gui_name = gui_name
@@ -533,12 +535,12 @@ class GUI_editor(QtGui.QDialog):
                 file_content = file.read()
         except FileNotFoundError:
             return
-        # get list of variables. ignore private variables and the variable_gui variable
+        # get list of variables. ignore private variables and the custom_variables_dialog variable
         self.variable_names = set(
             [
                 v_name
                 for v_name in re.findall(pattern, file_content)
-                if not v_name[-3:] == "___" and v_name != "variable_gui"
+                if not v_name[-3:] == "___" and v_name != "custom_variables_dialog"
             ]
         )
 
@@ -805,7 +807,7 @@ class Variables_table(QtGui.QTableWidget):
         return tab_dictionary
 
 
-class GUI_not_found(QtGui.QDialog):
+class Custom_variables_not_found_dialog(QtGui.QDialog):
     def __init__(self, missing_file, parent):
         super(QtGui.QDialog, self).__init__(parent)
         self.setWindowTitle("Custom variable GUI not found")

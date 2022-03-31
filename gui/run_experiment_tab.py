@@ -15,7 +15,7 @@ from com.data_logger import Data_logger
 from gui.plotting import Experiment_plot
 from gui.dialogs import Variables_dialog, Summary_variables_dialog
 from gui.utility import variable_constants, TaskInfo
-from gui.custom_variable_GUI import Custom_GUI
+from gui.custom_variable_GUI import Custom_variables_dialog
 
 class Run_experiment_tab(QtGui.QWidget):
     '''The run experiment tab is responsible for setting up, running and stopping
@@ -448,9 +448,9 @@ class Subjectbox(QtGui.QGroupBox):
 
     def assign_board(self, board):
         self.board = board
-        if 'variable_gui' in self.board.sm_info['variables']:
-            custom_gui_name = eval(self.board.sm_info['variables']['variable_gui'])
-            potential_dialog = Custom_GUI(self,custom_gui_name,is_experiment=True)
+        if 'custom_variables_dialog' in self.board.sm_info['variables']:
+            custom_variables_name = eval(self.board.sm_info['variables']['custom_variables_dialog'])
+            potential_dialog = Custom_variables_dialog(self,custom_variables_name,is_experiment=True)
         if potential_dialog.using_custom_gui == True:
             self.variables_dialog = potential_dialog
         else:

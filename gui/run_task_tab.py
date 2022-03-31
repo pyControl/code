@@ -11,7 +11,7 @@ from config.paths import dirs
 from config.gui_settings import update_interval, log_font_size
 
 from gui.dialogs import Variables_dialog
-from gui.custom_variable_GUI import Custom_GUI
+from gui.custom_variable_GUI import Custom_variables_dialog
 from gui.plotting import Task_plot
 from gui.utility import init_keyboard_shortcuts, TaskSelectMenu, TaskInfo
 
@@ -313,10 +313,9 @@ class Run_task_tab(QtGui.QWidget):
                 self.variables_button.clicked.disconnect()
                 self.variables_dialog.deleteLater()
             self.task = task
-            custom_gui_dict = None
-            if "variable_gui" in self.board.sm_info["variables"]:
-                custom_gui_name = eval(self.board.sm_info["variables"]["variable_gui"])
-                potential_dialog = Custom_GUI(self,custom_gui_name)
+            if "custom_variables_dialog" in self.board.sm_info["variables"]:
+                custom_variables_name = eval(self.board.sm_info["variables"]["custom_variables_dialog"])
+                potential_dialog = Custom_variables_dialog(self,custom_variables_name)
             if potential_dialog.using_custom_gui:
                 self.variables_dialog = potential_dialog
                 self.using_custom_gui = True
