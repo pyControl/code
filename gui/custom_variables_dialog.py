@@ -6,7 +6,7 @@ from config.paths import dirs
 from gui.utility import variable_constants, null_resize, cbox_set_item, cbox_update_options
 
 # input widgets ---------------------------------------------------------------
-class spin_var:
+class Spin_var:
     def __init__(self, init_var_dict, label, spin_min, spin_max, step, varname):
         center = QtCore.Qt.AlignCenter
         Vcenter = QtCore.Qt.AlignVCenter
@@ -97,7 +97,7 @@ class spin_var:
         self.spn.setSuffix(suffix)
 
 
-class standard_var:
+class Standard_var:
     def __init__(self, init_var_dict, label, varname, text_width=80):
         center = QtCore.Qt.AlignCenter
         Vcenter = QtCore.Qt.AlignVCenter
@@ -180,7 +180,7 @@ class standard_var:
         self.line_edit.setStyleSheet(f"color: {color};")
 
 
-class checkbox_var:
+class Checkbox_var:
     def __init__(self, init_var_dict, label, varname):
         self.varname = varname
         self.label = QtGui.QLabel(label)
@@ -256,7 +256,7 @@ class DoubleSlider(QtGui.QSlider):  # https://stackoverflow.com/questions/482788
         super(DoubleSlider, self).setMaximum(number_of_steps)
 
 
-class slider_var:
+class Slider_var:
     def __init__(self, init_var_dict, label, slide_min, slide_max, step, varname):
         self.varname = varname
 
@@ -384,19 +384,19 @@ class Custom_variables_grid(QtGui.QWidget):
             for row, var in enumerate(tab_data["ordered_inputs"]):
                 control = tab_data[var]
                 if control["widget"] == "slider":
-                    globals()[var] = slider_var(
+                    globals()[var] = Slider_var(
                         init_vars, control["label"], control["min"], control["max"], control["step"], var
                     )
                     globals()[var].setSuffix(" " + control["suffix"])
                 elif control["widget"] == "spinbox":
-                    globals()[var] = spin_var(
+                    globals()[var] = Spin_var(
                         init_vars, control["label"], control["min"], control["max"], control["step"], var
                     )
                     globals()[var].setSuffix(" " + control["suffix"])
                 elif control["widget"] == "checkbox":
-                    globals()[var] = checkbox_var(init_vars, control["label"], var)
+                    globals()[var] = Checkbox_var(init_vars, control["label"], var)
                 elif control["widget"] == "line edit":
-                    globals()[var] = standard_var(init_vars, control["label"], var)
+                    globals()[var] = Standard_var(init_vars, control["label"], var)
 
                 globals()[var].setHint(control["hint"])
                 globals()[var].setBoard(board)
@@ -412,7 +412,7 @@ class Custom_variables_grid(QtGui.QWidget):
         ]
         if len(leftover_vars) > 0:
             for row, var in enumerate(leftover_vars):
-                globals()[var] = standard_var(init_vars, var, var)
+                globals()[var] = Standard_var(init_vars, var, var)
                 globals()[var].setBoard(board)
                 globals()[var].add_to_grid(leftover_layout, row)
             leftover_widget.setLayout(leftover_layout)
