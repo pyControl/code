@@ -376,6 +376,7 @@ class Custom_variables_grid(QtGui.QWidget):
         init_vars = dict(sorted(variables.items()))
         variable_tabs = QtGui.QTabWidget()
         used_vars = []
+        self.widget_dict = {}
         for tab in generator_data["ordered_tabs"]:  # create widgets
             widget = QtGui.QWidget()
             layout = QtGui.QGridLayout()
@@ -384,23 +385,23 @@ class Custom_variables_grid(QtGui.QWidget):
             for row, var in enumerate(tab_data["ordered_inputs"]):
                 control = tab_data[var]
                 if control["widget"] == "slider":
-                    globals()[var] = Slider_var(
+                    self.widget_dict[var] = Slider_var(
                         init_vars, control["label"], control["min"], control["max"], control["step"], var
                     )
-                    globals()[var].setSuffix(" " + control["suffix"])
+                    self.widget_dict[var].setSuffix(" " + control["suffix"])
                 elif control["widget"] == "spinbox":
-                    globals()[var] = Spin_var(
+                    self.widget_dict[var] = Spin_var(
                         init_vars, control["label"], control["min"], control["max"], control["step"], var
                     )
-                    globals()[var].setSuffix(" " + control["suffix"])
+                    self.widget_dict[var].setSuffix(" " + control["suffix"])
                 elif control["widget"] == "checkbox":
-                    globals()[var] = Checkbox_var(init_vars, control["label"], var)
+                    self.widget_dict[var] = Checkbox_var(init_vars, control["label"], var)
                 elif control["widget"] == "line edit":
-                    globals()[var] = Standard_var(init_vars, control["label"], var)
+                    self.widget_dict[var] = Standard_var(init_vars, control["label"], var)
 
-                globals()[var].setHint(control["hint"])
-                globals()[var].setBoard(board)
-                globals()[var].add_to_grid(layout, row)
+                self.widget_dict[var].setHint(control["hint"])
+                self.widget_dict[var].setBoard(board)
+                self.widget_dict[var].add_to_grid(layout, row)
             widget.setLayout(layout)
             variable_tabs.addTab(widget, tab)
 
@@ -412,9 +413,9 @@ class Custom_variables_grid(QtGui.QWidget):
         ]
         if len(leftover_vars) > 0:
             for row, var in enumerate(leftover_vars):
-                globals()[var] = Standard_var(init_vars, var, var)
-                globals()[var].setBoard(board)
-                globals()[var].add_to_grid(leftover_layout, row)
+                self.widget_dict[var] = Standard_var(init_vars, var, var)
+                self.widget_dict[var].setBoard(board)
+                self.widget_dict[var].add_to_grid(leftover_layout, row)
             leftover_widget.setLayout(leftover_layout)
             variable_tabs.addTab(leftover_widget, "...")
 
