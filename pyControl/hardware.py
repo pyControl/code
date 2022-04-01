@@ -93,7 +93,7 @@ def off():
 def get_analog_inputs():
     # Print dict of analog inputs {name: {'ID': ID, 'Fs':sampling rate}}
     print({io.name:{'ID': io.ID, 'Fs': io.sampling_rate}
-          for io in IO_dict.values() if isinstance(io, Analog_input)})
+          for io in IO_dict.values() if hasattr(io, 'recording') and hasattr(io, 'sampling_rate')})
 
 # IO_object -------------------------------------------------------------------
 
@@ -229,13 +229,11 @@ class Digital_input(IO_object):
         self.interrupt_timestamp = 0
         self.decimate_counter = -1
 
-# Analog input ----------------------------------------------------------------
+# Analog data ----------------------------------------------------------------
 
-class Analog_input(IO_object):
-    # Analog_input samples analog voltage from specified pin at specified frequency and can
-    # stream data to continously to computer as well as generate framework events when 
-    # voltage goes above / below specified value. The Analog_input class is subclassed
-    # by other hardware devices that generate continous data such as the Rotory_encoder.
+class Data_channel(IO_object):
+    # Data_channel can stream data continously to computer. This class can be subclassed or instantiated to stream
+    # any kind of data back to the computer. the `Analog_input` class is an example of instantiating this class and adding functionality (event generation)
     # Serial data format for sending data to computer: '\x07A c i r l t k D' where:
     # \x07A Message start byte and A character indicating start of analog data chunk (2 bytes)
     # c data array typecode (1 byte)
@@ -246,63 +244,24 @@ class Analog_input(IO_object):
     # k checksum (2 bytes)
     # D data array bytes (variable)
 
-    def __init__(self, pin, name, sampling_rate, threshold=None, rising_event=None, 
-                 falling_event=None, data_type='H'):
-        if rising_event or falling_event:
-            assert type(threshold) == int, 'Integer threshold must be specified if rising or falling events are defined.'
+    def __init__(self, name, sampling_rate, data_type='l'):
         assert data_type in ('b','B','h','H','l','L'), 'Invalid data_type.'
         assert not any([name == io.name for io in IO_dict.values() 
-                        if isinstance(io, Analog_input)]), 'Analog inputs must have unique names.'
-        if pin: # pin argument can be None when Analog_input subclassed.
-            self.ADC = pyb.ADC(pin)
-            self.read_sample = self.ADC.read
+                        if isinstance(io, Data_channel)]), 'Analog inputs must have unique names.'
         self.name = name
         assign_ID(self)
-        # Data acqisition variables
-        self.timer = pyb.Timer(available_timers.pop())
         self.recording = False # Whether data is being sent to computer.
-        self.acquiring = False # Whether input is being monitored.
         self.sampling_rate = sampling_rate
         self.data_type = data_type
         self.bytes_per_sample = {'b':1,'B':1,'h':2,'H':2,'l':4,'L':4}[data_type]
         self.buffer_size = max(4, min(256 // self.bytes_per_sample, sampling_rate//10))
-        self.buffers = (array(data_type, [0]*self.buffer_size),array(data_type, [0]*self.buffer_size))
+        self.buffers = (array(data_type, [0]*self.buffer_size), array(data_type, [0]*self.buffer_size))
         self.buffers_mv = (memoryview(self.buffers[0]), memoryview(self.buffers[1]))
         self.buffer_start_times = array('i', [0,0])
         self.data_header = array('B', b'\x07A' + data_type.encode() + 
             self.ID.to_bytes(2,'little') + sampling_rate.to_bytes(2,'little') + b'\x00'*8)
-        # Event generation variables
-        self.threshold = threshold
-        self.rising_event = rising_event
-        self.falling_event = falling_event
-        self.timestamp = 0
-        self.crossing_direction = False
-
-    def _initialise(self):
-        # Set event codes for rising and falling events.
-        self.rising_event_ID  = fw.events[self.rising_event ] if self.rising_event  in fw.events else False
-        self.falling_event_ID = fw.events[self.falling_event] if self.falling_event in fw.events else False
-        self.threshold_active = self.rising_event_ID or self.falling_event_ID
-
-    def _run_start(self):
         self.write_buffer = 0 # Buffer to write new data to.
         self.write_index  = 0 # Buffer index to write new data to. 
-        if self.threshold_active: 
-            self._start_acquisition()
-
-    def _run_stop(self):
-        if self.recording:
-            self.stop()
-        if self.acquiring:
-            self._stop_acquisition()
-
-    def _start_acquisition(self):
-        # Start sampling analog input values.
-        self.timer.init(freq=self.sampling_rate)
-        self.timer.callback(self._timer_ISR)
-        if self.threshold_active:
-            self.above_threshold = self.read_sample() > self.threshold
-        self.acquiring = True
 
     def record(self):
         # Start streaming data to computer.
@@ -310,7 +269,6 @@ class Analog_input(IO_object):
             self.write_index = 0  # Buffer index to write new data to. 
             self.buffer_start_times[self.write_buffer] = fw.current_time
             self.recording = True
-            if not self.acquiring: self._start_acquisition()
 
     def stop(self):
         # Stop streaming data to computer.
@@ -318,39 +276,16 @@ class Analog_input(IO_object):
             if self.write_index != 0:
                 self._send_buffer(self.write_buffer, self.write_index)
             self.recording = False
-            if not self.threshold_active: 
-                self._stop_acquisition()
 
-    def _stop_acquisition(self):
-        # Stop sampling analog input values.
-        self.timer.deinit()
-        self.acquiring = False
-
-    def _timer_ISR(self, t):
-        # Read a sample to the buffer, update write index.
-        self.buffers[self.write_buffer][self.write_index] = self.read_sample()
-        if self.threshold_active:
-            new_above_threshold = self.buffers[self.write_buffer][self.write_index] > self.threshold
-            if new_above_threshold != self.above_threshold: # Threshold crossing.
-                self.above_threshold = new_above_threshold
-                if ((    self.above_threshold and self.rising_event_ID) or 
-                    (not self.above_threshold and self.falling_event_ID)):
-                        self.timestamp = fw.current_time
-                        self.crossing_direction = self.above_threshold
-                        interrupt_queue.put(self.ID)
+    def put(self, sample: int):
+        # load the buffer.
+        self.buffers[self.write_buffer][self.write_index] = sample
         if self.recording:
             self.write_index = (self.write_index + 1) % self.buffer_size
             if self.write_index == 0: # Buffer full, switch buffers.
                 self.write_buffer = 1 - self.write_buffer
                 self.buffer_start_times[self.write_buffer] = fw.current_time
                 stream_data_queue.put(self.ID)
-
-    def _process_interrupt(self):
-        # Put event generated by threshold crossing in event queue.
-        if self.crossing_direction:
-            fw.event_queue.put((self.timestamp, fw.event_typ, self.rising_event_ID))
-        else:
-            fw.event_queue.put((self.timestamp, fw.event_typ, self.falling_event_ID))
 
     def _process_streaming(self):
         # Stream full buffer to computer.
@@ -369,6 +304,96 @@ class Analog_input(IO_object):
             fw.usb_serial.send(self.buffers_mv[buffer_n][:n_samples])
         else: # Send entire buffer.
             fw.usb_serial.send(self.buffers[buffer_n])
+
+class Analog_input(IO_object):
+    # Analog_input samples analog voltage from specified pin at specified frequency and uses `Data_channel`
+    # to stream data continously to computer as well as generate framework events when 
+    # voltage goes above / below specified value. The Analog_input class is subclassed
+    # by other hardware devices that generate continous data such as the Rotory_encoder.
+
+    def __init__(self, pin, name, sampling_rate, threshold=None, rising_event=None, 
+                 falling_event=None, data_type='H'):
+        if rising_event or falling_event:
+            assert type(threshold) == int, 'Integer threshold must be specified if rising or falling events are defined.'
+        assert not any([name == io.name for io in IO_dict.values() 
+                if isinstance(io, Analog_input)]), 'Analog inputs must have unique names.'
+        if pin: # pin argument can be None when Analog_input subclassed.
+            self.ADC = pyb.ADC(pin)
+            self.read_sample = self.ADC.read
+        self.name = name
+        assign_ID(self)
+        # Data acqisition variables
+        self.timer = pyb.Timer(available_timers.pop())
+        self.acquiring = False # Whether input is being monitored.
+        # Event generation variables
+        self.threshold = threshold
+        self.rising_event = rising_event
+        self.falling_event = falling_event
+        self.timestamp = 0
+        self.crossing_direction = False
+        # Data streaming
+        self.data_channel = Data_channel(name, sampling_rate, data_type)
+
+
+    def _initialise(self):
+        # Set event codes for rising and falling events.
+        self.rising_event_ID  = fw.events[self.rising_event ] if self.rising_event  in fw.events else False
+        self.falling_event_ID = fw.events[self.falling_event] if self.falling_event in fw.events else False
+        self.threshold_active = self.rising_event_ID or self.falling_event_ID
+
+    def _run_start(self):
+        if self.threshold_active: 
+            self._start_acquisition()
+
+    def _run_stop(self):
+        self.data_channel.stop()
+        if self.acquiring:
+            self._stop_acquisition()
+
+    def _start_acquisition(self):
+        # Start sampling analog input values.
+        self.timer.init(freq=self.data_channel.sampling_rate)
+        self.timer.callback(self._timer_ISR)
+        if self.threshold_active:
+            self.above_threshold = self.read_sample() > self.threshold
+        self.acquiring = True
+
+    def record(self):
+        # Start streaming data to computer.
+        self.data_channel.record()
+        if not self.acquiring: self._start_acquisition()
+
+    def stop(self):
+        # Stop streaming data to computer.
+        self.data_channel.stop()
+        if not self.threshold_active: 
+            self._stop_acquisition()
+
+    def _stop_acquisition(self):
+        # Stop sampling analog input values.
+        self.timer.deinit()
+        self.acquiring = False
+
+    def _timer_ISR(self, t):
+        # Read a sample to the buffer, update write index.
+        self.data_channel.put(self.read_sample())
+
+        if self.threshold_active:
+            new_above_threshold = self.buffers[self.write_buffer][self.write_index] > self.threshold
+            if new_above_threshold != self.above_threshold: # Threshold crossing.
+                self.above_threshold = new_above_threshold
+                if ((    self.above_threshold and self.rising_event_ID) or 
+                    (not self.above_threshold and self.falling_event_ID)):
+                        self.timestamp = fw.current_time
+                        self.crossing_direction = self.above_threshold
+                        interrupt_queue.put(self.ID)
+
+    def _process_interrupt(self):
+        # Put event generated by threshold crossing in event queue.
+        if self.crossing_direction:
+            fw.event_queue.put((self.timestamp, fw.event_typ, self.rising_event_ID))
+        else:
+            fw.event_queue.put((self.timestamp, fw.event_typ, self.falling_event_ID))
 
 # Digital Output --------------------------------------------------------------
 
