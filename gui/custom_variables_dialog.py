@@ -338,11 +338,11 @@ class Custom_variables_dialog(QtGui.QDialog):
     def get_custom_gui_data(self, is_experiment):
         custom_variables_dict = None
         try:  # Try to import and instantiate the user custom variable dialog
-            json_file = os.path.join(dirs["gui"], "user_variable_GUIs", f"{self.gui_name}.json")
+            json_file = os.path.join(dirs["gui"], "user_variable_dialogs", f"{self.gui_name}.json")
             with open(json_file, "r") as j:
                 custom_variables_dict = json.loads(j.read())
         except FileNotFoundError:  # couldn't find the json data
-            self.parent.print_to_log(f"\nCould not find custom variable GUI data: {json_file}")
+            self.parent.print_to_log(f"\nCould not find custom variable dialog data: {json_file}")
             if not is_experiment:
                 # ask if they want to create a new custom gui
                 not_found_dialog = Custom_variables_not_found_dialog(missing_file=self.gui_name, parent=self.parent)
@@ -432,7 +432,7 @@ class Variables_dialog_editor(QtGui.QDialog):
         self.get_vars(parent.task)
         self.tables = []
 
-        self.setWindowTitle("Custom GUI Editor")
+        self.setWindowTitle("Custom Variable Dialog Editor")
         # main widgets
         self.tabs = QtGui.QTabWidget()
         self.add_tab_btn = QtGui.QPushButton("Add tab")
@@ -497,7 +497,7 @@ class Variables_dialog_editor(QtGui.QDialog):
 
         gui_dict["ordered_tabs"] = ordered_tabs
 
-        user_guis_folder = os.path.join(dirs["gui"], "user_variable_GUIs")
+        user_guis_folder = os.path.join(dirs["gui"], "user_variable_dialogs")
         try:
             os.mkdir(user_guis_folder)
             print(f"User GUIs folder not found, therefore creating new directory: {user_guis_folder}")
@@ -810,11 +810,11 @@ class Variables_table(QtGui.QTableWidget):
 class Custom_variables_not_found_dialog(QtGui.QDialog):
     def __init__(self, missing_file, parent):
         super(QtGui.QDialog, self).__init__(parent)
-        self.setWindowTitle("Custom variable GUI not found")
+        self.setWindowTitle("Custom variable dialog not found")
 
-        message = QtGui.QLabel(f'The custom variable GUI <b>"{missing_file}"</b> was not found.<br><br>')
-        continue_button = QtGui.QPushButton("Continue with standard variable GUI")
-        generate_button = QtGui.QPushButton("Create new custom variable GUI")
+        message = QtGui.QLabel(f'The custom variable dialog <b>"{missing_file}"</b> was not found.<br><br>')
+        continue_button = QtGui.QPushButton("Continue with standard variable dialog")
+        generate_button = QtGui.QPushButton("Create new custom variable dialog")
         continue_button.setDefault(True)
         continue_button.setFocus()
         self.layout = QtGui.QGridLayout(self)

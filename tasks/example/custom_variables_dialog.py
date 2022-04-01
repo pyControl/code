@@ -26,7 +26,7 @@ v.red_count = 1
 
 v.current_count___ = 0
 
-# Use custom variable dialog that is defined in gui/user_variable_GUIs/blinker_gui.py
+# Use custom variable dialog that is defined in gui/user_variable_dialogs/blinker_gui.py
 v.custom_variables_dialog = "blinker_gui"
 # v.custom_variables_dialog = 'blinker_gui_tabs' # comment above line and uncomment this line to see example dialog with tabs
 

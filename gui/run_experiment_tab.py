@@ -15,7 +15,7 @@ from com.data_logger import Data_logger
 from gui.plotting import Experiment_plot
 from gui.dialogs import Variables_dialog, Summary_variables_dialog
 from gui.utility import variable_constants, TaskInfo
-from gui.custom_variable_GUI import Custom_variables_dialog
+from gui.custom_variables_dialog import Custom_variables_dialog
 
 class Run_experiment_tab(QtGui.QWidget):
     '''The run experiment tab is responsible for setting up, running and stopping

@@ -11,7 +11,7 @@ from config.paths import dirs
 from config.gui_settings import update_interval, log_font_size
 
 from gui.dialogs import Variables_dialog
-from gui.custom_variable_GUI import Custom_variables_dialog
+from gui.custom_variables_dialog import Custom_variables_dialog
 from gui.plotting import Task_plot
 from gui.utility import init_keyboard_shortcuts, TaskSelectMenu, TaskInfo
 
