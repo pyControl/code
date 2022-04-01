@@ -1,6 +1,6 @@
 # Graphical user interface settings.
 
-VERSION = '1.6.1'
+VERSION = '1.6.2'
 
 update_interval = 10 # Interval between calls to the GUIs update function (ms).
 

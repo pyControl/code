@@ -1,4 +1,6 @@
+from . import utility
 from . import framework as fw
+
 
 class State_machine():
     # State machine behaviour is defined by passing state machine description object smd to 
@@ -8,6 +10,7 @@ class State_machine():
     def __init__(self, smd):
 
         self.smd = smd # State machine definition.
+        self.variables = utility.v # User task variables object.
         self.state_transition_in_progress = False # Set to True during state transitions.
 
         fw.register_machine(self)
@@ -66,13 +69,13 @@ class State_machine():
             if not str_sum == checksum:
                 return False # Bad checksum.
         try:
-            setattr(self.smd.v, v_name, eval(v_str))
+            setattr(self.variables, v_name, eval(v_str))
             return True # Variable set OK.
         except Exception:
             return False # Bad variable name or invalid value string.
 
     def _get_variable(self, v_name):
         try:
-            return repr(getattr(self.smd.v, v_name))
+            return repr(getattr(self.variables, v_name))
         except Exception:
             return None

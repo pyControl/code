@@ -172,7 +172,7 @@ def get_states():
 
 def get_variables():
     # Print state machines variables as dict {v_name: repr(v_value)}
-    print({k: repr(v) for k, v in state_machine.smd.v.__dict__.items()})
+    print({k: repr(v) for k, v in state_machine.variables.__dict__.items()})
 
 def output_data(event):
     # Output data to computer.
