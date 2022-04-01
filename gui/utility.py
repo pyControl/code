@@ -318,7 +318,7 @@ class TaskSelectMenu(QtGui.QPushButton):
     def create_action(self,text):
         def fxn():
             if self.text() != text:
-                self.callback()
+                self.callback(text)
                 self.setText(text)
         return fxn
     

@@ -288,7 +288,7 @@ class Run_task_tab(QtGui.QWidget):
         self.task_changed()
         self.connected = False
 
-    def task_changed(self):
+    def task_changed(self, *args):
         self.uploaded = False
         self.upload_button.setText("Upload")
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
@@ -315,10 +315,13 @@ class Run_task_tab(QtGui.QWidget):
             self.task = task
             if "custom_variables_dialog" in self.board.sm_info["variables"]:
                 custom_variables_name = eval(self.board.sm_info["variables"]["custom_variables_dialog"])
-                potential_dialog = Custom_variables_dialog(self,custom_variables_name)
-            if potential_dialog.using_custom_gui:
-                self.variables_dialog = potential_dialog
-                self.using_custom_gui = True
+                potential_dialog = Custom_variables_dialog(self, custom_variables_name)
+                if potential_dialog.using_custom_gui:
+                    self.variables_dialog = potential_dialog
+                    self.using_custom_gui = True
+                else:
+                    self.variables_dialog = Variables_dialog(self, self.board)
+                    self.using_custom_gui = False
             else:
                 self.variables_dialog = Variables_dialog(self, self.board)
                 self.using_custom_gui = False
@@ -338,7 +341,6 @@ class Run_task_tab(QtGui.QWidget):
 
         except PyboardError:
             self.status_text.setText("Error setting up state machine.")
-
 
     def select_data_dir(self):
         new_path = QtGui.QFileDialog.getExistingDirectory(self, "Select data folder", dirs["data"])

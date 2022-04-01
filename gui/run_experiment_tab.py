@@ -233,11 +233,11 @@ class Run_experiment_tab(QtGui.QWidget):
         # Copy task file to experiments data folder.
         self.boards[0].data_logger.copy_task_file(self.experiment['data_dir'], dirs['tasks'])
         # Configure GUI ready to run.
-        for i, board in enumerate(self.boards):
-            self.subjectboxes[i].assign_board(board)
-            self.subjectboxes[i].start_stop_button.setEnabled(True)
-            self.subjectboxes[i].status_text.setText('Ready')
-            self.subjectboxes[i].task_info.set_state_machine(board.sm_info)
+        for subjectbox, board in zip(self.subjectboxes,self.boards):
+            subjectbox.assign_board(board)
+            subjectbox.start_stop_button.setEnabled(True)
+            subjectbox.status_text.setText('Ready')
+            subjectbox.task_info.set_state_machine(board.sm_info)
         self.experiment_plot.set_state_machine(board.sm_info)
         self.startstopclose_all_button.setEnabled(True)
         self.logs_button.setEnabled(True)
@@ -451,8 +451,10 @@ class Subjectbox(QtGui.QGroupBox):
         if 'custom_variables_dialog' in self.board.sm_info['variables']:
             custom_variables_name = eval(self.board.sm_info['variables']['custom_variables_dialog'])
             potential_dialog = Custom_variables_dialog(self,custom_variables_name,is_experiment=True)
-        if potential_dialog.using_custom_gui == True:
-            self.variables_dialog = potential_dialog
+            if potential_dialog.using_custom_gui is True:
+                self.variables_dialog = potential_dialog
+            else:
+                self.variables_dialog = Variables_dialog(self, self.board)
         else:
             self.variables_dialog = Variables_dialog(self, self.board)
 
@@ -517,7 +519,7 @@ class Subjectbox(QtGui.QGroupBox):
                 self.board.process_data()
                 if not self.board.framework_running:
                     self.stop_task()
-                self.time_text.setText(str(datetime.now()-self.start_time).split('.')[0])
+                self.time_text.setText(str(datetime.now()-self.start_time).split('.', maxsplit=1)[0])
             except PyboardError:
                 self.stop_task()
                 self.error()
