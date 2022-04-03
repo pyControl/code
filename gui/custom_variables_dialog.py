@@ -313,6 +313,7 @@ class Custom_variables_dialog(QtGui.QDialog):
         self.gui_name = gui_name
         self.generator_data = self.get_custom_gui_data(is_experiment)
         if self.generator_data:
+            self.parent.print_to_log(f"\nLoading \"{gui_name}\" custom variable dialog")
             self.setWindowTitle("Set Variables")
             self.layout = QtGui.QVBoxLayout(self)
             toolBar = QtGui.QToolBar()
@@ -383,25 +384,30 @@ class Custom_variables_grid(QtGui.QWidget):
             tab_data = generator_data[tab]
             used_vars.extend(tab_data["ordered_inputs"])
             for row, var in enumerate(tab_data["ordered_inputs"]):
-                control = tab_data[var]
-                if control["widget"] == "slider":
-                    self.widget_dict[var] = Slider_var(
-                        init_vars, control["label"], control["min"], control["max"], control["step"], var
-                    )
-                    self.widget_dict[var].setSuffix(" " + control["suffix"])
-                elif control["widget"] == "spinbox":
-                    self.widget_dict[var] = Spin_var(
-                        init_vars, control["label"], control["min"], control["max"], control["step"], var
-                    )
-                    self.widget_dict[var].setSuffix(" " + control["suffix"])
-                elif control["widget"] == "checkbox":
-                    self.widget_dict[var] = Checkbox_var(init_vars, control["label"], var)
-                elif control["widget"] == "line edit":
-                    self.widget_dict[var] = Standard_var(init_vars, control["label"], var)
+                try:
+                    control = tab_data[var]
+                    if control["widget"] == "slider":
+                        self.widget_dict[var] = Slider_var(
+                            init_vars, control["label"], control["min"], control["max"], control["step"], var
+                        )
+                        self.widget_dict[var].setSuffix(" " + control["suffix"])
+                    elif control["widget"] == "spinbox":
+                        self.widget_dict[var] = Spin_var(
+                            init_vars, control["label"], control["min"], control["max"], control["step"], var
+                        )
+                        self.widget_dict[var].setSuffix(" " + control["suffix"])
+                    elif control["widget"] == "checkbox":
+                        self.widget_dict[var] = Checkbox_var(init_vars, control["label"], var)
+                    elif control["widget"] == "line edit":
+                        self.widget_dict[var] = Standard_var(init_vars, control["label"], var)
 
-                self.widget_dict[var].setHint(control["hint"])
-                self.widget_dict[var].setBoard(board)
-                self.widget_dict[var].add_to_grid(layout, row)
+                    self.widget_dict[var].setHint(control["hint"])
+                    self.widget_dict[var].setBoard(board)
+                    self.widget_dict[var].add_to_grid(layout, row)
+                except KeyError:
+                    parent.parent.print_to_log(
+                        f'- Loading error: could not find "{var}" variable in the task file. The variable name has been changed or no longer exists.'
+                    )
             widget.setLayout(layout)
             variable_tabs.addTab(widget, tab)
 
