@@ -670,6 +670,10 @@ class Variables_table(QtGui.QTableWidget):
         self.setColumnWidth(8, 40)
         self.setColumnWidth(9, 150)
 
+        self.add_button = QtGui.QPushButton("   add   ")
+        self.add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+        self.add_button.clicked.connect(self.add_row)
+
         self.n_variables = 0
         self.clear_label_flag = None
         if data and data["ordered_inputs"]:
@@ -686,12 +690,9 @@ class Variables_table(QtGui.QTableWidget):
         # connect buttons to functions
         self.connect_buttons(self.n_variables)
 
-        # insert another row with an "add" button
+        # insert another row and shift down "add" button
         self.insertRow(self.n_variables + 1)
-        add_button = QtGui.QPushButton("   add   ")
-        add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
-        add_button.clicked.connect(self.add_row)
-        self.setCellWidget(self.n_variables + 1, 10, add_button)
+        self.setCellWidget(self.n_variables + 1, 10, self.add_button)
 
         self.n_variables += 1
         self.update_available()
