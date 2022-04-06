@@ -313,7 +313,7 @@ class Custom_variables_dialog(QtGui.QDialog):
         self.gui_name = gui_name
         self.generator_data = self.get_custom_gui_data(is_experiment)
         if self.generator_data:
-            self.parent.print_to_log(f"\nLoading \"{gui_name}\" custom variable dialog")
+            self.parent.print_to_log(f'\nLoading "{gui_name}" custom variable dialog')
             self.setWindowTitle("Set Variables")
             self.layout = QtGui.QVBoxLayout(self)
             toolBar = QtGui.QToolBar()
@@ -339,7 +339,7 @@ class Custom_variables_dialog(QtGui.QDialog):
     def get_custom_gui_data(self, is_experiment):
         custom_variables_dict = None
         try:  # Try to import and instantiate the user custom variable dialog
-            json_file = os.path.join(dirs["gui"], "user_variable_dialogs", f"{self.gui_name}.json")
+            json_file = os.path.join(dirs["config"], "user_variable_dialogs", f"{self.gui_name}.json")
             with open(json_file, "r") as j:
                 custom_variables_dict = json.loads(j.read())
         except FileNotFoundError:  # couldn't find the json data
@@ -504,10 +504,10 @@ class Variables_dialog_editor(QtGui.QDialog):
 
         gui_dict["ordered_tabs"] = ordered_tabs
 
-        user_guis_folder = os.path.join(dirs["gui"], "user_variable_dialogs")
+        user_guis_folder = os.path.join(dirs["config"], "user_variable_dialogs")
         try:
             os.mkdir(user_guis_folder)
-            print(f"User GUIs folder not found, therefore creating new directory: {user_guis_folder}")
+            print(f'"user_variable_dialogs" folder not found, therefore creating new directory: {user_guis_folder}')
         except FileExistsError:
             pass
         savename = os.path.join(user_guis_folder, f"{self.gui_name}.json")
