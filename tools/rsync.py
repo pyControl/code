@@ -2,7 +2,7 @@
 # random inter-pulse intervals. 
 # https://pycontrol.readthedocs.io/en/latest/user-guide/synchronisation
 # Dependencies:  Python 3, Numpy, Matplotlib, Scikit-learn.
-# (c) Thomas Akam 2018. Released under the GPL-3 open source licence.
+# (c) Thomas Akam 2018-2022. Released under the GPL-3 open source licence.
 
 import numpy as np
 import pylab as plt
@@ -13,7 +13,7 @@ class RsyncError(Exception):
 
 class Rsync_aligner():
 
-    def __init__(self, pulse_times_A, pulse_times_B, units_A=1, units_B=1, 
+    def __init__(self, pulse_times_A, pulse_times_B, units_A='auto', units_B='auto', 
                  chunk_size=5, plot=False, raise_exception=True):
         '''Class for converting timestamps between two recording systems
         (e.g  pyControl and an ephys) using sync pulses with random inter-pulse
@@ -22,8 +22,9 @@ class Rsync_aligner():
         Rsync_aligner,instantiate it by providing the sync pulse times recorded by each
         system. Timestamps from either system can then be converted into the reference frame
         of the other using the A_to_B and B_to_A methods.  If the hardware systems use 
-        different units to measure time this must be specified using the units arguments
-        when the aligner is instantiated. When the aligner is instantiated it works out 
+        different units to measure time this can either be specified manually using the units
+        arguments when the aligner is instantiated, or estimated automatically by setting
+        the units arguments to 'auto'. When the aligner is instantiated it works out 
         which pulses in each reference frame correspond to each other by by aligning 
         short chunks of pulse sequence A with B by minimising the mean squared error 
         between inter-pulse intervals.
@@ -35,7 +36,9 @@ class Rsync_aligner():
         pulse_times_B: The times when sync pulses occured recorded by hardware system B.
 
         units_A: The time units used by system A expressed in milliseconds.  E.g. if 
-                 system A uses units of seconds the *units_A* argument is 1000.  
+                 system A uses units of seconds the *units_A* argument is 1000. If either
+                 of the units_A or units_B arguments is set to 'auto' the units of B
+                 relative to A are estimated automatically.
 
         units_B: The time units used by system B expressed in milliseconds.
 
@@ -45,7 +48,16 @@ class Rsync_aligner():
                          between the sync pulse sequences.
 
         '''
-
+        if units_A == 'auto' or units_B == 'auto':
+            # Estimate the units of B relative to A automatically.
+            raw_intervals_A = np.diff(pulse_times_A)
+            raw_intervals_B = np.diff(pulse_times_B)
+            # Exclude very long intervals as likely due to missing pulses.
+            good_intervals_A = raw_intervals_A[raw_intervals_A<3*np.median(raw_intervals_A)]
+            good_intervals_B = raw_intervals_B[raw_intervals_B<3*np.median(raw_intervals_B)]
+            # Estimate units of B relative to A using the mean of the good intervals.
+            units_A = 1
+            units_B = np.mean(good_intervals_A)/np.mean(good_intervals_B)
         # Convert all units to ms.
         pulse_times_A = pulse_times_A*units_A
         pulse_times_B = pulse_times_B*units_B
@@ -113,7 +125,7 @@ class Rsync_aligner():
             plt.subplot2grid((3,3),(0,2),rowspan=1,colspan=1)
             timing_errors = np.diff(cor_times_A) - np.diff(pulse_times_B)
             plt.hist(timing_errors[~np.isnan(timing_errors)],100)
-            plt.yscale('log', nonposy='clip')
+            plt.yscale('log', nonpositive='clip')
             plt.xlabel('Inter-pulse interval\ndiscrepancy (ms)')
             plt.ylabel('# pulses')
             plt.subplot2grid((3,1),(1,0),rowspan=2,colspan=1)

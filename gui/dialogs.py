@@ -14,7 +14,6 @@ flashdrive_message = (
     'filesystem getting corrupted. Do you want to disable the flashdrive?')
 
 class Board_config_dialog(QtGui.QDialog):
-
     def __init__(self, parent=None):
         super(QtGui.QDialog, self).__init__(parent)
         self.setWindowTitle('Configure pyboard')
@@ -88,6 +87,9 @@ class Variables_dialog(QtGui.QDialog):
         self.layout = QtGui.QVBoxLayout(self)
         self.layout.addWidget(self.scroll_area)
         self.setLayout(self.layout)
+
+        self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+W'), self)
+        self.close_shortcut.activated.connect(self.close)
 
 class Variables_grid(QtGui.QWidget):
     # Grid of variables to set/get, displayed within scroll area of dialog.
@@ -263,6 +265,7 @@ class Keyboard_shortcuts_dialog(QtGui.QDialog):
 # Paths dialog. ---------------------------------------------------------
 
 class Path_setter():
+    '''Dialog for editing folder paths.'''
     def __init__(self, name, path, edited, dialog):
         self.name = name
         self.path = os.path.normpath(path)
@@ -295,7 +298,6 @@ class Path_setter():
                 self.path_text.setText(new_path)
 
 class Paths_dialog(QtGui.QDialog):
-    '''Dialog for displaying information about keyboard shortcuts.'''
     def __init__(self, parent):
         super(QtGui.QDialog, self).__init__(parent)
         self.setWindowTitle('Paths')

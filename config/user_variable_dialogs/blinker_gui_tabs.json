@@ -1,0 +1,54 @@
+{
+    "\ud83d\udfe2green": {
+        "green_enabled": {
+            "label": "enabled",
+            "widget": "checkbox",
+            "min": "",
+            "max": "",
+            "step": "",
+            "suffix": "",
+            "hint": "green enabled hint"
+        },
+        "green_count": {
+            "label": "count",
+            "widget": "spinbox",
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "suffix": "blinks",
+            "hint": "green count hint"
+        },
+        "ordered_inputs": [
+            "green_enabled",
+            "green_count"
+        ]
+    },
+    "\ud83d\udd34red": {
+        "red_enabled": {
+            "label": "enabled",
+            "widget": "checkbox",
+            "min": "",
+            "max": "",
+            "step": "",
+            "suffix": "",
+            "hint": "another hint"
+        },
+        "red_count": {
+            "label": "count",
+            "widget": "spinbox",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "suffix": "blinks",
+            "hint": "see this when hovering"
+        },
+        "ordered_inputs": [
+            "red_enabled",
+            "red_count"
+        ]
+    },
+    "ordered_tabs": [
+        "\ud83d\udfe2green",
+        "\ud83d\udd34red"
+    ]
+}
