@@ -311,6 +311,7 @@ class Custom_variables_dialog(QtGui.QDialog):
         super(QtGui.QDialog, self).__init__(parent)
         self.parent = parent
         self.gui_name = gui_name
+        self.custom_gui = False
         self.generator_data = self.get_custom_gui_data(is_experiment)
         if self.generator_data:
             self.parent.print_to_log(f'\nLoading "{gui_name}" custom variable dialog')
@@ -332,9 +333,7 @@ class Custom_variables_dialog(QtGui.QDialog):
 
             self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+W"), self)
             self.close_shortcut.activated.connect(self.close)
-            self.using_custom_gui = True
-        else:
-            self.using_custom_gui = False
+            self.custom_gui = "json_gui"
 
     def get_custom_gui_data(self, is_experiment):
         custom_variables_dict = None
@@ -343,16 +342,20 @@ class Custom_variables_dialog(QtGui.QDialog):
             with open(json_file, "r") as j:
                 custom_variables_dict = json.loads(j.read())
         except FileNotFoundError:  # couldn't find the json data
-            self.parent.print_to_log(f"\nCould not find custom variable dialog data: {json_file}")
-            if not is_experiment:
-                # ask if they want to create a new custom gui
-                not_found_dialog = Custom_variables_not_found_dialog(missing_file=self.gui_name, parent=self.parent)
-                do_create_custom = not_found_dialog.exec()
-                if do_create_custom:
-                    gui_created = self.open_gui_editor(self.gui_name, None)
-                    if gui_created:
-                        with open(json_file, "r") as j:
-                            custom_variables_dict = json.loads(j.read())
+            py_file = os.path.join(dirs["config"], "user_variable_dialogs", f"{self.gui_name}.py")
+            if os.path.exists(py_file):
+                self.custom_gui = "pyfile_gui"
+            else:
+                self.parent.print_to_log(f"\nCould not find custom variable dialog data: {json_file}")
+                if not is_experiment:
+                    # ask if they want to create a new custom gui
+                    not_found_dialog = Custom_variables_not_found_dialog(missing_file=self.gui_name, parent=self.parent)
+                    do_create_custom = not_found_dialog.exec()
+                    if do_create_custom:
+                        gui_created = self.open_gui_editor(self.gui_name, None)
+                        if gui_created:
+                            with open(json_file, "r") as j:
+                                custom_variables_dict = json.loads(j.read())
         return custom_variables_dict
 
     def edit(self):
@@ -697,7 +700,7 @@ class Variables_table(QtGui.QTableWidget):
         # connect buttons to functions
         self.connect_buttons(self.n_variables)
 
-        # insert another row with an "add" button
+        # insert another row and shift down "add" button
         self.insertRow(self.n_variables + 1)
         if not varname:
             add_button = QtGui.QPushButton("   add   ")
