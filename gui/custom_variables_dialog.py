@@ -349,7 +349,9 @@ class Custom_variables_dialog(QtGui.QDialog):
                 self.parent.print_to_log(f"\nCould not find custom variable dialog data: {json_file}")
                 if not is_experiment:
                     # ask if they want to create a new custom gui
-                    not_found_dialog = Custom_variables_not_found_dialog(missing_file=self.gui_name, parent=self.parent)
+                    not_found_dialog = Custom_variables_not_found_dialog(
+                        missing_file=self.gui_name, parent=self.parent
+                    )
                     do_create_custom = not_found_dialog.exec()
                     if do_create_custom:
                         gui_created = self.open_gui_editor(self.gui_name, None)
@@ -407,10 +409,12 @@ class Custom_variables_grid(QtGui.QWidget):
                     self.widget_dict[var].setHint(control["hint"])
                     self.widget_dict[var].setBoard(board)
                     self.widget_dict[var].add_to_grid(layout, row)
+
                 except KeyError:
                     parent.parent.print_to_log(
                         f'- Loading error: could not find "{var}" variable in the task file. The variable name has been changed or no longer exists.'
                     )
+            layout.setAlignment(QtCore.Qt.AlignTop)
             widget.setLayout(layout)
             variable_tabs.addTab(widget, tab)
 
@@ -425,11 +429,12 @@ class Custom_variables_grid(QtGui.QWidget):
                 self.widget_dict[var] = Standard_var(init_vars, var, var)
                 self.widget_dict[var].setBoard(board)
                 self.widget_dict[var].add_to_grid(leftover_layout, row)
+            leftover_layout.setAlignment(QtCore.Qt.AlignTop)
             leftover_widget.setLayout(leftover_layout)
             variable_tabs.addTab(leftover_widget, "...")
 
         grid_layout.addWidget(variable_tabs, 0, 0, QtCore.Qt.AlignLeft)
-        grid_layout.setRowStretch(15, 1)
+        grid_layout.setAlignment(QtCore.Qt.AlignTop)
         self.setLayout(grid_layout)
 
 
