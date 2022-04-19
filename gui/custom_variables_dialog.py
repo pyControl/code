@@ -326,8 +326,11 @@ class Custom_variables_dialog(QtGui.QDialog):
             if not is_experiment:
                 toolBar.addAction(self.edit_action)
                 self.edit_action.triggered.connect(self.edit)
+            self.scroll_area = QtGui.QScrollArea(parent=self)
+            self.scroll_area.setWidgetResizable(True)
             self.variables_grid = Custom_variables_grid(self, parent.board, self.generator_data)
-            self.layout.addWidget(self.variables_grid)
+            self.scroll_area.setWidget(self.variables_grid)
+            self.layout.addWidget(self.scroll_area)
             self.layout.setContentsMargins(0, 0, 0, 0)
             self.setLayout(self.layout)
 
