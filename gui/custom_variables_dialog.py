@@ -448,26 +448,40 @@ class Variables_dialog_editor(QtGui.QDialog):
         self.gui_name = gui_name
         self.available_vars = []
         self.get_vars(parent.task)
-        self.tables = []
+        self.tables = {}
 
         self.setWindowTitle("Custom Variable Dialog Editor")
         # main widgets
         self.tabs = QtGui.QTabWidget()
-        self.add_tab_btn = QtGui.QPushButton("Add tab")
+        self.add_tab_btn = QtGui.QPushButton("add tab")
         self.add_tab_btn.setIcon(QtGui.QIcon("gui/icons/add.svg"))
         self.add_tab_btn.clicked.connect(self.add_tab)
         self.add_tab_btn.setFocusPolicy(QtCore.Qt.NoFocus)
-        self.del_tab_btn = QtGui.QPushButton("Remove tab")
+
+        self.del_tab_btn = QtGui.QPushButton("remove tab")
         self.del_tab_btn.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
         self.del_tab_btn.clicked.connect(self.remove_tab)
         self.del_tab_btn.setFocusPolicy(QtCore.Qt.NoFocus)
+
         self.tab_title_lbl = QtGui.QLabel("Tab title:")
         self.tab_title_edit = QtGui.QLineEdit()
         self.tab_title_edit.setMinimumWidth(200)
         self.tab_title_edit.returnPressed.connect(self.set_tab_title)
-        self.tab_title_btn = QtGui.QPushButton("set tab title")
+        self.tab_title_btn = QtGui.QPushButton("set title")
         self.tab_title_btn.setFocusPolicy(QtCore.Qt.NoFocus)
         self.tab_title_btn.clicked.connect(self.set_tab_title)
+
+        self.tab_shift_left_btn = QtGui.QPushButton("shift tab")
+        self.tab_shift_left_btn.setIcon(QtGui.QIcon("gui/icons/left.svg"))
+        self.tab_shift_left_btn.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.tab_shift_left_btn.clicked.connect(self.shift_tab_left)
+
+        self.tab_shift_right_btn = QtGui.QPushButton("shift tab")
+        self.tab_shift_right_btn.setIcon(QtGui.QIcon("gui/icons/right.svg"))
+        self.tab_shift_right_btn.setLayoutDirection(QtCore.Qt.RightToLeft)
+        self.tab_shift_right_btn.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.tab_shift_right_btn.clicked.connect(self.shift_tab_right)
+
         self.save_gui_btn = QtGui.QPushButton("Save GUI")
         self.save_gui_btn.setIcon(QtGui.QIcon("gui/icons/save.svg"))
         self.save_gui_btn.clicked.connect(self.save_gui_data)
@@ -480,14 +494,21 @@ class Variables_dialog_editor(QtGui.QDialog):
         self.refresh_variable_options()
 
         # layout
+        tab_box = QtGui.QGroupBox("")
+        tab_box_layout = QtGui.QGridLayout(self)
+        tab_box_layout.addWidget(self.add_tab_btn, 0, 0)
+        tab_box_layout.addWidget(self.del_tab_btn, 0, 1)
+        tab_box_layout.addWidget(self.tab_title_lbl, 0, 2)
+        tab_box_layout.addWidget(self.tab_title_edit, 0, 3)
+        tab_box_layout.addWidget(self.tab_title_btn, 0, 4)
+        tab_box_layout.addWidget(self.tab_shift_left_btn, 0, 5)
+        tab_box_layout.addWidget(self.tab_shift_right_btn, 0, 6)
+        tab_box.setLayout(tab_box_layout)
+
         self.layout = QtGui.QGridLayout(self)
-        self.layout.addWidget(self.add_tab_btn, 0, 0)
-        self.layout.addWidget(self.del_tab_btn, 0, 1)
-        self.layout.addWidget(self.tab_title_lbl, 0, 2)
-        self.layout.addWidget(self.tab_title_edit, 0, 3)
-        self.layout.addWidget(self.tab_title_btn, 0, 4)
-        self.layout.addWidget(self.save_gui_btn, 0, 6)
-        self.layout.addWidget(self.tabs, 1, 0, 1, 7)
+        self.layout.addWidget(tab_box, 0, 0)
+        self.layout.addWidget(self.save_gui_btn, 0, 7)
+        self.layout.addWidget(self.tabs, 1, 0, 1, 8)
         self.layout.setColumnStretch(5, 1)
 
         self.setMinimumWidth(910)
@@ -504,10 +525,10 @@ class Variables_dialog_editor(QtGui.QDialog):
     def save_gui_data(self):
         gui_dict = {}
         ordered_tabs = []
-        for index, table in enumerate(self.tables):
-            tab_title = self.tabs.tabText(index)
+        for tab_index in range(self.tabs.count()):
+            tab_title = self.tabs.tabText(tab_index)
             ordered_tabs.append(tab_title)
-            data = table.save_gui_data()
+            data = self.tables[tab_title].save_gui_data()
             if data:
                 gui_dict[tab_title] = data
             else:  # there was an error
@@ -529,7 +550,7 @@ class Variables_dialog_editor(QtGui.QDialog):
 
     def refresh_variable_options(self):
         fully_asigned_variables = []
-        for table in self.tables:
+        for _, table in self.tables.items():
             # determine which variables are already being used
             for row in range(table.n_variables):
                 assigned_var = table.cellWidget(row, 2).currentText()
@@ -537,7 +558,7 @@ class Variables_dialog_editor(QtGui.QDialog):
                     fully_asigned_variables.append(assigned_var)
             self.available_vars = sorted(list(self.variable_names - set(fully_asigned_variables)), key=str.lower)
 
-        for table in self.tables:  # Update the available options in the variable comboboxes
+        for _, table in self.tables.items():
             for row in range(table.n_variables):
                 cbox_update_options(table.cellWidget(row, 2), self.available_vars)
 
@@ -568,7 +589,7 @@ class Variables_dialog_editor(QtGui.QDialog):
             tab_title = name
         else:
             tab_title = f"tab-{len(self.tables)+1}"
-        self.tables.append(new_table)
+        self.tables[tab_title] = new_table
         self.tabs.addTab(new_table, tab_title)
         if len(self.tables) < 2:
             self.del_tab_btn.setEnabled(False)
@@ -577,18 +598,45 @@ class Variables_dialog_editor(QtGui.QDialog):
 
     def remove_tab(self):
         if len(self.tables) > 1:
-            index = self.tabs.currentIndex()
-            self.tabs.removeTab(index)
-            del self.tables[index]
-            if len(self.tables) < 2:
-                self.del_tab_btn.setEnabled(False)
-            else:
-                self.del_tab_btn.setEnabled(True)
-            self.refresh_variable_options()
+            reply = QtGui.QMessageBox.question(
+                self,
+                "Remove tab",
+                f'Are you sure you want to remove "{self.tab_title_edit.text()}"?',
+                QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel,
+            )
+            if reply == QtGui.QMessageBox.Yes:
+                index = self.tabs.currentIndex()
+                table_key = self.tabs.tabText(index)
+                self.tabs.removeTab(index)
+                del self.tables[table_key]
+                if len(self.tables) < 2:
+                    self.del_tab_btn.setEnabled(False)
+                else:
+                    self.del_tab_btn.setEnabled(True)
+                self.refresh_variable_options()
+
+    def shift_tab_left(self):
+        index = self.tabs.currentIndex()
+        self.tabs.tabBar().moveTab(index, index - 1)
+
+    def shift_tab_right(self):
+        index = self.tabs.currentIndex()
+        self.tabs.tabBar().moveTab(index, index + 1)
 
     def set_tab_title(self):
+        new_title = self.tab_title_edit.text()
+        if new_title in self.tables:
+            QtGui.QMessageBox.warning(
+                self,
+                "Tab title already exists",
+                f"The new tab title must be different from existing tab titles.",
+                QtGui.QMessageBox.Ok,
+            )
+            return
         index = self.tabs.currentIndex()
-        self.tabs.setTabText(index, self.tab_title_edit.text())
+        old_key = self.tabs.tabText(index)
+        self.tables[new_title] = self.tables.pop(old_key)
+        self.tabs.setTabText(index, new_title)
 
     def closeEvent(self, event):
         self.deleteLater()
