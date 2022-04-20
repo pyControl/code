@@ -584,7 +584,7 @@ class Variables_dialog_editor(QtGui.QDialog):
 
 
 class Variable_row:
-    def __init__(self, parent, var_name=None, row_data=None):
+    def __init__(self, parent, var_name=False, row_data=False):
         self.parent = parent
         # buttons
         self.up_button = QtGui.QPushButton("⬆️")
@@ -676,19 +676,20 @@ class Variables_table(QtGui.QTableWidget):
         self.setColumnWidth(8, 40)
         self.setColumnWidth(9, 150)
 
-        self.add_button = QtGui.QPushButton("   add   ")
-        self.add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
-        self.add_button.clicked.connect(self.add_row)
-
         self.n_variables = 0
         self.clear_label_flag = None
         if data and data["ordered_inputs"]:
             for element in data["ordered_inputs"]:
                 self.add_row(element, data[element])
+            # after done loading control rows, insert another row with an "add" button
+            add_button = QtGui.QPushButton("   add   ")
+            add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+            add_button.clicked.connect(self.add_row)
+            self.setCellWidget(self.n_variables, 10, add_button)
         else:
             self.add_row()
 
-    def add_row(self, varname=None, row_dict=None):
+    def add_row(self, varname=False, row_dict=False):
         # populate row with widgets
         new_widgets = Variable_row(self, varname, row_dict)
         new_widgets.put_into_table(row_index=self.n_variables)
@@ -696,9 +697,13 @@ class Variables_table(QtGui.QTableWidget):
         # connect buttons to functions
         self.connect_buttons(self.n_variables)
 
-        # insert another row and shift down "add" button
+        # insert another row with an "add" button
         self.insertRow(self.n_variables + 1)
-        self.setCellWidget(self.n_variables + 1, 10, self.add_button)
+        if not varname:
+            add_button = QtGui.QPushButton("   add   ")
+            add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+            add_button.clicked.connect(self.add_row)
+            self.setCellWidget(self.n_variables + 1, 10, add_button)
 
         self.n_variables += 1
         self.update_available()
