@@ -15,6 +15,6 @@ tasks            : Task definition files
 tools            : Tools for importing and visualising pycontrol data
 pyControl_GUI.py : Python script to launch the GUI.
 
-Version: v1.7
+Version: v1.7.1
 ---------------
 
