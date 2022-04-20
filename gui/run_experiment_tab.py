@@ -1,6 +1,7 @@
 import os
 import time
 import json
+import importlib
 from datetime import datetime
 from collections import OrderedDict
 
@@ -448,15 +449,17 @@ class Subjectbox(QtGui.QGroupBox):
 
     def assign_board(self, board):
         self.board = board
+        self.variables_dialog = Variables_dialog(self, self.board)
         if 'custom_variables_dialog' in self.board.sm_info['variables']:
             custom_variables_name = eval(self.board.sm_info['variables']['custom_variables_dialog'])
             potential_dialog = Custom_variables_dialog(self,custom_variables_name,is_experiment=True)
-            if potential_dialog.using_custom_gui is True:
+            if potential_dialog.custom_gui == "json_gui":
                 self.variables_dialog = potential_dialog
-            else:
-                self.variables_dialog = Variables_dialog(self, self.board)
-        else:
-            self.variables_dialog = Variables_dialog(self, self.board)
+            elif potential_dialog.custom_gui == "pyfile_gui":
+                py_gui_file = importlib.import_module(f"config.user_variable_dialogs.{custom_variables_name}")
+                importlib.reload(py_gui_file)
+                self.variables_dialog = py_gui_file.Custom_variables_dialog(self, self.board)
+
 
         self.variables_button.clicked.connect(self.variables_dialog.exec_)
         self.variables_button.setEnabled(True)
