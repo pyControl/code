@@ -1,5 +1,6 @@
 import os
 import time
+import importlib
 from datetime import datetime
 from pyqtgraph.Qt import QtGui, QtCore
 from serial import SerialException, SerialTimeoutException
@@ -313,18 +314,18 @@ class Run_task_tab(QtGui.QWidget):
                 self.variables_button.clicked.disconnect()
                 self.variables_dialog.deleteLater()
             self.task = task
+            self.variables_dialog = Variables_dialog(self, self.board)
+            self.using_json_gui = False
             if "custom_variables_dialog" in self.board.sm_info["variables"]:
                 custom_variables_name = eval(self.board.sm_info["variables"]["custom_variables_dialog"])
                 potential_dialog = Custom_variables_dialog(self, custom_variables_name)
-                if potential_dialog.using_custom_gui:
+                if potential_dialog.custom_gui == "json_gui":
                     self.variables_dialog = potential_dialog
-                    self.using_custom_gui = True
-                else:
-                    self.variables_dialog = Variables_dialog(self, self.board)
-                    self.using_custom_gui = False
-            else:
-                self.variables_dialog = Variables_dialog(self, self.board)
-                self.using_custom_gui = False
+                    self.using_json_gui = True
+                elif potential_dialog.custom_gui == "pyfile_gui":
+                    py_gui_file = importlib.import_module(f"config.user_variable_dialogs.{custom_variables_name}")
+                    importlib.reload(py_gui_file)
+                    self.variables_dialog = py_gui_file.Custom_variables_dialog(self, self.board)
             self.variables_button.clicked.connect(self.variables_dialog.exec_)
             self.variables_button.setEnabled(True)
             self.task_plot.set_state_machine(self.board.sm_info)
@@ -376,7 +377,7 @@ class Run_task_tab(QtGui.QWidget):
         self.start_button.setEnabled(False)
         self.board_groupbox.setEnabled(False)
         self.stop_button.setEnabled(True)
-        if self.using_custom_gui:
+        if self.using_json_gui:
             self.variables_dialog.edit_action.setEnabled(False)
         self.print_to_log(f"\nRun started at: {datetime.now().strftime('%Y/%m/%d %H:%M:%S')}\n")
         self.update_timer.start(update_interval)
@@ -401,7 +402,7 @@ class Run_task_tab(QtGui.QWidget):
         self.task_select.setEnabled(True)
         self.upload_button.setEnabled(True)
         self.stop_button.setEnabled(False)
-        if self.using_custom_gui:
+        if self.using_json_gui:
             self.variables_dialog.edit_action.setEnabled(True)
         self.status_text.setText("Uploaded : " + self.task)
         self.GUI_main.tab_widget.setTabEnabled(1, True)  # Enable setups tab.

@@ -393,7 +393,7 @@ class SubjectsTable(QtGui.QTableWidget):
         remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
         ind = QtCore.QPersistentModelIndex(self.model().index(self.n_subjects, 2))
         remove_button.clicked.connect(lambda :self.remove_subject(ind.row()))
-        add_button = QtGui.QPushButton('add')
+        add_button = QtGui.QPushButton('   add   ')
         add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
         add_button.clicked.connect(self.add_subject)
         run_checkbox = TableCheckbox()

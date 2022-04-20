@@ -21,7 +21,7 @@
         "green_count": {
             "label": "\ud83d\udfe2Green count",
             "widget": "spinbox",
-            "min": 0,
+            "min": 1,
             "max": 10,
             "step": 1,
             "suffix": "blinks",
@@ -39,7 +39,7 @@
         "red_count": {
             "label": "\ud83d\udd34Red count",
             "widget": "spinbox",
-            "min": 0,
+            "min": 1,
             "max": 10,
             "step": 1,
             "suffix": "blinks",
