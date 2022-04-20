@@ -458,7 +458,7 @@ class Subjectbox(QtGui.QGroupBox):
             elif potential_dialog.custom_gui == "pyfile_gui":
                 py_gui_file = importlib.import_module(f"config.user_variable_dialogs.{custom_variables_name}")
                 importlib.reload(py_gui_file)
-                self.variables_dialog = py_gui_file.Sequence_Variables_dialog(self, self.board)
+                self.variables_dialog = py_gui_file.Custom_variables_dialog(self, self.board)
 
 
         self.variables_button.clicked.connect(self.variables_dialog.exec_)
