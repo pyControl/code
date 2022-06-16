@@ -1,6 +1,7 @@
 import os
 import sys
 import traceback
+import logging
 
 from serial.tools import list_ports
 from pyqtgraph.Qt import QtGui, QtCore
@@ -179,6 +180,7 @@ class GUI_main(QtGui.QMainWindow):
         '''Called whenever an uncaught exception occurs.'''
         if hasattr(self.tab_widget.currentWidget(), 'excepthook'):
            self.tab_widget.currentWidget().excepthook(ex_type, ex_value, ex_traceback)
+        logging.error(''.join(traceback.format_exception(ex_type, ex_value, ex_traceback)))
         traceback.print_exception(ex_type, ex_value, ex_traceback)
 
 # --------------------------------------------------------------------------------
