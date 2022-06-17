@@ -1,7 +1,6 @@
 # Check that depndencies are installed then launch the pyControl GUI.
 
 import sys
-import os
 import logging
 
 # Setup error logging.

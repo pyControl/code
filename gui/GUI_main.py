@@ -185,7 +185,6 @@ class GUI_main(QtGui.QMainWindow):
         if hasattr(self.tab_widget.currentWidget(), 'excepthook'):
            self.tab_widget.currentWidget().excepthook(ex_type, ex_value, ex_traceback)
         logging.error(''.join(traceback.format_exception(ex_type, ex_value, ex_traceback)))
-        traceback.print_exception(ex_type, ex_value, ex_traceback)
 
 # --------------------------------------------------------------------------------
 # Launch GUI.
