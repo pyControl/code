@@ -1,7 +1,12 @@
 # Check that depndencies are installed then launch the pyControl GUI.
 
 import sys
-import os
+import logging
+
+# Setup error logging.
+logging.basicConfig(level=logging.ERROR, 
+    handlers=[logging.FileHandler('ErrorLog.txt', delay=True)],
+    format='%(asctime)s %(message)s')
 
 # Check dependencies are installed.
 try:
@@ -9,8 +14,7 @@ try:
     import serial
     import pyqtgraph
 except Exception as e:
-    print('Unable to import dependencies:\n\n'+str(e))
-    input('\nPress enter to close.')
+    logging.error('  Unable to import dependencies:\n\n'+str(e)+'\n\n')
     sys.exit()
 
 # Launch the GUI.
