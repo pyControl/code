@@ -194,7 +194,7 @@ def launch_GUI():
     '''Launch the pyControl GUI.'''
     app = QtGui.QApplication(sys.argv)
     app.setStyle('Fusion')
-    app.setWindowIcon(QtGui.QIcon("gui/icons/main.svg"))
+    app.setWindowIcon(QtGui.QIcon("gui/icons/logo.svg"))
     font = QtGui.QFont()
     font.setPixelSize(ui_font_size)
     app.setFont(font)
