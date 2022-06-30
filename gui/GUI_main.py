@@ -1,6 +1,8 @@
 import os
 import sys
+import ctypes
 import traceback
+import logging
 
 from serial.tools import list_ports
 from pyqtgraph.Qt import QtGui, QtCore
@@ -12,6 +14,9 @@ from gui.dialogs import Board_config_dialog, Keyboard_shortcuts_dialog, Paths_di
 from gui.configure_experiment_tab import Configure_experiment_tab
 from gui.run_experiment_tab import Run_experiment_tab
 from gui.setups_tab import Setups_tab
+
+if os.name == 'nt': # Needed on windows to get taskbar icon to display correctly.
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u'pyControl')
 
 # --------------------------------------------------------------------------------
 # GUI_main
@@ -179,7 +184,7 @@ class GUI_main(QtGui.QMainWindow):
         '''Called whenever an uncaught exception occurs.'''
         if hasattr(self.tab_widget.currentWidget(), 'excepthook'):
            self.tab_widget.currentWidget().excepthook(ex_type, ex_value, ex_traceback)
-        traceback.print_exception(ex_type, ex_value, ex_traceback)
+        logging.error(''.join(traceback.format_exception(ex_type, ex_value, ex_traceback)))
 
 # --------------------------------------------------------------------------------
 # Launch GUI.
@@ -189,6 +194,7 @@ def launch_GUI():
     '''Launch the pyControl GUI.'''
     app = QtGui.QApplication(sys.argv)
     app.setStyle('Fusion')
+    app.setWindowIcon(QtGui.QIcon("gui/icons/logo.svg"))
     font = QtGui.QFont()
     font.setPixelSize(ui_font_size)
     app.setFont(font)
