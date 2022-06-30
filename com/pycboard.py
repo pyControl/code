@@ -238,7 +238,6 @@ class Pycboard(Pyboard):
             self.transfer_file(file_path, target_path)
             if show_progress:
                 self.print('.', end='')
-                sys.stdout.flush()
 
     def remove_file(self, file_path):
         '''Remove a file from the pyboard.'''
