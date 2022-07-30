@@ -3,6 +3,7 @@
 
 import os
 import pickle
+import pandas as pd
 import numpy as np
 from datetime import datetime, date
 from collections import namedtuple
@@ -80,6 +81,109 @@ class Session():
                       for event_name in ID2name.values()}
 
         self.print_lines = [line[2:] for line in all_lines if line[0]=='P']
+
+#----------------------------------------------------------------------------------
+# Session Dataframe
+#----------------------------------------------------------------------------------
+
+def session_dataframe(file_path, paired_events={}, pair_end_suffix=None):
+    '''Generate a pandas dataframe from a pyControl data file containing the 
+    sessions data.  The data frame has columns:
+    type : Whether the row contains session 'info', a 'state' entry, 
+          'event' or 'print' line.
+    name : The name of the state, event or session information in the row.
+    time : The time the row occured in ms since the session start.
+    duration : The duration in ms of states and paired events (see below).
+
+    Optionally events can be specified as coming in pairs corresponding to the
+    start and end of an action, e.g. entering and exiting a nosepoke. When a 
+    start-event end-event pair occurs in the data, only the start_event generates
+    a row in the dataframe, with the end event used to compute the duration. 
+    
+    Parameters
+    ----------
+    file_path : path to pyControl data file.
+    
+    paired_events : Optional dict specifying paired events e.g. 
+                    {'poke_1_in':poke_1_out', 'poke_1_in':poke_1_out'}.  
+    
+    pair_end_suffix : Optional string specifying a suffix used to indicate the
+                      end event of paired events that share a common stem e.g.
+                      the pair {'poke_1_in':poke_1_out'} would be found 
+                      automatically using pair_end_suffix='_out'
+
+        DESCRIPTION. The default is None.
+
+    Returns
+    -------
+    df : session dataframe
+    '''
+
+    # Load data from file.
+    with open(file_path, 'r') as f:
+        print('Importing data file: '+os.path.split(file_path)[1])
+        all_lines = [line.strip() for line in f.readlines() if line.strip()]
+    
+    # Make dataframe.
+    state_IDs = eval(next(line for line in all_lines if line[0]=='S')[2:])
+    event_IDs = eval(next(line for line in all_lines if line[0]=='E')[2:])
+    ID2name = {v: k for k, v in {**state_IDs, **event_IDs}.items()}
+
+    line_dicts = []
+    for line in all_lines:
+        if line[0] == 'I': # Info line.
+            name, value = line[2:].split(' : ')
+            line_dicts.append({'type'  : 'info',
+                               'name'  : name,
+                               'value' : value})
+        elif line[0] == 'D': # Data line.
+             timestamp, ID = [int(i) for i in line.split(' ')[1:]]
+             line_dicts.append({'type' : 'state' if ID in state_IDs.values() else 'event',
+                                'name' : ID2name[ID],
+                                'time' : int(timestamp)})
+        elif line[0] == 'P': # Print line.
+            line_dicts.append({'type'  : 'print',
+                               'time'  : int(line[2:].split(' ',1)[0]),
+                               'value' : line[2:].split(' ',1)[1]})
+
+    df = pd.DataFrame(line_dicts)
+    
+    # Add state durations.
+    df.loc[df['type'] == 'state','duration'] = -df.loc[df['type'] == 'state','time'].diff(-1)
+
+    # Find paired events with specified pair end suffix.
+    if pair_end_suffix: 
+        end_events = [ev for ev in event_IDs.keys() if ev.endswith(pair_end_suffix)]
+        for end_event in end_events:
+            stem = end_event[:-len(pair_end_suffix)]
+            try:
+                start_event = next(ev for ev in event_IDs.keys() if ev.startswith(stem) and ev != end_event)
+            except StopIteration:
+                continue # No matching start event found.
+            paired_events[start_event] = end_event
+        
+    # Compute paired event durations and remove end events.
+    if paired_events:
+        end2start = {v:k for k,v in paired_events.items()}
+        start_times = {se:None for se in paired_events.keys()}
+        start_inds  = {se:None for se in paired_events.keys()}
+        end_inds = []
+        for i in df.index:
+            if df.loc[i,'name'] in paired_events.keys(): # Pair start event.
+                start_times[df.loc[i,'name']] = df.loc[i,'time']
+                start_inds[ df.loc[i,'name']] = i
+            elif df.loc[i,'name'] in paired_events.values(): # Pair end event.
+                start_event = end2start[df.loc[i,'name']]
+                if start_times[start_event] != None:
+                    df.loc[start_inds[start_event],'duration'] = df.loc[i,'time'] - start_times[start_event]
+                    start_times[start_event] = None
+                    end_inds.append(i)
+        df.drop(index=end_inds, inplace=True)
+                     
+    # Reset index and set column order.    
+    df.reset_index(drop=True)
+    df = df.reindex(columns=['type','name','time','duration','value'])
+    return df
 
 #----------------------------------------------------------------------------------
 # Experiment class
