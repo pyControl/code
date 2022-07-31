@@ -646,8 +646,10 @@ class Variable_row:
     def __init__(self, parent, var_name=False, row_data=False):
         self.parent = parent
         # buttons
-        self.up_button = QtGui.QPushButton("⬆️")
-        self.down_button = QtGui.QPushButton("⬇️")
+        self.up_button = QtGui.QPushButton("")
+        self.up_button.setIcon(QtGui.QIcon("gui/icons/up.svg"))
+        self.down_button = QtGui.QPushButton("")
+        self.down_button.setIcon(QtGui.QIcon("gui/icons/down.svg"))
         self.remove_button = QtGui.QPushButton("remove")
         self.remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
         # line edits
