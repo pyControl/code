@@ -1,9 +1,8 @@
 import time
-import numpy as np
 from datetime import timedelta
+import numpy as np
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtGui
-from PyQt5.QtCore import Qt
+from pyqtgraph.Qt import QtGui,QtWidgets,QtCore
 
 from config.gui_settings import event_history_len, state_history_len, analog_history_dur
 from gui.utility import detachableTabWidget
@@ -12,11 +11,11 @@ from gui.utility import detachableTabWidget
 # Task_plot 
 # ----------------------------------------------------------------------------------------
 
-class Task_plot(QtGui.QWidget):
+class Task_plot(QtWidgets.QWidget):
     ''' Widget for plotting the states, events and analog inputs output by a state machine.'''
 
     def __init__(self, parent=None):
-        super(QtGui.QWidget, self).__init__(parent)
+        super(QtWidgets.QWidget, self).__init__(parent)
 
         # Create widgets
 
@@ -26,7 +25,7 @@ class Task_plot(QtGui.QWidget):
         self.run_clock   = Run_clock(self.states_plot.axis)
 
         # Setup plots
-        self.pause_button = QtGui.QPushButton()
+        self.pause_button = QtWidgets.QPushButton()
         self.pause_button.setEnabled(False)
         self.pause_button.setCheckable(True)
         self.events_plot.axis.setXLink(self.states_plot.axis)
@@ -35,11 +34,11 @@ class Task_plot(QtGui.QWidget):
 
         # create layout
 
-        self.vertical_layout = QtGui.QGridLayout()
+        self.vertical_layout = QtWidgets.QGridLayout()
         self.vertical_layout.addWidget(self.states_plot.axis,0,0,1,3)
         self.vertical_layout.addWidget(self.events_plot.axis,1,0,1,3)
         self.vertical_layout.addWidget(self.analog_plot.axis,2,0,1,3)
-        self.vertical_layout.addWidget(self.pause_button,3,0,1,3,Qt.AlignCenter)
+        self.vertical_layout.addWidget(self.pause_button,3,0,1,3,QtCore.Qt.AlignmentFlag.AlignCenter)
         self.setLayout(self.vertical_layout)
 
         self.pause_button.clicked.connect(self.update_pause_btn_text)
@@ -254,12 +253,12 @@ class Run_clock():
 
     def __init__(self, axis):
         self.clock_text = pg.TextItem(text='')
-        self.clock_text.setFont(QtGui.QFont('arial',11, QtGui.QFont.Bold))
+        self.clock_text.setFont(QtGui.QFont('arial',11, QtGui.QFont.Weight.Bold))
         axis.getViewBox().addItem(self.clock_text, ignoreBounds=True)
         self.clock_text.setParentItem(axis.getViewBox())
         self.clock_text.setPos(10,-5)
         self.recording_text = pg.TextItem(text='', color=(255,0,0))
-        self.recording_text.setFont(QtGui.QFont('arial',12,QtGui.QFont.Bold))
+        self.recording_text.setFont(QtGui.QFont('arial',12,QtGui.QFont.Weight.Bold))
         axis.getViewBox().addItem(self.recording_text, ignoreBounds=True)
         self.recording_text.setParentItem(axis.getViewBox())
         self.recording_text.setPos(80,-5)
@@ -278,12 +277,12 @@ class Run_clock():
 # Experiment plotter
 # --------------------------------------------------------------------------------
 
-class Experiment_plot(QtGui.QMainWindow):
+class Experiment_plot(QtWidgets.QMainWindow):
     '''Window for plotting data during experiment run where each subjects plots
     are displayed in a seperate tab.'''
 
     def __init__(self, parent=None):
-        super(QtGui.QWidget, self).__init__(parent)
+        super(QtWidgets.QWidget, self).__init__(parent)
         self.setWindowTitle('Experiment plot')
         self.setGeometry(720, 30, 700, 800) # Left, top, width, height.       
         self.subject_tabs = detachableTabWidget(self)
@@ -316,6 +315,7 @@ class Experiment_plot(QtGui.QMainWindow):
             subject_plot = self.subject_plots.pop() 
             subject_plot.setParent(None)
             subject_plot.deleteLater()
+        self.subject_tabs.closeDetachedTabs()
         self.close()
         
     def update(self):

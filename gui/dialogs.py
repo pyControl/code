@@ -1,7 +1,7 @@
 import os
 import json
 
-from pyqtgraph.Qt import QtGui, QtCore
+from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 from config.paths import dirs, update_paths
 from gui.utility import variable_constants
@@ -13,17 +13,17 @@ flashdrive_message = (
     'USB flash drive before loading the framework, as this helps prevent the '
     'filesystem getting corrupted. Do you want to disable the flashdrive?')
 
-class Board_config_dialog(QtGui.QDialog):
+class Board_config_dialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
-        super(QtGui.QDialog, self).__init__(parent)
+        super(QtWidgets.QDialog, self).__init__(parent)
         self.setWindowTitle('Configure pyboard')
         # Create widgets.
-        self.load_fw_button = QtGui.QPushButton('Load framework')
-        self.load_hw_button = QtGui.QPushButton('Load hardware definition')
-        self.DFU_button = QtGui.QPushButton('Device Firmware Update (DFU) mode')
-        self.flashdrive_button = QtGui.QPushButton()
+        self.load_fw_button = QtWidgets.QPushButton('Load framework')
+        self.load_hw_button = QtWidgets.QPushButton('Load hardware definition')
+        self.DFU_button = QtWidgets.QPushButton('Device Firmware Update (DFU) mode')
+        self.flashdrive_button = QtWidgets.QPushButton()
         # Layout.
-        self.vertical_layout = QtGui.QVBoxLayout()
+        self.vertical_layout = QtWidgets.QVBoxLayout()
         self.setLayout(self.vertical_layout)
         self.vertical_layout.addWidget(self.load_fw_button)
         self.vertical_layout.addWidget(self.load_hw_button)
@@ -35,20 +35,20 @@ class Board_config_dialog(QtGui.QDialog):
         self.DFU_button.clicked.connect(self.DFU_mode)
         self.flashdrive_button.clicked.connect(self.flashdrive)
 
-    def exec_(self, board):
+    def exec(self, board):
         self.board = board
         self.flashdrive_enabled = 'MSC' in self.board.status['usb_mode']
         self.flashdrive_button.setText('{} USB flash drive'
             .format('Disable' if self.flashdrive_enabled else 'Enable'))
         self.disconnect = False # Indicates whether board was disconnected by dialog.
-        return QtGui.QDialog.exec_(self)
+        return QtWidgets.QDialog.exec(self)
 
     def load_framework(self):
         self.accept()
         if self.flashdrive_enabled:
             reply = QtGui.QMessageBox.question(self, 'Disable flashdrive', 
-                flashdrive_message, QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
-            if reply == QtGui.QMessageBox.Yes:
+                flashdrive_message, QtGui.QMessageBox.StandardButton.Yes | QtGui.QMessageBox.StandardButton.No)
+            if reply == QtGui.QMessageBox.StandardButton.Yes:
                 self.board.disable_mass_storage()
                 self.disconnect = True
                 return
@@ -75,43 +75,43 @@ class Board_config_dialog(QtGui.QDialog):
 
 # Variables_dialog ---------------------------------------------------------------------
 
-class Variables_dialog(QtGui.QDialog):
+class Variables_dialog(QtWidgets.QDialog):
     # Dialog for setting and getting task variables.
     def __init__(self, parent, board):
-        super(QtGui.QDialog, self).__init__(parent)
+        super(QtWidgets.QDialog, self).__init__(parent)
         self.setWindowTitle('Set variables')
-        self.scroll_area = QtGui.QScrollArea(parent=self)
+        self.scroll_area = QtWidgets.QScrollArea(parent=self)
         self.scroll_area.setWidgetResizable(True)
         self.variables_grid = Variables_grid(self.scroll_area, board)
         self.scroll_area.setWidget(self.variables_grid)
-        self.layout = QtGui.QVBoxLayout(self)
+        self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.addWidget(self.scroll_area)
         self.setLayout(self.layout)
 
         self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+W'), self)
         self.close_shortcut.activated.connect(self.close)
 
-class Variables_grid(QtGui.QWidget):
+class Variables_grid(QtWidgets.QWidget):
     # Grid of variables to set/get, displayed within scroll area of dialog.
     def __init__(self, parent, board):
-        super(QtGui.QWidget, self).__init__(parent)
+        super(QtWidgets.QWidget, self).__init__(parent)
         variables = board.sm_info['variables']
-        self.grid_layout = QtGui.QGridLayout()
+        self.grid_layout = QtWidgets.QGridLayout()
         for i, (v_name, v_value_str) in enumerate(sorted(variables.items())):
             if not v_name[-3:] == '___':
                 Variable_setter(v_name, v_value_str, self.grid_layout, i, self, board)
         self.setLayout(self.grid_layout)
 
-class Variable_setter(QtGui.QWidget):
+class Variable_setter(QtWidgets.QWidget):
     # For setting and getting a single variable.
     def __init__(self, v_name, v_value_str, grid_layout, i, parent, board): # Should split into seperate init and provide info.
-        super(QtGui.QWidget, self).__init__(parent)
+        super(QtWidgets.QWidget, self).__init__(parent)
         self.board = board
         self.v_name = v_name
-        self.label = QtGui.QLabel(v_name)
-        self.get_button = QtGui.QPushButton('Get value')
-        self.set_button = QtGui.QPushButton('Set value')
-        self.value_str = QtGui.QLineEdit(v_value_str)
+        self.label = QtWidgets.QLabel(v_name)
+        self.get_button = QtWidgets.QPushButton('Get value')
+        self.set_button = QtWidgets.QPushButton('Set value')
+        self.value_str = QtWidgets.QLineEdit(v_value_str)
         if v_value_str[0] == '<': # Variable is a complex object that cannot be modifed.
             self.value_str.setText('<complex object>')
             self.set_button.setEnabled(False)
@@ -168,27 +168,27 @@ class Variable_setter(QtGui.QWidget):
 
 # Summary variables dialog -----------------------------------------------------------
 
-class Summary_variables_dialog(QtGui.QDialog):
+class Summary_variables_dialog(QtWidgets.QDialog):
     '''Dialog for displaying summary variables from an experiment as a table.
     The table is copied to the clipboard as a string that can be pasted into a
     spreadsheet.'''
     def __init__(self, parent, sv_dict):
-        super(QtGui.QDialog, self).__init__(parent)
+        super(QtWidgets.QDialog, self).__init__(parent)
         self.setWindowTitle('Summary variables')
 
         subjects = list(sv_dict.keys())
         v_names  = sorted(sv_dict[subjects[0]].keys())
 
-        self.label = QtGui.QLabel('Summary variables copied to clipboard.')
-        self.label.setAlignment(QtCore.Qt.AlignCenter)
+        self.label = QtWidgets.QLabel('Summary variables copied to clipboard.')
+        self.label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
-        self.table = QtGui.QTableWidget(len(subjects), len(v_names),  parent=self)
+        self.table = QtWidgets.QTableWidget(len(subjects), len(v_names),  parent=self)
         self.table.setSizeAdjustPolicy(QtGui.QAbstractScrollArea.AdjustToContents)
         self.table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.table.setHorizontalHeaderLabels(v_names)
         self.table.setVerticalHeaderLabels(subjects)
 
-        self.Vlayout = QtGui.QVBoxLayout(self)
+        self.Vlayout = QtWidgets.QVBoxLayout(self)
         self.Vlayout.addWidget(self.label)
         self.Vlayout.addWidget(self.table)
 
@@ -199,46 +199,46 @@ class Summary_variables_dialog(QtGui.QDialog):
             for v, v_name in enumerate(v_names):
                 v_value_str = repr(sv_dict[subject][v_name])
                 clip_string += '\t' + v_value_str
-                item = QtGui.QTableWidgetItem()
+                item = QtWidgets.QTableWidgetItem()
                 item.setText(v_value_str)
                 self.table.setItem(s, v, item)
 
         self.table.resizeColumnsToContents()
 
-        clipboard = QtGui.QApplication.clipboard()
+        clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setText(clip_string)
 
 # Invalid experiment dialog. ---------------------------------------------------------
 
 def invalid_run_experiment_dialog(parent, message):
     QtGui.QMessageBox.warning(parent, 'Invalid experiment', 
-        message + '\n\nUnable to run experiment.', QtGui.QMessageBox.Ok)
+        message + '\n\nUnable to run experiment.', QtGui.QMessageBox.StandardButton.Ok)
 
 def invalid_save_experiment_dialog(parent, message):
     QtGui.QMessageBox.warning(parent, 'Invalid experiment', 
-        message + '\n\nUnable to save experiment.', QtGui.QMessageBox.Ok)
+        message + '\n\nUnable to save experiment.', QtGui.QMessageBox.StandardButton.Ok)
 
 # Unrun subjects warning     ---------------------------------------------------------
 
 def unrun_subjects_dialog(parent,message):
     reply = QtGui.QMessageBox.warning(parent, 'Unrun Subjects', 
-        'The following Subjects will not be run:\n\n{}'.format(message), (QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel))
-    if reply == QtGui.QMessageBox.Ok:
+        'The following Subjects will not be run:\n\n{}'.format(message), (QtGui.QMessageBox.StandardButton.Ok | QtGui.QMessageBox.StandardButton.Cancel))
+    if reply == QtGui.QMessageBox.StandardButton.Ok:
         return True
     else:
         return False
         
 # Keyboard shortcuts dialog. ---------------------------------------------------------
 
-class Keyboard_shortcuts_dialog(QtGui.QDialog):
+class Keyboard_shortcuts_dialog(QtWidgets.QDialog):
     '''Dialog for displaying information about keyboard shortcuts.'''
     def __init__(self, parent):
-        super(QtGui.QDialog, self).__init__(parent)
+        super(QtWidgets.QDialog, self).__init__(parent)
         self.setWindowTitle('Shortcuts')
 
-        self.Vlayout = QtGui.QVBoxLayout(self)
+        self.Vlayout = QtWidgets.QVBoxLayout(self)
 
-        label = QtGui.QLabel('<center><b>Keyboard Shortcuts</b></center<br></br>')
+        label = QtWidgets.QLabel('<center><b>Keyboard Shortcuts</b></center<br></br>')
         label.setFont(QtGui.QFont('Helvetica', 12))
         self.Vlayout.addWidget(label)
 
@@ -256,7 +256,7 @@ class Keyboard_shortcuts_dialog(QtGui.QDialog):
             '<b style="color:#0220e0;">Ctrl + s</b> : Save experiment ']
 
         for ls in label_strings:
-            label = QtGui.QLabel(ls)
+            label = QtWidgets.QLabel(ls)
             label.setFont(QtGui.QFont('Helvetica', 10))
             self.Vlayout.addWidget(label)
 
@@ -272,14 +272,14 @@ class Path_setter():
         self.edited = edited
         self.dialog = dialog
         # Instantiate widgets
-        self.name_label = QtGui.QLabel(name +' folder:')
-        self.path_text = QtGui.QLineEdit(self.path)
+        self.name_label = QtWidgets.QLabel(name +' folder:')
+        self.path_text = QtWidgets.QLineEdit(self.path)
         self.path_text.setReadOnly(True)
         self.path_text.setFixedWidth(400)
-        self.change_button = QtGui.QPushButton('Change')
+        self.change_button = QtWidgets.QPushButton('Change')
         self.change_button.clicked.connect(self.select_path)
         # Layout
-        self.hlayout = QtGui.QHBoxLayout()
+        self.hlayout = QtWidgets.QHBoxLayout()
         self.hlayout.addWidget(self.name_label)
         self.hlayout.addWidget(self.path_text)
         self.hlayout.addWidget(self.change_button)
@@ -297,12 +297,12 @@ class Path_setter():
                 self.edited = True
                 self.path_text.setText(new_path)
 
-class Paths_dialog(QtGui.QDialog):
+class Paths_dialog(QtWidgets.QDialog):
     def __init__(self, parent):
-        super(QtGui.QDialog, self).__init__(parent)
+        super(QtWidgets.QDialog, self).__init__(parent)
         self.setWindowTitle('Paths')
 
-        self.Vlayout = QtGui.QVBoxLayout(self)
+        self.Vlayout = QtWidgets.QVBoxLayout(self)
         self.setters = []
 
         # Instantiate setters

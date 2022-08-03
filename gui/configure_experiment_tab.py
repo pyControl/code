@@ -11,12 +11,12 @@ from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_
 # Experiments_tab
 # --------------------------------------------------------------------------------
 
-class Configure_experiment_tab(QtGui.QWidget):
+class Configure_experiment_tab(QtWidgets.QWidget):
     '''The configure experiment tab is used to specify an experiment, i.e. a 
     set of subjects run on a given task on a set of setups.'''
 
     def __init__(self, parent=None):
-        super(QtGui.QWidget, self).__init__(parent)
+        super(QtWidgets.QWidget, self).__init__(parent)
 
         # Variables
         self.GUI_main = self.parent()
@@ -25,37 +25,37 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.saved_exp_dict = {}   # Dict of last saved/loaded experiment.
 
         # Experiment Groupbox
-        self.experiment_groupbox = QtGui.QGroupBox('Experiment')
-        self.expbox_Vlayout = QtGui.QVBoxLayout(self.experiment_groupbox)
-        self.expbox_Hlayout_1 = QtGui.QHBoxLayout()
-        self.separator = QtGui.QLabel("<hr>")
-        self.expbox_Hlayout_2 = QtGui.QHBoxLayout()
-        self.expbox_Hlayout_3 = QtGui.QHBoxLayout()
+        self.experiment_groupbox = QtWidgets.QGroupBox('Experiment')
+        self.expbox_Vlayout = QtWidgets.QVBoxLayout(self.experiment_groupbox)
+        self.expbox_Hlayout_1 = QtWidgets.QHBoxLayout()
+        self.separator = QtWidgets.QLabel("<hr>")
+        self.expbox_Hlayout_2 = QtWidgets.QHBoxLayout()
+        self.expbox_Hlayout_3 = QtWidgets.QHBoxLayout()
         self.expbox_Vlayout.addLayout(self.expbox_Hlayout_1)
         self.expbox_Vlayout.addWidget(self.separator)
         self.expbox_Vlayout.addLayout(self.expbox_Hlayout_2)
         self.expbox_Vlayout.addLayout(self.expbox_Hlayout_3)
 
-        self.experiment_select = QtGui.QComboBox()
+        self.experiment_select = QtWidgets.QComboBox()
 
-        self.run_button = QtGui.QPushButton('Run')
+        self.run_button = QtWidgets.QPushButton('Run')
         self.run_button.setIcon(QtGui.QIcon("gui/icons/run.svg"))
-        self.new_button = QtGui.QPushButton('New')
+        self.new_button = QtWidgets.QPushButton('New')
         self.new_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
-        self.delete_button = QtGui.QPushButton('Delete')
+        self.delete_button = QtWidgets.QPushButton('Delete')
         self.delete_button.setIcon(QtGui.QIcon("gui/icons/delete.svg"))
-        self.save_button = QtGui.QPushButton('Save')
+        self.save_button = QtWidgets.QPushButton('Save')
         self.save_button.setIcon(QtGui.QIcon("gui/icons/save.svg"))
         self.save_button.setEnabled(False)
-        self.name_label = QtGui.QLabel('Experiment name:')
-        self.name_text = QtGui.QLineEdit()
-        self.task_label = QtGui.QLabel('Task:')
+        self.name_label = QtWidgets.QLabel('Experiment name:')
+        self.name_text = QtWidgets.QLineEdit()
+        self.task_label = QtWidgets.QLabel('Task:')
         self.task_select = TaskSelectMenu('select task')
-        self.hardware_test_label = QtGui.QLabel('Hardware test:')
+        self.hardware_test_label = QtWidgets.QLabel('Hardware test:')
         self.hardware_test_select = TaskSelectMenu('no hardware test',add_default=True)
-        self.data_dir_label = QtGui.QLabel('Data directory:')
-        self.data_dir_text = QtGui.QLineEdit(dirs['data'])
-        self.data_dir_button = QtGui.QPushButton('')
+        self.data_dir_label = QtWidgets.QLabel('Data directory:')
+        self.data_dir_text = QtWidgets.QLineEdit(dirs['data'])
+        self.data_dir_button = QtWidgets.QPushButton('')
         self.data_dir_button.setIcon(QtGui.QIcon("gui/icons/folder.svg"))
         self.data_dir_button.setFixedWidth(30)
 
@@ -78,8 +78,8 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.expbox_Hlayout_3.setStretchFactor(self.data_dir_text, 1)
 
         # Subjects Groupbox
-        self.subjects_groupbox = QtGui.QGroupBox('Subjects')
-        self.subjectsbox_layout = QtGui.QGridLayout(self.subjects_groupbox)
+        self.subjects_groupbox = QtWidgets.QGroupBox('Subjects')
+        self.subjectsbox_layout = QtWidgets.QGridLayout(self.subjects_groupbox)
         self.subset_warning_checkbox = QtWidgets.QCheckBox('Warn me if any subjects will not be run')
         self.subset_warning_checkbox.setChecked(True)
         self.subjectsbox_layout.addWidget(self.subset_warning_checkbox,0,0)
@@ -88,8 +88,8 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.subjectsbox_layout.setColumnStretch(1,1)
 
         # Variables Groupbox
-        self.variables_groupbox = QtGui.QGroupBox('Variables')
-        self.variablesbox_layout = QtGui.QHBoxLayout(self.variables_groupbox)
+        self.variables_groupbox = QtWidgets.QGroupBox('Variables')
+        self.variablesbox_layout = QtWidgets.QHBoxLayout(self.variables_groupbox)
         self.variables_table = VariablesTable(self)
         self.task_select.set_callback(self.variables_table.task_changed)
         self.variablesbox_layout.addWidget(self.variables_table)
@@ -101,7 +101,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.name_text.textChanged.connect(self.name_edited)
         self.data_dir_text.textEdited.connect(lambda: setattr(self, 'custom_dir', True))
         self.data_dir_button.clicked.connect(self.select_data_dir)
-        self.experiment_select.activated[str].connect(self.experiment_changed)
+        self.experiment_select.textActivated[str].connect(self.experiment_changed)
         self.new_button.clicked.connect(lambda: self.new_experiment(dialog=True))
         self.delete_button.clicked.connect(self.delete_experiment)
         self.save_button.clicked.connect(self.save_experiment)
@@ -114,7 +114,7 @@ class Configure_experiment_tab(QtGui.QWidget):
         init_keyboard_shortcuts(self, shortcut_dict)
 
         # Main layout
-        self.vertical_layout = QtGui.QVBoxLayout(self)
+        self.vertical_layout = QtWidgets.QVBoxLayout(self)
         self.vertical_layout.addWidget(self.experiment_groupbox)
         self.vertical_layout.addWidget(self.subjects_groupbox)
         self.vertical_layout.addWidget(self.variables_groupbox)
@@ -191,8 +191,8 @@ class Configure_experiment_tab(QtGui.QWidget):
         if os.path.exists(exp_path):
             reply = QtGui.QMessageBox.question(self, 'Delete experiment', 
                 "Delete experiment '{}'".format(self.name_text.text()),
-                    QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel)
-            if reply == QtGui.QMessageBox.Yes:
+                    QtGui.QMessageBox.StandardButton.Yes | QtGui.QMessageBox.StandardButton.Cancel)
+            if reply == QtGui.QMessageBox.StandardButton.Yes:
                 self.new_experiment(dialog=False)
                 os.remove(exp_path)
 
@@ -222,8 +222,8 @@ class Configure_experiment_tab(QtGui.QWidget):
         if os.path.exists(exp_path) and (exp_path != self.saved_exp_path):
             reply = QtGui.QMessageBox.question(self, 'Replace file', 
                 "File '{}' already exists, do you want to replace it?".format(file_name),
-                QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
-            if reply == QtGui.QMessageBox.No:
+                QtGui.QMessageBox.StandardButton.Yes | QtGui.QMessageBox.StandardButton.No)
+            if reply == QtGui.QMessageBox.StandardButton.No:
                 return False
         with open(exp_path,'w') as exp_file:
             exp_file.write(json.dumps(experiment, sort_keys=True, indent=4))
@@ -342,27 +342,27 @@ class Configure_experiment_tab(QtGui.QWidget):
         else:
             dialog_text = 'Experiment edited, save experiment?'
         reply = QtGui.QMessageBox.question(self, 'Save experiment', dialog_text,
-            QtGui.QMessageBox.Yes | QtGui.QMessageBox.No | QtGui.QMessageBox.Cancel)
-        if reply == QtGui.QMessageBox.Yes:
+            QtGui.QMessageBox.StandardButton.Yes | QtGui.QMessageBox.StandardButton.No | QtGui.QMessageBox.StandardButton.Cancel)
+        if reply == QtGui.QMessageBox.StandardButton.Yes:
             was_saved = self.save_experiment(from_dialog=True)
             if not was_saved:
                 invalid_run_experiment_dialog(self, "Failed to save experiment")
                 return False
-        elif reply == QtGui.QMessageBox.Cancel:
+        elif reply == QtGui.QMessageBox.StandardButton.Cancel:
             return False
         return True
 
 # ---------------------------------------------------------------------------------
 
-class SubjectsTable(QtGui.QTableWidget):
+class SubjectsTable(QtWidgets.QTableWidget):
     '''Table for specifying the setups and subjects used in experiment. '''
 
     def __init__(self, parent=None):
-        super(QtGui.QTableWidget, self).__init__(1,4, parent=parent)
+        super(QtWidgets.QTableWidget, self).__init__(1,4, parent=parent)
         self.setHorizontalHeaderLabels(['Run','Setup', 'Subject', ''])
-        self.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
-        self.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.Stretch)
-        self.horizontalHeader().setResizeMode(3, QtGui.QHeaderView.ResizeToContents)
+        self.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.horizontalHeader().setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.verticalHeader().setVisible(False)
         self.cellChanged.connect(self.cell_changed)
         self.all_setups = set([])
@@ -388,18 +388,18 @@ class SubjectsTable(QtGui.QTableWidget):
 
     def add_subject(self, setup=None, subject=None, do_run=None):
         '''Add row to table allowing extra subject to be specified.'''
-        setup_cbox = QtGui.QComboBox()
+        setup_cbox = QtWidgets.QComboBox()
         setup_cbox.addItems(self.available_setups if self.available_setups
                             else ['select setup'])
         if self.unallocated_setups:
             setup_cbox.setCurrentIndex(self.available_setups.index(
                                        self.unallocated_setups[0]))
         setup_cbox.activated.connect(self.update_available_setups)
-        remove_button = QtGui.QPushButton('remove')
+        remove_button = QtWidgets.QPushButton('remove')
         remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
         ind = QtCore.QPersistentModelIndex(self.model().index(self.n_subjects, 2))
         remove_button.clicked.connect(lambda :self.remove_subject(ind.row()))
-        add_button = QtGui.QPushButton('   add   ')
+        add_button = QtWidgets.QPushButton('   add   ')
         add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
         add_button.clicked.connect(self.add_subject)
         run_checkbox = TableCheckbox()
@@ -415,7 +415,7 @@ class SubjectsTable(QtGui.QTableWidget):
         if setup:
             cbox_set_item(setup_cbox, setup)
         if subject:
-            subject_item = QtGui.QTableWidgetItem()
+            subject_item = QtWidgets.QTableWidgetItem()
             subject_item.setText(subject)
             self.setItem(self.n_subjects, 2, subject_item)
         self.n_subjects += 1
@@ -476,18 +476,18 @@ class SubjectsTable(QtGui.QTableWidget):
 
 # -------------------------------------------------------------------------------
 
-class VariablesTable(QtGui.QTableWidget):
+class VariablesTable(QtWidgets.QTableWidget):
     '''Class for specifying task variables that are set to non-default values.'''
 
     def __init__(self, parent=None):
-        super(QtGui.QTableWidget, self).__init__(1,6, parent=parent)
+        super(QtWidgets.QTableWidget, self).__init__(1,6, parent=parent)
         self.subjects_table = self.parent().subjects_table
         self.setHorizontalHeaderLabels(['Variable', 'Subject', 'Value', 'Persistent','Summary',''])
-        self.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Stretch)
-        self.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.Stretch)
-        self.horizontalHeader().setResizeMode(5, QtGui.QHeaderView.ResizeToContents)
+        self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.horizontalHeader().setSectionResizeMode(5, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.verticalHeader().setVisible(False)
-        add_button = QtGui.QPushButton('   add   ')
+        add_button = QtWidgets.QPushButton('   add   ')
         add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
         add_button.clicked.connect(self.add_variable)
         self.setCellWidget(0,5, add_button)
@@ -505,17 +505,17 @@ class VariablesTable(QtGui.QTableWidget):
 
     def add_variable(self, var_dict=None):
         '''Add a row to the variables table.'''
-        variable_cbox = QtGui.QComboBox()
+        variable_cbox = QtWidgets.QComboBox()
         variable_cbox.activated.connect(self.update_available)
-        subject_cbox = QtGui.QComboBox()
+        subject_cbox = QtWidgets.QComboBox()
         subject_cbox.activated.connect(self.update_available)
         persistent = TableCheckbox()
         summary    = TableCheckbox()
-        remove_button = QtGui.QPushButton('remove')
+        remove_button = QtWidgets.QPushButton('remove')
         ind = QtCore.QPersistentModelIndex(self.model().index(self.n_variables, 2))
         remove_button.clicked.connect(lambda :self.remove_variable(ind.row()))
         remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
-        add_button = QtGui.QPushButton('   add   ')
+        add_button = QtWidgets.QPushButton('   add   ')
         add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
         add_button.clicked.connect(self.add_variable)
         self.insertRow(self.n_variables+1)
@@ -528,7 +528,7 @@ class VariablesTable(QtGui.QTableWidget):
         if var_dict: # Set cell values from provided dictionary.
             variable_cbox.addItems([var_dict['name']])
             subject_cbox.addItems([var_dict['subject']])
-            value_item = QtGui.QTableWidgetItem()
+            value_item = QtWidgets.QTableWidgetItem()
             value_item.setText(var_dict['value'])
             self.setItem(self.n_variables, 2, value_item)
             persistent.setChecked(var_dict['persistent'])

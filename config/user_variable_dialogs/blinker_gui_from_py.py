@@ -5,36 +5,36 @@ from pyqtgraph.Qt import QtGui, QtCore
 from gui.custom_variables_dialog import Slider_var, Spin_var
 
 # Custom Variable dialog
-class Custom_variables_dialog(QtGui.QDialog):
+class Custom_variables_dialog(QtWidgets.QDialog):
     # Dialog for setting and getting task variables.
     def __init__(self, parent, board):
-        super(QtGui.QDialog, self).__init__(parent)
+        super(QtWidgets.QDialog, self).__init__(parent)
         self.setWindowTitle("Blink Variable GUI")
-        self.layout = QtGui.QVBoxLayout(self)
+        self.layout = QtWidgets.QVBoxLayout(self)
         self.variables_grid = Variables_grid(self, board)
         self.layout.addWidget(self.variables_grid)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
 
 
-class Variables_grid(QtGui.QWidget):
+class Variables_grid(QtWidgets.QWidget):
     def __init__(self, parent, board):
-        super(QtGui.QWidget, self).__init__(parent)
+        super(QtWidgets.QWidget, self).__init__(parent)
         variables = board.sm_info["variables"]
-        self.grid_layout = QtGui.QGridLayout()
+        self.grid_layout = QtWidgets.QGridLayout()
         initial_variables_dict = {v_name: v_value_str for (v_name, v_value_str) in sorted(variables.items())}
         self.variables_gui = Variables_gui(self, self.grid_layout, board, initial_variables_dict)
         self.setLayout(self.grid_layout)
 
 
-class Variables_gui(QtGui.QWidget):
+class Variables_gui(QtWidgets.QWidget):
     def __init__(self, parent, grid_layout, board, init_vars):
-        super(QtGui.QWidget, self).__init__(parent)
+        super(QtWidgets.QWidget, self).__init__(parent)
         self.board = board
 
         # create widgets
-        widget = QtGui.QWidget()
-        layout = QtGui.QGridLayout()
+        widget = QtWidgets.QWidget()
+        layout = QtWidgets.QGridLayout()
         row = 0
 
         # blink rate controls
@@ -44,29 +44,29 @@ class Variables_gui(QtGui.QWidget):
         self.blink_rate.setBoard(board)
         self.blink_rate.add_to_grid(layout, row)
         row += 1
-        self.min_btn = QtGui.QPushButton("min")
-        self.mid_btn = QtGui.QPushButton("50%")
-        self.max_btn = QtGui.QPushButton("max")
+        self.min_btn = QtWidgets.QPushButton("min")
+        self.mid_btn = QtWidgets.QPushButton("50%")
+        self.max_btn = QtWidgets.QPushButton("max")
         for col,btn in enumerate([self.min_btn,self.mid_btn,self.max_btn]):
-            layout.addWidget(btn, row,col, QtCore.Qt.AlignCenter)
-            btn.setFocusPolicy(QtCore.Qt.NoFocus)
+            layout.addWidget(btn, row,col, QtCore.Qt.AlignmentFlag.AlignCenter)
+            btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
             btn.setMaximumWidth(70)
         row += 1
 
         # separator
-        layout.addWidget(QtGui.QLabel("<hr>"), row, 0, 1, 4)
+        layout.addWidget(QtWidgets.QLabel("<hr>"), row, 0, 1, 4)
         row += 1
 
         # radio buttons
         red_is_enabled = eval(init_vars["red_enabled"])
         green_is_enabled = eval(init_vars["green_enabled"])
         self.both_radio = QtGui.QRadioButton()
-        self.both_lbl = QtGui.QLabel("🔴Both🟢")
+        self.both_lbl = QtWidgets.QLabel("🔴Both🟢")
         self.red_radio = QtGui.QRadioButton()
-        self.red_lbl = QtGui.QLabel("Red")
+        self.red_lbl = QtWidgets.QLabel("Red")
         self.red_lbl.setStyleSheet("border:3px solid red;background:red;border-radius:3px;")  # you can use css styling
         self.green_radio = QtGui.QRadioButton()
-        self.green_lbl = QtGui.QLabel("Green")
+        self.green_lbl = QtWidgets.QLabel("Green")
         self.green_lbl.setStyleSheet("border-radius:3px;border:3px solid green;background:green;color:white")
         if red_is_enabled and green_is_enabled:
             self.both_radio.setChecked(True)
@@ -84,13 +84,13 @@ class Variables_gui(QtGui.QWidget):
                 self.red_radio.setChecked(False)
                 self.green_radio.setChecked(False)
 
-        layout.addWidget(self.both_lbl, row, 0, QtCore.Qt.AlignCenter)
-        layout.addWidget(self.red_lbl, row, 1, QtCore.Qt.AlignCenter)
-        layout.addWidget(self.green_lbl, row, 2, QtCore.Qt.AlignCenter)
+        layout.addWidget(self.both_lbl, row, 0, QtCore.Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.red_lbl, row, 1, QtCore.Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.green_lbl, row, 2, QtCore.Qt.AlignmentFlag.AlignCenter)
         row += 1
-        layout.addWidget(self.both_radio, row, 0, QtCore.Qt.AlignCenter)
-        layout.addWidget(self.red_radio, row, 1, QtCore.Qt.AlignCenter)
-        layout.addWidget(self.green_radio, row, 2, QtCore.Qt.AlignCenter)
+        layout.addWidget(self.both_radio, row, 0, QtCore.Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.red_radio, row, 1, QtCore.Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.green_radio, row, 2, QtCore.Qt.AlignmentFlag.AlignCenter)
         row += 1
 
         # counts
@@ -104,14 +104,14 @@ class Variables_gui(QtGui.QWidget):
         row += 1
 
         # image
-        self.picture = QtGui.QLabel()
+        self.picture = QtWidgets.QLabel()
         image = QtGui.QPixmap("config/user_variable_dialogs/example_image.png")
         self.picture.setPixmap(image)
         layout.addWidget(self.picture, row, 0, 1, 4)
         row += 1
 
         # gif
-        self.gif = QtGui.QLabel()
+        self.gif = QtWidgets.QLabel()
         self.movie = QtGui.QMovie("config/user_variable_dialogs/example_movie.gif")
         self.gif.setMovie(self.movie)
         self.movie.start()
@@ -120,7 +120,7 @@ class Variables_gui(QtGui.QWidget):
 
         layout.setRowStretch(row, 1)
         widget.setLayout(layout)
-        grid_layout.addWidget(widget, 0, 0, QtCore.Qt.AlignLeft)
+        grid_layout.addWidget(widget, 0, 0, QtCore.Qt.AlignmentFlag.AlignLeft)
 
         # connect some buttons to functions
         self.min_btn.clicked.connect(self.slide_to_min)

@@ -1,18 +1,18 @@
 import os
 import json
 
-from pyqtgraph.Qt import QtGui, QtCore
+from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 from config.paths import dirs
 from com.pycboard import Pycboard, PyboardError
 from gui.utility import TableCheckbox
 
-class Setups_tab(QtGui.QWidget):
+class Setups_tab(QtWidgets.QWidget):
     '''The setups tab is used to name and configure setups, where one setup is one
     pyboard and connected hardware.'''
 
     def __init__(self, parent=None):
-        super(QtGui.QWidget, self).__init__(parent)
+        super(QtWidgets.QWidget, self).__init__(parent)
 
         # Variables
 
@@ -32,47 +32,47 @@ class Setups_tab(QtGui.QWidget):
 
         # Select setups group box.
 
-        self.select_groupbox = QtGui.QGroupBox('Setups')
+        self.select_groupbox = QtWidgets.QGroupBox('Setups')
 
-        self.select_all_button = QtGui.QPushButton('Select all')
+        self.select_all_button = QtWidgets.QPushButton('Select all')
         self.select_all_button.setIcon(QtGui.QIcon("gui/icons/checkbox_checked.svg"))
-        self.deselect_all_button = QtGui.QPushButton('Deselect all')
+        self.deselect_all_button = QtWidgets.QPushButton('Deselect all')
         self.deselect_all_button.setIcon(QtGui.QIcon("gui/icons/checkbox_empty.svg"))
 
         self.select_all_button.clicked.connect(self.select_all_setups)
         self.deselect_all_button.clicked.connect(self.deselect_all_setups)
 
-        self.setups_table = QtGui.QTableWidget(0, 4, parent=self)
+        self.setups_table = QtWidgets.QTableWidget(0, 4, parent=self)
         self.setups_table.setHorizontalHeaderLabels(['Serial port', 'Name', 'Select', 'Configure'])
-        self.setups_table.horizontalHeader().setResizeMode(QtGui.QHeaderView.Stretch)
+        self.setups_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.setups_table.verticalHeader().setVisible(False)
         self.setups_table.itemChanged.connect(
             lambda item: item.changed() if hasattr(item, 'changed') else None)
 
-        self.select_Hlayout = QtGui.QHBoxLayout()
+        self.select_Hlayout = QtWidgets.QHBoxLayout()
         self.select_Hlayout.addWidget(self.select_all_button)
         self.select_Hlayout.addWidget(self.deselect_all_button)
-        self.select_Vlayout = QtGui.QVBoxLayout(self.select_groupbox)
+        self.select_Vlayout = QtWidgets.QVBoxLayout(self.select_groupbox)
 
         self.select_Vlayout.addLayout(self.select_Hlayout)
         self.select_Vlayout.addWidget(self.setups_table)
 
         # Configure groupbox.
 
-        self.configure_groupbox = QtGui.QGroupBox('Configure selected')
+        self.configure_groupbox = QtWidgets.QGroupBox('Configure selected')
         self.configure_groupbox.setEnabled(False)
 
-        self.load_fw_button = QtGui.QPushButton('Load framework')
-        self.load_hw_button = QtGui.QPushButton('Load hardware definition')
-        self.enable_flashdrive_button = QtGui.QPushButton('Enable flashdrive')
-        self.disable_flashdrive_button = QtGui.QPushButton('Disable flashdrive')
+        self.load_fw_button = QtWidgets.QPushButton('Load framework')
+        self.load_hw_button = QtWidgets.QPushButton('Load hardware definition')
+        self.enable_flashdrive_button = QtWidgets.QPushButton('Enable flashdrive')
+        self.disable_flashdrive_button = QtWidgets.QPushButton('Disable flashdrive')
 
         self.load_fw_button.clicked.connect(self.load_framework)
         self.load_hw_button.clicked.connect(self.load_hardware_definition)
         self.enable_flashdrive_button.clicked.connect(self.enable_flashdrive)
         self.disable_flashdrive_button.clicked.connect(self.disable_flashdrive)
 
-        self.config_layout = QtGui.QHBoxLayout(self.configure_groupbox)
+        self.config_layout = QtWidgets.QHBoxLayout(self.configure_groupbox)
         self.config_layout.addWidget(self.load_fw_button)
         self.config_layout.addWidget(self.load_hw_button)
         self.config_layout.addWidget(self.enable_flashdrive_button)
@@ -80,22 +80,22 @@ class Setups_tab(QtGui.QWidget):
 
         # Log textbox.
 
-        self.log_textbox = QtGui.QTextEdit()
+        self.log_textbox = QtWidgets.QTextEdit()
         self.log_textbox.setMinimumHeight(180)
         self.log_textbox.setFont(QtGui.QFont('Courier', 9))
         self.log_textbox.setReadOnly(True)
 
         # Main layout.
 
-        self.VLayout = QtGui.QVBoxLayout(self)
+        self.VLayout = QtWidgets.QVBoxLayout(self)
         self.VLayout.addWidget(self.select_groupbox)
         self.VLayout.addWidget(self.configure_groupbox)
         self.VLayout.addWidget(self.log_textbox)
 
     def print_to_log(self, print_string, end='\n'):
-        self.log_textbox.moveCursor(QtGui.QTextCursor.End)
+        self.log_textbox.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         self.log_textbox.insertPlainText(print_string+end)
-        self.log_textbox.moveCursor(QtGui.QTextCursor.End)
+        self.log_textbox.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         self.GUI_main.app.processEvents()
 
     def select_all_setups(self):
@@ -195,17 +195,17 @@ class Setup():
         self.setups_tab = setups_tab
         self.board = None
 
-        self.port_item = QtGui.QTableWidgetItem()
+        self.port_item = QtWidgets.QTableWidgetItem()
         self.port_item.setText(serial_port)
-        self.port_item.setFlags(QtCore.Qt.ItemIsEnabled)
+        self.port_item.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled)
 
-        self.name_item = QtGui.QTableWidgetItem()
+        self.name_item = QtWidgets.QTableWidgetItem()
         self.name_item.changed = self.name_edited
         if self.name != self.port: 
             self.name_item.setText(self.name)
 
         self.select_checkbox = TableCheckbox()
-        self.config_button = QtGui.QPushButton('Configure')
+        self.config_button = QtWidgets.QPushButton('Configure')
         self.config_button.setIcon(QtGui.QIcon("gui/icons/settings.svg"))
         self.config_button.clicked.connect(self.open_config_dialog)
 
@@ -234,7 +234,7 @@ class Setup():
         '''Open the config dialog and update board status as required.'''
         if not self.board: self.connect()
         if self.board:
-            self.setups_tab.GUI_main.config_dialog.exec_(self.board)
+            self.setups_tab.GUI_main.config_dialog.exec(self.board)
             if self.setups_tab.GUI_main.config_dialog.disconnect:
                 self.disconnect()
 
