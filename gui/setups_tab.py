@@ -58,6 +58,7 @@ class Setups_tab(QtGui.QWidget):
         # Configure groupbox.
 
         self.configure_groupbox = QtGui.QGroupBox('Configure selected')
+        self.configure_groupbox.setEnabled(False)
 
         self.load_fw_button = QtGui.QPushButton('Load framework')
         self.load_hw_button = QtGui.QPushButton('Load hardware definition')
@@ -211,6 +212,14 @@ class Setup():
         self.setups_tab.setups_table.setItem(0, 1, self.name_item)
         self.setups_tab.setups_table.setCellWidget(0, 2, self.select_checkbox)
         self.setups_tab.setups_table.setCellWidget(0, 3, self.config_button)
+
+        self.select_checkbox.checkbox.stateChanged.connect(self.multi_config_enable)
+
+    def multi_config_enable(self):
+        self.setups_tab.configure_groupbox.setEnabled(False)
+        for setup in self.setups_tab.setups.values():
+            if setup.select_checkbox.isChecked():
+                self.setups_tab.configure_groupbox.setEnabled(True)
 
     def name_edited(self):
         '''If name entry in table is blank setup name is set to serial port.'''
