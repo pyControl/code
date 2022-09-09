@@ -270,10 +270,6 @@ class Slider_var:
         self.label = QtGui.QLabel(label)
         self.label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         self.val_label = QtGui.QLabel(str(self.slider.value()))
-        sizepolicy = QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding
-        )
-        self.val_label.setSizePolicy(sizepolicy)
 
         self.slider.sliderMoved.connect(self.update_val_lbl)
         self.slider.sliderReleased.connect(self.set)
