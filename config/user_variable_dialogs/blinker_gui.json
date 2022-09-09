@@ -9,6 +9,15 @@
             "suffix": "Hz",
             "hint": "Rate which LED blinks"
         },
+        "sep_0": {
+            "label": "",
+            "widget": "line edit",
+            "min": "",
+            "max": "",
+            "step": "",
+            "suffix": "",
+            "hint": ""
+        },
         "green_enabled": {
             "label": "\ud83d\udfe2Green active",
             "widget": "checkbox",
@@ -26,6 +35,15 @@
             "step": 1,
             "suffix": "blinks",
             "hint": "more"
+        },
+        "sep_1": {
+            "label": "",
+            "widget": "line edit",
+            "min": "",
+            "max": "",
+            "step": "",
+            "suffix": "",
+            "hint": ""
         },
         "red_enabled": {
             "label": "\ud83d\udd34Red active",
@@ -47,8 +65,10 @@
         },
         "ordered_inputs": [
             "blink_rate",
+            "sep_0",
             "green_enabled",
             "green_count",
+            "sep_1",
             "red_enabled",
             "red_count"
         ]
