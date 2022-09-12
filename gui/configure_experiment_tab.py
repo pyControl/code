@@ -60,9 +60,9 @@ class Configure_experiment_tab(QtGui.QWidget):
         self.data_dir_button.setFixedWidth(30)
 
         self.expbox_Hlayout_1.addWidget(self.experiment_select)
+        self.expbox_Hlayout_1.setStretchFactor(self.experiment_select, 2)
         self.expbox_Hlayout_1.addWidget(self.new_button)
         self.expbox_Hlayout_1.addWidget(self.delete_button)
-        self.expbox_Hlayout_1.addStretch(1)
         self.expbox_Hlayout_1.addWidget(self.save_button)
         self.expbox_Hlayout_1.addWidget(self.run_button)
         self.expbox_Hlayout_2.addWidget(self.name_label)
