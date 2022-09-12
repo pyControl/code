@@ -35,7 +35,9 @@ class Setups_tab(QtGui.QWidget):
         self.select_groupbox = QtGui.QGroupBox('Setups')
 
         self.select_all_button = QtGui.QPushButton('Select all')
+        self.select_all_button.setIcon(QtGui.QIcon("gui/icons/checkbox_checked.svg"))
         self.deselect_all_button = QtGui.QPushButton('Deselect all')
+        self.deselect_all_button.setIcon(QtGui.QIcon("gui/icons/checkbox_empty.svg"))
 
         self.select_all_button.clicked.connect(self.select_all_setups)
         self.deselect_all_button.clicked.connect(self.deselect_all_setups)
