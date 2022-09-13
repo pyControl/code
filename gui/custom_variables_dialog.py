@@ -270,10 +270,6 @@ class Slider_var:
         self.label = QtGui.QLabel(label)
         self.label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         self.val_label = QtGui.QLabel(str(self.slider.value()))
-        sizepolicy = QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding
-        )
-        self.val_label.setSizePolicy(sizepolicy)
 
         self.slider.sliderMoved.connect(self.update_val_lbl)
         self.slider.sliderReleased.connect(self.set)
@@ -392,31 +388,34 @@ class Custom_variables_grid(QtGui.QWidget):
             tab_data = generator_data[tab]
             used_vars.extend(tab_data["ordered_inputs"])
             for row, var in enumerate(tab_data["ordered_inputs"]):
-                try:
-                    control = tab_data[var]
-                    if control["widget"] == "slider":
-                        self.widget_dict[var] = Slider_var(
-                            init_vars, control["label"], control["min"], control["max"], control["step"], var
-                        )
-                        self.widget_dict[var].setSuffix(" " + control["suffix"])
-                    elif control["widget"] == "spinbox":
-                        self.widget_dict[var] = Spin_var(
-                            init_vars, control["label"], control["min"], control["max"], control["step"], var
-                        )
-                        self.widget_dict[var].setSuffix(" " + control["suffix"])
-                    elif control["widget"] == "checkbox":
-                        self.widget_dict[var] = Checkbox_var(init_vars, control["label"], var)
-                    elif control["widget"] == "line edit":
-                        self.widget_dict[var] = Standard_var(init_vars, control["label"], var)
+                if var.find("sep") > -1:
+                    layout.addWidget(QtGui.QLabel("<hr>"), row, 0, 1, 4)
+                else:
+                    try:
+                        control = tab_data[var]
+                        if control["widget"] == "slider":
+                            self.widget_dict[var] = Slider_var(
+                                init_vars, control["label"], control["min"], control["max"], control["step"], var
+                            )
+                            self.widget_dict[var].setSuffix(" " + control["suffix"])
+                        elif control["widget"] == "spinbox":
+                            self.widget_dict[var] = Spin_var(
+                                init_vars, control["label"], control["min"], control["max"], control["step"], var
+                            )
+                            self.widget_dict[var].setSuffix(" " + control["suffix"])
+                        elif control["widget"] == "checkbox":
+                            self.widget_dict[var] = Checkbox_var(init_vars, control["label"], var)
+                        elif control["widget"] == "line edit":
+                            self.widget_dict[var] = Standard_var(init_vars, control["label"], var)
 
-                    self.widget_dict[var].setHint(control["hint"])
-                    self.widget_dict[var].setBoard(board)
-                    self.widget_dict[var].add_to_grid(layout, row)
+                        self.widget_dict[var].setHint(control["hint"])
+                        self.widget_dict[var].setBoard(board)
+                        self.widget_dict[var].add_to_grid(layout, row)
 
-                except KeyError:
-                    parent.parent.print_to_log(
-                        f'- Loading error: could not find "{var}" variable in the task file. The variable name has been changed or no longer exists.'
-                    )
+                    except KeyError:
+                        parent.parent.print_to_log(
+                            f'- Loading error: could not find "{var}" variable in the task file. The variable name has been changed or no longer exists.'
+                        )
             layout.setAlignment(QtCore.Qt.AlignTop)
             widget.setLayout(layout)
             variable_tabs.addTab(widget, tab)
@@ -557,6 +556,7 @@ class Variables_dialog_editor(QtGui.QDialog):
                 if assigned_var != "     select variable     ":
                     fully_asigned_variables.append(assigned_var)
             self.available_vars = sorted(list(self.variable_names - set(fully_asigned_variables)), key=str.lower)
+            self.available_vars.insert(0, "--- separator ---")
 
         for _, table in self.tables.items():
             for row in range(table.n_variables):
@@ -646,8 +646,10 @@ class Variable_row:
     def __init__(self, parent, var_name=False, row_data=False):
         self.parent = parent
         # buttons
-        self.up_button = QtGui.QPushButton("⬆️")
-        self.down_button = QtGui.QPushButton("⬇️")
+        self.up_button = QtGui.QPushButton("")
+        self.up_button.setIcon(QtGui.QIcon("gui/icons/up.svg"))
+        self.down_button = QtGui.QPushButton("")
+        self.down_button.setIcon(QtGui.QIcon("gui/icons/down.svg"))
         self.remove_button = QtGui.QPushButton("remove")
         self.remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
         # line edits
@@ -700,8 +702,12 @@ class Variable_row:
         self.hint.setText(str(self.parent.cellWidget(row_index, 9).text()))
 
     def load_vals_from_dict(self, var_name, row_data):
-        self.variable_cbox.addItems([var_name])
-        cbox_set_item(self.variable_cbox, var_name)
+        if var_name[:4] == "sep_":
+            self.variable_cbox.addItems(["--- separator ---"])
+            cbox_set_item(self.variable_cbox, "--- separator ---")
+        else:
+            self.variable_cbox.addItems([var_name])
+            cbox_set_item(self.variable_cbox, var_name)
 
         self.display_name.setText(row_data["label"])
         cbox_set_item(self.input_type_combo, row_data["widget"])
@@ -814,12 +820,17 @@ class Variables_table(QtGui.QTableWidget):
         for row in range(self.n_variables):
             v_name = self.cellWidget(row, 2).currentText()
             input_type = self.cellWidget(row, 4).currentText()
-            if v_name == "     select variable     ":
-                for i in (3, 5, 6, 7, 8, 9):  # disable inputs until a variable as been selected
+            if v_name == "     select variable     " or v_name == "--- separator ---":
+                for i in (3, 4, 5, 6, 7, 8, 9):  # disable inputs until a variable as been selected
                     self.cellWidget(row, i).setEnabled(False)
                     self.cellWidget(row, i).setStyleSheet("background: #dcdcdc;")
+                if v_name == "--- separator ---":
+                    self.cellWidget(row, 4).setEnabled(False)
+                    for i in (3, 5, 6, 7, 8, 9):
+                        self.cellWidget(row, i).setText("")
             else:
                 self.cellWidget(row, 3).setStyleSheet("background: #ffffff;")
+                self.cellWidget(row, 4).setStyleSheet("color: black; background: none;")
                 self.cellWidget(row, 9).setStyleSheet("background: #ffffff;")
                 self.cellWidget(row, 9).setEnabled(True)
                 if self.cellWidget(row, 3).text() == self.clear_label_flag:
@@ -842,10 +853,14 @@ class Variables_table(QtGui.QTableWidget):
     def save_gui_data(self):
         tab_dictionary = {}
         ordered_inputs = []
+        num_separators = 0
         for row in range(self.n_variables):
             input_specs = {}
             varname = self.cellWidget(row, 2).currentText()
             if varname != "     select variable     ":
+                if varname == "--- separator ---":
+                    varname = f"sep_{num_separators}"
+                    num_separators += 1
                 ordered_inputs.append(varname)
                 input_specs["label"] = self.cellWidget(row, 3).text()
                 input_specs["widget"] = self.cellWidget(row, 4).currentText()

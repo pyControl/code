@@ -249,7 +249,7 @@ class Pycboard(Pyboard):
 
     def load_framework(self):
         '''Copy the pyControl framework folder to the board.'''
-        self.print('\nTransfering pyControl framework to pyboard.', end='')
+        self.print('\nTransferring pyControl framework to pyboard.', end='')
         self.transfer_folder(dirs['framework'], file_type='py', show_progress=True)
         self.transfer_folder(dirs['devices']  , file_type='py', show_progress=True)
         error_message = self.reset()
@@ -261,10 +261,10 @@ class Pycboard(Pyboard):
         return 
 
     def load_hardware_definition(self, hwd_path=os.path.join(dirs['config'], 'hardware_definition.py')):
-        '''Transfer a hardware definition file to pyboard.  Defaults to transfering 
+        '''Transfer a hardware definition file to pyboard.  Defaults to transferring 
         file hardware_definition.py from config folder.'''
         if os.path.exists(hwd_path):
-            self.print('\nTransfering hardware definition to pyboard.', end='')
+            self.print('\nTransferring hardware definition to pyboard.', end='')
             self.transfer_file(hwd_path, target_path = 'hardware_definition.py')
             self.reset()
             try:
@@ -290,7 +290,7 @@ class Pycboard(Pyboard):
             if not os.path.exists(sm_path):
                 self.print('Error: State machine file not found at: ' + sm_path)
                 raise PyboardError('State machine file not found at: ' + sm_path)
-            self.print('\nTransfering state machine {} to pyboard. '.format(sm_name), end='')
+            self.print('\nTransferring state machine {} to pyboard. '.format(sm_name), end='')
             self.transfer_file(sm_path, 'task_file.py')
         self.gc_collect()
         try:

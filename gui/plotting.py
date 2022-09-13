@@ -26,7 +26,7 @@ class Task_plot(QtGui.QWidget):
         self.run_clock   = Run_clock(self.states_plot.axis)
 
         # Setup plots
-        self.pause_button = QtGui.QPushButton('Pause plots')
+        self.pause_button = QtGui.QPushButton()
         self.pause_button.setEnabled(False)
         self.pause_button.setCheckable(True)
         self.events_plot.axis.setXLink(self.states_plot.axis)
@@ -41,6 +41,9 @@ class Task_plot(QtGui.QWidget):
         self.vertical_layout.addWidget(self.analog_plot.axis,2,0,1,3)
         self.vertical_layout.addWidget(self.pause_button,3,0,1,3,Qt.AlignCenter)
         self.setLayout(self.vertical_layout)
+
+        self.pause_button.clicked.connect(self.update_pause_btn_text)
+        self.update_pause_btn_text()
 
     def set_state_machine(self, sm_info):
         # Initialise plots with state machine information.
@@ -58,6 +61,7 @@ class Task_plot(QtGui.QWidget):
     def run_start(self, recording):
         self.pause_button.setChecked(False)
         self.pause_button.setEnabled(True)
+        self.update_pause_btn_text()
         self.start_time = time.time()
         self.states_plot.run_start()
         self.events_plot.run_start()
@@ -83,6 +87,14 @@ class Task_plot(QtGui.QWidget):
             self.events_plot.update(run_time)
             self.analog_plot.update(run_time)
             self.run_clock.update(run_time)
+
+    def update_pause_btn_text(self):
+        if self.pause_button.isChecked():
+            self.pause_button.setText("Resume plotting")
+            self.pause_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
+        else:
+            self.pause_button.setText("Pause plotting")
+            self.pause_button.setIcon(QtGui.QIcon("gui/icons/pause.svg"))
 
 
 # States_plot --------------------------------------------------------
