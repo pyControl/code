@@ -216,7 +216,7 @@ class Analog_plot():
         self.axis.clear()
         self.legend = self.axis.addLegend(offset=(10, 10))
         self.plots = {ai['ID']: self.axis.plot(name=name, 
-                      pen=pg.mkPen(pg.intColor(ai['ID'],len(self.inputs)))) for name, ai in sorted(self.inputs.items())}
+                      pen=pg.mkPen(pg.intColor(i,len(self.inputs)))) for i, (name, ai) in enumerate(sorted(self.inputs.items()))}
         self.axis.getAxis('bottom').setLabel('Time (seconds)')
         max_len = max([len(n) for n in list(sm_info['states'])+list(sm_info['events'])])
         self.axis.getAxis('right').setWidth(5*max_len)
