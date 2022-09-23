@@ -17,6 +17,7 @@ class Rotary_encoder(Analog_input):
         self.enc_channel = self.enc_timer.channel(1, pyb.Timer.ENC_AB)
         self.position = 0
         self.velocity = 0
+        self.sampling_rate = sampling_rate
         Analog_input.__init__(self, None, name, int(sampling_rate), threshold, rising_event,
                               falling_event, data_type={2:'h',4:'l'}[bytes_per_sample])
 
@@ -38,7 +39,7 @@ class Rotary_encoder(Analog_input):
         else:
             return self.position
 
-    def _start_acquisition(self):
+    def _run_start(self):
         # Start sampling analog input values.
         self.counter_value = self.enc_timer.counter()
-        Analog_input._start_acquisition(self)
+        Analog_input._run_start(self)
