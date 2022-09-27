@@ -45,7 +45,7 @@ next_ID = 0 # Next hardware object ID.
 
 IO_dict = {} # Dictionary {ID: IO_object} containing all hardware inputs and outputs.
 
-available_timers = [2,3,4,5,7,8,9,10,11,12,13,14] # Hardware timers not in use. Used timers; 1: Framework clock tick, 6: DAC timed write.
+available_timers = [3,4,5,7,8,9,10,11,12,13,14] # Hardware timers not in use. Used timers; 1: Framework clock tick, 2: Audio write_timed, 6: DAC write_timed.
 
 default_pull = {'down': [], # Used when Mainboards are initialised to specify 
                 'up'  : []} # default pullup or pulldown resistors for pins.
