@@ -1,6 +1,6 @@
 import pyControl.hardware as _h
 
-class Breakout_1_0(_h.Mainboard):
+class Breakout_1_0():
     def __init__(self):
         # Inputs and outputs.
         self.port_1 = _h.Port(DIO_A='X1' , DIO_B='X2', DIO_C='X5', POW_A='Y8', POW_B='Y4',
@@ -15,5 +15,3 @@ class Breakout_1_0(_h.Mainboard):
         self.DAC_2 = 'X6'
         self.button_1 = 'X9'
         self.button_2 = 'X10'
-        # Set default pullup/pulldown resistors.
-        self.set_pull_updown({'up': ['X9','X10']})

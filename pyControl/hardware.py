@@ -47,9 +47,6 @@ IO_dict = {} # Dictionary {ID: IO_object} containing all hardware inputs and out
 
 available_timers = [3,4,5,7,8,9,10,11,12,13,14] # Hardware timers not in use. Used timers; 1: Framework clock tick, 2: Audio write_timed, 6: DAC write_timed.
 
-default_pull = {'down': [], # Used when Mainboards are initialised to specify 
-                'up'  : []} # default pullup or pulldown resistors for pins.
-
 initialised = False # Set to True once hardware has been intiialised.
 
 interrupt_queue = Ring_buffer()   # Queue for processing hardware interrupts.
@@ -139,13 +136,8 @@ class Digital_input(IO_object):
             assert isinstance(decimate, int), '! Decimate argument must be integer or False'
             assert not (rising_event and falling_event), '! Decimate can only be used with single edge'
             debounce = False
-        if pull is None: # No pullup or pulldown resistor specified, use default.
-            if pin in default_pull['up']:
-                pull = pyb.Pin.PULL_UP
-            elif pin in default_pull['down']:
-                pull = pyb.Pin.PULL_DOWN
-            else:
-                pull = pyb.Pin.PULL_NONE
+        if pull is None:
+            pull = pyb.Pin.PULL_NONE
         elif pull == 'up':
             pull = pyb.Pin.PULL_UP
         elif pull == 'down':
@@ -457,14 +449,6 @@ class Port():
         self.DAC   = DAC
         self.I2C   = I2C
         self.UART  = UART
-
-# Mainboard -------------------------------------------------------------------
-
-class Mainboard():
-    # Parent class for devboard and breakout boards.
-    
-    def set_pull_updown(self, pull): # Set default pullup/pulldown resistors.
-        default_pull.update(pull)
 
 # IO_expander_pin -------------------------------------------------------------
 
