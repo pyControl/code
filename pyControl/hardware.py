@@ -1,6 +1,8 @@
 import pyb
 from array import array
+from . import timer
 from . import framework as fw
+from . import state_machine as sm
 from .utility import randint
 
 # Ring buffer -----------------------------------------------------------------
@@ -158,8 +160,8 @@ class Digital_input(IO_object):
 
     def _initialise(self):
         # Set event codes for rising and falling events, configure interrupts.
-        self.rising_event_ID  = fw.events[self.rising_event ] if self.rising_event  in fw.events else False
-        self.falling_event_ID = fw.events[self.falling_event] if self.falling_event in fw.events else False
+        self.rising_event_ID  = sm.events[self.rising_event ] if self.rising_event  in sm.events else False
+        self.falling_event_ID = sm.events[self.falling_event] if self.falling_event in sm.events else False
         self.use_both_edges = False
         if self.rising_event_ID or self.falling_event_ID: # Setup interrupts.
             if self.debounce or (self.rising_event_ID and self.falling_event_ID):
@@ -193,7 +195,7 @@ class Digital_input(IO_object):
         # Put apropriate event for interrupt in event queue.
         self._publish_if_edge_has_event(self.interrupt_timestamp)
         if self.debounce: # Set timer to deactivate debounce in self.debounce milliseconds.
-            fw.timer_set(self.debounce, fw.hardw_typ, self.ID)
+            timer.set(self.debounce, fw.hardw_typ, self.ID)
 
     def _timer_callback(self):
         # Called when debounce timer elapses, deactivates debounce and 
@@ -345,8 +347,8 @@ class Analog_threshold(IO_object):
 
     def _initialise(self):
         # Set event codes for rising and falling events.
-        self.rising_event_ID  = fw.events[self.rising_event ] if self.rising_event  in fw.events else False
-        self.falling_event_ID = fw.events[self.falling_event] if self.falling_event in fw.events else False
+        self.rising_event_ID  = sm.events[self.rising_event ] if self.rising_event  in sm.events else False
+        self.falling_event_ID = sm.events[self.falling_event] if self.falling_event in sm.events else False
         self.threshold_active = self.rising_event_ID or self.falling_event_ID
 
     def run_start(self, sample):
@@ -471,7 +473,7 @@ class Rsync(IO_object):
         assign_ID(self)
 
     def _initialise(self):
-        self.event_ID  = fw.events[self.event_name] if self.event_name in fw.events else False
+        self.event_ID  = sm.events[self.event_name] if self.event_name in sm.events else False
 
     def _run_start(self): 
         if self.event_ID:
@@ -483,9 +485,9 @@ class Rsync(IO_object):
 
     def _timer_callback(self):
         if self.state: # Pin high -> low, set timer for next pulse.
-            fw.timer_set(randint(self.min_IPI, self.max_IPI), fw.hardw_typ, self.ID)
+            timer.set(randint(self.min_IPI, self.max_IPI), fw.hardw_typ, self.ID)
         else: # Pin low -> high, set timer for pulse duration.
-            fw.timer_set(self.pulse_dur, fw.hardw_typ, self.ID)
+            timer.set(self.pulse_dur, fw.hardw_typ, self.ID)
             fw.data_output_queue.put((fw.current_time, fw.event_typ, self.event_ID))
         self.state = not self.state
         self.sync_pin.value(self.state)

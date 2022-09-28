@@ -295,7 +295,7 @@ class Pycboard(Pyboard):
         self.gc_collect()
         try:
             self.exec('import task_file as smd')
-            self.exec('state_machine = sm.State_machine(smd)')
+            self.exec('sm.setup_state_machine(smd)')
             self.print('OK')
         except PyboardError as e:
             self.print('\n\nError: Unable to setup state machine.\n\n' + e.args[2].decode())
@@ -329,12 +329,12 @@ class Pycboard(Pyboard):
         '''Return analog_inputs as a directory {input name: ID}'''
         return eval(self.exec('hw.get_analog_inputs()').decode().strip())
 
-    def start_framework(self, dur=None, data_output=True):
+    def start_framework(self, data_output=True):
         '''Start pyControl framwork running on pyboard.'''
         self.gc_collect()
         self.exec('fw.data_output = ' + repr(data_output))
         self.serial.reset_input_buffer()
-        self.exec_raw_no_follow('fw.run({})'.format(dur))
+        self.exec_raw_no_follow('fw.run()')
         self.framework_running = True
 
     def stop_framework(self):

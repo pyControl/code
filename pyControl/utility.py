@@ -3,45 +3,47 @@
 
 import pyb
 import math
+from . import timer
 from . import framework as fw
+from . import state_machine as sm
 
 # State machine functions -----------------------------------------------------
 
 def goto_state(next_state):
-    fw.state_machine.goto_state(next_state)
+    sm.goto_state(next_state)
 
 def timed_goto_state(next_state, interval):
     # Transition to next_state after interval milliseconds. timed_goto_state()
     # is cancelled if goto_state() occurs before interval elapses.
-    fw.timer_set(interval, fw.state_typ, fw.states[next_state])
+    timer.set(interval, fw.state_typ, sm.states[next_state])
 
 def set_timer(event, interval, output_event=False):
     # Set a timer to return specified event after interval milliseconds.
     event_type = fw.event_typ if output_event else fw.timer_typ
-    fw.timer_set(interval, event_type, fw.events[event])    
+    timer.set(interval, event_type, sm.events[event])    
 
 def disarm_timer(event):
     # Disable all timers due to return specified event.
-    fw.timer_disarm(fw.events[event])
+    timer.disarm(sm.events[event])
 
 def reset_timer(event, interval, output_event=False):
     # Disarm all timers due to return specified event and set new timer
     # to return specified event after interval milliseconds.
-    fw.timer_disarm(fw.events[event])
+    timer.disarm(sm.events[event])
     event_type = fw.event_typ if output_event else fw.timer_typ
-    fw.timer_set(interval, event_type, fw.events[event])
+    timer.set(interval, event_type, sm.events[event])
 
 def pause_timer(event):
     # Pause all timers due to return specified event.
-    fw.timer_pause(fw.events[event])
+    timer.pause(sm.events[event])
 
 def unpause_timer(event):
     # Unpause all timers due to return specified event.
-    fw.timer_unpause(fw.events[event])
+    timer.unpause(sm.events[event])
 
 def timer_remaining(event):
     # Return time until timer for specified event elapses, returns 0 if no timer set for event.
-    return fw.timer_remaining(fw.events[event])
+    return timer.remaining(sm.events[event])
 
 def print(print_string):
     # Used to output data print_string with timestamp.  print_string is stored and only
@@ -51,7 +53,7 @@ def print(print_string):
 
 def publish_event(event):
     # Put event with specified name in the event queue.
-    fw.event_queue.put((fw.current_time, fw.event_typ, fw.events[event]))
+    fw.event_queue.put((fw.current_time, fw.event_typ, sm.events[event]))
 
 def stop_framework():
     fw.running = False
