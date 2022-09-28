@@ -193,7 +193,7 @@ class Digital_input(IO_object):
         # Put apropriate event for interrupt in event queue.
         self._publish_if_edge_has_event(self.interrupt_timestamp)
         if self.debounce: # Set timer to deactivate debounce in self.debounce milliseconds.
-            fw.timer.set(self.debounce, fw.hardw_typ, self.ID)
+            fw.timer_set(self.debounce, fw.hardw_typ, self.ID)
 
     def _timer_callback(self):
         # Called when debounce timer elapses, deactivates debounce and 
@@ -483,9 +483,9 @@ class Rsync(IO_object):
 
     def _timer_callback(self):
         if self.state: # Pin high -> low, set timer for next pulse.
-            fw.timer.set(randint(self.min_IPI, self.max_IPI), fw.hardw_typ, self.ID)
+            fw.timer_set(randint(self.min_IPI, self.max_IPI), fw.hardw_typ, self.ID)
         else: # Pin low -> high, set timer for pulse duration.
-            fw.timer.set(self.pulse_dur, fw.hardw_typ, self.ID)
+            fw.timer_set(self.pulse_dur, fw.hardw_typ, self.ID)
             fw.data_output_queue.put((fw.current_time, fw.event_typ, self.event_ID))
         self.state = not self.state
         self.sync_pin.value(self.state)

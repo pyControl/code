@@ -37,76 +37,76 @@ class Event_queue():
         self.available = len(self.Q) > 1
         return(self.Q.pop(0))
 
-# Timer -----------------------------------------------------------------------
+# Timer functions --------------------------------------------------------
 
-class Timer():
+def timer_reset():
+    # Reset timer variables.
+    global active_timers, paused_timers, timer_elapsed
+    active_timers = []
+    paused_timers = []
+    timer_elapsed = False
+        
+def timer_set(interval, event_type, event_data):
+    # Set a timer to trigger specified event after 'interval' ms has elapsed.
+    active_timers.append((current_time+int(interval), event_type, event_data))
+    active_timers.sort(reverse=True)
 
-    def __init__(self):
-        self.reset()
+def timer_check():
+    #Check whether timers have triggered.
+    global check_timers, timer_elapsed
+    timer_elapsed = bool(active_timers) and (active_timers[-1][0] <= current_time)
+    check_timers = False
 
-    def reset(self):
-        self.active_timers = [] # list of event tuples: (trigger_time, event_type, data)
-        self.paused_timers = [] # list of event tuples: (trigger_time, event_type, data)
-        self.available = False
-    
-    def set(self, interval, event_type, event_data):
-        # Set a timer to trigger specified event after 'interval' ms has elapsed.
-        global current_time
-        self.active_timers.append((current_time+int(interval), event_type, event_data))
-        self.active_timers.sort(reverse=True)
+def timer_get():
+    # Get first timer event.
+    global timer_elapsed
+    event_tuple = active_timers.pop()
+    timer_elapsed = bool(active_timers) and (active_timers[-1][0] <= current_time)
+    return event_tuple
 
-    def check(self):
-        #Check whether timers have triggered.
-        global current_time, check_timers
-        self.available = bool(self.active_timers) and (self.active_timers[-1][0] <= current_time)
-        check_timers = False
+def timer_disarm(event_ID):
+    # Remove all user timers with specified event_ID.
+    global active_timers, paused_timers
+    active_timers = [t for t in active_timers if not (t[2] == event_ID and (t[1] in (event_typ, timer_typ)))]
+    paused_timers = [t for t in paused_timers if not  t[2] == event_ID]
 
-    def get(self):
-        # Get first timer event.
-        global current_time
-        event_tuple = self.active_timers.pop()
-        self.available = bool(self.active_timers) and (self.active_timers[-1][0] <= current_time)
-        return event_tuple
+def timer_pause(event_ID):
+    # Pause all user timers with specified event_ID.
+    global active_timers, paused_timers
+    paused_timers += [(t[0]-current_time,t[1], t[2]) for t in active_timers
+                      if (t[2] == event_ID and (t[1] in (event_typ, timer_typ)))]
+    active_timers = [t for t in active_timers if not (t[2] == event_ID and (t[1] in (event_typ, timer_typ)))]
 
-    def disarm(self, event_ID):
-        # Remove all user timers with specified event_ID.
-        self.active_timers = [t for t in self.active_timers 
-                              if not (t[2] == event_ID and (t[1] in (event_typ, timer_typ)))]
-        self.paused_timers = [t for t in self.paused_timers if not t[2] == event_ID]
+def timer_unpause(event_ID):
+    # Unpause user timers with specified event.
+    global active_timers, paused_timers
+    active_timers += [(t[0]+current_time,t[1], t[2]) for t in paused_timers if t[2] == event_ID]
+    paused_timers = [t for t in paused_timers if not t[2] == event_ID]
+    active_timers.sort(reverse=True)
 
-    def pause(self, event_ID):
-        # Pause all user timers with specified event_ID.
-        global current_time
-        self.paused_timers += [(t[0]-current_time,t[1], t[2]) for t in self.active_timers 
-                               if (t[2] == event_ID and (t[1] in (event_typ, timer_typ)))]
-        self.active_timers = [t for t in self.active_timers 
-                              if not (t[2] == event_ID and (t[1] in (event_typ, timer_typ)))]
+def timer_remaining(event_ID):
+    # Return time until timer for specified event elapses, returns 0 if no timer set for event.
+    global current_time
+    try:
+        return next(t[0]-current_time for t in reversed(active_timers) 
+                    if (t[1] == event_typ and t[2] == event_ID))
+    except StopIteration:
+        return 0
 
-    def unpause(self, event_ID):
-        # Unpause user timers with specified event.
-        global current_time
-        self.active_timers += [(t[0]+current_time,t[1], t[2]) for t in self.paused_timers if t[2] == event_ID]
-        self.paused_timers = [t for t in self.paused_timers if not t[2] == event_ID]
-        self.active_timers.sort(reverse=True)
-
-    def remaining(self,event_ID):
-        # Return time until timer for specified event elapses, returns 0 if no timer set for event.
-        global current_time
-        try:
-            return next(t[0]-current_time for t in reversed(self.active_timers) 
-                        if (t[1] == event_typ and t[2] == event_ID))
-        except StopIteration:
-            return 0
-
-    def disarm_type(self, event_type):
-        # Disarm all active timers of a particular type.
-        self.active_timers = [t for t in self.active_timers if not t[1] == event_type]
+def timer_disarm_type(event_type):
+    # Disarm all active timers of a particular type.
+    global active_timers
+    active_timers = [t for t in active_timers if not t[1] == event_type]
 
 # Framework variables and objects ---------------------------------------------
 
-state_machine = None  # State machine object.
+active_timers = [] # list of event tuples: (trigger_time, event_type, data)
 
-timer = Timer()  # Instantiate timer_array object.
+paused_timers = [] # list of event tuples: (trigger_time, event_type, data)
+
+timer_elapsed = False # Whether any timers have elapsed and need processing.
+
+state_machine = None  # State machine object.
 
 event_queue = Event_queue() # Instantiate event que object.
 
@@ -218,7 +218,7 @@ def run(duration=None):
     # Run framework for specified number of seconds.
     # Pre run
     global current_time, start_time, running
-    timer.reset()
+    timer_reset()
     event_queue.reset()
     data_output_queue.reset()
     if not hw.initialised: hw.initialise()
@@ -231,7 +231,7 @@ def run(duration=None):
     running = True
     state_machine._start()
     if duration: # Set timer to stop framework.
-        timer.set(duration*1000, (stopf_typ, None))
+        timer_set(duration*1000, (stopf_typ, None))
     # Run
     while running:
         # Priority 1: Process hardware interrupts.
@@ -244,10 +244,10 @@ def run(duration=None):
             state_machine._process_event(ID2name[event[2]])
         # Priority 3: Check for elapsed timers.
         elif check_timers:
-            timer.check()
+            timer_check()
         # Priority 4: Process timer event.
-        elif timer.available: 
-            event = timer.get()
+        elif timer_elapsed: 
+            event = timer_get()
             if  event[1] == timer_typ:
                 state_machine._process_event(ID2name[event[2]])
             elif event[1] == event_typ:

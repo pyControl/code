@@ -33,7 +33,7 @@ class State_machine():
             raise fw.pyControlError('Invalid state name passed to goto_state: ' + repr(next_state))
         self.state_transition_in_progress = True
         self._process_event('exit')
-        fw.timer.disarm_type(fw.state_typ) # Clear any timed_goto_states     
+        fw.timer_disarm_type(fw.state_typ) # Clear any timed_goto_states     
         if fw.data_output:
             fw.data_output_queue.put((fw.current_time, fw.state_typ, fw.states[next_state]))
         self.current_state = next_state
