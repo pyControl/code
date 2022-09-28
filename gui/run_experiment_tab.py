@@ -202,16 +202,16 @@ class Run_experiment_tab(QtWidgets.QWidget):
             return
         # Hardware test.
         if experiment['hardware_test'] != 'no hardware test':
-            reply = QtGui.QMessageBox.question(self, 'Hardware test', 'Run hardware test?',
-                QtGui.QMessageBox.StandardButton.Yes | QtGui.QMessageBox.StandardButton.No)
-            if reply == QtGui.QMessageBox.StandardButton.Yes:
+            reply = QtWidgets.QMessageBox.question(self, 'Hardware test', 'Run hardware test?',
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No)
+            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 self.print_to_logs('\nStarting hardware test.')
                 self.thread_map(self.start_hardware_test)
                 if any(self.setup_failed):
                     self.abort_experiment()
                     return
-                QtGui.QMessageBox.question(self, 'Hardware test',
-                    'Press OK when finished with hardware test.', QtGui.QMessageBox.StandardButton.Ok)
+                QtWidgets.QMessageBox.question(self, 'Hardware test',
+                    'Press OK when finished with hardware test.', QtWidgets.QMessageBox.StandardButton.Ok)
                 for i, board in enumerate(self.boards):
                     try:
                         board.stop_framework()
@@ -318,10 +318,10 @@ class Run_experiment_tab(QtWidgets.QWidget):
                 time.sleep(0.05)
                 board.process_data()
                 self.subjectboxes[i].stop_task()
-        msg = QtGui.QMessageBox()
+        msg = QtWidgets.QMessageBox()
         msg.setWindowTitle('Error')
         msg.setText('An error occured while setting up experiment')
-        msg.setIcon(QtGui.QMessageBox.Warning)
+        msg.setIcon(QtWidgets.QMessageBox.Warning)
         msg.exec()
         self.startstopclose_all_button.setText('Close Exp.')
         self.startstopclose_all_button.setEnabled(True)

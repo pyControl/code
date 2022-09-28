@@ -127,7 +127,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
             self.data_dir_text.setText(os.path.join(dirs['data'], self.name_text.text()))
 
     def select_data_dir(self):
-        new_path = QtGui.QFileDialog.getExistingDirectory(self, 'Select data folder', dirs['data'])
+        new_path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select data folder', dirs['data'])
         if new_path:
             self.data_dir_text.setText(new_path)
             self.custom_dir = True
@@ -189,10 +189,10 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         '''Delete an experiment file after dialog to confirm deletion.'''
         exp_path = os.path.join(dirs['experiments'], self.name_text.text()+'.pcx')
         if os.path.exists(exp_path):
-            reply = QtGui.QMessageBox.question(self, 'Delete experiment', 
+            reply = QtWidgets.QMessageBox.question(self, 'Delete experiment', 
                 "Delete experiment '{}'".format(self.name_text.text()),
-                    QtGui.QMessageBox.StandardButton.Yes | QtGui.QMessageBox.StandardButton.Cancel)
-            if reply == QtGui.QMessageBox.StandardButton.Yes:
+                    QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.Cancel)
+            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 self.new_experiment(dialog=False)
                 os.remove(exp_path)
 
@@ -220,10 +220,10 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         file_name = self.name_text.text()+'.pcx'
         exp_path = os.path.join(dirs['experiments'], file_name)
         if os.path.exists(exp_path) and (exp_path != self.saved_exp_path):
-            reply = QtGui.QMessageBox.question(self, 'Replace file', 
+            reply = QtWidgets.QMessageBox.question(self, 'Replace file', 
                 "File '{}' already exists, do you want to replace it?".format(file_name),
-                QtGui.QMessageBox.StandardButton.Yes | QtGui.QMessageBox.StandardButton.No)
-            if reply == QtGui.QMessageBox.StandardButton.No:
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No)
+            if reply == QtWidgets.QMessageBox.StandardButton.No:
                 return False
         with open(exp_path,'w') as exp_file:
             exp_file.write(json.dumps(experiment, sort_keys=True, indent=4))
@@ -341,14 +341,14 @@ class Configure_experiment_tab(QtWidgets.QWidget):
             dialog_text = 'Experiment not saved, save experiment?'
         else:
             dialog_text = 'Experiment edited, save experiment?'
-        reply = QtGui.QMessageBox.question(self, 'Save experiment', dialog_text,
-            QtGui.QMessageBox.StandardButton.Yes | QtGui.QMessageBox.StandardButton.No | QtGui.QMessageBox.StandardButton.Cancel)
-        if reply == QtGui.QMessageBox.StandardButton.Yes:
+        reply = QtWidgets.QMessageBox.question(self, 'Save experiment', dialog_text,
+            QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No | QtWidgets.QMessageBox.StandardButton.Cancel)
+        if reply == QtWidgets.QMessageBox.StandardButton.Yes:
             was_saved = self.save_experiment(from_dialog=True)
             if not was_saved:
                 invalid_run_experiment_dialog(self, "Failed to save experiment")
                 return False
-        elif reply == QtGui.QMessageBox.StandardButton.Cancel:
+        elif reply == QtWidgets.QMessageBox.StandardButton.Cancel:
             return False
         return True
 

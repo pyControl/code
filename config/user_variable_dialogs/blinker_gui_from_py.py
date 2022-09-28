@@ -60,12 +60,12 @@ class Variables_gui(QtWidgets.QWidget):
         # radio buttons
         red_is_enabled = eval(init_vars["red_enabled"])
         green_is_enabled = eval(init_vars["green_enabled"])
-        self.both_radio = QtGui.QRadioButton()
+        self.both_radio = QtWidgets.QRadioButton()
         self.both_lbl = QtWidgets.QLabel("🔴Both🟢")
-        self.red_radio = QtGui.QRadioButton()
+        self.red_radio = QtWidgets.QRadioButton()
         self.red_lbl = QtWidgets.QLabel("Red")
         self.red_lbl.setStyleSheet("border:3px solid red;background:red;border-radius:3px;")  # you can use css styling
-        self.green_radio = QtGui.QRadioButton()
+        self.green_radio = QtWidgets.QRadioButton()
         self.green_lbl = QtWidgets.QLabel("Green")
         self.green_lbl.setStyleSheet("border-radius:3px;border:3px solid green;background:green;color:white")
         if red_is_enabled and green_is_enabled:
@@ -142,7 +142,7 @@ class Variables_gui(QtWidgets.QWidget):
         self.red_count.setEnabled(red_val)  # enable or disable control
         self.green_count.setEnabled(green_val)
         if not self.board.framework_running:  # Value returned later.
-            msg = QtGui.QMessageBox()
+            msg = QtWidgets.QMessageBox()
             msg.setText("Variable Changed")
             msg.exec()
 

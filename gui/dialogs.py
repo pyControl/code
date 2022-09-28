@@ -46,16 +46,16 @@ class Board_config_dialog(QtWidgets.QDialog):
     def load_framework(self):
         self.accept()
         if self.flashdrive_enabled:
-            reply = QtGui.QMessageBox.question(self, 'Disable flashdrive', 
-                flashdrive_message, QtGui.QMessageBox.StandardButton.Yes | QtGui.QMessageBox.StandardButton.No)
-            if reply == QtGui.QMessageBox.StandardButton.Yes:
+            reply = QtWidgets.QMessageBox.question(self, 'Disable flashdrive', 
+                flashdrive_message, QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No)
+            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 self.board.disable_mass_storage()
                 self.disconnect = True
                 return
         self.board.load_framework()
 
     def load_hardware_definition(self):
-        hwd_path = QtGui.QFileDialog.getOpenFileName(self, 'Select hardware definition:',
+        hwd_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select hardware definition:',
                     os.path.join(dirs['config'], 'hardware_definition.py'), filter='*.py')[0]
         self.accept()
         self.board.load_hardware_definition(hwd_path)
@@ -183,8 +183,8 @@ class Summary_variables_dialog(QtWidgets.QDialog):
         self.label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         self.table = QtWidgets.QTableWidget(len(subjects), len(v_names),  parent=self)
-        self.table.setSizeAdjustPolicy(QtGui.QAbstractScrollArea.AdjustToContents)
-        self.table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
+        self.table.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+        self.table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.table.setHorizontalHeaderLabels(v_names)
         self.table.setVerticalHeaderLabels(subjects)
 
@@ -211,19 +211,19 @@ class Summary_variables_dialog(QtWidgets.QDialog):
 # Invalid experiment dialog. ---------------------------------------------------------
 
 def invalid_run_experiment_dialog(parent, message):
-    QtGui.QMessageBox.warning(parent, 'Invalid experiment', 
-        message + '\n\nUnable to run experiment.', QtGui.QMessageBox.StandardButton.Ok)
+    QtWidgets.QMessageBox.warning(parent, 'Invalid experiment', 
+        message + '\n\nUnable to run experiment.', QtWidgets.QMessageBox.StandardButton.Ok)
 
 def invalid_save_experiment_dialog(parent, message):
-    QtGui.QMessageBox.warning(parent, 'Invalid experiment', 
-        message + '\n\nUnable to save experiment.', QtGui.QMessageBox.StandardButton.Ok)
+    QtWidgets.QMessageBox.warning(parent, 'Invalid experiment', 
+        message + '\n\nUnable to save experiment.', QtWidgets.QMessageBox.StandardButton.Ok)
 
 # Unrun subjects warning     ---------------------------------------------------------
 
 def unrun_subjects_dialog(parent,message):
-    reply = QtGui.QMessageBox.warning(parent, 'Unrun Subjects', 
-        'The following Subjects will not be run:\n\n{}'.format(message), (QtGui.QMessageBox.StandardButton.Ok | QtGui.QMessageBox.StandardButton.Cancel))
-    if reply == QtGui.QMessageBox.StandardButton.Ok:
+    reply = QtWidgets.QMessageBox.warning(parent, 'Unrun Subjects', 
+        'The following Subjects will not be run:\n\n{}'.format(message), (QtWidgets.QMessageBox.StandardButton.Ok | QtWidgets.QMessageBox.StandardButton.Cancel))
+    if reply == QtWidgets.QMessageBox.StandardButton.Ok:
         return True
     else:
         return False
@@ -288,7 +288,7 @@ class Path_setter():
         self.dialog.setters.append(self)
 
     def select_path(self):
-        new_path = QtGui.QFileDialog.getExistingDirectory(
+        new_path = QtWidgets.QFileDialog.getExistingDirectory(
             self.dialog, 'Select {} folder'.format(self.name), self.path)
         if new_path:
             new_path = os.path.normpath(new_path)

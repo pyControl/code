@@ -18,9 +18,9 @@ class Spin_var:
         self.varname = varname
 
         if isinstance(spin_min, float) or isinstance(spin_max, float) or isinstance(step, float):
-            self.spn = QtGui.QDoubleSpinBox()
+            self.spn = QtWidgets.QDoubleSpinBox()
         else:
-            self.spn = QtGui.QSpinBox()
+            self.spn = QtWidgets.QSpinBox()
 
         self.spn.setRange(spin_min, spin_max)
         self.spn.setValue(eval(init_var_dict[varname]))
@@ -68,7 +68,7 @@ class Spin_var:
         if self.board.framework_running:  # Value returned later.
             QtCore.QTimer.singleShot(200, self.reload)
         else:  # Value returned immediately.
-            msg = QtGui.QMessageBox()
+            msg = QtWidgets.QMessageBox()
             msg.setText("Variable Changed")
             msg.exec()
             self.spn.setValue(self.board.get_variable(self.varname))
@@ -160,7 +160,7 @@ class Standard_var:
         if self.board.framework_running:  # Value returned later.
             QtCore.QTimer.singleShot(200, self.reload)
         else:  # Value returned immediately.
-            msg = QtGui.QMessageBox()
+            msg = QtWidgets.QMessageBox()
             msg.setText("Variable Changed")
             msg.exec()
             self.line_edit.setText(str(self.board.get_variable(self.varname)))
@@ -199,7 +199,7 @@ class Checkbox_var:
     def set(self):
         self.board.set_variable(self.varname, self.checkbox.isChecked())
         if not self.board.framework_running:  # Value returned later.
-            msg = QtGui.QMessageBox()
+            msg = QtWidgets.QMessageBox()
             msg.setText("Variable Changed")
             msg.exec()
 
@@ -288,7 +288,7 @@ class Slider_var:
     def set(self):
         self.board.set_variable(self.varname, self.slider.value())
         if not self.board.framework_running:  # Value returned later.
-            msg = QtGui.QMessageBox()
+            msg = QtWidgets.QMessageBox()
             msg.setText("Variable Changed")
             msg.exec()
 
@@ -599,13 +599,13 @@ class Variables_dialog_editor(QtWidgets.QDialog):
 
     def remove_tab(self):
         if len(self.tables) > 1:
-            reply = QtGui.QMessageBox.question(
+            reply = QtWidgets.QMessageBox.question(
                 self,
                 "Remove tab",
                 f'Are you sure you want to remove "{self.tab_title_edit.text()}"?',
-                QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel,
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel,
             )
-            if reply == QtGui.QMessageBox.Yes:
+            if reply == QtWidgets.QMessageBox.Yes:
                 index = self.tabs.currentIndex()
                 table_key = self.tabs.tabText(index)
                 self.tabs.removeTab(index)
@@ -627,11 +627,11 @@ class Variables_dialog_editor(QtWidgets.QDialog):
     def set_tab_title(self):
         new_title = self.tab_title_edit.text()
         if new_title in self.tables:
-            QtGui.QMessageBox.warning(
+            QtWidgets.QMessageBox.warning(
                 self,
                 "Tab title already exists",
                 f"The new tab title must be different from existing tab titles.",
-                QtGui.QMessageBox.StandardButton.Ok,
+                QtWidgets.QMessageBox.StandardButton.Ok,
             )
             return
         index = self.tabs.currentIndex()
@@ -882,7 +882,7 @@ class Variables_table(QtWidgets.QTableWidget):
                         value = self.cellWidget(row, 7).text()
                         input_specs["step"] = float(value) if value.find(".") > -1 else int(value)
                     except:
-                        msg = QtGui.QMessageBox()
+                        msg = QtWidgets.QMessageBox()
                         msg.setText("Numbers for min, max, and step are required for spinboxes and sliders")
                         msg.exec()
                         return None

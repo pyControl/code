@@ -344,7 +344,7 @@ class Run_task_tab(QtWidgets.QWidget):
             self.status_text.setText("Error setting up state machine.")
 
     def select_data_dir(self):
-        new_path = QtGui.QFileDialog.getExistingDirectory(self, "Select data folder", dirs["data"])
+        new_path = QtWidgets.QFileDialog.getExistingDirectory(self, "Select data folder", dirs["data"])
         if new_path:
             self.data_dir_text.setText(new_path)
             self.custom_dir = True
@@ -353,14 +353,14 @@ class Run_task_tab(QtWidgets.QWidget):
         recording = self.test_data_path()
         if recording:
             if not self.fresh_task:
-                reset_task = QtGui.QMessageBox.question(
+                reset_task = QtWidgets.QMessageBox.question(
                     self,
                     "Reset task",
                     "Task has already been run, variables may not have default values.\n\nReset task?",
-                    QtGui.QMessageBox.StandardButton.Yes,
-                    QtGui.QMessageBox.StandardButton.No,
+                    QtWidgets.QMessageBox.StandardButton.Yes,
+                    QtWidgets.QMessageBox.StandardButton.No,
                 )
-                if reset_task == QtGui.QMessageBox.StandardButton.Yes:
+                if reset_task == QtWidgets.QMessageBox.StandardButton.Yes:
                     self.setup_task()
                     return
             subject_ID = str(self.subject_text.text())
