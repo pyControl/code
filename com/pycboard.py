@@ -294,8 +294,8 @@ class Pycboard(Pyboard):
             self.transfer_file(sm_path, 'task_file.py')
         self.gc_collect()
         try:
-            self.exec('import task_file as smd')
-            self.exec('state_machine = sm.State_machine(smd)')
+            self.exec('import task_file')
+            self.exec('sm.setup_state_machine(task_file)')
             self.print('OK')
         except PyboardError as e:
             self.print('\n\nError: Unable to setup state machine.\n\n' + e.args[2].decode())
@@ -315,26 +315,26 @@ class Pycboard(Pyboard):
 
     def get_states(self):
         '''Return states as a dictionary {state_name: state_ID}'''
-        return eval(self.exec('fw.get_states()').decode().strip())
+        return eval(self.exec('sm.get_states()').decode().strip())
 
     def get_events(self):
         '''Return events as a dictionary {event_name: state_ID}'''
-        return eval(self.exec('fw.get_events()').decode().strip())
+        return eval(self.exec('sm.get_events()').decode().strip())
 
     def get_variables(self):
         '''Return variables as a dictionary {variable_name: value}'''
-        return eval(self.exec('fw.get_variables()').decode().strip())
+        return eval(self.exec('sm.get_variables()').decode().strip())
 
     def get_analog_inputs(self):
         '''Return analog_inputs as a directory {input name: ID}'''
         return eval(self.exec('hw.get_analog_inputs()').decode().strip())
 
-    def start_framework(self, dur=None, data_output=True):
+    def start_framework(self, data_output=True):
         '''Start pyControl framwork running on pyboard.'''
         self.gc_collect()
         self.exec('fw.data_output = ' + repr(data_output))
         self.serial.reset_input_buffer()
-        self.exec_raw_no_follow('fw.run({})'.format(dur))
+        self.exec_raw_no_follow('fw.run()')
         self.framework_running = True
 
     def stop_framework(self):
@@ -429,7 +429,7 @@ class Pycboard(Pyboard):
             return None
         else: # Set variable using REPL.  
             checksum = sum(v_str.encode())
-            set_OK = eval(self.eval("state_machine._set_variable({}, {}, {})"
+            set_OK = eval(self.eval("state_machine.set_variable({}, {}, {})"
                 .format(repr(v_name), repr(v_str), checksum)).decode())
             if set_OK:
                 self.sm_info['variables'][v_name] = v_str
@@ -447,5 +447,5 @@ class Pycboard(Pyboard):
             checksum = sum(data).to_bytes(2, 'little')
             self.serial.write(b'V' + data_len +  data + checksum)
         else: # Get variable using REPL.
-            return eval(self.eval("state_machine._get_variable({})"
+            return eval(self.eval("state_machine.get_variable({})"
                                   .format(repr(v_name))).decode())

@@ -6,7 +6,7 @@ class Stepper_motor():
             direction_pin = port.DIO_A
             step_pin = port.DIO_B
         self._direction = _h.Digital_output(direction_pin)
-        self._step = _h.Digital_output(step_pin, pulse_enabled=True)
+        self._step = _h.Digital_output(step_pin)
 
     def forward(self, step_rate, n_steps=False):
         self._direction.off() #set direction forward

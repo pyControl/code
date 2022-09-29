@@ -1,6 +1,8 @@
 import pyb
 from array import array
+from . import timer
 from . import framework as fw
+from . import state_machine as sm
 from .utility import randint
 
 # Ring buffer -----------------------------------------------------------------
@@ -112,7 +114,7 @@ class IO_object():
 # Digital Input ---------------------------------------------------------------
 
 class Digital_input(IO_object):
-    def __init__(self, pin, rising_event=None, falling_event=None, debounce=5, decimate=False, pull=None):
+    def __init__(self, pin, rising_event=None, falling_event=None, debounce=5, pull=None):
         # Digital_input class provides functionallity to generate framework events when a
         # specified pin on the Micropython board changes state. Seperate events can be
         # specified for rising and falling edges. 
@@ -121,21 +123,13 @@ class Digital_input(IO_object):
         # ensures that transient inputs shorter than the debounce duration still generate 
         # rising and faling edges.  Debouncing incurs some overheads so should be turned
         # off for inputs with clean edges and high event rates.
-        # Setting the decimate argument to an integer n causes only every n'th input to 
-        # generate an event.  Decimate can be used only with debouncing off and an event 
-        # specified for a single edge.
         # Arguments:
         # pin           - micropython pin to use
         # rising_event  - Name of event triggered on rising edges.
         # falling_event - Name of event triggered on falling edges.
         # debounce      - Minimum time interval between events (ms), 
         #                 set to False to deactive debouncing.
-        # decimate      - set to n to only generate 1 event for every n input pulses.
         # pull          - used to enable internal pullup or pulldown resitors. 
-        if decimate:
-            assert isinstance(decimate, int), '! Decimate argument must be integer or False'
-            assert not (rising_event and falling_event), '! Decimate can only be used with single edge'
-            debounce = False
         if pull is None:
             pull = pyb.Pin.PULL_NONE
         elif pull == 'up':
@@ -152,14 +146,13 @@ class Digital_input(IO_object):
         self.rising_event = rising_event
         self.falling_event = falling_event
         self.debounce = debounce     
-        self.decimate = decimate
 
         assign_ID(self)
 
     def _initialise(self):
         # Set event codes for rising and falling events, configure interrupts.
-        self.rising_event_ID  = fw.events[self.rising_event ] if self.rising_event  in fw.events else False
-        self.falling_event_ID = fw.events[self.falling_event] if self.falling_event in fw.events else False
+        self.rising_event_ID  = sm.events[self.rising_event ] if self.rising_event  in sm.events else False
+        self.falling_event_ID = sm.events[self.falling_event] if self.falling_event in sm.events else False
         self.use_both_edges = False
         if self.rising_event_ID or self.falling_event_ID: # Setup interrupts.
             if self.debounce or (self.rising_event_ID and self.falling_event_ID):
@@ -176,11 +169,7 @@ class Digital_input(IO_object):
     def _ISR(self, line):
         # Interrupt service routine called on pin change.
         if self.debounce_active:
-                return # Ignore interrupt as too soon after previous interrupt.
-        if self.decimate:
-            self.decimate_counter = (self.decimate_counter+1) % self.decimate
-            if not self.decimate_counter == 0:
-                return # Ignore input due to decimation.
+            return # Ignore interrupt as too soon after previous interrupt.
         self.interrupt_timestamp = fw.current_time
         if self.debounce: # Digital input uses debouncing.
             self.debounce_active = True
@@ -193,7 +182,7 @@ class Digital_input(IO_object):
         # Put apropriate event for interrupt in event queue.
         self._publish_if_edge_has_event(self.interrupt_timestamp)
         if self.debounce: # Set timer to deactivate debounce in self.debounce milliseconds.
-            fw.timer.set(self.debounce, fw.hardw_typ, self.ID)
+            timer.set(self.debounce, fw.hardw_typ, self.ID)
 
     def _timer_callback(self):
         # Called when debounce timer elapses, deactivates debounce and 
@@ -219,7 +208,6 @@ class Digital_input(IO_object):
         if self.use_both_edges:
             self.pin_state = self.pin.value()
         self.interrupt_timestamp = 0
-        self.decimate_counter = -1
 
 # Analog data ----------------------------------------------------------------
 
@@ -345,8 +333,8 @@ class Analog_threshold(IO_object):
 
     def _initialise(self):
         # Set event codes for rising and falling events.
-        self.rising_event_ID  = fw.events[self.rising_event ] if self.rising_event  in fw.events else False
-        self.falling_event_ID = fw.events[self.falling_event] if self.falling_event in fw.events else False
+        self.rising_event_ID  = sm.events[self.rising_event ] if self.rising_event  in sm.events else False
+        self.falling_event_ID = sm.events[self.falling_event] if self.falling_event in sm.events else False
         self.threshold_active = self.rising_event_ID or self.falling_event_ID
 
     def run_start(self, sample):
@@ -373,19 +361,19 @@ class Analog_threshold(IO_object):
 # Digital Output --------------------------------------------------------------
 
 class Digital_output(IO_object):
+    freq_multipliers = {10:10, 25:4, 50:2, 75:4}
+    off_inds = {10:1, 25:1, 50:1, 75:3}
 
-    def __init__(self, pin, inverted=False, pulse_enabled=False):
+    def __init__(self, pin, inverted=False):
         if isinstance(pin, IO_expander_pin):
             pin.set_mode(pyb.Pin.OUT)
             self.pin = pin # Pin is on an IO expander.
         else:
             self.pin = pyb.Pin(pin, pyb.Pin.OUT)  # Pin is pyboard pin.
         self.inverted = inverted # Set True for inverted output.
-        self.timer = False # Replaced by timer object if pulse enabled.
+        self.timer = False # Replaced by timer object if pulsed output is used.
         self.off()
         assign_ID(self)
-        if pulse_enabled:
-            self.enable_pulse()
 
     def on(self):
         self.pin.value(not self.inverted)
@@ -404,13 +392,11 @@ class Digital_output(IO_object):
             self.pin.value(not self.inverted)
         self.state = not self.state  
 
-    def enable_pulse(self): # Setup a hardware timer to allow pulsed output  
-        self.timer = pyb.Timer(available_timers.pop())
-        self.freq_multipliers = {10:10, 25:4, 50:2, 75:4}
-        self.off_inds = {10:1, 25:1, 50:1, 75:3}
-
-    def pulse(self, freq, duty_cycle=50, n_pulses=False): # Turn on pulsed output with specified frequency and duty cycle.
+    def pulse(self, freq, duty_cycle=50, n_pulses=False):
+        # Turn on pulsed output with specified frequency and duty cycle.
         assert duty_cycle in (10,25,50,75), 'duty_cycle must be 10, 25, 50 or 75'
+        if not self.timer:
+            self.timer = pyb.Timer(available_timers.pop())
         self.off_ind = self.off_inds[duty_cycle]
         self.i = 0
         self.fm = self.freq_multipliers[duty_cycle]
@@ -471,7 +457,7 @@ class Rsync(IO_object):
         assign_ID(self)
 
     def _initialise(self):
-        self.event_ID  = fw.events[self.event_name] if self.event_name in fw.events else False
+        self.event_ID  = sm.events[self.event_name] if self.event_name in sm.events else False
 
     def _run_start(self): 
         if self.event_ID:
@@ -483,9 +469,9 @@ class Rsync(IO_object):
 
     def _timer_callback(self):
         if self.state: # Pin high -> low, set timer for next pulse.
-            fw.timer.set(randint(self.min_IPI, self.max_IPI), fw.hardw_typ, self.ID)
+            timer.set(randint(self.min_IPI, self.max_IPI), fw.hardw_typ, self.ID)
         else: # Pin low -> high, set timer for pulse duration.
-            fw.timer.set(self.pulse_dur, fw.hardw_typ, self.ID)
+            timer.set(self.pulse_dur, fw.hardw_typ, self.ID)
             fw.data_output_queue.put((fw.current_time, fw.event_typ, self.event_ID))
         self.state = not self.state
         self.sync_pin.value(self.state)
