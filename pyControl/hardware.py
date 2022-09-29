@@ -114,7 +114,7 @@ class IO_object():
 # Digital Input ---------------------------------------------------------------
 
 class Digital_input(IO_object):
-    def __init__(self, pin, rising_event=None, falling_event=None, debounce=5, decimate=False, pull=None):
+    def __init__(self, pin, rising_event=None, falling_event=None, debounce=5, pull=None):
         # Digital_input class provides functionallity to generate framework events when a
         # specified pin on the Micropython board changes state. Seperate events can be
         # specified for rising and falling edges. 
@@ -123,21 +123,13 @@ class Digital_input(IO_object):
         # ensures that transient inputs shorter than the debounce duration still generate 
         # rising and faling edges.  Debouncing incurs some overheads so should be turned
         # off for inputs with clean edges and high event rates.
-        # Setting the decimate argument to an integer n causes only every n'th input to 
-        # generate an event.  Decimate can be used only with debouncing off and an event 
-        # specified for a single edge.
         # Arguments:
         # pin           - micropython pin to use
         # rising_event  - Name of event triggered on rising edges.
         # falling_event - Name of event triggered on falling edges.
         # debounce      - Minimum time interval between events (ms), 
         #                 set to False to deactive debouncing.
-        # decimate      - set to n to only generate 1 event for every n input pulses.
         # pull          - used to enable internal pullup or pulldown resitors. 
-        if decimate:
-            assert isinstance(decimate, int), '! Decimate argument must be integer or False'
-            assert not (rising_event and falling_event), '! Decimate can only be used with single edge'
-            debounce = False
         if pull is None:
             pull = pyb.Pin.PULL_NONE
         elif pull == 'up':
@@ -154,7 +146,6 @@ class Digital_input(IO_object):
         self.rising_event = rising_event
         self.falling_event = falling_event
         self.debounce = debounce     
-        self.decimate = decimate
 
         assign_ID(self)
 
@@ -178,11 +169,7 @@ class Digital_input(IO_object):
     def _ISR(self, line):
         # Interrupt service routine called on pin change.
         if self.debounce_active:
-                return # Ignore interrupt as too soon after previous interrupt.
-        if self.decimate:
-            self.decimate_counter = (self.decimate_counter+1) % self.decimate
-            if not self.decimate_counter == 0:
-                return # Ignore input due to decimation.
+            return # Ignore interrupt as too soon after previous interrupt.
         self.interrupt_timestamp = fw.current_time
         if self.debounce: # Digital input uses debouncing.
             self.debounce_active = True
@@ -221,7 +208,6 @@ class Digital_input(IO_object):
         if self.use_both_edges:
             self.pin_state = self.pin.value()
         self.interrupt_timestamp = 0
-        self.decimate_counter = -1
 
 # Analog data ----------------------------------------------------------------
 
@@ -375,19 +361,19 @@ class Analog_threshold(IO_object):
 # Digital Output --------------------------------------------------------------
 
 class Digital_output(IO_object):
+    freq_multipliers = {10:10, 25:4, 50:2, 75:4}
+    off_inds = {10:1, 25:1, 50:1, 75:3}
 
-    def __init__(self, pin, inverted=False, pulse_enabled=False):
+    def __init__(self, pin, inverted=False):
         if isinstance(pin, IO_expander_pin):
             pin.set_mode(pyb.Pin.OUT)
             self.pin = pin # Pin is on an IO expander.
         else:
             self.pin = pyb.Pin(pin, pyb.Pin.OUT)  # Pin is pyboard pin.
         self.inverted = inverted # Set True for inverted output.
-        self.timer = False # Replaced by timer object if pulse enabled.
+        self.timer = False # Replaced by timer object if pulsed output is used.
         self.off()
         assign_ID(self)
-        if pulse_enabled:
-            self.enable_pulse()
 
     def on(self):
         self.pin.value(not self.inverted)
@@ -406,13 +392,11 @@ class Digital_output(IO_object):
             self.pin.value(not self.inverted)
         self.state = not self.state  
 
-    def enable_pulse(self): # Setup a hardware timer to allow pulsed output  
-        self.timer = pyb.Timer(available_timers.pop())
-        self.freq_multipliers = {10:10, 25:4, 50:2, 75:4}
-        self.off_inds = {10:1, 25:1, 50:1, 75:3}
-
-    def pulse(self, freq, duty_cycle=50, n_pulses=False): # Turn on pulsed output with specified frequency and duty cycle.
+    def pulse(self, freq, duty_cycle=50, n_pulses=False):
+        # Turn on pulsed output with specified frequency and duty cycle.
         assert duty_cycle in (10,25,50,75), 'duty_cycle must be 10, 25, 50 or 75'
+        if not self.timer:
+            self.timer = pyb.Timer(available_timers.pop())
         self.off_ind = self.off_inds[duty_cycle]
         self.i = 0
         self.fm = self.freq_multipliers[duty_cycle]
