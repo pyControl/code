@@ -4,7 +4,7 @@ from . import framework as fw
 
 # State machine variables.
 
-user_task_file = None # State machine definition file
+user_task_file = None # User task definition file module.
 
 states = {} # Dictionary of {state_name: state_ID}
 
@@ -23,20 +23,21 @@ current_state = None
 # State machine functions.
 
 def setup_state_machine(task_file):
+    # Initialise the state machine using an imported task definition file.
     global user_task_file, variables, transition_in_progress, states, events, ID2name, event_dispatch_dict
 
-    user_task_file = task_file  # User task definition file module.
-    variables = utility.v # User task variables object.
-    transition_in_progress = False # Set to True during state transitions.
+    user_task_file = task_file
+    variables = utility.v
+    transition_in_progress = False
 
-    # Adds state machine states and events to framework states and events dicts.
+    # Assign states and events interger IDs.
     states = {s: i+1 for s, i in zip(user_task_file.states, range(len(user_task_file.states)))}
     events = {e: i+1+len(user_task_file.states)
               for e, i in zip(user_task_file.events, range(len(user_task_file.events)))}
 
     ID2name = {ID: name for name, ID in list(states.items()) + list(events.items())}
 
-    # Make dict mapping state names to state behaviour functiona.
+    # Make dict mapping state names to state behaviour functions.
     user_task_file_methods = dir(user_task_file)
     for state in list(user_task_file.states) + ['all_states', 'run_start', 'run_end']:
         if state in user_task_file_methods:
@@ -45,8 +46,7 @@ def setup_state_machine(task_file):
             event_dispatch_dict[state] = None
 
 def goto_state(next_state):
-    # Transition to next state, calling exit action of old state
-    # and entry action of next state.
+    # Transition to next state, calling exit action of old state and entry action of next state.
     global transition_in_progress, current_state
     if type(next_state) is int: # ID passed in not name.
         next_state = ID2name[next_state]
@@ -108,11 +108,11 @@ def get_variable(v_name):
         return None
 
 def get_events():
-    # Print events as dict to USB serial.
+    # Print events dict to USB serial.
     print(events)
 
 def get_states():
-    # Print states as a dict to USB serial.
+    # Print states dict to USB serial.
     print(states)
 
 def get_variables():
