@@ -55,15 +55,15 @@ def goto_state(next_state):
     if not next_state in states.keys():
         raise fw.pyControlError('Invalid state name passed to goto_state: ' + repr(next_state))
     transition_in_progress = True
-    _process_event('exit')
+    process_event('exit')
     timer.disarm_type(fw.state_typ) # Clear any timed_goto_states     
     if fw.data_output:
         fw.data_output_queue.put((fw.current_time, fw.state_typ, states[next_state]))
     current_state = next_state
-    _process_event('entry')
+    process_event('entry')
     transition_in_progress = False
 
-def _process_event(event):
+def process_event(event):
     # Process event given event name by calling appropriate state event handler function.
     if type(event) is int: # ID passed in not name.
         event = ID2name[event]
@@ -73,7 +73,7 @@ def _process_event(event):
     if event_dispatch_dict[current_state]:                 # If state machine has event handler function for current state.
         event_dispatch_dict[current_state](event)          # Evaluate state event handler function.
 
-def _start():
+def start():
     global current_state
     # Called when run is started. Puts agent in initial state, and runs entry event.
     if event_dispatch_dict['run_start']:
@@ -81,14 +81,14 @@ def _start():
     current_state = smd.initial_state
     if fw.data_output:
         fw.data_output_queue.put((fw.current_time, fw.state_typ, states[current_state]))
-    _process_event('entry')
+    process_event('entry')
 
-def _stop():
+def stop():
     # Calls user defined stop function at end of run if function is defined.
     if event_dispatch_dict['run_end']:
         event_dispatch_dict['run_end']()
 
-def _set_variable(v_name, v_str, checksum=None):
+def set_variable(v_name, v_str, checksum=None):
     # Set value of variable v.v_name to value eval(v_str).
     if checksum:
         str_sum = sum(v_str) if type(v_str) is bytes else sum(v_str.encode())
@@ -100,8 +100,21 @@ def _set_variable(v_name, v_str, checksum=None):
     except Exception:
         return False # Bad variable name or invalid value string.
 
-def _get_variable(v_name):
+def get_variable(v_name):
+    # Return string representing value of specified variable.
     try:
         return repr(getattr(variables, v_name))
     except Exception:
         return None
+
+def get_events():
+    # Print events as dict to USB serial.
+    print(events)
+
+def get_states():
+    # Print states as a dict to USB serial.
+    print(states)
+
+def get_variables():
+    # Print state machines variables as dict {v_name: repr(v_value)} to USB serial.
+    print({k: repr(v) for k, v in variables.__dict__.items()})

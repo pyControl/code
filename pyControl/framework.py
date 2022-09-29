@@ -62,21 +62,9 @@ start_time = 0 # Time at which framework run is started.
 
 def _clock_tick(t):
     # Set flag to check timers, called by hardware timer once each millisecond.
-    global check_timers, current_time, start_time
+    global check_timers, current_time
     current_time = pyb.elapsed_millis(start_time)
     check_timers = True
-
-def get_events():
-    # Print events as dict.
-    print(sm.events)
-
-def get_states():
-    # Print states as a dict.
-    print(sm.states)
-
-def get_variables():
-    # Print state machines variables as dict {v_name: repr(v_value)}
-    print({k: repr(v) for k, v in sm.variables.__dict__.items()})
 
 def output_data(event):
     # Output data to computer.
@@ -111,11 +99,11 @@ def recieve_data():
             return  # Bad checksum.
         if data[-1:] == b's': # Set variable.
             v_name, v_str = eval(data[:-1])
-            if sm._set_variable(v_name, v_str):
+            if sm.set_variable(v_name, v_str):
                 data_output_queue.put((current_time, varbl_typ, (v_name, v_str)))
         elif data[-1:] == b'g': # Get variable.
             v_name = data[:-1].decode()
-            v_str = sm._get_variable(v_name)
+            v_str = sm.get_variable(v_name)
             data_output_queue.put((current_time, varbl_typ, (v_name, v_str)))
 
 def run():
@@ -133,7 +121,7 @@ def run():
     clock.callback(_clock_tick)
     usb_serial.setinterrupt(-1) # Disable 'ctrl+c' on serial raising KeyboardInterrupt.
     running = True
-    sm._start()
+    sm.start()
     # Run
     while running:
         # Priority 1: Process hardware interrupts.
@@ -143,7 +131,7 @@ def run():
         elif event_queue.available: 
             event = event_queue.get()
             data_output_queue.put(event)
-            sm._process_event(event[2])
+            sm.process_event(event[2])
         # Priority 3: Check for elapsed timers.
         elif check_timers:
             timer.check()
@@ -151,10 +139,10 @@ def run():
         elif timer.elapsed: 
             event = timer.get()
             if  event[1] == timer_typ:
-                sm._process_event(event[2])
+                sm.process_event(event[2])
             elif event[1] == event_typ:
                 data_output_queue.put(event)
-                sm._process_event(event[2])
+                sm.process_event(event[2])
             elif event[1] == hardw_typ:
                 hw.IO_dict[event[2]]._timer_callback()
             elif event[1] == state_typ:
@@ -174,6 +162,6 @@ def run():
     usb_serial.setinterrupt(3) # Enable 'ctrl+c' on serial raising KeyboardInterrupt.
     clock.deinit()
     hw.run_stop()
-    sm._stop()
+    sm.stop()
     while data_output_queue.available:
         output_data(data_output_queue.get())
