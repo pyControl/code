@@ -1,5 +1,5 @@
-from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 import os
+from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 # --------------------------------------------------------------------------------
 # GUI utility functions, classes, variables.
@@ -14,15 +14,15 @@ variable_constants = { #  Constants that can be used in setting the value of tas
 
 # --------------------------------------------------------------------------------
 
-class TableCheckbox(QtGui.QWidget):
+class TableCheckbox(QtWidgets.QWidget):
     '''Checkbox that is centered in cell when placed in table.'''
 
     def __init__(self, parent=None):
-        super(QtGui.QWidget, self).__init__(parent)
-        self.checkbox = QtGui.QCheckBox(parent=parent)
-        self.layout = QtGui.QHBoxLayout(self)
+        super(QtWidgets.QWidget, self).__init__(parent)
+        self.checkbox = QtWidgets.QCheckBox(parent=parent)
+        self.layout = QtWidgets.QHBoxLayout(self)
         self.layout.addWidget(self.checkbox)
-        self.layout.setAlignment(QtCore.Qt.AlignCenter)
+        self.layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.layout.setContentsMargins(0,0,0,0)
 
     def isChecked(self):
@@ -46,7 +46,7 @@ def cbox_set_item(cbox, item_name, insert=False):
     '''Set the selected item in a combobox to the name provided.  If name is
     not in item list returns False if insert is False or inserts item if insert 
     is True.'''
-    index = cbox.findText(item_name, QtCore.Qt.MatchFixedString)
+    index = cbox.findText(item_name, QtCore.Qt.MatchFlag.MatchFixedString)
     if index >= 0:
          cbox.setCurrentIndex(index)
          return True
@@ -107,9 +107,6 @@ class detachableTabWidget(QtWidgets.QTabWidget):
 
         self.detachedTabs = {}
 
-        # Close all detached tabs if the application is closed explicitly
-        QtWidgets.qApp.aboutToQuit.connect(self.closeDetachedTabs) 
-
     def setMovable(self, movable):
         '''Disable default movable functionality of QTabWidget.'''
         pass
@@ -131,7 +128,7 @@ class detachableTabWidget(QtWidgets.QTabWidget):
 
         # Create a new detached tab window
         detachedTab = DetachedTab(name, contentWidget)
-        detachedTab.setWindowModality(QtCore.Qt.NonModal)
+        detachedTab.setWindowModality(QtCore.Qt.WindowModality.NonModal)
         detachedTab.setGeometry(contentWidgetRect)
         detachedTab.onCloseSignal.connect(self.attachTab)
         detachedTab.move(point)
@@ -210,8 +207,8 @@ class TabBar(QtWidgets.QTabBar):
         QtWidgets.QTabBar.__init__(self, parent)
 
         self.setAcceptDrops(True)
-        self.setElideMode(QtCore.Qt.ElideRight)
-        self.setSelectionBehaviorOnRemove(QtWidgets.QTabBar.SelectLeftTab)
+        self.setElideMode(QtCore.Qt.TextElideMode.ElideRight)
+        self.setSelectionBehaviorOnRemove(QtWidgets.QTabBar.SelectionBehavior.SelectLeftTab)
 
         self.dragStartPos = QtCore.QPoint()
         self.dragDropedPos = QtCore.QPoint()
@@ -229,7 +226,7 @@ class TabBar(QtWidgets.QTabBar):
         '''Set the starting position for a drag event when the mouse button is pressed.
         - event : a mouse press event.
         '''
-        if event.button() == QtCore.Qt.LeftButton:
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
             self.dragStartPos = event.pos()
 
         self.dragDropedPos.setX(0)
@@ -249,10 +246,10 @@ class TabBar(QtWidgets.QTabBar):
             self.dragInitiated = True
 
         # If the current movement is a drag initiated by the left button
-        if (((event.buttons() & QtCore.Qt.LeftButton)) and self.dragInitiated):
+        if (((event.buttons() & QtCore.Qt.MouseButton.LeftButton)) and self.dragInitiated):
 
             # Stop the move event
-            finishMoveEvent = QtGui.QMouseEvent(QtCore.QEvent.MouseMove, event.pos(), QtCore.Qt.NoButton, QtCore.Qt.NoButton, QtCore.Qt.NoModifier)
+            finishMoveEvent = QtGui.QMouseEvent(QtCore.QEvent.Type.MouseMove, QtCore.QPointF(event.pos()), QtCore.Qt.MouseButton.NoButton, QtCore.Qt.MouseButton.NoButton, QtCore.Qt.KeyboardModifier.NoModifier)
             QtWidgets.QTabBar.mouseMoveEvent(self, finishMoveEvent)
 
             # Convert the move event into a drag
@@ -262,7 +259,7 @@ class TabBar(QtWidgets.QTabBar):
             # Create the appearance of dragging the tab content
             pixmap = self.parent().widget(self.tabAt(self.dragStartPos)).grab()
             targetPixmap = QtGui.QPixmap(pixmap.size())
-            targetPixmap.fill(QtCore.Qt.transparent)
+            targetPixmap.fill(QtCore.Qt.GlobalColor.transparent)
             painter = QtGui.QPainter(targetPixmap)
             painter.setOpacity(0.85)
             painter.drawPixmap(0, 0, pixmap)
@@ -270,16 +267,16 @@ class TabBar(QtWidgets.QTabBar):
             drag.setPixmap(targetPixmap)
 
             # Initiate the drag
-            dropAction = drag.exec_(QtCore.Qt.MoveAction | QtCore.Qt.CopyAction)
+            dropAction = drag.exec(QtCore.Qt.DropAction.MoveAction | QtCore.Qt.DropAction.CopyAction)
 
-            # For Linux:  Here, drag.exec_() will not return MoveAction on Linux.  So it
+            # For Linux:  Here, drag.exec() will not return MoveAction on Linux.  So it
             #             must be set manually
             if self.dragDropedPos.x() != 0 and self.dragDropedPos.y() != 0:
-                dropAction = QtCore.Qt.MoveAction
+                dropAction = QtCore.Qt.DropAction.MoveAction
 
             # If the drag completed outside of the tab bar, detach the tab and move
             # the content to the current cursor position
-            if dropAction == QtCore.Qt.IgnoreAction:
+            if dropAction == QtCore.Qt.DropAction.IgnoreAction:
                 event.accept()
                 self.onDetachTabSignal.emit(self.tabAt(self.dragStartPos), self.mouseCursor.pos())
                 
@@ -297,7 +294,7 @@ class TabBar(QtWidgets.QTabBar):
 # TaskSelectMenu
 # ----------------------------------------------------------------------------------
 
-class TaskSelectMenu(QtGui.QPushButton):
+class TaskSelectMenu(QtWidgets.QPushButton):
     '''Nested menu used to select tasks. The menu items are the names of
     any .py files in root_folder and it's sub-directories.  Items are 
     nested in the menu according to the sub-directory structure. 
@@ -307,7 +304,7 @@ class TaskSelectMenu(QtGui.QPushButton):
     '''
     def __init__(self, initial_text, add_default=False):
         self.callback = lambda task: None
-        self.root_menu = QtGui.QMenu()
+        self.root_menu = QtWidgets.QMenu()
         self.add_default = add_default
         self.default_text = initial_text
         super().__init__(initial_text)
@@ -365,16 +362,19 @@ class TaskInfo():
     '''
 
     def __init__(self):
-        self.state_label = QtGui.QLabel('State:')
-        self.state_text = QtGui.QLineEdit('')
+        self.state_label = QtWidgets.QLabel('State:')
+        self.state_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight|QtCore.Qt.AlignmentFlag.AlignVCenter)
+        self.state_text = QtWidgets.QLineEdit('')
         self.state_text.setReadOnly(True)
 
-        self.event_label = QtGui.QLabel('Event:')
-        self.event_text = QtGui.QLineEdit('')
+        self.event_label = QtWidgets.QLabel('Event:')
+        self.event_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight|QtCore.Qt.AlignmentFlag.AlignVCenter)
+        self.event_text = QtWidgets.QLineEdit('')
         self.event_text.setReadOnly(True)
 
-        self.print_label = QtGui.QLabel('Print:')
-        self.print_text = QtGui.QLineEdit('')
+        self.print_label = QtWidgets.QLabel('Print:')
+        self.print_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight|QtCore.Qt.AlignmentFlag.AlignVCenter)
+        self.print_text = QtWidgets.QLineEdit('')
         self.print_text.setReadOnly(True)
 
     def process_data(self, new_data):

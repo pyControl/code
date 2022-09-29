@@ -5,7 +5,7 @@ import traceback
 import logging
 
 from serial.tools import list_ports
-from pyqtgraph.Qt import QtGui, QtCore
+from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 from config.paths import dirs
 from config.gui_settings import  VERSION, ui_font_size
@@ -22,9 +22,9 @@ if os.name == 'nt': # Needed on windows to get taskbar icon to display correctly
 # GUI_main
 # --------------------------------------------------------------------------------
 
-class GUI_main(QtGui.QMainWindow):
+class GUI_main(QtWidgets.QMainWindow):
  
-    def __init__(self):
+    def __init__(self,app):
         super().__init__()
         self.setWindowTitle('pyControl v{}'.format(VERSION))
         self.setGeometry(10, 30, 700, 800) # Left, top, width, height.
@@ -39,7 +39,7 @@ class GUI_main(QtGui.QMainWindow):
         self.available_ports_changed = False
         self.data_dir_changed = False
         self.current_tab_ind = 0 # Which tab is currently selected.
-        self.app = None # Overwritten with QtGui.QApplication instance in main.
+        self.app = app
 
         # Dialogs.
 
@@ -48,11 +48,11 @@ class GUI_main(QtGui.QMainWindow):
         self.paths_dialog = Paths_dialog(parent=self)
 
         # Widgets.
-        self.tab_widget = QtGui.QTabWidget(self)
+        self.tab_widget = QtWidgets.QTabWidget(self)
         self.setCentralWidget(self.tab_widget)
 
         self.run_task_tab = Run_task_tab(self)  
-        self.experiments_tab = QtGui.QStackedWidget(self)
+        self.experiments_tab = QtWidgets.QStackedWidget(self)
         self.setups_tab = Setups_tab(self)
 
         self.configure_experiment_tab = Configure_experiment_tab(self)
@@ -192,13 +192,12 @@ class GUI_main(QtGui.QMainWindow):
 
 def launch_GUI():
     '''Launch the pyControl GUI.'''
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     app.setStyle('Fusion')
     app.setWindowIcon(QtGui.QIcon("gui/icons/logo.svg"))
     font = QtGui.QFont()
     font.setPixelSize(ui_font_size)
     app.setFont(font)
-    gui_main = GUI_main()
-    gui_main.app = app # To allow app functions to be called from GUI.
+    gui_main = GUI_main(app)
     sys.excepthook = gui_main.excepthook
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
