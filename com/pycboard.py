@@ -294,8 +294,8 @@ class Pycboard(Pyboard):
             self.transfer_file(sm_path, 'task_file.py')
         self.gc_collect()
         try:
-            self.exec('import task_file as smd')
-            self.exec('sm.setup_state_machine(smd)')
+            self.exec('import task_file')
+            self.exec('sm.setup_state_machine(task_file)')
             self.print('OK')
         except PyboardError as e:
             self.print('\n\nError: Unable to setup state machine.\n\n' + e.args[2].decode())

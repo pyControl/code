@@ -13,8 +13,7 @@ state_typ = const(2) # State transition : (time, state_typ, state_ID)
 timer_typ = const(3) # User timer       : (time, timer_typ, event_ID) 
 print_typ = const(4) # User print       : (time, print_typ, print_string)
 hardw_typ = const(5) # Harware callback : (time, hardw_typ, hardware_ID)
-stopf_typ = const(6) # Stop framework   : (time, stopf_typ, None)
-varbl_typ = const(7) # Variable change  : (time, varbl_typ, (v_name, v_str))
+varbl_typ = const(6) # Variable change  : (time, varbl_typ, (v_name, v_str))
 
 # Event_queue -----------------------------------------------------------------
 
@@ -147,8 +146,6 @@ def run():
                 hw.IO_dict[event[2]]._timer_callback()
             elif event[1] == state_typ:
                 sm.goto_state(event[2])
-            elif event[1] == stopf_typ:
-                running = False
         # Priority 5: Check for serial input from computer.
         elif usb_serial.any(): 
             recieve_data()

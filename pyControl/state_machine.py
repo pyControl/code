@@ -4,7 +4,7 @@ from . import framework as fw
 
 # State machine variables.
 
-smd = None # State machine definition file
+user_task_file = None # State machine definition file
 
 states = {} # Dictionary of {state_name: state_ID}
 
@@ -22,25 +22,25 @@ current_state = None
 
 # State machine functions.
 
-def setup_state_machine(user_task_file):
-    global smd, variables, transition_in_progress, states, events, ID2name, event_dispatch_dict
+def setup_state_machine(task_file):
+    global user_task_file, variables, transition_in_progress, states, events, ID2name, event_dispatch_dict
 
-    smd = user_task_file # State machine definition.
+    user_task_file = task_file  # User task definition file module.
     variables = utility.v # User task variables object.
     transition_in_progress = False # Set to True during state transitions.
 
     # Adds state machine states and events to framework states and events dicts.
-    states = {s: i+1 for s, i in zip(smd.states, range(len(smd.states)))}
-    events = {e: i+1+len(smd.states)
-              for e, i in zip(smd.events, range(len(smd.events)))}
+    states = {s: i+1 for s, i in zip(user_task_file.states, range(len(user_task_file.states)))}
+    events = {e: i+1+len(user_task_file.states)
+              for e, i in zip(user_task_file.events, range(len(user_task_file.events)))}
 
     ID2name = {ID: name for name, ID in list(states.items()) + list(events.items())}
 
     # Make dict mapping state names to state behaviour functiona.
-    smd_methods = dir(smd)
-    for state in list(smd.states) + ['all_states', 'run_start', 'run_end']:
-        if state in smd_methods:
-            event_dispatch_dict[state] = getattr(smd, state)
+    user_task_file_methods = dir(user_task_file)
+    for state in list(user_task_file.states) + ['all_states', 'run_start', 'run_end']:
+        if state in user_task_file_methods:
+            event_dispatch_dict[state] = getattr(user_task_file, state)
         else:
             event_dispatch_dict[state] = None
 
@@ -78,7 +78,7 @@ def start():
     # Called when run is started. Puts agent in initial state, and runs entry event.
     if event_dispatch_dict['run_start']:
         event_dispatch_dict['run_start']()
-    current_state = smd.initial_state
+    current_state = user_task_file.initial_state
     if fw.data_output:
         fw.data_output_queue.put((fw.current_time, fw.state_typ, states[current_state]))
     process_event('entry')
