@@ -6,6 +6,7 @@ from serial import SerialException
 from array import array
 from .pyboard import Pyboard, PyboardError
 from config.paths import dirs
+from config.gui_settings import VERSION
 
 # ----------------------------------------------------------------------------------------
 #  Helper functions.
@@ -81,7 +82,10 @@ class Pycboard(Pyboard):
                 self.print('Error: Unable to open serial connection.')
                 return
             if self.status['framework']:
-                self.print('pyControl Framework: OK')
+                self.print(f'Framework version: {self.framework_version}')
+                if self.framework_version != VERSION:
+                    self.print('\nThe pyControl framework version on the board does not match the GUI version. '
+                               'It is recommended to reload the pyControl framework to the pyboard to ensure compatibility.')
             else:
                 if self.status['framework'] is None:
                     self.print('pyControl Framework: Not loaded')
@@ -109,6 +113,10 @@ class Pycboard(Pyboard):
                 self.status['framework'] = None # Framework not installed.
             else:
                 self.status['framework'] = False # Framework import error.
+        try:
+            self.framework_version = self.eval('fw.VERSION').decode()
+        except PyboardError:
+            self.framework_version = '<1.8'
         return error_message
 
     def hard_reset(self, reconnect=True):
@@ -309,7 +317,9 @@ class Pycboard(Pyboard):
                         'events': events, # {name:ID}
                         'ID2name': {ID: name for name, ID in {**states, **events}.items()}, # {ID:name}
                         'analog_inputs': self.get_analog_inputs(), # {name: {'ID': ID, 'Fs':sampling rate}}
-                        'variables': self.get_variables()} # {name: repr(value)}
+                        'variables': self.get_variables(),
+                        'framework_version': self.framework_version,
+                        'micropython_version': self.micropython_version} # {name: repr(value)}
         if self.data_logger:
             self.data_logger.set_state_machine(self.sm_info)
 

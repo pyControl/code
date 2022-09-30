@@ -3,6 +3,8 @@ from . import timer
 from . import state_machine as sm
 from . import hardware as hw
 
+VERSION = '1.8'
+
 class pyControlError(BaseException): # Exception for pyControl errors.
     pass
 

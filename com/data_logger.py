@@ -35,6 +35,8 @@ class Data_logger():
         self.data_file.write('I Task name : {}\n'.format(self.sm_info['name']))
         self.data_file.write('I Task file hash : {}\n'.format(self.sm_info['task_hash']))
         self.data_file.write('I Setup ID : {}\n'.format(self.setup_ID))
+        self.data_file.write('I Framework version : {}\n'.format(self.sm_info['framework_version']))
+        self.data_file.write('I Micropython version : {}\n'.format(self.sm_info['micropython_version']))
         self.data_file.write('I Subject ID : {}\n'.format(self.subject_ID))
         self.data_file.write('I Start date : ' + datetime_now.strftime('%Y/%m/%d %H:%M:%S') + '\n\n')
         self.data_file.write('S {}\n\n'.format(json.dumps(self.sm_info['states'])))
