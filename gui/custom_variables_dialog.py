@@ -313,7 +313,7 @@ class Custom_variables_dialog(QtWidgets.QDialog):
             self.parent.print_to_log(f'\nLoading "{gui_name}" custom variable dialog')
             self.setWindowTitle("Set Variables")
             self.layout = QtWidgets.QVBoxLayout(self)
-            toolBar = QtGui.QToolBar()
+            toolBar = QtWidgets.QToolBar()
             toolBar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
             toolBar.setIconSize(QtCore.QSize(15, 15))
             self.layout.addWidget(toolBar)
