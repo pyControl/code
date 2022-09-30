@@ -105,16 +105,4 @@ def get_variable(v_name):
     try:
         return repr(getattr(variables, v_name))
     except Exception:
-        return None
-
-def get_events():
-    # Print events dict to USB serial.
-    print(events)
-
-def get_states():
-    # Print states dict to USB serial.
-    print(states)
-
-def get_variables():
-    # Print state machines variables as dict {v_name: repr(v_value)} to USB serial.
-    print({k: repr(v) for k, v in variables.__dict__.items()})
+        return None # Bad variable name

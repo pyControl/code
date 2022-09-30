@@ -315,15 +315,15 @@ class Pycboard(Pyboard):
 
     def get_states(self):
         '''Return states as a dictionary {state_name: state_ID}'''
-        return eval(self.exec('sm.get_states()').decode().strip())
+        return eval(self.eval('sm.states').decode())
 
     def get_events(self):
         '''Return events as a dictionary {event_name: state_ID}'''
-        return eval(self.exec('sm.get_events()').decode().strip())
+        return eval(self.eval('sm.events').decode())
 
     def get_variables(self):
         '''Return variables as a dictionary {variable_name: value}'''
-        return eval(self.exec('sm.get_variables()').decode().strip())
+        return eval(self.eval('{k: repr(v) for k, v in sm.variables.__dict__.items()}'))
 
     def get_analog_inputs(self):
         '''Return analog_inputs as a directory {input name: ID}'''
@@ -429,8 +429,7 @@ class Pycboard(Pyboard):
             return None
         else: # Set variable using REPL.  
             checksum = sum(v_str.encode())
-            set_OK = eval(self.eval("state_machine.set_variable({}, {}, {})"
-                .format(repr(v_name), repr(v_str), checksum)).decode())
+            set_OK = eval(self.eval(f'sm.set_variable({repr(v_name)}, {repr(v_str)}, {checksum})').decode())
             if set_OK:
                 self.sm_info['variables'][v_name] = v_str
             return set_OK
@@ -447,5 +446,4 @@ class Pycboard(Pyboard):
             checksum = sum(data).to_bytes(2, 'little')
             self.serial.write(b'V' + data_len +  data + checksum)
         else: # Get variable using REPL.
-            return eval(self.eval("state_machine.get_variable({})"
-                                  .format(repr(v_name))).decode())
+            return eval(self.eval(f'sm.get_variable({repr(v_name)})').decode())
