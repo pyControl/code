@@ -36,9 +36,9 @@ def init_state(event):
     elif event == 'exit':
         hw.center_poke.LED.off()
     elif event == 'left_poke':
-        goto('left_active')
+        goto_state('left_active')
     elif event == 'right_poke':
-        goto('right_active')
+        goto_state('right_active')
 
 def left_active(event):
     # Poke center to trigger solenoid or right to goto right_active.
@@ -47,9 +47,9 @@ def left_active(event):
     elif event == 'exit':
         hw.left_poke.LED.off()
     elif event == 'center_poke':
-        goto('left_release')
+        goto_state('left_release')
     elif event == 'right_poke':
-        goto('right_active')
+        goto_state('right_active')
 
 def right_active(event):
     # Poke center to trigger solenoid or left to goto left_active.
@@ -58,9 +58,9 @@ def right_active(event):
     elif event == 'exit':
         hw.right_poke.LED.off()
     elif event == 'left_poke':
-        goto('left_active')
+        goto_state('left_active')
     elif event == 'center_poke':
-        goto('right_release')
+        goto_state('right_release')
 
 def left_release(event):
     # Trigger left solenoid while center poke IR beam remains broken.
@@ -69,9 +69,9 @@ def left_release(event):
     elif event == 'exit':
         hw.left_poke.SOL.off()
     elif event == 'center_poke_out':
-        goto('left_active')
+        goto_state('left_active')
     elif event == 'right_poke':
-        goto('right_active')
+        goto_state('right_active')
 
 def right_release(event):
     # Trigger right solenoid while center poke IR beam remains broken.
@@ -80,6 +80,6 @@ def right_release(event):
     elif event == 'exit':
         hw.right_poke.SOL.off()
     elif event == 'left_poke':
-        goto('left_active')
+        goto_state('left_active')
     elif event == 'center_poke_out':
-        goto('right_active')
+        goto_state('right_active')
