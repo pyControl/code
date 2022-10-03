@@ -2,8 +2,8 @@
 # second when the usr pushbutton on the pyboard is pressed three times.  
 # Does not require any hardware except a micropython board.
 
-from pyControl.utility import * 
-from devices import * 
+from pyControl.utility import v, goto_state, timed_goto_state,second
+from devices import Digital_input, Digital_output 
   
 # Define hardware 
   

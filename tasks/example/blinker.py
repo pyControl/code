@@ -1,8 +1,8 @@
 # A simple state machine which flashes the blue LED on the pyboard on and off.
 # Does not require any hardware except micropython board.
 
-from pyControl.utility import *
-from devices import *
+from pyControl.utility import timed_goto_state,second
+from devices import Digital_output
 
 # Define hardware (normally done in seperate hardware definition file).
 
