@@ -1,5 +1,5 @@
-from devices._poke import _Poke
-from devices._MCP import MCP23017, MCP23008
+from devices.poke import _Poke
+from devices.MCP import MCP23017, MCP23008
 from pyControl.hardware import Digital_output
 
 class Nine_poke():

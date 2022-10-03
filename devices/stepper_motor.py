@@ -1,12 +1,12 @@
-import pyControl.hardware as _h
+from pyControl.hardware import Digital_output
 
 class Stepper_motor():
     def __init__(self, port=None, direction_pin=None, step_pin=None):
         if port:
             direction_pin = port.DIO_A
             step_pin = port.DIO_B
-        self._direction = _h.Digital_output(direction_pin)
-        self._step = _h.Digital_output(step_pin)
+        self._direction = Digital_output(direction_pin)
+        self._step = Digital_output(step_pin)
 
     def forward(self, step_rate, n_steps=False):
         self._direction.off() #set direction forward

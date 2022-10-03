@@ -1,5 +1,5 @@
 from pyControl.hardware import Port
-from devices._MCP import MCP23017
+from devices.MCP import MCP23017
 
 class Port_expander():
     # IO expander board which runs 8 behaviour ports from an MCP23017 i2c port expander.

@@ -1,7 +1,7 @@
 import pyb
-import pyControl.audio as _a
+from pyControl.audio import Audio_output
 
-class Audio_board(_a.Audio_output):
+class Audio_board(Audio_output):
 
     def __init__(self,  port):
         assert port.DAC is not None, '! Audio board needs port with DAC.'

@@ -1,9 +1,9 @@
 import pyb
 import math
 from array import array
-import pyControl.hardware as _h
+import pyControl.hardware as hw
 
-class _MCP(_h.IO_object):
+class _MCP(hw.IO_object):
     # Parent class for MCP23017 and MCP23008 port expanders.
 
     def __init__(self, I2C_bus, interrupt_pin, addr):
@@ -13,7 +13,7 @@ class _MCP(_h.IO_object):
         self.interrupts_enabled = False
         self.interrupt_pin = interrupt_pin
         self.reg_values = {} # Register values set by user.
-        _h.assign_ID(self)
+        hw.assign_ID(self)
 
     def reset(self):
         self.write_register('IODIR'  , 0) # Set pins as ouptuts.
@@ -54,7 +54,7 @@ class _MCP(_h.IO_object):
         self.interrupts_enabled = True
 
     def ISR(self, i):
-        _h.interrupt_queue.put(self.ID)
+        hw.interrupt_queue.put(self.ID)
         
     def _process_interrupt(self):
         INTF = self.read_register('INTF')
@@ -110,7 +110,7 @@ class MCP23008(_MCP):
         self.reset()
 
 
-class _Pin(_h.IO_expander_pin):
+class _Pin(hw.IO_expander_pin):
     # GPIO pin on MCP IO expander.
 
     def __init__(self, IOx, id, mode=None):
