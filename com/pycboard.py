@@ -1,5 +1,5 @@
 import os
-import sys
+import re
 import time
 import inspect
 from serial import SerialException
@@ -58,12 +58,16 @@ class Pycboard(Pyboard):
     '''Pycontrol board inherits from Pyboard and adds functionality for file transfer
     and pyControl operations.
     '''
+    device_class2file = {} # Dict mapping device classes to the file in the devices folder where they are defined {device_class_name: device_file}
 
     def __init__(self, serial_port,  baudrate=115200, verbose=True, print_func=print, data_logger=None):
         self.serial_port = serial_port
         self.print = print_func        # Function used for print statements.
         self.data_logger = data_logger # Instance of Data_logger class for saving and printing data.
         self.status = {'serial': None, 'framework':None, 'usb_mode':None}
+        self.device_files_on_pyboard = [] # List of files in devices folder on pyboard.
+        if not Pycboard.device_class2file: # Scan devices folder to find files where device classes are defined.
+            self.make_device_class2file_map()
         try:    
             super().__init__(self.serial_port, baudrate=115200)
             self.status['serial'] = True
@@ -106,6 +110,7 @@ class Pycboard(Pyboard):
         try:
             self.exec('from pyControl import *; import devices')
             self.status['framework'] = True # Framework imported OK.
+            self.device_files_on_pyboard = self.get_folder_contents('devices')
         except PyboardError as e:
             error_message = e.args[2].decode()
             if (("ImportError: no module named 'pyControl'" in error_message) or
@@ -221,25 +226,27 @@ class Pycboard(Pyboard):
 
 
     def transfer_folder(self, folder_path, target_folder=None, file_type='all',
-                        show_progress=False):
+                        files='all', remove_files=True, show_progress=False):
         '''Copy a folder into the root directory of the pyboard.  Folders that
         contain subfolders will not be copied successfully.  To copy only files of
-        a specific type, change the file_type argument to the file suffix (e.g. 'py').'''
+        a specific type, change the file_type argument to the file suffix (e.g. 'py').
+        To copy only specified files pass a list of file names as files argument.'''
         if not target_folder:
             target_folder = os.path.split(folder_path)[-1]
-        files = os.listdir(folder_path)
-        if file_type != 'all':
-            files = [f for f in files if f.split('.')[-1] == file_type]
+        if files == 'all':
+            files = os.listdir(folder_path)
+            if file_type != 'all':
+                files = [f for f in files if f.split('.')[-1] == file_type]
         try:
             self.exec('os.mkdir({})'.format(repr(target_folder)))
         except PyboardError:
-            # Folder already exists, remove any files not in sending folder.
-            target_files = eval(self.eval('os.listdir({})'.format(
-                repr(target_folder))).decode())
-            remove_files = list(set(target_files)-set(files))
-            for f in remove_files:
-                target_path = target_folder + '/' + f
-                self.remove_file(target_path)
+            # Folder already exists.
+            if remove_files: # Remove any files not in sending folder.
+                target_files = self.get_folder_contents(target_folder)
+                remove_files = list(set(target_files)-set(files))
+                for f in remove_files:
+                    target_path = target_folder + '/' + f
+                    self.remove_file(target_path)
         for f in files:
             file_path = os.path.join(folder_path, f)
             target_path = target_folder + '/' + f
@@ -249,7 +256,14 @@ class Pycboard(Pyboard):
 
     def remove_file(self, file_path):
         '''Remove a file from the pyboard.'''
-        self.exec('os.remove({})'.format(repr(file_path)))
+        try:
+            self.exec('os.remove({})'.format(repr(file_path)))
+        except PyboardError:
+            pass # File does not exist.
+
+    def get_folder_contents(self, folder_path):
+        '''Get a list of the files in a folder on the pyboard.'''
+        return eval(self.eval('os.listdir({})'.format(repr(folder_path))).decode())
   
     # ------------------------------------------------------------------------------------
     # pyControl operations.
@@ -259,7 +273,7 @@ class Pycboard(Pyboard):
         '''Copy the pyControl framework folder to the board.'''
         self.print('\nTransferring pyControl framework to pyboard.', end='')
         self.transfer_folder(dirs['framework'], file_type='py', show_progress=True)
-        self.transfer_folder(dirs['devices']  , file_type='py', show_progress=True)
+        self.transfer_folder(dirs['devices'], files=['__init__.py'], remove_files=False, show_progress=True)
         error_message = self.reset()
         if not self.status['framework']:
             self.print('\nError importing framework:')
@@ -269,11 +283,14 @@ class Pycboard(Pyboard):
         return 
 
     def load_hardware_definition(self, hwd_path=os.path.join(dirs['config'], 'hardware_definition.py')):
-        '''Transfer a hardware definition file to pyboard.  Defaults to transferring 
-        file hardware_definition.py from config folder.'''
+        '''Transfer a hardware definition file to pyboard.  Device driver files needed for
+        the hardware definition are transferred to the pyboard and any other device driver
+        files on the pyboard are deleted.'''
         if os.path.exists(hwd_path):
+            self.make_device_class2file_map()
+            self.transfer_device_files(hwd_path, reset_folder=True)
             self.print('\nTransferring hardware definition to pyboard.', end='')
-            self.transfer_file(hwd_path, target_path = 'hardware_definition.py')
+            self.transfer_file(hwd_path, target_path='hardware_definition.py')
             self.reset()
             try:
                 self.exec('import hardware_definition')
@@ -283,7 +300,51 @@ class Pycboard(Pyboard):
                 self.print('\n\nError importing hardware definition:\n')
                 self.print(error_message)
         else:
-            self.print('Hardware definition file not found.') 
+            self.print('Hardware definition file not found.')
+
+    def transfer_device_files(self, ref_file_path, reset_folder=False, return_filenames=False):
+        '''Transfer device driver files defining classes used in ref_file to the pyboard devices folder. 
+        If reset_folder=True then any files not used by ref_file are deleted from the pyboard filesystem, 
+        and any files that have changed on the computer are retransferred.  If reset_folder=False then
+        only files that are not already on the pyboard filesystem are transferred. If return_filenames=True
+        then no files are transferred but a list of the filenames used in ref_file is returned.'''
+        ref_file_name = os.path.split(ref_file_path)[-1]
+        with open(ref_file_path, 'r') as f:
+            file_content = f.read()
+        device_files = [Pycboard.device_class2file[device_class] for device_class in 
+                        Pycboard.device_class2file.keys() if device_class in file_content
+                        and not ref_file_name == Pycboard.device_class2file[device_class]]
+        # Add any device driver files containing classes used in device_files.
+        for device_file in device_files.copy():
+            device_files += self.transfer_device_files(os.path.join(dirs['devices'], device_file), return_filenames=True)
+        device_files = list(set(device_files)) # Remove duplicates.
+        if return_filenames:
+            return device_files
+        else:
+            if reset_folder: 
+                device_files += ['__init__.py']
+            else:
+                device_files = list(set(device_files)-set(self.device_files_on_pyboard))
+            if device_files:
+                self.print(f'\nTransfering device driver files {device_files} to pyboard', end='')
+                self.transfer_folder(dirs['devices'], files=device_files, remove_files=reset_folder, show_progress=True)
+                self.reset()
+                self.print(' OK')
+        
+
+    def make_device_class2file_map(self):
+        '''Make dict mapping device class names to file in devices folder containing 
+        the class definition.'''
+        Pycboard.device_class2file = {} # Dict {device_classname: device_filename}
+        all_device_files = [f for f in os.listdir(dirs['devices']) if f[-3:]=='.py']
+        for device_file in all_device_files:
+            with open(os.path.join(dirs['devices'],device_file), 'r') as f:
+                file_content = f.read()
+            pattern = "[\n\r]class\s*(?P<dcname>\w+)\s*\("
+            list(set([d_name for d_name in re.findall(pattern, file_content)]))
+            device_classes = list(set([device_class for device_class in re.findall(pattern, file_content)]))
+            for device_class in device_classes:
+                Pycboard.device_class2file[device_class] = device_file
 
     def setup_state_machine(self, sm_name, sm_dir=None, uploaded=False):
         '''Transfer state machine descriptor file sm_name.py from folder sm_dir
@@ -298,6 +359,7 @@ class Pycboard(Pyboard):
             if not os.path.exists(sm_path):
                 self.print('Error: State machine file not found at: ' + sm_path)
                 raise PyboardError('State machine file not found at: ' + sm_path)
+            self.transfer_device_files(sm_path)
             self.print('\nTransferring state machine {} to pyboard. '.format(sm_name), end='')
             self.transfer_file(sm_path, 'task_file.py')
         self.gc_collect()
