@@ -2,7 +2,7 @@
 # pokes the left poke, a reward becomes available with probability 1/ratio
 # at the right poke.
 
-from pyControl.utility import v, goto_state, timed_goto_state, set_timer, withprob, stop_framework, hour, ms
+from pyControl.utility import *
 import hardware_definition as hw
 
 #-------------------------------------------------------------------------

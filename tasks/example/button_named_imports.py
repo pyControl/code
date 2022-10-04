@@ -4,12 +4,12 @@
 # use whichever import style you prefer in your task code.
 
 import pyControl.utility as pc 
-from devices import Digital_input, Digital_output
-  
+import devices as dv  
+
 # Define hardware 
   
-button = Digital_input('X17', rising_event='button_press', pull='up') # pyboard usr button.
-LED    = Digital_output('B4') 
+button = dv.Digital_input('X17', rising_event='button_press', pull='up') # pyboard usr button.
+LED    = dv.Digital_output('B4') 
   
 # States and events. 
   

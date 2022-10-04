@@ -5,7 +5,7 @@
 
 # Does not require any hardware except a micropython board.
 
-from pyControl.utility import  goto_state, set_timer, second
+from pyControl.utility import *
 from devices import Digital_output, Digital_input
 
 # Define hardware (normally done in seperate hardware definition file).

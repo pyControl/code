@@ -2,7 +2,7 @@
 # running starts and stops. The subject must run for 10 seconds to trigger reward delivery,
 # then stop running for 5 seconds to initiate the next trial.
 
-from pyControl.utility import v, goto_state, timed_goto_state, set_timer, disarm_timer, second, ms
+from pyControl.utility import *
 from devices import Breakout_1_2, Rotary_encoder, Digital_output
 
 # Variables.

@@ -5,7 +5,7 @@
 # The frequency can be adjusted between 1 and 15 Hz, using the slider
 
 from pyb import LED
-from pyControl.utility import v, timed_goto_state, set_timer, second
+from pyControl.utility import *
 
 red_LED = LED(1)
 green_LED = LED(2)
