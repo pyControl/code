@@ -497,12 +497,12 @@ class Settings_dialog(QtWidgets.QDialog):
         # Store newly edited paths.
         json_path = os.path.join(dirs["config"], "user_settings.json")
         if os.path.exists(json_path):
-            with open(json_path, "r") as f:
+            with open(json_path, "r", encoding='utf-8') as f:
                 user_settings = json.loads(f.read())
         else:
             user_settings = {}
         user_settings.update(user_setting_dict_new)
-        with open(json_path, "w") as f:
+        with open(json_path, "w", encoding='utf-8') as f:
             f.write(json.dumps(user_settings, indent=4))
         self.parent().data_dir_changed = True
         self.parent().task_directory = get_setting("folders","tasks")
