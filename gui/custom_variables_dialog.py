@@ -603,9 +603,9 @@ class Variables_dialog_editor(QtWidgets.QDialog):
                 self,
                 "Remove tab",
                 f'Are you sure you want to remove "{self.tab_title_edit.text()}"?',
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel,
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.Cancel,
             )
-            if reply == QtWidgets.QMessageBox.Yes:
+            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 index = self.tabs.currentIndex()
                 table_key = self.tabs.tabText(index)
                 self.tabs.removeTab(index)

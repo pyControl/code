@@ -321,7 +321,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         msg = QtWidgets.QMessageBox()
         msg.setWindowTitle('Error')
         msg.setText('An error occured while setting up experiment')
-        msg.setIcon(QtWidgets.QMessageBox.Warning)
+        msg.setIcon(QtWidgets.QMessageBox.Icon.Warning)
         msg.exec()
         self.startstopclose_all_button.setText('Close Exp.')
         self.startstopclose_all_button.setEnabled(True)
