@@ -294,21 +294,6 @@ class Path_setter(QtWidgets.QHBoxLayout):
         self.addWidget(self.change_button)
         self.setContentsMargins(0, 0, 0, 0)
 
-    def show_edit(self):
-        if self.path_text.text() != self.path:
-            if self.edited is False:
-                self.edited = True
-                self.name_label.setStyleSheet("color:red;")
-                self.parent.num_edits += 1
-                self.parent.save_settings_btn.setEnabled(True)
-        else:
-            if self.edited is True:
-                self.edited = False
-                self.name_label.setStyleSheet("color:black;")
-                self.parent.num_edits -= 1
-                if self.parent.num_edits < 1:
-                    self.parent.save_settings_btn.setEnabled(False)
-
     def select_path(self):
         new_path = QtWidgets.QFileDialog.getExistingDirectory(
             self.parent, f"Select {self.name} folder", self.path_text.text()
@@ -317,6 +302,21 @@ class Path_setter(QtWidgets.QHBoxLayout):
             new_path = os.path.normpath(new_path)
             self.path_text.setText(new_path)
             self.show_edit()
+
+    def show_edit(self):
+        if self.path_text.text() != self.path:
+            if self.edited is False:
+                self.edited = True
+                self.name_label.setStyleSheet("color:red;")
+                self.parent.num_edited_setters += 1
+                self.parent.save_settings_btn.setEnabled(True)
+        else:
+            if self.edited is True:
+                self.edited = False
+                self.name_label.setStyleSheet("color:black;")
+                self.parent.num_edited_setters -= 1
+                if self.parent.num_edited_setters < 1:
+                    self.parent.save_settings_btn.setEnabled(False)
 
     def reset(self):
         self.path = os.path.normpath(get_setting(*self.key))
@@ -345,6 +345,10 @@ class Spin_setter:
             self.spn.setSuffix(suffix)
         self.spn.valueChanged.connect(self.show_edit)
 
+    def add_to_grid(self, groupbox_grid, row):
+        groupbox_grid.addWidget(self.label, row, 0)
+        groupbox_grid.addWidget(self.spn, row, 1)
+
     def show_edit(self):
         """
         checks whether the settings has been edited, and changes label color accordingly
@@ -355,21 +359,17 @@ class Spin_setter:
             if self.edited is False:
                 self.edited = True
                 self.label.setStyleSheet("color:red;")
-                self.parent.num_edits += 1
+                self.parent.num_edited_setters += 1
                 self.parent.save_settings_btn.setEnabled(True)
         else:
             if self.edited is True:
                 self.edited = False
                 self.label.setStyleSheet("color:black;")
-                self.parent.num_edits -= 1
-                if self.parent.num_edits < 1:
+                self.parent.num_edited_setters -= 1
+                if self.parent.num_edited_setters < 1:
                     self.parent.save_settings_btn.setEnabled(False)
 
         self.spn.lineEdit().deselect()
-
-    def add_to_grid(self, grid, row):
-        grid.addWidget(self.label, row, 0)
-        grid.addWidget(self.spn, row, 1)
 
     def reset(self):
         self.start_value = get_setting(*self.key)
@@ -382,7 +382,7 @@ class Settings_dialog(QtWidgets.QDialog):
     def __init__(self, parent):
         super(QtWidgets.QDialog, self).__init__(parent)
         self.setWindowTitle("Settings")
-        self.num_edits = 0
+        self.num_edited_setters = 0
 
         settings_grid_layout = QtWidgets.QGridLayout(self)
         paths_box = QtWidgets.QGroupBox("Paths")
@@ -473,7 +473,7 @@ class Settings_dialog(QtWidgets.QDialog):
             self.log_font_size,
         ]:
             variable.reset()
-        self.num_edits = 0
+        self.num_edited_setters = 0
         self.save_settings_btn.setEnabled(False)
         self.save_settings_btn.setFocus()
 
@@ -529,7 +529,5 @@ class Settings_dialog(QtWidgets.QDialog):
                 "Are you sure you want to exit without saving your settings?",
                 QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.Cancel,
             )
-            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
-                self.reset()
-            else:
+            if reply == QtWidgets.QMessageBox.StandardButton.Cancel:
                 event.ignore()
