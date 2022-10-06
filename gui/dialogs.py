@@ -325,6 +325,7 @@ class Path_setter(QtWidgets.QHBoxLayout):
 
 
 class Spin_setter:
+    """Spinbox input for changing user settings"""
     def __init__(self, parent, label, key, suffix=None):
         center = QtCore.Qt.AlignmentFlag.AlignCenter
         Vcenter = QtCore.Qt.AlignmentFlag.AlignVCenter
@@ -345,6 +346,11 @@ class Spin_setter:
         self.spn.valueChanged.connect(self.show_edit)
 
     def show_edit(self):
+        """
+        checks whether the settings has been edited, and changes label color accordingly
+        also keeps a running tally of how many settings have been edited
+        and enables/disables the "Save settings" button accordingly
+        """
         if self.spn.value() != self.start_value:
             if self.edited is False:
                 self.edited = True
@@ -372,6 +378,7 @@ class Spin_setter:
 
 
 class Settings_dialog(QtWidgets.QDialog):
+    """Dialog for editing user settings"""
     def __init__(self, parent):
         super(QtWidgets.QDialog, self).__init__(parent)
         self.setWindowTitle("Settings")
@@ -454,6 +461,7 @@ class Settings_dialog(QtWidgets.QDialog):
         self.close_shortcut.activated.connect(self.close)
 
     def reset(self):
+        """Resets values to whatever is saved in user_settings.json, or to default_user_settings if no user_settings.json exists"""
         for variable in [
             self.tasks_setter,
             self.data_setter,
@@ -470,6 +478,7 @@ class Settings_dialog(QtWidgets.QDialog):
         self.save_settings_btn.setFocus()
 
     def fill_with_defaults(self):
+        "Populates inputs with default_user_settings dictionary values from settings.py"
         self.update_interval.spn.setValue(default_user_settings["plotting"]["update_interval"])
         self.event_history_len.spn.setValue(default_user_settings["plotting"]["event_history_len"])
         self.state_history_len.spn.setValue(default_user_settings["plotting"]["state_history_len"])

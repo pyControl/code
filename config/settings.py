@@ -31,6 +31,11 @@ default_user_settings = {
 
 
 def get_setting(setting_type, setting_name=None):
+    """
+    gets a user setting or group of user settings
+    from the user_settings.json or, if that doesn't exist, 
+    the default_user_settings dictionary
+    """
     json_path = os.path.join(dirs["config"], "user_settings.json")
     if os.path.exists(json_path):
         with open(json_path, "r", encoding='utf-8') as f:
