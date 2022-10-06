@@ -4,7 +4,7 @@ import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui,QtWidgets,QtCore
 
-from config.gui_settings import event_history_len, state_history_len, analog_history_dur
+from config.settings import get_setting
 from gui.utility import detachableTabWidget
 
 # ----------------------------------------------------------------------------------------
@@ -18,10 +18,9 @@ class Task_plot(QtWidgets.QWidget):
         super(QtWidgets.QWidget, self).__init__(parent)
 
         # Create widgets
-
-        self.states_plot = States_plot(self, data_len=state_history_len)
-        self.events_plot = Events_plot(self, data_len=event_history_len)
-        self.analog_plot = Analog_plot(self, data_dur=analog_history_dur)
+        self.states_plot = States_plot(self, data_len = get_setting("plotting","state_history_len"))
+        self.events_plot = Events_plot(self, data_len = get_setting("plotting","event_history_len"))
+        self.analog_plot = Analog_plot(self, data_dur = get_setting("plotting","analog_history_dur"))
         self.run_clock   = Run_clock(self.states_plot.axis)
 
         # Setup plots

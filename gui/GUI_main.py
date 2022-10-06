@@ -7,10 +7,9 @@ import logging
 from serial.tools import list_ports
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
-from config.paths import dirs
-from config.gui_settings import  VERSION, ui_font_size
+from config.settings import VERSION, dirs, get_setting
 from gui.run_task_tab import Run_task_tab
-from gui.dialogs import Board_config_dialog, Keyboard_shortcuts_dialog, Paths_dialog
+from gui.dialogs import Board_config_dialog, Keyboard_shortcuts_dialog, Settings_dialog
 from gui.configure_experiment_tab import Configure_experiment_tab
 from gui.run_experiment_tab import Run_experiment_tab
 from gui.setups_tab import Setups_tab
@@ -37,15 +36,15 @@ class GUI_main(QtWidgets.QMainWindow):
         self.available_tasks_changed = False
         self.available_experiments_changed = False
         self.available_ports_changed = False
+        self.task_directory = get_setting("folders","tasks")
         self.data_dir_changed = False
         self.current_tab_ind = 0 # Which tab is currently selected.
         self.app = app
 
         # Dialogs.
-
         self.config_dialog = Board_config_dialog(parent=self)
         self.shortcuts_dialog = Keyboard_shortcuts_dialog(parent=self)
-        self.paths_dialog = Paths_dialog(parent=self)
+        self.settings_dialog = Settings_dialog(parent=self)
 
         # Widgets.
         self.tab_widget = QtWidgets.QTabWidget(self)
@@ -68,7 +67,6 @@ class GUI_main(QtWidgets.QMainWindow):
         self.tab_widget.currentChanged.connect(self.tab_changed) 
 
         # Timers
-
         self.refresh_timer = QtCore.QTimer() # Timer to regularly call refresh() when not running.
         self.refresh_timer.timeout.connect(self.refresh)
         self.refresh_timer.start(self.refresh_interval)
@@ -93,8 +91,8 @@ class GUI_main(QtWidgets.QMainWindow):
         ## --------Settings menu--------
         settings_menu = main_menu.addMenu('Settings')
         # Folder paths
-        paths_action = QtGui.QAction("&Folder paths", self)
-        paths_action.triggered.connect(self.paths_dialog.exec)
+        paths_action = QtGui.QAction("&Edit settings", self)
+        paths_action.triggered.connect(self.settings_dialog.exec)
         settings_menu.addAction(paths_action)
         # ---------Help menu----------
         help_menu= main_menu.addMenu('Help')
@@ -122,10 +120,10 @@ class GUI_main(QtWidgets.QMainWindow):
         self.show()
 
     def go_to_data(self):
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(dirs['data']))
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(get_setting("folders","data")))
 
     def go_to_tasks(self):
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(dirs['tasks']))
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(get_setting("folders","tasks")))
 
     def view_docs(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://pycontrol.readthedocs.io/en/latest/"))
@@ -140,8 +138,11 @@ class GUI_main(QtWidgets.QMainWindow):
         '''Return list of .py files in tasks folder and subfolders in format:
         subdir_1/subdir_2/task_file_name.py'''
         task_files = []
-        for (dirpath, dirnames, filenames) in os.walk(dirs['tasks']):
-            task_files += [os.path.join(dirpath, file).split(dirs['tasks'])[1][1:-3]
+        # this function gets called every second. Normally we would use get_setting("folder","tasks")
+        # but there no need to constantly be rereading the user_settings.json file that isn't changing
+        # so we use this self.task_directory variable that is only updated when a new user settting is saved
+        for (dirpath, dirnames, filenames) in os.walk(self.task_directory):
+            task_files += [os.path.join(dirpath, file).split(self.task_directory)[1][1:-3]
                            for file in filenames if file.endswith('.py')]
         return task_files
 
@@ -150,12 +151,12 @@ class GUI_main(QtWidgets.QMainWindow):
         # Scan task folder.
         tasks = self.get_task_file_list()
         self.available_tasks_changed = tasks != self.available_tasks
-        if self.available_tasks_changed:    
+        if self.available_tasks_changed:
             self.available_tasks = tasks
         # Scan experiments folder.
         experiments = [t.split('.')[0] for t in os.listdir(dirs['experiments']) if t[-4:] == '.pcx']
         self.available_experiments_changed = experiments != self.available_experiments
-        if self.available_experiments_changed:    
+        if self.available_experiments_changed:
             self.available_experiments = experiments
         # Scan serial ports.
         ports = set([c[0] for c in list_ports.comports()
@@ -196,7 +197,7 @@ def launch_GUI():
     app.setStyle('Fusion')
     app.setWindowIcon(QtGui.QIcon("gui/icons/logo.svg"))
     font = QtGui.QFont()
-    font.setPixelSize(ui_font_size)
+    font.setPixelSize(get_setting("other",("ui_font_size")))
     app.setFont(font)
     gui_main = GUI_main(app)
     sys.excepthook = gui_main.excepthook
