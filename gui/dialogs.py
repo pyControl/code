@@ -425,17 +425,17 @@ class Settings_dialog(QtWidgets.QDialog):
         plotting_layout.setRowStretch(i + 1, 1)
         plotting_box.setLayout(plotting_layout)
 
-        other_box = QtWidgets.QGroupBox("Other")
-        other_layout = QtWidgets.QGridLayout()
-        self.ui_font_size = Spin_setter(self, "UI font size*", ("other", "ui_font_size"), " pt")
-        self.log_font_size = Spin_setter(self, "Log font size*", ("other", "log_font_size"), " pt")
+        gui_box = QtWidgets.QGroupBox("GUI")
+        gui_layout = QtWidgets.QGridLayout()
+        self.ui_font_size = Spin_setter(self, "UI font size*", ("GUI", "ui_font_size"), " pt")
+        self.log_font_size = Spin_setter(self, "Log font size*", ("GUI", "log_font_size"), " pt")
 
         other_spins = [self.ui_font_size, self.log_font_size]
         for i, variable in enumerate(other_spins):
-            variable.add_to_grid(other_layout, i)
-        other_layout.setColumnStretch(2, 1)
-        other_layout.setRowStretch(i + 1, 1)
-        other_box.setLayout(other_layout)
+            variable.add_to_grid(gui_layout, i)
+        gui_layout.setColumnStretch(2, 1)
+        gui_layout.setRowStretch(i + 1, 1)
+        gui_box.setLayout(gui_layout)
 
         self.fill_with_defaults_btn = QtWidgets.QPushButton("Use defaults")
         self.fill_with_defaults_btn.clicked.connect(self.fill_with_defaults)
@@ -452,7 +452,7 @@ class Settings_dialog(QtWidgets.QDialog):
 
         settings_grid_layout.addWidget(paths_box, 0, 0, 1, 3)
         settings_grid_layout.addWidget(plotting_box, 1, 0)
-        settings_grid_layout.addWidget(other_box, 1, 1)
+        settings_grid_layout.addWidget(gui_box, 1, 1)
         settings_grid_layout.addLayout(btns_layout, 2, 0, 1, 3)
         settings_grid_layout.setColumnStretch(2, 1)
 
@@ -483,8 +483,8 @@ class Settings_dialog(QtWidgets.QDialog):
         self.event_history_len.spn.setValue(default_user_settings["plotting"]["event_history_len"])
         self.state_history_len.spn.setValue(default_user_settings["plotting"]["state_history_len"])
         self.analog_history_dur.spn.setValue(default_user_settings["plotting"]["analog_history_dur"])
-        self.ui_font_size.spn.setValue(default_user_settings["other"]["ui_font_size"])
-        self.log_font_size.spn.setValue(default_user_settings["other"]["log_font_size"])
+        self.ui_font_size.spn.setValue(default_user_settings["GUI"]["ui_font_size"])
+        self.log_font_size.spn.setValue(default_user_settings["GUI"]["log_font_size"])
 
     def saveChanges(self):
         user_setting_dict_new = {
@@ -498,7 +498,7 @@ class Settings_dialog(QtWidgets.QDialog):
                 "state_history_len": self.state_history_len.spn.value(),
                 "analog_history_dur": self.analog_history_dur.spn.value(),
             },
-            "other": {
+            "GUI": {
                 "ui_font_size": self.ui_font_size.spn.value(),
                 "log_font_size": self.log_font_size.spn.value(),
             },

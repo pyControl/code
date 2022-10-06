@@ -403,7 +403,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.variables_button.setEnabled(False)
         self.log_textbox = QtWidgets.QTextEdit()
         self.log_textbox.setMinimumHeight(180)
-        self.log_textbox.setFont(QtGui.QFont('Courier New',get_setting("other","log_font_size")))
+        self.log_textbox.setFont(QtGui.QFont('Courier New',get_setting("GUI","log_font_size")))
         self.log_textbox.setReadOnly(True)
 
         self.Vlayout = QtWidgets.QVBoxLayout(self)

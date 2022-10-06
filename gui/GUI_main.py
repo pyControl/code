@@ -197,7 +197,7 @@ def launch_GUI():
     app.setStyle('Fusion')
     app.setWindowIcon(QtGui.QIcon("gui/icons/logo.svg"))
     font = QtGui.QFont()
-    font.setPixelSize(get_setting("other",("ui_font_size")))
+    font.setPixelSize(get_setting("GUI",("ui_font_size")))
     app.setFont(font)
     gui_main = GUI_main(app)
     sys.excepthook = gui_main.excepthook

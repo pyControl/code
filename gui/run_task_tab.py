@@ -145,7 +145,7 @@ class Run_task_tab(QtWidgets.QWidget):
         # Log text and task plots.
 
         self.log_textbox = QtWidgets.QTextEdit()
-        self.log_textbox.setFont(QtGui.QFont("Courier New", get_setting("other","log_font_size")))
+        self.log_textbox.setFont(QtGui.QFont("Courier New", get_setting("GUI","log_font_size")))
         self.log_textbox.setReadOnly(True)
 
         self.task_plot = Task_plot()

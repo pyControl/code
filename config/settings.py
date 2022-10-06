@@ -23,7 +23,7 @@ default_user_settings = {
         "state_history_len": 100,
         "analog_history_dur": 12,
     },
-    "other": {
+    "GUI": {
         "ui_font_size": 11,
         "log_font_size": 9,
     },
