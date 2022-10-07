@@ -1,7 +1,7 @@
 # This is an example custom dialog for more advanced users.
 # Complex custom dialogs can be directly coded using the PyQt framework
 
-from pyqtgraph.Qt import QtGui, QtCore
+from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from gui.custom_variables_dialog import Slider_var, Spin_var
 
 # Custom Variable dialog

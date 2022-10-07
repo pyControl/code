@@ -8,8 +8,7 @@ from serial import SerialException, SerialTimeoutException
 from com.pycboard import Pycboard, PyboardError, _djb2_file
 from com.data_logger import Data_logger
 
-from config.paths import dirs
-from config.gui_settings import update_interval, log_font_size
+from config.settings import get_setting
 
 from gui.dialogs import Variables_dialog
 from gui.custom_variables_dialog import Custom_variables_dialog
@@ -79,7 +78,7 @@ class Run_task_tab(QtWidgets.QWidget):
 
         self.data_dir_label = QtWidgets.QLabel("Data dir:")
         self.data_dir_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
-        self.data_dir_text = QtWidgets.QLineEdit(dirs["data"])
+        self.data_dir_text = QtWidgets.QLineEdit(get_setting("folders","data"))
         self.data_dir_button = QtWidgets.QPushButton()
         self.data_dir_button.setIcon(QtGui.QIcon("gui/icons/folder.svg"))
         self.data_dir_button.setFixedWidth(30)
@@ -146,7 +145,7 @@ class Run_task_tab(QtWidgets.QWidget):
         # Log text and task plots.
 
         self.log_textbox = QtWidgets.QTextEdit()
-        self.log_textbox.setFont(QtGui.QFont("Courier New", log_font_size))
+        self.log_textbox.setFont(QtGui.QFont("Courier New", get_setting("GUI","log_font_size")))
         self.log_textbox.setReadOnly(True)
 
         self.task_plot = Task_plot()
@@ -223,12 +222,12 @@ class Run_task_tab(QtWidgets.QWidget):
                 self.board_select.addItems(["No setups found"])
                 self.connect_button.setEnabled(False)
         if self.GUI_main.available_tasks_changed:
-            self.task_select.update_menu(dirs["tasks"])
+            self.task_select.update_menu(get_setting("folders","tasks"))
         if self.GUI_main.data_dir_changed and not self.custom_dir:
-            self.data_dir_text.setText(dirs["data"])
+            self.data_dir_text.setText(get_setting("folders","data"))
         if self.task:
             try:
-                task_path = os.path.join(dirs["tasks"], self.task + ".py")
+                task_path = os.path.join(self.GUI_main.task_directory, self.task + ".py") #gets called frequently, so not using get_setting()
                 if not self.task_hash == _djb2_file(task_path):  # Task file modified.
                     self.task_changed()
             except FileNotFoundError:
@@ -305,7 +304,7 @@ class Run_task_tab(QtWidgets.QWidget):
                 self.status_text.setText("Resetting task..")
             else:
                 self.status_text.setText("Uploading..")
-                self.task_hash = _djb2_file(os.path.join(dirs["tasks"], task + ".py"))
+                self.task_hash = _djb2_file(os.path.join(self.GUI_main.task_directory, task + ".py"))
             self.start_button.setEnabled(False)
             self.variables_button.setEnabled(False)
             self.repaint()
@@ -344,7 +343,7 @@ class Run_task_tab(QtWidgets.QWidget):
             self.status_text.setText("Error setting up state machine.")
 
     def select_data_dir(self):
-        new_path = QtWidgets.QFileDialog.getExistingDirectory(self, "Select data folder", dirs["data"])
+        new_path = QtWidgets.QFileDialog.getExistingDirectory(self, "Select data folder", get_setting("folders","data"))
         if new_path:
             self.data_dir_text.setText(new_path)
             self.custom_dir = True
@@ -366,7 +365,7 @@ class Run_task_tab(QtWidgets.QWidget):
             subject_ID = str(self.subject_text.text())
             setup_ID = str(self.board_select.currentText())
             self.data_logger.open_data_file(self.data_dir, "run_task", setup_ID, subject_ID)
-            self.data_logger.copy_task_file(self.data_dir, dirs["tasks"], "run_task-task_files")
+            self.data_logger.copy_task_file(self.data_dir, self.GUI_main.task_directory, "run_task-task_files")
         self.fresh_task = False
         self.running = True
         self.board.start_framework()
@@ -380,7 +379,7 @@ class Run_task_tab(QtWidgets.QWidget):
         if self.using_json_gui:
             self.variables_dialog.edit_action.setEnabled(False)
         self.print_to_log(f"\nRun started at: {datetime.now().strftime('%Y/%m/%d %H:%M:%S')}\n")
-        self.update_timer.start(update_interval)
+        self.update_timer.start(get_setting("plotting","update_interval"))
         self.GUI_main.refresh_timer.stop()
         self.status_text.setText("Running: " + self.task)
         self.GUI_main.tab_widget.setTabEnabled(1, False)  # Disable experiments tab.
