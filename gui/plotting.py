@@ -49,8 +49,7 @@ class Task_plot(QtWidgets.QWidget):
         self.states_plot.set_state_machine(sm_info)
         self.events_plot.set_state_machine(sm_info)
         self.analog_plot.set_state_machine(sm_info)
-
-        if sm_info['analog_inputs']:
+        if self.analog_plot.inputs:
             self.analog_plot.axis.setVisible(True)
             self.events_plot.axis.getAxis('bottom').setLabel('')
         else:
@@ -210,12 +209,12 @@ class Analog_plot():
         self.axis.setLimits(xMax=0)
 
     def set_state_machine(self, sm_info):
-        self.inputs = sm_info['analog_inputs']
+        self.inputs = {ID: ai for ID,ai in sm_info['analog_inputs'].items() if ai['plot']}
         if not self.inputs: return # State machine may not have analog inputs.
         self.axis.clear()
         self.legend = self.axis.addLegend(offset=(10, 10))
-        self.plots = {ai['ID']: self.axis.plot(name=name, 
-                      pen=pg.mkPen(pg.intColor(i,len(self.inputs)))) for i, (name, ai) in enumerate(sorted(self.inputs.items()))}
+        self.plots = {ai['ID']: self.axis.plot(name=name, pen=pg.mkPen(pg.intColor(i,len(self.inputs))))
+                      for i, (name, ai) in enumerate(sorted(self.inputs.items()))}
         self.axis.getAxis('bottom').setLabel('Time (seconds)')
         max_len = max([len(n) for n in list(sm_info['states'])+list(sm_info['events'])])
         self.axis.getAxis('right').setWidth(5*max_len)

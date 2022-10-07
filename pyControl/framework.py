@@ -153,7 +153,7 @@ def run():
             recieve_data()
         # Priority 6: Stream analog data.
         elif hw.stream_data_queue.available: 
-            hw.IO_dict[hw.stream_data_queue.get()]._process_streaming()
+            hw.IO_dict[hw.stream_data_queue.get()].send_buffer()
         # Priority 7: Output framework data.
         elif data_output_queue.available: 
             output_data(data_output_queue.get())
