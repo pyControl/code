@@ -5,8 +5,7 @@ import inspect
 from serial import SerialException
 from array import array
 from .pyboard import Pyboard, PyboardError
-from config.paths import dirs
-from config.gui_settings import VERSION
+from config.settings import VERSION, dirs, get_setting
 
 # ----------------------------------------------------------------------------------------
 #  Helper functions.
@@ -351,7 +350,7 @@ class Pycboard(Pyboard):
         to board. Instantiate state machine object as state_machine on pyboard.'''
         self.reset()
         if sm_dir is None:
-            sm_dir = dirs['tasks']
+            sm_dir = get_setting("folders","tasks")
         sm_path = os.path.join(sm_dir, sm_name + '.py')
         if uploaded:
             self.print('\nResetting task. ', end='')

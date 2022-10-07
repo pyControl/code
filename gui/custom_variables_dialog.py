@@ -2,7 +2,7 @@ import os
 import json
 import re
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from config.paths import dirs
+from config.settings import dirs, get_setting
 from gui.utility import variable_constants, null_resize, cbox_set_item, cbox_update_options
 
 # input widgets ---------------------------------------------------------------
@@ -571,7 +571,7 @@ class Variables_dialog_editor(QtWidgets.QDialog):
         """Remove variables that are not defined in the new task."""
         pattern = "[\n\r]v\.(?P<vname>\w+)\s*\="
         try:
-            with open(os.path.join(dirs["tasks"], task + ".py"), "r") as file:
+            with open(os.path.join(get_setting("folders","tasks"), task + ".py"), "r") as file:
                 file_content = file.read()
         except FileNotFoundError:
             return
@@ -603,9 +603,9 @@ class Variables_dialog_editor(QtWidgets.QDialog):
                 self,
                 "Remove tab",
                 f'Are you sure you want to remove "{self.tab_title_edit.text()}"?',
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel,
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.Cancel,
             )
-            if reply == QtWidgets.QMessageBox.Yes:
+            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 index = self.tabs.currentIndex()
                 table_key = self.tabs.tabText(index)
                 self.tabs.removeTab(index)

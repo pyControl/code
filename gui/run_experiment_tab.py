@@ -9,10 +9,9 @@ from concurrent.futures import ThreadPoolExecutor
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException
 
-from config.gui_settings import  update_interval, log_font_size
-from config.paths import dirs
 from com.pycboard import Pycboard, PyboardError
 from com.data_logger import Data_logger
+from config.settings import get_setting
 from gui.plotting import Experiment_plot
 from gui.dialogs import Variables_dialog, Summary_variables_dialog
 from gui.utility import variable_constants, TaskInfo
@@ -232,7 +231,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
             self.abort_experiment()
             return
         # Copy task file to experiments data folder.
-        self.boards[0].data_logger.copy_task_file(self.experiment['data_dir'], dirs['tasks'])
+        self.boards[0].data_logger.copy_task_file(self.experiment['data_dir'], get_setting("folders","tasks"))
         # Configure GUI ready to run.
         for subjectbox, board in zip(self.subjectboxes,self.boards):
             subjectbox.assign_board(board)
@@ -321,7 +320,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         msg = QtWidgets.QMessageBox()
         msg.setWindowTitle('Error')
         msg.setText('An error occured while setting up experiment')
-        msg.setIcon(QtWidgets.QMessageBox.Warning)
+        msg.setIcon(QtWidgets.QMessageBox.Icon.Warning)
         msg.exec()
         self.startstopclose_all_button.setText('Close Exp.')
         self.startstopclose_all_button.setEnabled(True)
@@ -404,7 +403,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.variables_button.setEnabled(False)
         self.log_textbox = QtWidgets.QTextEdit()
         self.log_textbox.setMinimumHeight(180)
-        self.log_textbox.setFont(QtGui.QFont('Courier New',log_font_size))
+        self.log_textbox.setFont(QtGui.QFont('Courier New',get_setting("GUI","log_font_size")))
         self.log_textbox.setReadOnly(True)
 
         self.Vlayout = QtWidgets.QVBoxLayout(self)
@@ -493,7 +492,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.run_exp_tab.setups_started += 1
 
         self.run_exp_tab.GUI_main.refresh_timer.stop()
-        self.run_exp_tab.update_timer.start(update_interval)
+        self.run_exp_tab.update_timer.start(get_setting("plotting","update_interval"))
         self.run_exp_tab.update_startstopclose_button()
 
     def error(self):

@@ -3,7 +3,7 @@ import re
 import json
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
-from config.paths import dirs
+from config.settings import dirs, get_setting
 from gui.dialogs import invalid_run_experiment_dialog, invalid_save_experiment_dialog,unrun_subjects_dialog
 from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants, init_keyboard_shortcuts,TaskSelectMenu
 
@@ -54,7 +54,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.hardware_test_label = QtWidgets.QLabel('Hardware test:')
         self.hardware_test_select = TaskSelectMenu('no hardware test',add_default=True)
         self.data_dir_label = QtWidgets.QLabel('Data directory:')
-        self.data_dir_text = QtWidgets.QLineEdit(dirs['data'])
+        self.data_dir_text = QtWidgets.QLineEdit(get_setting("folders","data"))
         self.data_dir_button = QtWidgets.QPushButton('')
         self.data_dir_button.setIcon(QtGui.QIcon("gui/icons/folder.svg"))
         self.data_dir_button.setFixedWidth(30)
@@ -124,10 +124,10 @@ class Configure_experiment_tab(QtWidgets.QWidget):
 
     def name_edited(self):
         if not self.custom_dir:
-            self.data_dir_text.setText(os.path.join(dirs['data'], self.name_text.text()))
+            self.data_dir_text.setText(os.path.join(get_setting("folders","data"), self.name_text.text()))
 
     def select_data_dir(self):
-        new_path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select data folder', dirs['data'])
+        new_path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select data folder', get_setting("folders","data"))
         if new_path:
             self.data_dir_text.setText(new_path)
             self.custom_dir = True
@@ -142,8 +142,8 @@ class Configure_experiment_tab(QtWidgets.QWidget):
     def refresh(self):
         '''Called periodically when not running to update available task, ports, experiments.'''
         if self.GUI_main.available_tasks_changed:
-            self.task_select.update_menu(dirs['tasks'])
-            self.hardware_test_select.update_menu(dirs['tasks'])
+            self.task_select.update_menu(get_setting("folders","tasks"))
+            self.hardware_test_select.update_menu(get_setting("folders","tasks"))
             self.GUI_main.available_tasks_changed = False
         if self.GUI_main.available_experiments_changed:
             cbox_update_options(self.experiment_select, self.GUI_main.available_experiments)
@@ -157,7 +157,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
             self.save_button.setEnabled(False)
         if self.GUI_main.data_dir_changed:
             if (str(self.name_text.text()) == '') and not self.custom_dir:
-                self.data_dir_text.setText(dirs['data'])
+                self.data_dir_text.setText(get_setting("folders","data"))
 
     def experiment_dict(self, filtered=False):
         '''Return the current state of the experiments tab as a dictionary.'''
@@ -174,7 +174,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         if dialog:
             if not self.save_dialog(): return
         self.name_text.setText('')
-        self.data_dir_text.setText(dirs['data'])
+        self.data_dir_text.setText(get_setting("folders","data"))
         self.custom_dir = False
         self.subjects_table.reset()
         self.variables_table.reset()
@@ -605,7 +605,7 @@ class VariablesTable(QtWidgets.QTableWidget):
         '''Remove variables that are not defined in the new task.'''
         pattern = "[\n\r\.]v\.(?P<vname>\w+)\s*\="
         try:
-            with open(os.path.join(dirs['tasks'], task+'.py'), "r") as file:
+            with open(os.path.join(get_setting("folders","tasks"), task+'.py'), "r") as file:
                 file_content = file.read()
         except FileNotFoundError:
             return
