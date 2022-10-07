@@ -91,9 +91,9 @@ class GUI_main(QtWidgets.QMainWindow):
         ## --------Settings menu--------
         settings_menu = main_menu.addMenu('Settings')
         # Folder paths
-        paths_action = QtGui.QAction("&Edit settings", self)
-        paths_action.triggered.connect(self.settings_dialog.exec)
-        settings_menu.addAction(paths_action)
+        settings_action = QtGui.QAction("&Edit settings", self)
+        settings_action.triggered.connect(self.settings_dialog.exec)
+        settings_menu.addAction(settings_action)
         # ---------Help menu----------
         help_menu= main_menu.addMenu('Help')
         # Go to readthedocs

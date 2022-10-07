@@ -261,121 +261,7 @@ class Keyboard_shortcuts_dialog(QtWidgets.QDialog):
         self.setFixedSize(self.sizeHint())
 
 
-# Paths dialog. ---------------------------------------------------------
-
-
-class Path_setter(QtWidgets.QHBoxLayout):
-    """Dialog for editing folder paths."""
-
-    def __init__(self, parent, label, key):
-        super(QtWidgets.QHBoxLayout, self).__init__()
-        self.name = label
-        self.key = key
-        self.parent = parent
-        self.edited = False
-        # Instantiate widgets
-        Vcenter = QtCore.Qt.AlignmentFlag.AlignVCenter
-        right = QtCore.Qt.AlignmentFlag.AlignRight
-        self.path = ""
-        self.name_label = QtWidgets.QLabel(label + " folder")
-        self.name_label.setAlignment(right | Vcenter)
-        self.name_label.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
-        self.path_text = QtWidgets.QLineEdit()
-        self.path_text.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
-        self.path_text.setReadOnly(True)
-        self.path_text.setFixedWidth(500)
-        self.change_button = QtWidgets.QPushButton("Change")
-        self.change_button.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
-        self.path_text.setReadOnly(True)
-        self.change_button.clicked.connect(self.select_path)
-        # Layout
-        self.addWidget(self.name_label)
-        self.addWidget(self.path_text)
-        self.addWidget(self.change_button)
-        self.setContentsMargins(0, 0, 0, 0)
-
-    def select_path(self):
-        new_path = QtWidgets.QFileDialog.getExistingDirectory(
-            self.parent, f"Select {self.name} folder", self.path_text.text()
-        )
-        if new_path:
-            new_path = os.path.normpath(new_path)
-            self.path_text.setText(new_path)
-            self.show_edit()
-
-    def show_edit(self):
-        if self.path_text.text() != self.path:
-            if self.edited is False:
-                self.edited = True
-                self.name_label.setStyleSheet("color:red;")
-                self.parent.num_edited_setters += 1
-                self.parent.save_settings_btn.setEnabled(True)
-        else:
-            if self.edited is True:
-                self.edited = False
-                self.name_label.setStyleSheet("color:black;")
-                self.parent.num_edited_setters -= 1
-                if self.parent.num_edited_setters < 1:
-                    self.parent.save_settings_btn.setEnabled(False)
-
-    def reset(self):
-        self.path = os.path.normpath(get_setting(*self.key))
-        self.path_text.setText(self.path)
-        self.show_edit()
-
-
-class Spin_setter:
-    """Spinbox input for changing user settings"""
-    def __init__(self, parent, label, key, suffix=None):
-        center = QtCore.Qt.AlignmentFlag.AlignCenter
-        Vcenter = QtCore.Qt.AlignmentFlag.AlignVCenter
-        right = QtCore.Qt.AlignmentFlag.AlignRight
-        spin_width = 85
-        self.parent = parent
-        self.key = key
-        self.edited = False
-        self.label = QtWidgets.QLabel(label)
-        self.label.setAlignment(right | Vcenter)
-
-        self.spn = QtWidgets.QSpinBox()
-        self.spn.setMaximum(1000)
-        self.spn.setAlignment(center)
-        self.spn.setMinimumWidth(spin_width)
-        if suffix:
-            self.spn.setSuffix(suffix)
-        self.spn.valueChanged.connect(self.show_edit)
-
-    def add_to_grid(self, groupbox_grid, row):
-        groupbox_grid.addWidget(self.label, row, 0)
-        groupbox_grid.addWidget(self.spn, row, 1)
-
-    def show_edit(self):
-        """
-        checks whether the settings has been edited, and changes label color accordingly
-        also keeps a running tally of how many settings have been edited
-        and enables/disables the "Save settings" button accordingly
-        """
-        if self.spn.value() != self.start_value:
-            if self.edited is False:
-                self.edited = True
-                self.label.setStyleSheet("color:red;")
-                self.parent.num_edited_setters += 1
-                self.parent.save_settings_btn.setEnabled(True)
-        else:
-            if self.edited is True:
-                self.edited = False
-                self.label.setStyleSheet("color:black;")
-                self.parent.num_edited_setters -= 1
-                if self.parent.num_edited_setters < 1:
-                    self.parent.save_settings_btn.setEnabled(False)
-
-        self.spn.lineEdit().deselect()
-
-    def reset(self):
-        self.start_value = get_setting(*self.key)
-        self.spn.setValue(self.start_value)
-        self.show_edit()
-
+# Settings dialog. ---------------------------------------------------------
 
 class Settings_dialog(QtWidgets.QDialog):
     """Dialog for editing user settings"""
@@ -531,3 +417,118 @@ class Settings_dialog(QtWidgets.QDialog):
             )
             if reply == QtWidgets.QMessageBox.StandardButton.Cancel:
                 event.ignore()
+
+
+class Path_setter(QtWidgets.QHBoxLayout):
+    """Dialog for editing folder paths."""
+
+    def __init__(self, parent, label, key):
+        super(QtWidgets.QHBoxLayout, self).__init__()
+        self.name = label
+        self.key = key
+        self.parent = parent
+        self.edited = False
+        # Instantiate widgets
+        Vcenter = QtCore.Qt.AlignmentFlag.AlignVCenter
+        right = QtCore.Qt.AlignmentFlag.AlignRight
+        self.path = ""
+        self.name_label = QtWidgets.QLabel(label + " folder")
+        self.name_label.setAlignment(right | Vcenter)
+        self.name_label.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+        self.path_text = QtWidgets.QLineEdit()
+        self.path_text.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+        self.path_text.setReadOnly(True)
+        self.path_text.setFixedWidth(500)
+        self.change_button = QtWidgets.QPushButton("Change")
+        self.change_button.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+        self.path_text.setReadOnly(True)
+        self.change_button.clicked.connect(self.select_path)
+        # Layout
+        self.addWidget(self.name_label)
+        self.addWidget(self.path_text)
+        self.addWidget(self.change_button)
+        self.setContentsMargins(0, 0, 0, 0)
+
+    def select_path(self):
+        new_path = QtWidgets.QFileDialog.getExistingDirectory(
+            self.parent, f"Select {self.name} folder", self.path_text.text()
+        )
+        if new_path:
+            new_path = os.path.normpath(new_path)
+            self.path_text.setText(new_path)
+            self.show_edit()
+
+    def show_edit(self):
+        if self.path_text.text() != self.path:
+            if self.edited is False:
+                self.edited = True
+                self.name_label.setStyleSheet("color:red;")
+                self.parent.num_edited_setters += 1
+                self.parent.save_settings_btn.setEnabled(True)
+        else:
+            if self.edited is True:
+                self.edited = False
+                self.name_label.setStyleSheet("color:black;")
+                self.parent.num_edited_setters -= 1
+                if self.parent.num_edited_setters < 1:
+                    self.parent.save_settings_btn.setEnabled(False)
+
+    def reset(self):
+        self.path = os.path.normpath(get_setting(*self.key))
+        self.path_text.setText(self.path)
+        self.show_edit()
+
+
+class Spin_setter:
+    """Spinbox input for changing user settings"""
+    def __init__(self, parent, label, key, suffix=None):
+        center = QtCore.Qt.AlignmentFlag.AlignCenter
+        Vcenter = QtCore.Qt.AlignmentFlag.AlignVCenter
+        right = QtCore.Qt.AlignmentFlag.AlignRight
+        spin_width = 85
+        self.parent = parent
+        self.key = key
+        self.edited = False
+        self.label = QtWidgets.QLabel(label)
+        self.label.setAlignment(right | Vcenter)
+
+        self.spn = QtWidgets.QSpinBox()
+        self.spn.setMaximum(1000)
+        self.spn.setAlignment(center)
+        self.spn.setMinimumWidth(spin_width)
+        if suffix:
+            self.spn.setSuffix(suffix)
+        self.spn.valueChanged.connect(self.show_edit)
+
+    def add_to_grid(self, groupbox_grid, row):
+        groupbox_grid.addWidget(self.label, row, 0)
+        groupbox_grid.addWidget(self.spn, row, 1)
+
+    def show_edit(self):
+        """
+        checks whether the settings has been edited, and changes label color accordingly
+        also keeps a running tally of how many settings have been edited
+        and enables/disables the "Save settings" button accordingly
+        """
+        if self.spn.value() != self.start_value:
+            if self.edited is False:
+                self.edited = True
+                self.label.setStyleSheet("color:red;")
+                self.parent.num_edited_setters += 1
+                self.parent.save_settings_btn.setEnabled(True)
+        else:
+            if self.edited is True:
+                self.edited = False
+                self.label.setStyleSheet("color:black;")
+                self.parent.num_edited_setters -= 1
+                if self.parent.num_edited_setters < 1:
+                    self.parent.save_settings_btn.setEnabled(False)
+
+        self.spn.lineEdit().deselect()
+
+    def reset(self):
+        self.start_value = get_setting(*self.key)
+        self.spn.setValue(self.start_value)
+        self.show_edit()
+
+
