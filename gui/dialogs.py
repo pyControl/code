@@ -276,10 +276,17 @@ class Settings_dialog(QtWidgets.QDialog):
         paths_box = QtWidgets.QGroupBox("Paths")
         paths_layout = QtWidgets.QVBoxLayout()
 
+        self.discard_changes_btn = QtWidgets.QPushButton("Discard changes")
+        self.discard_changes_btn.setEnabled(False)
+        self.discard_changes_btn.setIcon(QtGui.QIcon("gui/icons/delete.svg"))
+        self.discard_changes_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+        self.discard_changes_btn.clicked.connect(self.reset)
+
         self.save_settings_btn = QtWidgets.QPushButton("Save settings")
         self.save_settings_btn.setEnabled(False)
         self.save_settings_btn.setIcon(QtGui.QIcon("gui/icons/save.svg"))
         self.save_settings_btn.clicked.connect(self.saveChanges)
+
 
         # Instantiate setters
         self.tasks_setter = Path_setter(self, "Tasks", ("folders", "tasks"))
@@ -331,6 +338,7 @@ class Settings_dialog(QtWidgets.QDialog):
         btns_layout.addWidget(restart_app_label)
         btns_layout.addStretch(1)
         btns_layout.addWidget(self.fill_with_defaults_btn)
+        btns_layout.addWidget(self.discard_changes_btn)
         btns_layout.addWidget(self.save_settings_btn)
 
         settings_grid_layout.addWidget(paths_box, 0, 0, 1, 3)
@@ -438,6 +446,7 @@ class Path_setter(QtWidgets.QHBoxLayout):
                 self.name_label.setStyleSheet("color:red;")
                 self.parent.num_edited_setters += 1
                 self.parent.save_settings_btn.setEnabled(True)
+                self.parent.discard_changes_btn.setEnabled(True)
         else:
             if self.edited is True:
                 self.edited = False
@@ -445,6 +454,7 @@ class Path_setter(QtWidgets.QHBoxLayout):
                 self.parent.num_edited_setters -= 1
                 if self.parent.num_edited_setters < 1:
                     self.parent.save_settings_btn.setEnabled(False)
+                    self.parent.discard_changes_btn.setEnabled(False)
 
     def reset(self):
         self.path = os.path.normpath(get_setting(*self.key))
@@ -493,6 +503,7 @@ class Spin_setter:
                 self.label.setStyleSheet("color:red;")
                 self.parent.num_edited_setters += 1
                 self.parent.save_settings_btn.setEnabled(True)
+                self.parent.discard_changes_btn.setEnabled(True)
         else:
             if self.edited is True:
                 self.edited = False
@@ -500,6 +511,7 @@ class Spin_setter:
                 self.parent.num_edited_setters -= 1
                 if self.parent.num_edited_setters < 1:
                     self.parent.save_settings_btn.setEnabled(False)
+                    self.parent.discard_changes_btn.setEnabled(False)
 
         self.spn.lineEdit().deselect()
 
