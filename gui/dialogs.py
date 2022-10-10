@@ -263,8 +263,10 @@ class Keyboard_shortcuts_dialog(QtWidgets.QDialog):
 
 # Settings dialog. ---------------------------------------------------------
 
+
 class Settings_dialog(QtWidgets.QDialog):
     """Dialog for editing user settings"""
+
     def __init__(self, parent):
         super(QtWidgets.QDialog, self).__init__(parent)
         self.setWindowTitle("Settings")
@@ -282,6 +284,7 @@ class Settings_dialog(QtWidgets.QDialog):
         # Instantiate setters
         self.tasks_setter = Path_setter(self, "Tasks", ("folders", "tasks"))
         self.data_setter = Path_setter(self, "Data", ("folders", "data"))
+        self.path_setters = [self.tasks_setter, self.data_setter]
         paths_layout.addLayout(self.tasks_setter)
         paths_layout.addLayout(self.data_setter)
         paths_box.setLayout(paths_layout)
@@ -289,23 +292,17 @@ class Settings_dialog(QtWidgets.QDialog):
         plotting_box = QtWidgets.QGroupBox("Plotting")
         plotting_layout = QtWidgets.QGridLayout()
         self.update_interval = Spin_setter(self, "Update interval", ("plotting", "update_interval"), " ms")
-        self.event_history_len = Spin_setter(
-            self, "Event history length*", ("plotting", "event_history_len"), " events"
-        )
-        self.state_history_len = Spin_setter(
-            self, "State history length*", ("plotting", "state_history_len"), " states"
-        )
-        self.analog_history_dur = Spin_setter(
-            self, "Analog history duration*", ("plotting", "analog_history_dur"), " s"
-        )
+        self.event_history_len = Spin_setter( self, "Event history length*", ("plotting", "event_history_len"), " events")
+        self.state_history_len = Spin_setter( self, "State history length*", ("plotting", "state_history_len"), " states")
+        self.analog_history_dur = Spin_setter( self, "Analog history duration*", ("plotting", "analog_history_dur"), " s")
 
-        plotting_spins = [
+        self.plotting_spins = [
             self.update_interval,
             self.event_history_len,
             self.state_history_len,
             self.analog_history_dur,
         ]
-        for i, variable in enumerate(plotting_spins):
+        for i, variable in enumerate(self.plotting_spins):
             variable.add_to_grid(plotting_layout, i)
         plotting_layout.setColumnStretch(2, 1)
         plotting_layout.setRowStretch(i + 1, 1)
@@ -316,8 +313,8 @@ class Settings_dialog(QtWidgets.QDialog):
         self.ui_font_size = Spin_setter(self, "UI font size*", ("GUI", "ui_font_size"), " pt")
         self.log_font_size = Spin_setter(self, "Log font size*", ("GUI", "log_font_size"), " pt")
 
-        other_spins = [self.ui_font_size, self.log_font_size]
-        for i, variable in enumerate(other_spins):
+        self.gui_spins = [self.ui_font_size, self.log_font_size]
+        for i, variable in enumerate(self.gui_spins):
             variable.add_to_grid(gui_layout, i)
         gui_layout.setColumnStretch(2, 1)
         gui_layout.setRowStretch(i + 1, 1)
@@ -348,16 +345,7 @@ class Settings_dialog(QtWidgets.QDialog):
 
     def reset(self):
         """Resets values to whatever is saved in user_settings.json, or to default_user_settings if no user_settings.json exists"""
-        for variable in [
-            self.tasks_setter,
-            self.data_setter,
-            self.update_interval,
-            self.event_history_len,
-            self.state_history_len,
-            self.analog_history_dur,
-            self.ui_font_size,
-            self.log_font_size,
-        ]:
+        for variable in self.path_setters + self.plotting_spins + self.gui_spins:
             variable.reset()
         self.num_edited_setters = 0
         self.save_settings_btn.setEnabled(False)
@@ -365,46 +353,31 @@ class Settings_dialog(QtWidgets.QDialog):
 
     def fill_with_defaults(self):
         "Populates inputs with default_user_settings dictionary values from settings.py"
-        self.update_interval.spn.setValue(default_user_settings["plotting"]["update_interval"])
-        self.event_history_len.spn.setValue(default_user_settings["plotting"]["event_history_len"])
-        self.state_history_len.spn.setValue(default_user_settings["plotting"]["state_history_len"])
-        self.analog_history_dur.spn.setValue(default_user_settings["plotting"]["analog_history_dur"])
-        self.ui_font_size.spn.setValue(default_user_settings["GUI"]["ui_font_size"])
-        self.log_font_size.spn.setValue(default_user_settings["GUI"]["log_font_size"])
+
+        for variable in self.plotting_spins + self.gui_spins:
+            variable.fill_with_default()
 
     def saveChanges(self):
-        user_setting_dict_new = {
-            "folders": {
-                "tasks": self.tasks_setter.path_text.text(),
-                "data": self.data_setter.path_text.text(),
-            },
-            "plotting": {
-                "update_interval": self.update_interval.spn.value(),
-                "event_history_len": self.event_history_len.spn.value(),
-                "state_history_len": self.state_history_len.spn.value(),
-                "analog_history_dur": self.analog_history_dur.spn.value(),
-            },
-            "GUI": {
-                "ui_font_size": self.ui_font_size.spn.value(),
-                "log_font_size": self.log_font_size.spn.value(),
-            },
-        }
+        user_setting_dict_new = {"folders": {}, "plotting": {}, "GUI": {}}
+        for variable in self.path_setters + self.plotting_spins + self.gui_spins:
+            top_key, sub_key = variable.key
+            user_setting_dict_new[top_key][sub_key] = variable.get()
         # Store newly edited paths.
         json_path = os.path.join(dirs["config"], "user_settings.json")
         if os.path.exists(json_path):
-            with open(json_path, "r", encoding='utf-8') as f:
+            with open(json_path, "r", encoding="utf-8") as f:
                 user_settings = json.loads(f.read())
         else:
             user_settings = {}
         user_settings.update(user_setting_dict_new)
-        with open(json_path, "w", encoding='utf-8') as f:
+        with open(json_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(user_settings, indent=4))
         self.parent().data_dir_changed = True
-        self.parent().task_directory = get_setting("folders","tasks")
+        self.parent().task_directory = get_setting("folders", "tasks")
 
         self.reset()
 
-    def showEvent(self,event):
+    def showEvent(self, event):
         self.reset()
 
     def closeEvent(self, event):
@@ -478,9 +451,13 @@ class Path_setter(QtWidgets.QHBoxLayout):
         self.path_text.setText(self.path)
         self.show_edit()
 
+    def get(self):
+        return self.path_text.text()
+
 
 class Spin_setter:
     """Spinbox input for changing user settings"""
+
     def __init__(self, parent, label, key, suffix=None):
         center = QtCore.Qt.AlignmentFlag.AlignCenter
         Vcenter = QtCore.Qt.AlignmentFlag.AlignVCenter
@@ -493,7 +470,7 @@ class Spin_setter:
         self.label.setAlignment(right | Vcenter)
 
         self.spn = QtWidgets.QSpinBox()
-        self.spn.setMaximum(1000)
+        self.spn.setMaximum(10000)
         self.spn.setAlignment(center)
         self.spn.setMinimumWidth(spin_width)
         if suffix:
@@ -526,9 +503,14 @@ class Spin_setter:
 
         self.spn.lineEdit().deselect()
 
+    def fill_with_default(self):
+        top_key, sub_key = self.key
+        self.spn.setValue(default_user_settings[top_key][sub_key])
+
     def reset(self):
         self.start_value = get_setting(*self.key)
         self.spn.setValue(self.start_value)
         self.show_edit()
 
-
+    def get(self):
+        return self.spn.value()
