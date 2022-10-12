@@ -44,8 +44,12 @@ class Board_config_dialog(QtWidgets.QDialog):
     def load_framework(self):
         self.accept()
         if self.flashdrive_enabled:
-            reply = QtWidgets.QMessageBox.question(self, 'Disable flashdrive', 
-                flashdrive_message, QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No)
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "Disable flashdrive",
+                flashdrive_message,
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+            )
             if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 self.board.disable_mass_storage()
                 self.disconnect = True
@@ -129,7 +133,7 @@ class Variable_setter(QtWidgets.QWidget):
         grid_layout.addWidget(self.set_button, i, 4)
 
     def value_text_colour(self, color='gray'):
-        self.value_str.setStyleSheet("color: {};".format(color))
+        self.value_str.setStyleSheet(f"color: {color};")
 
     def get(self):
         if self.board.framework_running: # Value returned later.
@@ -209,18 +213,31 @@ class Summary_variables_dialog(QtWidgets.QDialog):
 # Invalid experiment dialog. ---------------------------------------------------------
 
 def invalid_run_experiment_dialog(parent, message):
-    QtWidgets.QMessageBox.warning(parent, 'Invalid experiment', 
-        message + '\n\nUnable to run experiment.', QtWidgets.QMessageBox.StandardButton.Ok)
+    QtWidgets.QMessageBox.warning(
+        parent,
+        "Invalid experiment",
+        message + "\n\nUnable to run experiment.",
+        QtWidgets.QMessageBox.StandardButton.Ok,
+    )
+
 
 def invalid_save_experiment_dialog(parent, message):
-    QtWidgets.QMessageBox.warning(parent, 'Invalid experiment', 
-        message + '\n\nUnable to save experiment.', QtWidgets.QMessageBox.StandardButton.Ok)
+    QtWidgets.QMessageBox.warning(
+        parent,
+        "Invalid experiment",
+        message + "\n\nUnable to save experiment.",
+        QtWidgets.QMessageBox.StandardButton.Ok,
+    )
 
 # Unrun subjects warning     ---------------------------------------------------------
 
 def unrun_subjects_dialog(parent,message):
-    reply = QtWidgets.QMessageBox.warning(parent, 'Unrun Subjects', 
-        'The following Subjects will not be run:\n\n{}'.format(message), (QtWidgets.QMessageBox.StandardButton.Ok | QtWidgets.QMessageBox.StandardButton.Cancel))
+    reply = QtWidgets.QMessageBox.warning(
+        parent,
+        "Unrun Subjects",
+        f"The following Subjects will not be run:\n\n{message}",
+        (QtWidgets.QMessageBox.StandardButton.Ok | QtWidgets.QMessageBox.StandardButton.Cancel),
+    )
     if reply == QtWidgets.QMessageBox.StandardButton.Ok:
         return True
     else:

@@ -630,7 +630,7 @@ class Variables_dialog_editor(QtWidgets.QDialog):
             QtWidgets.QMessageBox.warning(
                 self,
                 "Tab title already exists",
-                f"The new tab title must be different from existing tab titles.",
+                "The new tab title must be different from existing tab titles.",
                 QtWidgets.QMessageBox.StandardButton.Ok,
             )
             return

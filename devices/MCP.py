@@ -134,9 +134,8 @@ class _Pin(hw.IO_expander_pin):
         # Get or set the digital logic level of the pin.
         if value is None: # Return the state of the pin.
             if self.mode == pyb.Pin.OUT or self.interrupt_enabled: # Use stored value.
-               return bool(self.IOx.reg_values['GPIO'] & (1<<self.pin))
-            else:
-                return bool(self.IOx.read_register('GPIO') & (1<<self.pin))
+                return bool(self.IOx.reg_values['GPIO'] & (1<<self.pin))
+            return bool(self.IOx.read_register('GPIO') & (1<<self.pin))
         else: # Set the logic level of the pin.
             self.IOx.write_bit('GPIO', self.pin, value)
 

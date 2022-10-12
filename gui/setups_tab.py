@@ -261,7 +261,7 @@ class Setup():
         Closes serial connection and removes row from setups table.'''
         if self.board: self.board.close()
         self.setups_tab.setups_table.removeRow(self.port_item.row())
-        del(self.setups_tab.setups[self.port])
+        del self.setups_tab.setups[self.port]
 
     def load_framework(self):
         if not self.board: self.connect()

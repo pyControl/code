@@ -37,7 +37,7 @@ class Event_queue():
     def get(self):
         # Get event tuple from queue
         self.available = len(self.Q) > 1
-        return(self.Q.pop(0))
+        return self.Q.pop(0)
 
 # Framework variables and objects ---------------------------------------------
 

@@ -58,8 +58,9 @@ def unpause(event_ID):
 def remaining(event_ID):
     # Return time until timer for specified event elapses, returns 0 if no timer set for event.
     try:
-        return next(t[0]-fw.current_time for t in reversed(active_timers) 
-                    if (t[1] == fw.event_typ and t[2] == event_ID))
+        return next(
+            t[0] - fw.current_time for t in reversed(active_timers) if (t[1] == fw.event_typ and t[2] == event_ID)
+        )
     except StopIteration:
         return 0
 

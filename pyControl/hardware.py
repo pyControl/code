@@ -266,8 +266,9 @@ class Analog_channel(IO_object):
 
     def __init__(self, name, sampling_rate, data_type='l', plot=True):
         assert data_type in ('b','B','h','H','l','L'), 'Invalid data_type.'
-        assert not any([name == io.name for io in IO_dict.values() 
-                        if isinstance(io, Analog_channel)]), 'Analog signals must have unique names.'
+        assert not any(
+            [name == io.name for io in IO_dict.values() if isinstance(io, Analog_channel)]
+        ), "Analog signals must have unique names."
         self.name = name
         assign_ID(self)
         self.sampling_rate = sampling_rate
@@ -355,11 +356,10 @@ class Analog_threshold(IO_object):
         new_above_threshold = sample > self.threshold
         if new_above_threshold != self.above_threshold:  # Threshold crossing.
             self.above_threshold = new_above_threshold
-            if ((    self.above_threshold and self.rising_event_ID) or 
-                (not self.above_threshold and self.falling_event_ID)):
-                    self.timestamp = fw.current_time
-                    self.crossing_direction = self.above_threshold
-                    interrupt_queue.put(self.ID)
+            if (self.above_threshold and self.rising_event_ID) or (not self.above_threshold and self.falling_event_ID):
+                self.timestamp = fw.current_time
+                self.crossing_direction = self.above_threshold
+                interrupt_queue.put(self.ID)
 
 # Digital Output --------------------------------------------------------------
 

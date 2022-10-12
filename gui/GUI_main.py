@@ -22,10 +22,9 @@ if os.name == 'nt': # Needed on windows to get taskbar icon to display correctly
 # --------------------------------------------------------------------------------
 
 class GUI_main(QtWidgets.QMainWindow):
- 
     def __init__(self,app):
         super().__init__()
-        self.setWindowTitle('pyControl v{}'.format(VERSION))
+        self.setWindowTitle(f'pyControl v{VERSION}')
         self.setGeometry(10, 30, 700, 800) # Left, top, width, height.
 
         # Variables
