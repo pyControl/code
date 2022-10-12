@@ -137,8 +137,8 @@ def session_dataframe(file_path, paired_events={}, pair_end_suffix=None):
                                'name'  : name,
                                'value' : value})
         elif line[0] == 'D': # Data line.
-             timestamp, ID = [int(i) for i in line.split(' ')[1:]]
-             line_dicts.append({'type' : 'state' if ID in state_IDs.values() else 'event',
+            timestamp, ID = [int(i) for i in line.split(' ')[1:]]
+            line_dicts.append({'type' : 'state' if ID in state_IDs.values() else 'event',
                                 'name' : ID2name[ID],
                                 'time' : int(timestamp)})
         elif line[0] == 'P': # Print line.
@@ -210,7 +210,7 @@ class Experiment():
                 self.sessions = pickle.load(sessions_file)
             print('Saved sessions loaded from: sessions.pkl')
         except IOError:
-           pass
+            pass
 
         old_files = [session.file_name for session in self.sessions]
         files = os.listdir(self.path)

@@ -138,7 +138,7 @@ class Variable_setter(QtWidgets.QWidget):
             QtCore.QTimer.singleShot(200, self.reload)
         else: # Value returned immediately.
             self.value_text_colour('black')
-            self.value_str.setText(repr(self.board.get_variable(self.v_name))) 
+            self.value_str.setText(repr(self.board.get_variable(self.v_name)))
             QtCore.QTimer.singleShot(1000, self.value_text_colour)
 
     def set(self):
@@ -156,7 +156,7 @@ class Variable_setter(QtWidgets.QWidget):
                 self.value_text_colour('gray')
             else:
                 self.value_str.setText('Set failed')
-                
+
     def reload(self):
         '''Reload value from sm_info.  sm_info is updated when variables are output
         during framework run due to get/set.'''
@@ -225,7 +225,7 @@ def unrun_subjects_dialog(parent,message):
         return True
     else:
         return False
-        
+
 # Keyboard shortcuts dialog. ---------------------------------------------------------
 
 class Keyboard_shortcuts_dialog(QtWidgets.QDialog):
@@ -244,7 +244,7 @@ class Keyboard_shortcuts_dialog(QtWidgets.QDialog):
             '<b><u>Global:</u></b>',
             '<b style="color:#0220e0;">Ctrl + t</b> : Open tasks folder',
             '<b style="color:#0220e0;">Ctrl + d</b> : Open data folder',
-        
+
             '<br></br><b><u>Run task tab:</u></b>',
             '<b style="color:#0220e0;">    t    </b> : Select task',
             '<b style="color:#0220e0;">    u    </b> : Upload/reset task',

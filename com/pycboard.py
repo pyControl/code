@@ -320,10 +320,10 @@ class Pycboard(Pyboard):
                 if file_hash != self.device_files_on_pyboard[device_file]: # File has changed.
                     files_to_transfer.append(device_file)
         if files_to_transfer:
-                self.print(f'\nTransfering device driver files {files_to_transfer} to pyboard', end='')
-                self.transfer_folder(dirs['devices'], files=files_to_transfer, remove_files=False, show_progress=True)
-                self.reset()
-                self.print(' OK')
+            self.print(f'\nTransfering device driver files {files_to_transfer} to pyboard', end='')
+            self.transfer_folder(dirs['devices'], files=files_to_transfer, remove_files=False, show_progress=True)
+            self.reset()
+            self.print(' OK')
         
     def _get_used_device_files(self, ref_file_path):
         '''Return a list of device driver file names containing device classes used in ref_file'''

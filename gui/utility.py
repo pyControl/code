@@ -48,8 +48,8 @@ def cbox_set_item(cbox, item_name, insert=False):
     is True.'''
     index = cbox.findText(item_name, QtCore.Qt.MatchFlag.MatchFixedString)
     if index >= 0:
-         cbox.setCurrentIndex(index)
-         return True
+        cbox.setCurrentIndex(index)
+        return True
     else:
         if insert:
             cbox.insertItem(0, item_name)

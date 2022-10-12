@@ -112,7 +112,7 @@ class Setups_tab(QtWidgets.QWidget):
         if setup_names != self.setup_names:
             self.available_setups_changed = True
             self.setup_names = setup_names
-        else: 
+        else:
             self.available_setups_changed = False
 
     def update_saved_setups(self, setup):
@@ -133,7 +133,7 @@ class Setups_tab(QtWidgets.QWidget):
 
     def get_selected_setups(self):
         '''Return sorted list of setups whose select checkboxes are ticked.'''
-        return sorted([setup for setup in self.setups.values() 
+        return sorted([setup for setup in self.setups.values()
             if setup.select_checkbox.isChecked()], key=lambda setup: setup.port)
 
     def connect(self, setups):
@@ -170,7 +170,7 @@ class Setups_tab(QtWidgets.QWidget):
             # Add any newly connected setups.
             for serial_port in self.GUI_main.available_ports:
                 if not serial_port in self.setups.keys():
-                    self.setups[serial_port] = Setup(serial_port, self)   
+                    self.setups[serial_port] = Setup(serial_port, self)
             # Remove any unplugged setups.
             for serial_port in list(self.setups.keys()):
                 if serial_port not in self.GUI_main.available_ports:
@@ -201,7 +201,7 @@ class Setup():
 
         self.name_item = QtWidgets.QTableWidgetItem()
         self.name_item.changed = self.name_edited
-        if self.name != self.port: 
+        if self.name != self.port:
             self.name_item.setText(self.name)
 
         self.select_checkbox = TableCheckbox()
@@ -245,7 +245,7 @@ class Setup():
     def connect(self):
         '''Instantiate pyboard object, opening serial connection to board.'''
         self.print('Connecting to board.')
-        try: 
+        try:
             self.board = Pycboard(self.port, print_func=self.setups_tab.print_to_log)
         except PyboardError:
             self.print('Unable to connect.')

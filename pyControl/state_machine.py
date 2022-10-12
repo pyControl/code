@@ -56,7 +56,7 @@ def goto_state(next_state):
         raise fw.pyControlError('Invalid state name passed to goto_state: ' + repr(next_state))
     transition_in_progress = True
     process_event('exit')
-    timer.disarm_type(fw.state_typ) # Clear any timed_goto_states     
+    timer.disarm_type(fw.state_typ) # Clear any timed_goto_states
     if fw.data_output:
         fw.data_output_queue.put((fw.current_time, fw.state_typ, states[next_state]))
     current_state = next_state
@@ -67,7 +67,7 @@ def process_event(event):
     # Process event given event name by calling appropriate state event handler function.
     if type(event) is int: # ID passed in not name.
         event = ID2name[event]
-    if event_dispatch_dict['all_states']:                  # If machine has all_states event handler function. 
+    if event_dispatch_dict['all_states']:                  # If machine has all_states event handler function.
         handled = event_dispatch_dict['all_states'](event) # Evaluate all_states event handler function.
         if handled: return                                 # If all_states event handler returns True, don't evaluate state specific behaviour.
     if event_dispatch_dict[current_state]:                 # If state machine has event handler function for current state.

@@ -416,7 +416,7 @@ class Custom_variables_grid(QtWidgets.QWidget):
                         parent.parent.print_to_log(
                             f'- Loading error: could not find "{var}" variable in the task file. The variable name has been changed or no longer exists.'
                         )
-            
+
             layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
             widget.setLayout(layout)
             variable_tabs.addTab(widget, tab)

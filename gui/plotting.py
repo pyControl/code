@@ -8,7 +8,7 @@ from config.settings import get_setting
 from gui.utility import detachableTabWidget
 
 # ----------------------------------------------------------------------------------------
-# Task_plot 
+# Task_plot
 # ----------------------------------------------------------------------------------------
 
 class Task_plot(QtWidgets.QWidget):
@@ -134,7 +134,7 @@ class States_plot():
                 timestamp, ID = ns[1:]
                 j = 2*(-n_new+i)  # Index of state entry in self.data
                 self.data[j-1:,0] = timestamp
-                self.data[j:  ,1] = ID  
+                self.data[j:  ,1] = ID
 
     def update(self, run_time):
         '''Update plots.'''
@@ -217,7 +217,7 @@ class Analog_plot():
         self.axis.getAxis('bottom').setLabel('Time (seconds)')
         max_len = max([len(n) for n in list(sm_info['states'])+list(sm_info['events'])])
         self.axis.getAxis('right').setWidth(5*max_len)
-        
+
     def run_start(self):
         if not self.inputs: return # State machine may not have analog inputs.
         for plot in self.plots.values():
@@ -282,7 +282,7 @@ class Experiment_plot(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
         super(QtWidgets.QWidget, self).__init__(parent)
         self.setWindowTitle('Experiment plot')
-        self.setGeometry(720, 30, 700, 800) # Left, top, width, height.       
+        self.setGeometry(720, 30, 700, 800) # Left, top, width, height.
         self.subject_tabs = detachableTabWidget(self)
         self.setCentralWidget(self.subject_tabs)
         self.subject_plots = []
@@ -310,12 +310,12 @@ class Experiment_plot(QtWidgets.QMainWindow):
     def close_experiment(self):
         '''Remove and delete all subject plot tabs.'''
         while len(self.subject_plots) > 0:
-            subject_plot = self.subject_plots.pop() 
+            subject_plot = self.subject_plots.pop()
             subject_plot.setParent(None)
             subject_plot.deleteLater()
         self.subject_tabs.closeDetachedTabs()
         self.close()
-        
+
     def update(self):
         '''Update the plots of the active tab.'''
         for i,subject_plot in enumerate(self.subject_plots):

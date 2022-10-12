@@ -73,7 +73,7 @@ class _MCP(hw.IO_object):
 
     def _run_start(self):
         self.read_register('GPIO') # Read the GPIO register to clear interrupts.
-        
+
 
 class MCP23017(_MCP):
     # MCP23017 16 bit port expander. Ports A and B are addressed as single 16 bit port
