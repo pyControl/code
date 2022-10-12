@@ -326,7 +326,7 @@ class Analog_threshold(IO_object):
     # Generates framework events when an analog signal goes above or below specified threshold.
 
     def __init__(self, threshold=None, rising_event=None, falling_event=None):
-        assert type(threshold) == int, 'Integer threshold must be specified if rising or falling events are defined.'
+        assert isinstance(threshold, int), 'Integer threshold must be specified if rising or falling events are defined.'
         self.threshold = threshold
         self.rising_event = rising_event
         self.falling_event = falling_event

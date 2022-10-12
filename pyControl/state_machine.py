@@ -48,7 +48,7 @@ def setup_state_machine(task_file):
 def goto_state(next_state):
     # Transition to next state, calling exit action of old state and entry action of next state.
     global transition_in_progress, current_state
-    if type(next_state) is int: # ID passed in not name.
+    if isinstance(next_state,int): # ID passed in not name.
         next_state = ID2name[next_state]
     if transition_in_progress:
         raise fw.pyControlError("goto_state cannot not be called while processing 'entry' or 'exit' events.")
@@ -65,7 +65,7 @@ def goto_state(next_state):
 
 def process_event(event):
     # Process event given event name by calling appropriate state event handler function.
-    if type(event) is int: # ID passed in not name.
+    if isinstance(event, int): # ID passed in not name.
         event = ID2name[event]
     if event_dispatch_dict['all_states']:                  # If machine has all_states event handler function.
         handled = event_dispatch_dict['all_states'](event) # Evaluate all_states event handler function.
@@ -91,7 +91,7 @@ def stop():
 def set_variable(v_name, v_str, checksum=None):
     # Set value of variable v.v_name to value eval(v_str).
     if checksum:
-        str_sum = sum(v_str) if type(v_str) is bytes else sum(v_str.encode())
+        str_sum = sum(v_str) if isinstance(v_str, bytes) else sum(v_str.encode())
         if not str_sum == checksum:
             return False # Bad checksum.
     try:

@@ -174,7 +174,7 @@ def session_dataframe(file_path, paired_events={}, pair_end_suffix=None):
                 start_inds[ df.loc[i,'name']] = i
             elif df.loc[i,'name'] in paired_events.values(): # Pair end event.
                 start_event = end2start[df.loc[i,'name']]
-                if start_times[start_event] != None:
+                if start_times[start_event] is not None:
                     df.loc[start_inds[start_event],'duration'] = df.loc[i,'time'] - start_times[start_event]
                     start_times[start_event] = None
                     end_inds.append(i)

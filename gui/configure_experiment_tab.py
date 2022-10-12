@@ -403,7 +403,7 @@ class SubjectsTable(QtWidgets.QTableWidget):
         add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
         add_button.clicked.connect(self.add_subject)
         run_checkbox = TableCheckbox()
-        if do_run ==None:
+        if do_run is None:
             run_checkbox.setChecked(True) #new subjects are set to "Run" by default
         else:
             run_checkbox.setChecked(do_run)

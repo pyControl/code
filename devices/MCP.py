@@ -23,20 +23,20 @@ class _MCP(hw.IO_object):
 
     def read_register(self, register, n_bytes=None):
         # Read specified register, convert to int, store in reg_values, return value. 
-        if n_bytes == None: n_bytes = self.reg_size
+        if n_bytes is None: n_bytes = self.reg_size
         v = int.from_bytes(self.i2c.mem_read(n_bytes, self.addr, self.reg_addr[register]), 'little')
         self.reg_values[register] = v
         return v
 
     def write_register(self, register, values, n_bytes=None):
         # Write values to specified register, values must be int which is converted to n_bytes bytes.
-        if n_bytes == None: n_bytes = self.reg_size
+        if n_bytes is None: n_bytes = self.reg_size
         self.reg_values[register] = values
         self.i2c.mem_write(values.to_bytes(n_bytes,'little'), self.addr, self.reg_addr[register])
 
     def write_bit(self, register, bit, value, n_bytes=None):
         # Write the value of specified bit to specified register.
-        if n_bytes == None: n_bytes = self.reg_size
+        if n_bytes is None: n_bytes = self.reg_size
         if value:
             self.reg_values[register] |=  (1<<bit)  # Set bit
         else:
