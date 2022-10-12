@@ -605,7 +605,7 @@ class VariablesTable(QtWidgets.QTableWidget):
         '''Remove variables that are not defined in the new task.'''
         pattern = "[\n\r\.]v\.(?P<vname>\w+)\s*\="
         try:
-            with open(os.path.join(get_setting("folders","tasks"), task+'.py'), "r") as file:
+            with open(os.path.join(get_setting("folders","tasks"), task+'.py'), "r", encoding="utf-8") as file:
                 file_content = file.read()
         except FileNotFoundError:
             return

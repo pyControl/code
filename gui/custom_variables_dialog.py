@@ -355,7 +355,7 @@ class Custom_variables_dialog(QtWidgets.QDialog):
                     if do_create_custom:
                         gui_created = self.open_gui_editor(self.gui_name, None)
                         if gui_created:
-                            with open(json_file, "r") as j:
+                            with open(json_file, "r", encoding="utf-8") as j:
                                 custom_variables_dict = json.loads(j.read())
         return custom_variables_dict
 
@@ -543,7 +543,7 @@ class Variables_dialog_editor(QtWidgets.QDialog):
         except FileExistsError:
             pass
         savename = os.path.join(user_guis_folder, f"{self.gui_name}.json")
-        with open(savename, "w") as generated_data_file:
+        with open(savename, "w", encoding="utf-8") as generated_data_file:
             json.dump(gui_dict, generated_data_file, indent=4)
         self.accept()
         self.deleteLater()
@@ -571,7 +571,7 @@ class Variables_dialog_editor(QtWidgets.QDialog):
         """Remove variables that are not defined in the new task."""
         pattern = "[\n\r]v\.(?P<vname>\w+)\s*\="
         try:
-            with open(os.path.join(get_setting("folders","tasks"), task + ".py"), "r") as file:
+            with open(os.path.join(get_setting("folders","tasks"), task + ".py"), "r", encoding="utf-8") as file:
                 file_content = file.read()
         except FileNotFoundError:
             return
