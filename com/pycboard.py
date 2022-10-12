@@ -76,8 +76,8 @@ class Pycboard(Pyboard):
             "sys.implementation.version if hasattr(sys, 'implementation') else (0,0,0)").decode())
             self.micropython_version = float('{}.{}{}'.format(*v_tuple))
         except SerialException as e:
-            raise(e)
             self.status['serial'] = False
+            raise(e)
         if verbose: # Print status.
             if self.status['serial']:
                 self.print('\nMicropython version: {}'.format(self.micropython_version))

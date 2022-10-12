@@ -1,6 +1,5 @@
 import pyb
 import math
-from array import array
 import pyControl.hardware as hw
 
 class _MCP(hw.IO_object):

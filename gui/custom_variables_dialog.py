@@ -881,7 +881,7 @@ class Variables_table(QtWidgets.QTableWidget):
                         input_specs["max"] = float(value) if value.find(".") > -1 else int(value)
                         value = self.cellWidget(row, 7).text()
                         input_specs["step"] = float(value) if value.find(".") > -1 else int(value)
-                    except:
+                    except ValueError:
                         msg = QtWidgets.QMessageBox()
                         msg.setText("Numbers for min, max, and step are required for spinboxes and sliders")
                         msg.exec()
