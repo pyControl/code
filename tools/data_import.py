@@ -94,6 +94,7 @@ def session_dataframe(file_path, paired_events={}, pair_end_suffix=None):
     name : The name of the state, event or session information in the row.
     time : The time the row occured in ms since the session start.
     duration : The duration in ms of states and paired events (see below).
+    value : The contents of 'info' and 'print' rows.
 
     Optionally events can be specified as coming in pairs corresponding to the
     start and end of an action, e.g. entering and exiting a nosepoke. When a 

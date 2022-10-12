@@ -17,8 +17,8 @@ Framework:
 
 - Major refactoring of framework code to make it simpler and more readable.
 
-- Analog inputs now stream data to the computer continously while the GUI is 
-  running rather than having record() and stop() methods to start and stop
+- Analog inputs now stream data to the computer continously while the framework
+  is running rather than having record() and stop() methods to start and stop
   data streaming.  
 
 - Events triggered by timers are now output to the data log by default.
