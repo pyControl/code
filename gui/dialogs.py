@@ -57,8 +57,8 @@ class Board_config_dialog(QtWidgets.QDialog):
         self.board.load_framework()
 
     def load_hardware_definition(self):
-        hwd_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select hardware definition:',
-                    os.path.join(dirs['config'], 'hardware_definition.py'), filter='*.py')[0]
+        hwd_path = QtWidgets.QFileDialog.getOpenFileName(self, 
+            'Select hardware definition:', dirs['hardware_definitions'], filter='*.py')[0]
         self.accept()
         self.board.load_hardware_definition(hwd_path)
 

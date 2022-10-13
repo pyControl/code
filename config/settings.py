@@ -10,6 +10,7 @@ dirs = {
     "devices": os.path.join(top_dir, "devices"),
     "gui": os.path.join(top_dir, "gui"),
     "experiments": os.path.join(top_dir, "experiments"),
+    "hardware_definitions": os.path.join(top_dir, "hardware_definitions")
 }
 
 default_user_settings = {

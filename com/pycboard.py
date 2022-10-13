@@ -289,7 +289,7 @@ class Pycboard(Pyboard):
             self.print(' OK')
         return 
 
-    def load_hardware_definition(self, hwd_path=os.path.join(dirs['config'], 'hardware_definition.py')):
+    def load_hardware_definition(self, hwd_path):
         '''Transfer a hardware definition file to pyboard.'''
         if os.path.exists(hwd_path):
             self.transfer_device_files(hwd_path)
@@ -308,7 +308,7 @@ class Pycboard(Pyboard):
 
     def transfer_device_files(self, ref_file_path):
         '''Transfer device driver files defining classes used in ref_file to the pyboard devices folder.
-        Driver file that are already on the pyboard are only be transferred if they have changed
+        Driver file that are already on the pyboard are only transferred if they have changed
         on the computer.'''
         used_device_files = self._get_used_device_files(ref_file_path)
         files_to_transfer = []
