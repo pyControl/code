@@ -355,7 +355,7 @@ class Custom_variables_dialog(QtWidgets.QDialog):
                     if do_create_custom:
                         gui_created = self.open_gui_editor(self.gui_name, None)
                         if gui_created:
-                            with open(json_file, "r") as j:
+                            with open(json_file, "r", encoding="utf-8") as j:
                                 custom_variables_dict = json.loads(j.read())
         return custom_variables_dict
 
@@ -416,7 +416,7 @@ class Custom_variables_grid(QtWidgets.QWidget):
                         parent.parent.print_to_log(
                             f'- Loading error: could not find "{var}" variable in the task file. The variable name has been changed or no longer exists.'
                         )
-            
+
             layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
             widget.setLayout(layout)
             variable_tabs.addTab(widget, tab)
@@ -543,7 +543,7 @@ class Variables_dialog_editor(QtWidgets.QDialog):
         except FileExistsError:
             pass
         savename = os.path.join(user_guis_folder, f"{self.gui_name}.json")
-        with open(savename, "w") as generated_data_file:
+        with open(savename, "w", encoding="utf-8") as generated_data_file:
             json.dump(gui_dict, generated_data_file, indent=4)
         self.accept()
         self.deleteLater()
@@ -571,7 +571,7 @@ class Variables_dialog_editor(QtWidgets.QDialog):
         """Remove variables that are not defined in the new task."""
         pattern = "[\n\r]v\.(?P<vname>\w+)\s*\="
         try:
-            with open(os.path.join(get_setting("folders","tasks"), task + ".py"), "r") as file:
+            with open(os.path.join(get_setting("folders","tasks"), task + ".py"), "r", encoding="utf-8") as file:
                 file_content = file.read()
         except FileNotFoundError:
             return
@@ -630,7 +630,7 @@ class Variables_dialog_editor(QtWidgets.QDialog):
             QtWidgets.QMessageBox.warning(
                 self,
                 "Tab title already exists",
-                f"The new tab title must be different from existing tab titles.",
+                "The new tab title must be different from existing tab titles.",
                 QtWidgets.QMessageBox.StandardButton.Ok,
             )
             return
@@ -881,7 +881,7 @@ class Variables_table(QtWidgets.QTableWidget):
                         input_specs["max"] = float(value) if value.find(".") > -1 else int(value)
                         value = self.cellWidget(row, 7).text()
                         input_specs["step"] = float(value) if value.find(".") > -1 else int(value)
-                    except:
+                    except ValueError:
                         msg = QtWidgets.QMessageBox()
                         msg.setText("Numbers for min, max, and step are required for spinboxes and sliders")
                         msg.exec()

@@ -115,7 +115,7 @@ class Rsync_aligner():
                 print('Rsync warning: No match found between inter-pulse interval sequences.')
         # Plotting
         if plot:
-            plt.figure(plot if type(plot)==int else 1, figsize=[7,9]).clf()
+            plt.figure(plot if isinstance(plot, int) else 1, figsize=[7,9]).clf()
             plt.subplot2grid((3,3),(0,0),rowspan=1,colspan=2)
             plt.hist(log_mse[ valid_matches], 20, color='b', label='Match')
             plt.hist(log_mse[~valid_matches], 20, color='r', label='Non-match')

@@ -108,9 +108,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.run_button.clicked.connect(self.run_experiment)
 
         # Keyboard shortcuts
-        shortcut_dict = {
-                        'Ctrl+s' : lambda: self.save_experiment(),
-                        }
+        shortcut_dict = {'Ctrl+s': self.save_experiment}
         init_keyboard_shortcuts(self, shortcut_dict)
 
         # Main layout
@@ -189,9 +187,12 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         '''Delete an experiment file after dialog to confirm deletion.'''
         exp_path = os.path.join(dirs['experiments'], self.name_text.text()+'.pcx')
         if os.path.exists(exp_path):
-            reply = QtWidgets.QMessageBox.question(self, 'Delete experiment', 
-                "Delete experiment '{}'".format(self.name_text.text()),
-                    QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.Cancel)
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "Delete experiment",
+                f"Delete experiment '{self.name_text.text()}'",
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.Cancel,
+            )
             if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 self.new_experiment(dialog=False)
                 os.remove(exp_path)
@@ -220,9 +221,12 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         file_name = self.name_text.text()+'.pcx'
         exp_path = os.path.join(dirs['experiments'], file_name)
         if os.path.exists(exp_path) and (exp_path != self.saved_exp_path):
-            reply = QtWidgets.QMessageBox.question(self, 'Replace file', 
-                "File '{}' already exists, do you want to replace it?".format(file_name),
-                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No)
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "Replace file",
+                f"File '{file_name}' already exists, do you want to replace it?",
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+            )
             if reply == QtWidgets.QMessageBox.StandardButton.No:
                 return False
         with open(exp_path,'w') as exp_file:
@@ -281,13 +285,11 @@ class Configure_experiment_tab(QtWidgets.QWidget):
             invalid_run_experiment_dialog(self, "Task not selected.")
             return
         if not experiment['task'] in self.GUI_main.available_tasks:
-            invalid_run_experiment_dialog(self, 
-                "Task file '{}.py' not found.".format(experiment['task']))
+            invalid_run_experiment_dialog(self, f"Task file '{experiment['task']}.py' not found.")
             return
         if (experiment['hardware_test'] != 'no hardware test' and
             experiment['hardware_test'] not in self.GUI_main.available_tasks):
-            invalid_run_experiment_dialog(self, 
-                "Hardware test file '{}.py' not found.".format(experiment['hardware_test']))
+            invalid_run_experiment_dialog(self, f"Hardware test file '{experiment['hardware_test']}.py' not found.")
             return
         # Validate setups and subjects.
         if not experiment['subjects']:
@@ -296,18 +298,17 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         setups = [experiment['subjects'][subject]['setup'] for subject in experiment['subjects']]
         subjects = experiment['subjects'].keys()
         if len(setups) == 0:
-                invalid_run_experiment_dialog(self, 'No subjects specified.')
-                return
+            invalid_run_experiment_dialog(self, 'No subjects specified.')
+            return
         if min([len(subject) for subject in subjects]) == 0:
-                invalid_run_experiment_dialog(self,'All subjects must have names.')
-                return
+            invalid_run_experiment_dialog(self,'All subjects must have names.')
+            return
         if len(set(setups)) < len(setups):
-                invalid_run_experiment_dialog(self,'Repeated Setup. Cannot run two experiments on the same Setup.')
-                return
+            invalid_run_experiment_dialog(self,'Repeated Setup. Cannot run two experiments on the same Setup.')
+            return
         for setup in setups:
             if not setup in self.GUI_main.setups_tab.setup_names:
-                invalid_run_experiment_dialog(self, 
-                    "Setup '{}' not available.".format(setup))
+                invalid_run_experiment_dialog(self, f"Setup '{setup}' not available.")
                 return
         # Validate variables.
         for v in experiment['variables']:
@@ -315,15 +316,14 @@ class Configure_experiment_tab(QtWidgets.QWidget):
                 try:
                     eval(v['value'], variable_constants)
                 except:
-                    invalid_run_experiment_dialog(self, "Invalid value '{}' for variable '{}'."
-                        .format(v['value'], v['name']))
+                    invalid_run_experiment_dialog(self, f"Invalid value '{v['value']}' for variable '{v['name']}'.")
                     return
         if self.subset_warning_checkbox.isChecked():
             all_subjects = self.experiment_dict()['subjects']
             will_not_run = ''
             for subject in all_subjects.keys():
                 if all_subjects[subject]['run'] == False:
-                    will_not_run += ('{}\n'.format(subject))
+                    will_not_run += (f"{subject}\n")
             if will_not_run != '':
                 okay = unrun_subjects_dialog(self.subjects_groupbox,will_not_run)
                 if not okay :return
@@ -334,7 +334,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         '''Dialog to save experiment if it has been edited.  Returns False if
         cancel is selected, True otherwise.'''
         if self.saved_exp_dict == self.experiment_dict():
-            return True # Experiment has not been edited.  
+            return True # Experiment has not been edited.
         exp_path = os.path.join(dirs['experiments'], self.name_text.text()+'.pcx')
         dialog_text = None
         if not os.path.exists(exp_path):
@@ -403,7 +403,7 @@ class SubjectsTable(QtWidgets.QTableWidget):
         add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
         add_button.clicked.connect(self.add_subject)
         run_checkbox = TableCheckbox()
-        if do_run ==None:
+        if do_run is None:
             run_checkbox.setChecked(True) #new subjects are set to "Run" by default
         else:
             run_checkbox.setChecked(do_run)
@@ -424,7 +424,7 @@ class SubjectsTable(QtWidgets.QTableWidget):
 
     def remove_subject(self, subject_n):
         '''Remove specified row from table'''
-        if self.item(subject_n, 2): 
+        if self.item(subject_n, 2):
             s_name = self.item(subject_n, 2).text()
             self.parent().parent().variables_table.remove_subject(s_name)
         self.removeRow(subject_n)
@@ -444,7 +444,7 @@ class SubjectsTable(QtWidgets.QTableWidget):
 
     def update_subjects(self):
         '''Update the subjects list'''
-        self.subjects = [str(self.item(s, 2).text()) 
+        self.subjects = [str(self.item(s, 2).text())
                          for s in range(self.n_subjects) if self.item(s, 2)]
 
     def subjects_dict(self,filtered=False):
@@ -454,11 +454,11 @@ class SubjectsTable(QtWidgets.QTableWidget):
             try:
                 subject = str(self.item(s, 2).text())
             except:
-                return 
+                return
             setup = str(self.cellWidget(s,1).currentText())
             run = self.cellWidget(s,0).isChecked()
             if filtered:
-                if run: 
+                if run:
                     d[subject] =  {'setup':setup,'run':run} # add dict subject entry
             else:
                 d[subject] =  {'setup':setup,'run':run} # add dict subject entry
@@ -501,7 +501,7 @@ class VariablesTable(QtWidgets.QTableWidget):
         for i in reversed(range(self.n_variables)):
             self.removeRow(i)
         self.n_variables = 0
-        self.assigned = {v_name:[] for v_name in self.variable_names} 
+        self.assigned = {v_name:[] for v_name in self.variable_names}
 
     def add_variable(self, var_dict=None):
         '''Add a row to the variables table.'''
@@ -578,7 +578,7 @@ class VariablesTable(QtWidgets.QTableWidget):
         self.available_variables = sorted(list(
             set(self.variable_names) - set(fully_asigned_variables)), key=str.lower)
         # Update the available options in the variable and subject comboboxes.
-        for v in range(self.n_variables):  
+        for v in range(self.n_variables):
             v_name = self.cellWidget(v,0).currentText()
             s_name = self.cellWidget(v,1).currentText()
             cbox_update_options(self.cellWidget(v,0), self.available_variables)
@@ -605,11 +605,11 @@ class VariablesTable(QtWidgets.QTableWidget):
         '''Remove variables that are not defined in the new task.'''
         pattern = "[\n\r\.]v\.(?P<vname>\w+)\s*\="
         try:
-            with open(os.path.join(get_setting("folders","tasks"), task+'.py'), "r") as file:
+            with open(os.path.join(get_setting("folders","tasks"), task+'.py'), "r", encoding="utf-8") as file:
                 file_content = file.read()
         except FileNotFoundError:
             return
-        self.variable_names = list(set([v_name for v_name in 
+        self.variable_names = list(set([v_name for v_name in
             re.findall(pattern, file_content) if not v_name[-3:] == '___']))
         # Remove variables that are not in new task.
         for i in reversed(range(self.n_variables)):

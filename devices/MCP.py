@@ -1,6 +1,5 @@
 import pyb
 import math
-from array import array
 import pyControl.hardware as hw
 
 class _MCP(hw.IO_object):
@@ -23,20 +22,20 @@ class _MCP(hw.IO_object):
 
     def read_register(self, register, n_bytes=None):
         # Read specified register, convert to int, store in reg_values, return value. 
-        if n_bytes == None: n_bytes = self.reg_size
+        if n_bytes is None: n_bytes = self.reg_size
         v = int.from_bytes(self.i2c.mem_read(n_bytes, self.addr, self.reg_addr[register]), 'little')
         self.reg_values[register] = v
         return v
 
     def write_register(self, register, values, n_bytes=None):
         # Write values to specified register, values must be int which is converted to n_bytes bytes.
-        if n_bytes == None: n_bytes = self.reg_size
+        if n_bytes is None: n_bytes = self.reg_size
         self.reg_values[register] = values
         self.i2c.mem_write(values.to_bytes(n_bytes,'little'), self.addr, self.reg_addr[register])
 
     def write_bit(self, register, bit, value, n_bytes=None):
         # Write the value of specified bit to specified register.
-        if n_bytes == None: n_bytes = self.reg_size
+        if n_bytes is None: n_bytes = self.reg_size
         if value:
             self.reg_values[register] |=  (1<<bit)  # Set bit
         else:
@@ -73,7 +72,7 @@ class _MCP(hw.IO_object):
 
     def _run_start(self):
         self.read_register('GPIO') # Read the GPIO register to clear interrupts.
-        
+
 
 class MCP23017(_MCP):
     # MCP23017 16 bit port expander. Ports A and B are addressed as single 16 bit port
@@ -134,9 +133,8 @@ class _Pin(hw.IO_expander_pin):
         # Get or set the digital logic level of the pin.
         if value is None: # Return the state of the pin.
             if self.mode == pyb.Pin.OUT or self.interrupt_enabled: # Use stored value.
-               return bool(self.IOx.reg_values['GPIO'] & (1<<self.pin))
-            else:
-                return bool(self.IOx.read_register('GPIO') & (1<<self.pin))
+                return bool(self.IOx.reg_values['GPIO'] & (1<<self.pin))
+            return bool(self.IOx.read_register('GPIO') & (1<<self.pin))
         else: # Set the logic level of the pin.
             self.IOx.write_bit('GPIO', self.pin, value)
 

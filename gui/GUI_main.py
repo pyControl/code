@@ -22,10 +22,9 @@ if os.name == 'nt': # Needed on windows to get taskbar icon to display correctly
 # --------------------------------------------------------------------------------
 
 class GUI_main(QtWidgets.QMainWindow):
- 
     def __init__(self,app):
         super().__init__()
-        self.setWindowTitle('pyControl v{}'.format(VERSION))
+        self.setWindowTitle(f'pyControl v{VERSION}')
         self.setGeometry(10, 30, 700, 800) # Left, top, width, height.
 
         # Variables
@@ -50,7 +49,7 @@ class GUI_main(QtWidgets.QMainWindow):
         self.tab_widget = QtWidgets.QTabWidget(self)
         self.setCentralWidget(self.tab_widget)
 
-        self.run_task_tab = Run_task_tab(self)  
+        self.run_task_tab = Run_task_tab(self)
         self.experiments_tab = QtWidgets.QStackedWidget(self)
         self.setups_tab = Setups_tab(self)
 
@@ -64,7 +63,7 @@ class GUI_main(QtWidgets.QMainWindow):
         self.tab_widget.addTab(self.experiments_tab,'Experiments')
         self.tab_widget.addTab(self.setups_tab, 'Setups')
 
-        self.tab_widget.currentChanged.connect(self.tab_changed) 
+        self.tab_widget.currentChanged.connect(self.tab_changed)
 
         # Timers
         self.refresh_timer = QtCore.QTimer() # Timer to regularly call refresh() when not running.
@@ -162,7 +161,7 @@ class GUI_main(QtWidgets.QMainWindow):
         ports = set([c[0] for c in list_ports.comports()
                      if ('Pyboard' in c[1]) or ('USB Serial Device' in c[1])])
         self.available_ports_changed = ports != self.available_ports
-        if self.available_ports_changed:    
+        if self.available_ports_changed:
             self.available_ports = ports
         # Refresh tabs.
         self.run_task_tab.refresh()
@@ -173,7 +172,7 @@ class GUI_main(QtWidgets.QMainWindow):
 
     def tab_changed(self, new_tab_ind):
         '''Called whenever the active tab is changed.'''
-        if self.current_tab_ind == 0: 
+        if self.current_tab_ind == 0:
             self.run_task_tab.disconnect()
         elif self.current_tab_ind == 2:
             self.setups_tab.disconnect()
@@ -184,7 +183,7 @@ class GUI_main(QtWidgets.QMainWindow):
     def excepthook(self, ex_type, ex_value, ex_traceback):
         '''Called whenever an uncaught exception occurs.'''
         if hasattr(self.tab_widget.currentWidget(), 'excepthook'):
-           self.tab_widget.currentWidget().excepthook(ex_type, ex_value, ex_traceback)
+            self.tab_widget.currentWidget().excepthook(ex_type, ex_value, ex_traceback)
         logging.error(''.join(traceback.format_exception(ex_type, ex_value, ex_traceback)))
 
 # --------------------------------------------------------------------------------

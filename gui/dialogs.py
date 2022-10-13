@@ -44,8 +44,12 @@ class Board_config_dialog(QtWidgets.QDialog):
     def load_framework(self):
         self.accept()
         if self.flashdrive_enabled:
-            reply = QtWidgets.QMessageBox.question(self, 'Disable flashdrive', 
-                flashdrive_message, QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No)
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "Disable flashdrive",
+                flashdrive_message,
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+            )
             if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 self.board.disable_mass_storage()
                 self.disconnect = True
@@ -129,7 +133,7 @@ class Variable_setter(QtWidgets.QWidget):
         grid_layout.addWidget(self.set_button, i, 4)
 
     def value_text_colour(self, color='gray'):
-        self.value_str.setStyleSheet("color: {};".format(color))
+        self.value_str.setStyleSheet(f"color: {color};")
 
     def get(self):
         if self.board.framework_running: # Value returned later.
@@ -138,7 +142,7 @@ class Variable_setter(QtWidgets.QWidget):
             QtCore.QTimer.singleShot(200, self.reload)
         else: # Value returned immediately.
             self.value_text_colour('black')
-            self.value_str.setText(repr(self.board.get_variable(self.v_name))) 
+            self.value_str.setText(repr(self.board.get_variable(self.v_name)))
             QtCore.QTimer.singleShot(1000, self.value_text_colour)
 
     def set(self):
@@ -156,7 +160,7 @@ class Variable_setter(QtWidgets.QWidget):
                 self.value_text_colour('gray')
             else:
                 self.value_str.setText('Set failed')
-                
+
     def reload(self):
         '''Reload value from sm_info.  sm_info is updated when variables are output
         during framework run due to get/set.'''
@@ -209,23 +213,36 @@ class Summary_variables_dialog(QtWidgets.QDialog):
 # Invalid experiment dialog. ---------------------------------------------------------
 
 def invalid_run_experiment_dialog(parent, message):
-    QtWidgets.QMessageBox.warning(parent, 'Invalid experiment', 
-        message + '\n\nUnable to run experiment.', QtWidgets.QMessageBox.StandardButton.Ok)
+    QtWidgets.QMessageBox.warning(
+        parent,
+        "Invalid experiment",
+        message + "\n\nUnable to run experiment.",
+        QtWidgets.QMessageBox.StandardButton.Ok,
+    )
+
 
 def invalid_save_experiment_dialog(parent, message):
-    QtWidgets.QMessageBox.warning(parent, 'Invalid experiment', 
-        message + '\n\nUnable to save experiment.', QtWidgets.QMessageBox.StandardButton.Ok)
+    QtWidgets.QMessageBox.warning(
+        parent,
+        "Invalid experiment",
+        message + "\n\nUnable to save experiment.",
+        QtWidgets.QMessageBox.StandardButton.Ok,
+    )
 
 # Unrun subjects warning     ---------------------------------------------------------
 
 def unrun_subjects_dialog(parent,message):
-    reply = QtWidgets.QMessageBox.warning(parent, 'Unrun Subjects', 
-        'The following Subjects will not be run:\n\n{}'.format(message), (QtWidgets.QMessageBox.StandardButton.Ok | QtWidgets.QMessageBox.StandardButton.Cancel))
+    reply = QtWidgets.QMessageBox.warning(
+        parent,
+        "Unrun Subjects",
+        f"The following Subjects will not be run:\n\n{message}",
+        (QtWidgets.QMessageBox.StandardButton.Ok | QtWidgets.QMessageBox.StandardButton.Cancel),
+    )
     if reply == QtWidgets.QMessageBox.StandardButton.Ok:
         return True
     else:
         return False
-        
+
 # Keyboard shortcuts dialog. ---------------------------------------------------------
 
 class Keyboard_shortcuts_dialog(QtWidgets.QDialog):
@@ -244,7 +261,7 @@ class Keyboard_shortcuts_dialog(QtWidgets.QDialog):
             '<b><u>Global:</u></b>',
             '<b style="color:#0220e0;">Ctrl + t</b> : Open tasks folder',
             '<b style="color:#0220e0;">Ctrl + d</b> : Open data folder',
-        
+
             '<br></br><b><u>Run task tab:</u></b>',
             '<b style="color:#0220e0;">    t    </b> : Select task',
             '<b style="color:#0220e0;">    u    </b> : Upload/reset task',

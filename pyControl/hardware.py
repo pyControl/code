@@ -69,7 +69,7 @@ def initialise():
     global initialised
     for IO_object in IO_dict.values():
         IO_object._initialise()
-    initialised = True   
+    initialised = True
 
 def run_start():
     # Called at start of each framework run.
@@ -187,7 +187,7 @@ class Digital_input(IO_object):
     def _timer_callback(self):
         # Called when debounce timer elapses, deactivates debounce and 
         # if necessary publishes event for edge missed during debounce.
-        if not self.pin_state == self.pin.value(): # An edge has been missed.  
+        if not self.pin_state == self.pin.value(): # An edge has been missed.
             self.pin_state = not self.pin_state  
             self._publish_if_edge_has_event(fw.current_time)
         self.debounce_active = False
@@ -200,7 +200,7 @@ class Digital_input(IO_object):
             fw.event_queue.put((timestamp, fw.event_typ, self.falling_event_ID))
 
     def value(self):
-        # Return state of the input. 
+        # Return state of the input.
         return self.pin.value()
 
     def _run_start(self): # Reset state of input, called at beginning of run.
@@ -266,8 +266,9 @@ class Analog_channel(IO_object):
 
     def __init__(self, name, sampling_rate, data_type='l', plot=True):
         assert data_type in ('b','B','h','H','l','L'), 'Invalid data_type.'
-        assert not any([name == io.name for io in IO_dict.values() 
-                        if isinstance(io, Analog_channel)]), 'Analog signals must have unique names.'
+        assert not any(
+            [name == io.name for io in IO_dict.values() if isinstance(io, Analog_channel)]
+        ), "Analog signals must have unique names."
         self.name = name
         assign_ID(self)
         self.sampling_rate = sampling_rate
@@ -281,10 +282,10 @@ class Analog_channel(IO_object):
         self.data_header = array('B', b'\x07A' + data_type.encode() + 
             self.ID.to_bytes(2,'little') + sampling_rate.to_bytes(2,'little') + b'\x00'*8)
         self.write_buffer = 0 # Buffer to write new data to.
-        self.write_index  = 0 # Buffer index to write new data to. 
+        self.write_index  = 0 # Buffer index to write new data to.
 
     def _run_start(self):
-        self.write_index = 0  # Buffer index to write new data to. 
+        self.write_index = 0  # Buffer index to write new data to.
 
     def _run_stop(self):
         if self.write_index != 0:
@@ -326,7 +327,7 @@ class Analog_threshold(IO_object):
     # Generates framework events when an analog signal goes above or below specified threshold.
 
     def __init__(self, threshold=None, rising_event=None, falling_event=None):
-        assert type(threshold) == int, 'Integer threshold must be specified if rising or falling events are defined.'
+        assert isinstance(threshold, int), 'Integer threshold must be specified if rising or falling events are defined.'
         self.threshold = threshold
         self.rising_event = rising_event
         self.falling_event = falling_event
@@ -353,13 +354,12 @@ class Analog_threshold(IO_object):
     @micropython.native
     def check(self, sample):
         new_above_threshold = sample > self.threshold
-        if new_above_threshold != self.above_threshold: # Threshold crossing.
+        if new_above_threshold != self.above_threshold:  # Threshold crossing.
             self.above_threshold = new_above_threshold
-            if ((    self.above_threshold and self.rising_event_ID) or 
-                (not self.above_threshold and self.falling_event_ID)):
-                    self.timestamp = fw.current_time
-                    self.crossing_direction = self.above_threshold
-                    interrupt_queue.put(self.ID)
+            if (self.above_threshold and self.rising_event_ID) or (not self.above_threshold and self.falling_event_ID):
+                self.timestamp = fw.current_time
+                self.crossing_direction = self.above_threshold
+                interrupt_queue.put(self.ID)
 
 # Digital Output --------------------------------------------------------------
 
@@ -393,7 +393,7 @@ class Digital_output(IO_object):
             self.pin.value(self.inverted)
         else:
             self.pin.value(not self.inverted)
-        self.state = not self.state  
+        self.state = not self.state
 
     def pulse(self, freq, duty_cycle=50, n_pulses=False):
         # Turn on pulsed output with specified frequency and duty cycle.
@@ -455,14 +455,14 @@ class Rsync(IO_object):
         self.sync_pin = pyb.Pin(pin, pyb.Pin.OUT)
         self.event_name = event_name
         self.pulse_dur = pulse_dur       # Sync pulse duration (ms)
-        self.min_IPI = int(0.1*mean_IPI) 
+        self.min_IPI = int(0.1*mean_IPI)
         self.max_IPI = int(1.9*mean_IPI)
         assign_ID(self)
 
     def _initialise(self):
         self.event_ID  = sm.events[self.event_name] if self.event_name in sm.events else False
 
-    def _run_start(self): 
+    def _run_start(self):
         if self.event_ID:
             self.state = False # Whether output is high or low.
             self._timer_callback()

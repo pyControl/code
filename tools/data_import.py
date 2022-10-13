@@ -138,8 +138,8 @@ def session_dataframe(file_path, paired_events={}, pair_end_suffix=None):
                                'name'  : name,
                                'value' : value})
         elif line[0] == 'D': # Data line.
-             timestamp, ID = [int(i) for i in line.split(' ')[1:]]
-             line_dicts.append({'type' : 'state' if ID in state_IDs.values() else 'event',
+            timestamp, ID = [int(i) for i in line.split(' ')[1:]]
+            line_dicts.append({'type' : 'state' if ID in state_IDs.values() else 'event',
                                 'name' : ID2name[ID],
                                 'time' : int(timestamp)})
         elif line[0] == 'P': # Print line.
@@ -175,7 +175,7 @@ def session_dataframe(file_path, paired_events={}, pair_end_suffix=None):
                 start_inds[ df.loc[i,'name']] = i
             elif df.loc[i,'name'] in paired_events.values(): # Pair end event.
                 start_event = end2start[df.loc[i,'name']]
-                if start_times[start_event] != None:
+                if start_times[start_event] is not None:
                     df.loc[start_inds[start_event],'duration'] = df.loc[i,'time'] - start_times[start_event]
                     start_times[start_event] = None
                     end_inds.append(i)
@@ -211,7 +211,7 @@ class Experiment():
                 self.sessions = pickle.load(sessions_file)
             print('Saved sessions loaded from: sessions.pkl')
         except IOError:
-           pass
+            pass
 
         old_files = [session.file_name for session in self.sessions]
         files = os.listdir(self.path)

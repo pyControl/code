@@ -20,7 +20,7 @@ def timed_goto_state(next_state, interval):
 def set_timer(event, interval, output_event=True):
     # Set a timer to return specified event after interval milliseconds.
     event_type = fw.event_typ if output_event else fw.timer_typ
-    timer.set(interval, event_type, sm.events[event])    
+    timer.set(interval, event_type, sm.events[event])
 
 def disarm_timer(event):
     # Disable all timers due to return specified event.
@@ -77,7 +77,7 @@ def shuffled(L):
     # Return a shuffled copy of list L.
     return sorted(L, key = lambda l: pyb.rng())
 
-def randint(a,b):  
+def randint(a,b):
   # Return a random integer N such that a <= N <= b.
     return int(a+(b+1-a)*random())
 
