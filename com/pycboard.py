@@ -22,11 +22,6 @@ def _djb2_file(file_path):
             h = ((h << 5) + h + int.from_bytes(c,'little')) & 0xFFFFFFFF           
     return h
 
-# Used on pyboard to measure free space on filesystem.
-def _fs_free_space(drive='/flash'):
-    fs_stat = os.statvfs(drive)
-    return fs_stat[0] * fs_stat[3]
-
 # Used on pyboard for file transfer.
 def _receive_file(file_path, file_size):
     usb = pyb.USB_VCP()
@@ -44,7 +39,9 @@ def _receive_file(file_path, file_size):
                     bytes_remaining -= bytes_read
                     f.write(buf_mv[:bytes_read])
     except:
-        if _fs_free_space() < bytes_remaining:
+        fs_stat = os.statvfs('/flash')
+        fs_free_space = fs_stat[0] * fs_stat[3]
+        if fs_free_space < bytes_remaining:
             usb.write(b'NS') # Out of space.
         else:
             usb.write(b'ER')
@@ -101,7 +98,6 @@ class Pycboard(Pyboard):
         self.enter_raw_repl() # Soft resets pyboard.
         self.exec(inspect.getsource(_djb2_file))     # define djb2 hashing function.
         self.exec(inspect.getsource(_receive_file))  # define recieve file function.
-        self.exec(inspect.getsource(_fs_free_space)) # define file system free space function.
         self.exec('import os; import gc; import sys; import pyb')
         self.framework_running = False
         error_message = None
