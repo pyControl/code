@@ -382,7 +382,7 @@ class SubjectsTable(QtWidgets.QTableWidget):
 
     def cell_changed(self, row, column):
         '''If cell in subject row is changed, update subjects list and variables table.'''
-        if column == 1:
+        if column == 2:
             self.update_subjects()
             self.parent().parent().variables_table.update_available()
 
