@@ -1,7 +1,7 @@
 import os
 import json
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from config.settings import dirs, get_setting, default_user_settings
+from gui.settings import dirs, get_setting, default_user_settings
 from gui.utility import variable_constants
 
 # Board_config_dialog -------------------------------------------------

@@ -3,7 +3,7 @@ import re
 import json
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
-from config.settings import dirs, get_setting
+from gui.settings import dirs, get_setting
 from gui.dialogs import invalid_run_experiment_dialog, invalid_save_experiment_dialog,unrun_subjects_dialog
 from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants, init_keyboard_shortcuts,TaskSelectMenu
 

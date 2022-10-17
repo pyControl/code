@@ -11,7 +11,7 @@ from serial import SerialException
 
 from com.pycboard import Pycboard, PyboardError
 from com.data_logger import Data_logger
-from config.settings import get_setting
+from gui.settings import get_setting
 from gui.plotting import Experiment_plot
 from gui.dialogs import Variables_dialog, Summary_variables_dialog
 from gui.utility import variable_constants, TaskInfo

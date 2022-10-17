@@ -8,8 +8,7 @@ from serial import SerialException, SerialTimeoutException
 from com.pycboard import Pycboard, PyboardError, _djb2_file
 from com.data_logger import Data_logger
 
-from config.settings import get_setting
-
+from gui.settings import get_setting
 from gui.dialogs import Variables_dialog
 from gui.custom_variables_dialog import Custom_variables_dialog
 from gui.plotting import Task_plot

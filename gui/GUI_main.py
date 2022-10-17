@@ -7,7 +7,7 @@ import logging
 from serial.tools import list_ports
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
-from config.settings import VERSION, dirs, get_setting
+from gui.settings import VERSION, dirs, get_setting
 from gui.run_task_tab import Run_task_tab
 from gui.dialogs import Board_config_dialog, Keyboard_shortcuts_dialog, Settings_dialog
 from gui.configure_experiment_tab import Configure_experiment_tab

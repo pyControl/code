@@ -5,7 +5,7 @@ import inspect
 from serial import SerialException
 from array import array
 from .pyboard import Pyboard, PyboardError
-from config.settings import VERSION, dirs, get_setting
+from gui.settings import VERSION, dirs, get_setting
 
 # ----------------------------------------------------------------------------------------
 #  Helper functions.

@@ -3,7 +3,7 @@ import json
 
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
-from config.settings import dirs
+from gui.settings import dirs
 from com.pycboard import Pycboard, PyboardError
 from gui.utility import TableCheckbox
 

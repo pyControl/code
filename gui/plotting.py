@@ -4,7 +4,7 @@ import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui,QtWidgets,QtCore
 
-from config.settings import get_setting
+from gui.settings import get_setting
 from gui.utility import detachableTabWidget
 
 # ----------------------------------------------------------------------------------------

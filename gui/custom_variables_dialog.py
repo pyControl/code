@@ -2,7 +2,7 @@ import os
 import json
 import re
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from config.settings import dirs, get_setting
+from gui.settings import dirs, get_setting
 from gui.utility import variable_constants, null_resize, cbox_set_item, cbox_update_options
 
 # input widgets ---------------------------------------------------------------
