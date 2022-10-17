@@ -108,7 +108,8 @@ class Setups_tab(QtWidgets.QWidget):
 
     def update_available_setups(self):
         '''Called when boards are plugged, unplugged or renamed.'''
-        setup_names =  sorted([setup.name for setup in self.setups.values()])
+        setup_names =  sorted([setup.name for setup in self.setups.values()
+                               if setup.name != '_hidden_'])
         if setup_names != self.setup_names:
             self.available_setups_changed = True
             self.setup_names = setup_names
