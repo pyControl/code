@@ -185,7 +185,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
 
     def delete_experiment(self):
         '''Delete an experiment file after dialog to confirm deletion.'''
-        exp_path = os.path.join(dirs['experiments'], self.name_text.text()+'.pcx')
+        exp_path = os.path.join(dirs['experiments'], self.name_text.text()+'.json')
         if os.path.exists(exp_path):
             reply = QtWidgets.QMessageBox.question(
                 self,
@@ -215,10 +215,10 @@ class Configure_experiment_tab(QtWidgets.QWidget):
             setup = str(self.subjects_table.cellWidget(s,1).currentText())
             run = self.subjects_table.cellWidget(s,0).isChecked()
             d[subject] =  {'setup':setup,'run':run} # add dict subject entry
-        '''Store the current state of the experiment tab as a JSON object
-        saved in the experiments folder as .pcx file.'''
+        # Store the current state of the experiment tab as a JSON object
+        # saved in the experiments folder as .json file.
         experiment = self.experiment_dict()
-        file_name = self.name_text.text()+'.pcx'
+        file_name = self.name_text.text()+'.json'
         exp_path = os.path.join(dirs['experiments'], file_name)
         if os.path.exists(exp_path) and (exp_path != self.saved_exp_path):
             reply = QtWidgets.QMessageBox.question(
@@ -229,7 +229,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
             )
             if reply == QtWidgets.QMessageBox.StandardButton.No:
                 return False
-        with open(exp_path,'w') as exp_file:
+        with open(exp_path,'w', encoding='utf-8') as exp_file:
             exp_file.write(json.dumps(experiment, sort_keys=True, indent=4))
         if not from_dialog:
             cbox_set_item(self.experiment_select, experiment['name'], insert=True)
@@ -239,9 +239,9 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         return True
 
     def load_experiment(self, experiment_name):
-        '''Load experiment  .pcx file and set fields of experiment tab.'''
-        exp_path = os.path.join(dirs['experiments'], experiment_name +'.pcx')
-        with open(exp_path,'r') as exp_file:
+        '''Load experiment  .json file and set fields of experiment tab.'''
+        exp_path = os.path.join(dirs['experiments'], experiment_name +'.json')
+        with open(exp_path,'r', encoding='utf-8') as exp_file:
             experiment = json.loads(exp_file.read())
         self.name_text.setText(experiment['name'])
         if experiment['task'] in self.GUI_main.available_tasks:
@@ -335,7 +335,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         cancel is selected, True otherwise.'''
         if self.saved_exp_dict == self.experiment_dict():
             return True # Experiment has not been edited.
-        exp_path = os.path.join(dirs['experiments'], self.name_text.text()+'.pcx')
+        exp_path = os.path.join(dirs['experiments'], self.name_text.text()+'.json')
         dialog_text = None
         if not os.path.exists(exp_path):
             dialog_text = 'Experiment not saved, save experiment?'
