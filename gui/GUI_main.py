@@ -4,6 +4,7 @@ import ctypes
 import traceback
 import logging
 
+from pathlib import Path
 from serial.tools import list_ports
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
@@ -116,6 +117,7 @@ class GUI_main(QtWidgets.QMainWindow):
         shortcuts_action.setIcon(QtGui.QIcon("gui/icons/keyboard.svg"))
         help_menu.addAction(shortcuts_action)
 
+        self.pcx2json()
         self.show()
 
     def go_to_data(self):
@@ -138,12 +140,18 @@ class GUI_main(QtWidgets.QMainWindow):
         subdir_1/subdir_2/task_file_name.py'''
         task_files = []
         # this function gets called every second. Normally we would use get_setting("folder","tasks")
-        # but there no need to constantly be rereading the user_settings.json file that isn't changing
+        # but there is no need to constantly be rereading the user_settings.json file that isn't changing
         # so we use this self.task_directory variable that is only updated when a new user settting is saved
         for (dirpath, dirnames, filenames) in os.walk(self.task_directory):
             task_files += [os.path.join(dirpath, file).split(self.task_directory)[1][1:-3]
                            for file in filenames if file.endswith('.py')]
         return task_files
+
+    def pcx2json(self):
+        """Converts legacy .pcx files to .json files"""
+        exp_dir = Path(dirs['experiments'])
+        for f in exp_dir.glob('*.pcx'):
+            f.rename(f.with_suffix('.json'))
 
     def refresh(self):
         '''Called regularly when framework not running.'''
@@ -153,7 +161,7 @@ class GUI_main(QtWidgets.QMainWindow):
         if self.available_tasks_changed:
             self.available_tasks = tasks
         # Scan experiments folder.
-        experiments = [t.split('.')[0] for t in os.listdir(dirs['experiments']) if t[-4:] == '.pcx']
+        experiments = [exp_file.stem for exp_file in Path(dirs['experiments']).glob('*.json')]
         self.available_experiments_changed = experiments != self.available_experiments
         if self.available_experiments_changed:
             self.available_experiments = experiments
