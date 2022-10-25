@@ -42,8 +42,8 @@ v.bad_prob  = 0.2                # Reward probabilities on the bad side.
 v.n_rewards = 0                  # Number of rewards obtained.
 v.n_trials = 0                   # Number of trials recieved.
 v.n_blocks = 0                   # Number of reversals.
-v.state = withprob(0.5)          # Which side is currently good: True: left, False: right
-v.mov_ave = exp_mov_ave(tau=v.tau, init_value = 0.5) # Moving average of choices.
+v.good_side = choice(['left', 'right']) # Which side is currently good.
+v.correct_mov_ave = exp_mov_ave(tau=v.tau, init_value = 0.5) # Moving average of correct/incorrect choices
 v.threshold_crossed = False      # Whether performance threshold has been crossed.
 v.trials_till_reversal = 0       # Used after threshold crossing to trigger reversal.
 
@@ -51,43 +51,39 @@ v.trials_till_reversal = 0       # Used after threshold crossing to trigger reve
 # Non-state machine code.
 #-------------------------------------------------------------------------
 
-def trial_outcome(choice):
+def get_trial_outcome(chosen_side):
     # Function called after choice is made which determines trial outcome,
     # controls when reversals happen, and prints trial information.
 
     # Determine trial outcome.
-    if choice: # Subject chose left.
-        if v.state:
-            reward_prob = v.good_prob
-        else:
-            reward_prob = v.bad_prob
-    else: # Subject chose right
-        if v.state:
-            reward_prob = v.bad_prob
-        else:
-            reward_prob = v.good_prob
-    outcome = withprob(reward_prob) # Whether trial is rewarded or not.
+    if chosen_side == v.good_side: # Subject choose good side.
+        v.outcome = withprob(v.good_prob)
+        v.correct_mov_ave.update(1)
+
+    else:
+        v.outcome = withprob(v.bad_prob)
+        v.correct_mov_ave.update(0)
 
     # Determine when reversal occurs.
-    v.mov_ave.update(choice) # Update moving average of choices.
     if v.threshold_crossed: # Subject has already crossed threshold.
         v.trials_till_reversal -= 1
         if v.trials_till_reversal == 0: # Trigger reversal.
-            v.state = not v.state
+            v.good_side = 'left' if (v.good_side == 'right') else 'right'
+            v.correct_mov_ave.value = 1 - v.correct_mov_ave.value
             v.threshold_crossed = False
             v.n_blocks += 1
     else: # Check for threshold crossing.
-        if ((    v.state and (v.mov_ave.value > v.threshold)) or
-            (not v.state and (v.mov_ave.value < (1- v.threshold)))):
+        if v.correct_mov_ave.value > v.threshold:
             v.threshold_crossed = True
             v.trials_till_reversal = randint(*v.trials_post_threshold)
 
     # Print trial information.
     v.n_trials  +=1
-    v.n_rewards += outcome
-    print_variables(['n_trials', 'n_rewards', 'n_blocks', 'choice', 'outcome', 'state'])
-
-    return outcome
+    v.n_rewards += v.outcome
+    v.choice = chosen_side
+    v.ave_correct = v.correct_mov_ave.value
+    print_variables(['n_trials', 'n_rewards', 'n_blocks', 'good_side', 'choice', 'outcome', 'ave_correct'])  
+    return v.outcome
 
 #-------------------------------------------------------------------------        
 # State machine code.
@@ -116,7 +112,7 @@ def init_trial(event):
         goto_state('choice_state')
 
 def choice_state(event):
-    # Wait for left or right choice, evaluate if reward is delivered using trial_outcome function.
+    # Wait for left or right choice, evaluate if reward is delivered using get_trial_outcome function.
     if event == 'entry':
         hw.left_poke.LED.on()
         hw.right_poke.LED.on()
@@ -124,12 +120,12 @@ def choice_state(event):
         hw.left_poke.LED.off()
         hw.right_poke.LED.off()
     elif event == 'left_poke':
-        if trial_outcome(True):
+        if get_trial_outcome('left'):
             goto_state('left_reward')
         else:
             goto_state('inter_trial_interval')
     elif event == 'right_poke':
-        if trial_outcome(False):
+        if get_trial_outcome('right'):
             goto_state('right_reward')
         else:
             goto_state('inter_trial_interval')
