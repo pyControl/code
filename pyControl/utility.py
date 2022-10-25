@@ -1,8 +1,11 @@
 # Module imported by the user into their task file which contains the 
 # functions, classes and variables used in task files.
 
+import sys
 import pyb
 import math
+import ujson
+from ucollections import OrderedDict
 from . import timer
 from . import framework as fw
 from . import state_machine as sm
@@ -50,6 +53,16 @@ def print(print_string):
     #  printed to serial line once higher priority tasks have all been processed. 
     if fw.data_output:
         fw.data_output_queue.put((fw.current_time, fw.print_typ, str(print_string)))
+
+def print_variables(variables='all'):
+    # Print specified variables to data log as a json string.
+    if variables=='all':
+        var_dict = {k:v for k,v in v.__dict__.items() if not hasattr(v, '__init__')}
+    elif sys.implementation.version >= (1,12): 
+        var_dict = OrderedDict([(k, getattr(v,k)) for k in variables if not hasattr(getattr(v,k), '__init__')])
+    else: # old versions of ujson don't support OrdereDict.
+        var_dict = {k:getattr(v,k) for k in variables if not hasattr(getattr(v,k), '__init__')}
+    print(ujson.dumps(var_dict))
 
 def publish_event(event):
     # Put event with specified name in the event queue.

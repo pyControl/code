@@ -85,8 +85,7 @@ def trial_outcome(choice):
     # Print trial information.
     v.n_trials  +=1
     v.n_rewards += outcome
-    print('T#:{} R#:{} B#:{} C:{:d} O:{:d} S:{:d} A:{:.2f}'.format(
-           v.n_trials, v.n_rewards, v.n_blocks, choice, outcome, v.state, v.mov_ave.value))
+    print_variables(['n_trials', 'n_rewards', 'n_blocks', 'choice', 'outcome', 'state'])
 
     return outcome
 
