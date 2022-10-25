@@ -391,7 +391,11 @@ class Run_task_tab(QtWidgets.QWidget):
         if not (error or stopped_by_task):
             self.board.stop_framework()
             time.sleep(0.05)
-            self.board.process_data()
+            try:
+                self.board.process_data()
+                self.print_to_log(f"\nRun stopped at: {datetime.now().strftime('%Y/%m/%d %H:%M:%S')}")
+            except PyboardError:
+                self.print_to_log("\nError while stopping framework run.")
         self.data_logger.close_files()
         self.task_plot.run_stop()
         self.board_groupbox.setEnabled(True)
