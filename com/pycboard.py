@@ -276,6 +276,7 @@ class Pycboard(Pyboard):
         self.print('\nTransferring pyControl framework to pyboard.', end='')
         self.transfer_folder(dirs['framework'], file_type='py', show_progress=True)
         self.transfer_folder(dirs['devices'], files=['__init__.py'], remove_files=True, show_progress=True)
+        self.remove_file('hardware_definition.py')
         self.make_device_class2file_map()
         error_message = self.reset()
         if not self.status['framework']:
