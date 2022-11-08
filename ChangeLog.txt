@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
-Version 1.8 release candidate 1 2022-10-07
+Version 1.8 2022-11-08
 -------------------------------------------------------------------------------
 
 GUI:
@@ -10,6 +10,12 @@ GUI:
 
 - Required device driver files are now automatically transferred to the pyboard
   when a task or hardware definition is uploaded.
+
+- Hardware definition files are now stored in a hardware_definitions folder
+  not the generic config folder.
+
+- pyboards can how be hidden so they do not show up in board select GUI menus 
+  by naming them _hidden_ in the setups tab.
 
 - Various small improvements and bug fixes.
 
@@ -30,10 +36,14 @@ Framework:
 
 - Added uRFID device class for controlling Priority 1 Designs RFID module.
 
+- Added print_variables function for printing variable values to the data
+  log as a json formatted string.
+
 Data import:
 
-- Added session_dataframe function for generating a pandas dataframe from 
-  a pyControl data file.
+- Added session_dataframe() function for generating a pandas dataframe from 
+  a pyControl data file and experiment_dataframe() for generating a pandas
+  dataframe from an experiment data folder.
 
 -------------------------------------------------------------------------------
 Version 1.7.2 2022-06-30
