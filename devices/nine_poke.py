@@ -14,7 +14,7 @@ class Nine_poke():
                              rising_event_8 = 'poke_8', falling_event_8 = 'poke_8_out',
                              rising_event_9 = 'poke_9', falling_event_9 = 'poke_9_out',
                              debounce = 5, solenoid_driver=True):
-        self.mcp1 = MCP23017(port.I2C, port.DIO_C, 0x20)
+        self.mcp1 = MCP23017(port.I2C, port.DIO_C, 0x20, 'Nine_poke')
         self.poke_1 = _Poke(self.mcp1.Pin('A0'), self.mcp1.Pin('B0'), rising_event_1, falling_event_1, debounce)
         self.poke_2 = _Poke(self.mcp1.Pin('A1'), self.mcp1.Pin('B1'), rising_event_2, falling_event_2, debounce)
         self.poke_3 = _Poke(self.mcp1.Pin('A2'), self.mcp1.Pin('B2'), rising_event_3, falling_event_3, debounce)
@@ -25,7 +25,7 @@ class Nine_poke():
         self.poke_8 = _Poke(self.mcp1.Pin('A7'), port.POW_A         , rising_event_8, falling_event_8, debounce)
         self.poke_9 = _Poke(self.mcp1.Pin('B7'), port.POW_B         , rising_event_9, falling_event_9, debounce)
         if solenoid_driver: 
-            self.mcp2 = MCP23008(port.I2C, None, 0x21)
+            self.mcp2 = MCP23008(port.I2C, None, 0x21, 'Nine_poke_solenoids')
             self.SOL_1 = Digital_output(self.mcp2.Pin('A0'))
             self.SOL_2 = Digital_output(self.mcp2.Pin('A1'))
             self.SOL_3 = Digital_output(self.mcp2.Pin('A2'))

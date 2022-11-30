@@ -1,13 +1,17 @@
 import pyb
 import math
 import pyControl.hardware as hw
+from pyControl.framework import pyControlError
 
 class _MCP(hw.IO_object):
     # Parent class for MCP23017 and MCP23008 port expanders.
 
-    def __init__(self, I2C_bus, interrupt_pin, addr):
-        self.i2c = pyb.I2C(I2C_bus, mode=pyb.I2C.MASTER, baudrate=400000) 
+    def __init__(self, I2C_bus, interrupt_pin, addr, name):
+        self.baudrate = 400000
+        self.i2c = pyb.I2C(I2C_bus, mode=pyb.I2C.MASTER, baudrate=self.baudrate) 
+        self.timer = pyb.Timer(hw.available_timers.pop())
         self.addr = addr   # Device I2C address
+        self.name = name
         self.interrupt_timestamp = 0  # Time of last interrupt.
         self.interrupts_enabled = False
         self.interrupt_pin = interrupt_pin
@@ -23,15 +27,26 @@ class _MCP(hw.IO_object):
     def read_register(self, register, n_bytes=None):
         # Read specified register, convert to int, store in reg_values, return value. 
         if n_bytes is None: n_bytes = self.reg_size
-        v = int.from_bytes(self.i2c.mem_read(n_bytes, self.addr, self.reg_addr[register]), 'little')
-        self.reg_values[register] = v
-        return v
+        for i in range(5):
+            try:
+                v = int.from_bytes(self.i2c.mem_read(n_bytes, self.addr, self.reg_addr[register], timeout=5), 'little')
+                self.reg_values[register] = v
+                return v
+            except:
+                self.reduce_baudrate()
+        raise pyControlError('Unable to communicate with device: ' + self.name)
 
     def write_register(self, register, values, n_bytes=None):
         # Write values to specified register, values must be int which is converted to n_bytes bytes.
         if n_bytes is None: n_bytes = self.reg_size
         self.reg_values[register] = values
-        self.i2c.mem_write(values.to_bytes(n_bytes,'little'), self.addr, self.reg_addr[register])
+        for i in range(5):
+            try:
+                self.i2c.mem_write(values.to_bytes(n_bytes,'little'), self.addr, self.reg_addr[register], timeout=5)
+                return
+            except:
+                self.reduce_baudrate()
+        raise pyControlError('Unable to communicate with device: ' + self.name)
 
     def write_bit(self, register, bit, value, n_bytes=None):
         # Write the value of specified bit to specified register.
@@ -40,8 +55,7 @@ class _MCP(hw.IO_object):
             self.reg_values[register] |=  (1<<bit)  # Set bit
         else:
             self.reg_values[register] &= ~(1<<bit)  # Clear bit
-        self.i2c.mem_write(self.reg_values[register].to_bytes(n_bytes,'little'),
-                           self.addr, self.reg_addr[register])
+        self.write_register(register, self.reg_values[register], n_bytes)
 
     def enable_interrupts(self):
         self.write_register('INTCON', 0) # Set all interupts to IRQ_RISING_FALLING mode.
@@ -62,6 +76,12 @@ class _MCP(hw.IO_object):
             pin = int(math.log2(INTF)+0.1)
             self.pin_callbacks[pin](pin) # Called with pin as an argument for consistency with pyb.ExtInt
 
+    def reduce_baudrate(self):
+        # Reduce i2c baudrate to overcome intermittant serial communication.
+        if self.baudrate > 20000:
+            self.baudrate = self.baudrate//2
+            self.i2c.init(mode=pyb.I2C.MASTER, baudrate=self.baudrate)
+
     def Pin(self, id, mode=None, pull=None):
         # Instantiate and return a Pin object, pull argument currently ignored.
         return _Pin(self, id, mode)
@@ -72,14 +92,19 @@ class _MCP(hw.IO_object):
 
     def _run_start(self):
         self.read_register('GPIO') # Read the GPIO register to clear interrupts.
+        # Set timer to call ISR every second to avoid lockup if an interrupt is missed.
+        self.timer.init(freq=1)
+        self.timer.callback(self.ISR)
 
+    def _run_stop(self):
+        self.timer.deinit()
 
 class MCP23017(_MCP):
     # MCP23017 16 bit port expander. Ports A and B are addressed as single 16 bit port
     # and use a single interrupt pin.
 
-    def __init__(self, I2C_bus=1, interrupt_pin='X5', addr=0x20):
-        super().__init__(I2C_bus, interrupt_pin, addr)
+    def __init__(self, I2C_bus=1, interrupt_pin='X5', addr=0x20, name='MCP23017'):
+        super().__init__(I2C_bus, interrupt_pin, addr, name)
         self.reg_addr = {                 # Register memory addresses.
                          'IODIR'  : 0x00, # Input / output direction.
                          'GPIO'   : 0x12, # Pin state.
@@ -95,8 +120,8 @@ class MCP23017(_MCP):
 class MCP23008(_MCP):
     # MCP23008 8 bit port expander.
 
-    def __init__(self, I2C_bus=1, interrupt_pin='X5', addr=0x20):
-        super().__init__(I2C_bus, interrupt_pin, addr)
+    def __init__(self, I2C_bus=1, interrupt_pin='X5', addr=0x20, name='MCP23017'):
+        super().__init__(I2C_bus, interrupt_pin, addr, name)
         self.reg_addr = {                 # Register memory addresses.
                          'IODIR'  : 0x00, # Input / output direction.
                          'GPIO'   : 0x09, # Pin state.
