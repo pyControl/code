@@ -15,7 +15,8 @@ state_typ = const(2) # State transition : (time, state_typ, state_ID)
 timer_typ = const(3) # User timer       : (time, timer_typ, event_ID)
 print_typ = const(4) # User print       : (time, print_typ, print_string)
 hardw_typ = const(5) # Harware callback : (time, hardw_typ, hardware_ID)
-varbl_typ = const(6) # Variable change  : (time, varbl_typ, (v_name, v_str))
+varbl_typ = const(6) # Variable change  : (time, varbl_typ, (v_name, v_str)
+warng_typ = const(7) # Warning          : (time, warng_typ, print_string)
 
 # Event_queue -----------------------------------------------------------------
 
@@ -69,18 +70,21 @@ def _clock_tick(t):
 
 def output_data(event):
     # Output data to computer.
-    if event[1] in  (event_typ, state_typ): # send event or state change.
+    if event[1] in (event_typ, state_typ): # Event or state change.
         timestamp = event[0].to_bytes(4, 'little')
         ID        = event[2].to_bytes(2, 'little')
         checksum  = sum(timestamp + ID).to_bytes(2, 'little')
         usb_serial.send(b'\x07D' + timestamp + ID + checksum)
-    elif event[1] in (print_typ, varbl_typ): # send user generated output string.
-        if event[1] == print_typ: # send user generated output string.
-            start_byte = b'\x07P'
-            data_bytes = event[2].encode()
-        elif event[1] == varbl_typ: # Variable changed.
+    else:
+        if event[1] == varbl_typ: # Variable changed.
             start_byte = b'\x07V'
             data_bytes = event[2][0].encode() + b' ' + event[2][1].encode()
+        else:
+            if event[1] == print_typ: # User print string.
+                start_byte = b'\x07P'
+            elif event[1] == warng_typ: # Warning.
+                start_byte = b'\x07!'
+            data_bytes = event[2].encode()
         data_len = len(data_bytes).to_bytes(2, 'little')
         timestamp = event[0].to_bytes(4, 'little')
         checksum  = (sum(data_len + timestamp) + sum(data_bytes)).to_bytes(2, 'little')

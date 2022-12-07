@@ -394,8 +394,16 @@ class TaskInfo():
         except StopIteration:
             pass
         try:
-            new_print = next(nd[2] for nd in reversed(new_data) if nd[0] == 'P')
+            new_print = next(nd[-1] for nd in reversed(new_data) if nd[0] == 'P')
             self.print_text.setText(new_print)
+            self.print_text.setStyleSheet('color: black;')
+            self.print_text.home(False)
+        except StopIteration:
+            pass
+        try:
+            new_warning = next(nd[-1] for nd in reversed(new_data) if nd[0] == '!')
+            self.print_text.setText('! ' + new_warning)
+            self.print_text.setStyleSheet('color: orange;')
             self.print_text.home(False)
         except StopIteration:
             pass

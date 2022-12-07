@@ -427,7 +427,7 @@ class Pycboard(Pyboard):
             new_byte = self.serial.read(1)
             if new_byte == b'\x07':   # Start of pyControl message.  
                 if unexpected_input: # Output any unexpected characters recived prior to message start.
-                    new_data.append(('!','Unexpected input recieved from board: ' +
+                    new_data.append(('!', 'Unexpected input recieved from board: ' +
                                          ''.join(unexpected_input)))
                     unexpected_input = []
                 type_byte = self.serial.read(1) # Message type identifier.
@@ -456,7 +456,7 @@ class Pycboard(Pyboard):
                         new_data.append(('D',timestamp, ID))
                     else:
                         new_data.append(('!','bad checksum D'))
-                elif type_byte in (b'P', b'V'): # User print statement or set variable, 8 byte data header + variable size content.
+                elif type_byte in (b'P', b'V', b'!'): # User print statement, set variable, or warning. 8 byte data header + variable size content.
                     data_header = self.serial.read(8)
                     data_len  = int.from_bytes(data_header[ :2], 'little')
                     timestamp = int.from_bytes(data_header[2:6], 'little')
@@ -465,7 +465,10 @@ class Pycboard(Pyboard):
                     if not checksum == (sum(data_header[:-2]) + sum(data_bytes)) & 0xffff: # Bad checksum.
                         new_data.append(('!','bad checksum ' + type_byte.decode()))
                         continue
-                    new_data.append((type_byte.decode(),timestamp, data_bytes.decode()))
+                    if type_byte == b'!':
+                        new_data.append(('!', data_bytes.decode()))
+                    else:
+                        new_data.append((type_byte.decode(),timestamp, data_bytes.decode()))
                     if type_byte == b'V': # Store new variable value in sm_info
                         v_name, v_str = data_bytes.decode().split(' ', 1)
                         self.sm_info['variables'][v_name] = eval(v_str)
@@ -474,9 +477,9 @@ class Pycboard(Pyboard):
             elif new_byte == b'\x04': # End of framework run.
                 self.framework_running = False
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
-                if len(data_err) > 2:
+                if len(data_err) > 2: # Fatal error during framework run.
                     error_message = data_err[:-3].decode()
-                    new_data.append(('!', error_message))                
+                    new_data.append(('!!', error_message))                
                 break
             else:
                 unexpected_input.append(new_byte.decode())

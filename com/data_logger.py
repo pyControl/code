@@ -95,10 +95,12 @@ class Data_logger():
                         data_string += 'D {} {}\n'.format(nd[1], nd[2])
             elif nd[0] in ('P', 'V'): # User print output or set variable.
                 data_string += '{} {} {}\n'.format(*nd)
-            elif nd[0] == '!': # Error
+            elif nd[0] == '!': # Warning
+                data_string = '! {}\n'.format(nd[1])
+            elif nd[0] == '!!': # Crash traceback.
                 error_string = nd[1]
-                if not verbose:
-                    error_string = '! ' +error_string.replace('\n', '\n! ')
+                if not verbose: # In data files multi-line tracebacks have ! prepended to all lines aid parsing data file.
+                    error_string = '! ' + error_string.replace('\n', '\n! ')
                 data_string += '\n' + error_string + '\n'
         return data_string
 
