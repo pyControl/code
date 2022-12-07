@@ -5,8 +5,8 @@ class Port_expander():
     # IO expander board which runs 8 behaviour ports from an MCP23017 i2c port expander.
     def __init__(self, port):
         assert port.I2C, 'Port expander must be connected to port that supports I2C.'
-        self.mcp1 = MCP23017(port.I2C, port.DIO_C, 0x20)
-        self.mcp2 = MCP23017(port.I2C, None      , 0x21)
+        self.mcp1 = MCP23017(port.I2C, port.DIO_C, 0x20, 'Port_expander')
+        self.mcp2 = MCP23017(port.I2C, None      , 0x21, 'Port_expander')
         self.port_1 = Port(DIO_A=self.mcp1.Pin('A0'), DIO_B=self.mcp1.Pin('A1'),
                            POW_A=self.mcp2.Pin('A0'), POW_B=self.mcp2.Pin('A1'))
         self.port_2 = Port(DIO_A=self.mcp1.Pin('A2'), DIO_B=self.mcp1.Pin('A3'),
