@@ -102,9 +102,9 @@ class GUI_main(QtWidgets.QMainWindow):
         documentation_action.setIcon(QtGui.QIcon("gui/icons/book.svg"))
         help_menu.addAction(documentation_action)
         # Go to Google forum
-        forum_action= QtGui.QAction("&Forum", self)
+        forum_action= QtGui.QAction("&Help and Discussions", self)
         forum_action.triggered.connect(self.view_forum)
-        forum_action.setIcon(QtGui.QIcon("gui/icons/google-groups.svg")) #https://iconscout.com/icon/google-groups-1
+        forum_action.setIcon(QtGui.QIcon("gui/icons/help.svg"))
         help_menu.addAction(forum_action)
         # Go to GitHub Repository
         github_action= QtGui.QAction("&GitHub Repository", self)
@@ -130,7 +130,7 @@ class GUI_main(QtWidgets.QMainWindow):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://pycontrol.readthedocs.io/en/latest/"))
 
     def view_forum(self):
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://groups.google.com/forum/#!forum/pycontrol"))
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://github.com/orgs/pyControl/discussions"))
 
     def view_github(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://github.com/pyControl/pyControl"))
