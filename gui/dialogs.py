@@ -185,8 +185,8 @@ class Summary_variables_dialog(QtWidgets.QDialog):
         self.label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         self.table = QtWidgets.QTableWidget(len(subjects), len(v_names),  parent=self)
-        self.table.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
-        self.table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.table.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
+        self.table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setHorizontalHeaderLabels(v_names)
         self.table.setVerticalHeaderLabels(subjects)
 
