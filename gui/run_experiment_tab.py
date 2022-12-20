@@ -274,9 +274,12 @@ class Run_experiment_tab(QtWidgets.QWidget):
     def stop_experiment(self):
         self.update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
-        for board in self.boards:
+        for i, board in enumerate(self.boards):
             time.sleep(0.05)
-            board.process_data()
+            try:
+                board.process_data()
+            except PyboardError:
+                self.subjectboxes[i].print_to_log("\nError while stopping framework run.")
         # Summary and persistent variables.
         summary_variables = [v for v in self.experiment['variables'] if v['summary']]
         sv_dict = OrderedDict()
