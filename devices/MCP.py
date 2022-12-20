@@ -13,6 +13,7 @@ class _MCP(hw.IO_object):
         self.addr = addr   # Device I2C address
         self.name = name
         self.interrupt_timestamp = 0  # Time of last interrupt.
+        self.check_config = False     # Set True by timer to periodically check registers are set correctly.
         self.interrupts_enabled = False
         self.interrupt_pin = interrupt_pin
         self.reg_values = {} # Register values set by user.
@@ -87,13 +88,29 @@ class _MCP(hw.IO_object):
 
     def ISR(self, i):
         hw.interrupt_queue.put(self.ID)
+
+    def timer_ISR(self,i):
+        self.check_config = True
+        hw.interrupt_queue.put(self.ID)
         
     def _process_interrupt(self):
+        # Find out which pin triggered the interrupt and call the appropriate function.
         INTF = self.read_register('INTF')
         self.read_register('GPIO')
         if INTF > 0:
             pin = int(math.log2(INTF)+0.1)
-            self.pin_callbacks[pin](pin) # Called with pin as an argument for consistency with pyb.ExtInt          
+            self.pin_callbacks[pin](pin) # Called with pin as an argument for consistency with pyb.ExtInt
+        if self.check_config: 
+           # Check the state of the registers on the MCP device is correct and correct them if not.
+            self.check_config = False
+            for register, values in self.reg_values.items():
+                if register in ('GPIO', 'INTF'):
+                    continue
+                n_bytes = 1 if register == 'IOCON' else self.reg_size
+                read_values = self.read_register(register, n_bytes=n_bytes)
+                if read_values != values:
+                    self.write_register(register, values, n_bytes=n_bytes)
+                    fw.data_output_queue.put((fw.current_time, fw.print_typ, 'Corrected bad '+ register + ' register value on device ' + self.name))
 
     def Pin(self, id, mode=None, pull=None):
         # Instantiate and return a Pin object, pull argument currently ignored.
@@ -107,7 +124,8 @@ class _MCP(hw.IO_object):
         self.read_register('GPIO') # Read the GPIO register to clear interrupts.
         # Set timer to call ISR every second to avoid lockup if an interrupt is missed.
         self.timer.init(freq=1)
-        self.timer.callback(self.ISR)
+        self.timer.callback(self.timer_ISR)
+        self.check_config = False
 
     def _run_stop(self):
         self.timer.deinit()
