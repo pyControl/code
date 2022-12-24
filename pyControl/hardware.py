@@ -365,9 +365,6 @@ class Analog_threshold(IO_object):
 # Digital Output --------------------------------------------------------------
 
 class Digital_output(IO_object):
-    freq_multipliers = {10:10, 25:4, 50:2, 75:4}
-    off_inds = {10:1, 25:1, 50:1, 75:3}
-
     def __init__(self, pin, inverted=False):
         if isinstance(pin, IO_expander_pin):
             pin.set_mode(pyb.Pin.OUT)
@@ -398,30 +395,32 @@ class Digital_output(IO_object):
 
     def pulse(self, freq, duty_cycle=50, n_pulses=False):
         # Turn on pulsed output with specified frequency and duty cycle.
-        assert duty_cycle in (10,25,50,75), 'duty_cycle must be 10, 25, 50 or 75'
+        assert duty_cycle % 5 == 0, "duty cycle must be a multiple of 5 between 5 and 95%"
         if not self.timer:
             self.timer = pyb.Timer(available_timers.pop())
-        self.off_ind = self.off_inds[duty_cycle]
+        for dc in (50, 25, 20, 10, 5):
+            if duty_cycle % dc == 0:
+                self.fm = int(100 / dc)
+                self.duty_cycle = int(duty_cycle / 100 * self.fm)
         self.i = 0
-        self.fm = self.freq_multipliers[duty_cycle]
         self.n_pulses = n_pulses
         if self.n_pulses:
             self.pulse_n = 0
         self.on()
-        self.timer.init(freq=freq*self.fm)
+        self.timer.init(freq=freq * self.fm)
         self.timer.callback(self._ISR)
 
     def _ISR(self, t):
-        self.i = (self.i + 1) % self.fm
-        if self.i == 0:
+        self.i += 1
+        if self.i == self.duty_cycle:
             if self.n_pulses:
                 self.pulse_n += 1
                 if self.pulse_n == self.n_pulses:
                     self.off()
                     return
             self.toggle()
-
-        elif self.i == self.off_ind:
+        elif self.i == self.fm:
+            self.i = 0
             self.toggle()
 
 # Port ------------------------------------------------------------------------
