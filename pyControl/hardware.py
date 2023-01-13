@@ -398,10 +398,8 @@ class Digital_output(IO_object):
         assert duty_cycle % 5 == 0, "duty cycle must be a multiple of 5 between 5 and 95%"
         if not self.timer:
             self.timer = pyb.Timer(available_timers.pop())
-        for dc in (50, 25, 20, 10, 5):
-            if duty_cycle % dc == 0:
-                self.fm = int(100 / dc)
-                self.duty_cycle = int(duty_cycle / 100 * self.fm)
+        self.fm = int(100 / next(x for x in (50, 25, 20, 10, 5) if duty_cycle % x == 0))
+        self.off_ind = int(duty_cycle / 100 * self.fm)
         self.i = 0
         self.n_pulses = n_pulses
         if self.n_pulses:
@@ -410,9 +408,10 @@ class Digital_output(IO_object):
         self.timer.init(freq=freq * self.fm)
         self.timer.callback(self._ISR)
 
+    @micropython.native
     def _ISR(self, t):
         self.i += 1
-        if self.i == self.duty_cycle:
+        if self.i == self.off_ind:
             if self.n_pulses:
                 self.pulse_n += 1
                 if self.pulse_n == self.n_pulses:
