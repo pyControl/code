@@ -64,6 +64,10 @@ def print_variables(variables='all'):
         var_dict = {k:getattr(v,k) for k in variables if not hasattr(getattr(v,k), '__init__')}
     print(ujson.dumps(var_dict))
 
+def warning(message):
+    # Print a warning message to the log.
+    fw.data_output_queue.put((fw.current_time, fw.warng_typ, message))
+
 def publish_event(event):
     # Put event with specified name in the event queue.
     fw.event_queue.put((fw.current_time, fw.event_typ, sm.events[event]))
