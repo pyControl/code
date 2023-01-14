@@ -3,7 +3,7 @@ from array import array
 from . import timer
 from . import framework as fw
 from . import state_machine as sm
-from .utility import randint
+from .utility import randint, warning
 
 # Ring buffer -----------------------------------------------------------------
 
@@ -393,7 +393,7 @@ class Digital_output(IO_object):
             self.pin.value(not self.inverted)
         self.state = not self.state
 
-    def pulse(self, freq, duty_cycle=50, n_pulses=False):
+    def pulse(self, freq, duty_cycle=50, n_pulses=False, load_warning=True):
         # Turn on pulsed output with specified frequency and duty cycle.
         assert duty_cycle % 5 == 0, "duty cycle must be a multiple of 5 between 5 and 95%"
         if not self.timer:
@@ -404,9 +404,12 @@ class Digital_output(IO_object):
         self.n_pulses = n_pulses
         if self.n_pulses:
             self.pulse_n = 0
-        self.on()
-        self.timer.init(freq=freq * self.fm)
+        int_freq = freq * self.fm
+        if load_warning and int_freq > 2000:
+            warning('This pulse freq and duty_cycle will use > 10% of pyboard processor resources.')
+        self.timer.init(freq=int_freq)
         self.timer.callback(self._ISR)
+        self.on()
 
     @micropython.native
     def _ISR(self, t):
