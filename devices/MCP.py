@@ -104,9 +104,10 @@ class _MCP(hw.IO_object):
         changed_bits = self.GPIO_state ^ new_GPIO_state
         active_edges = ((changed_bits & ( new_GPIO_state & self.rising_ints )) | 
                         (changed_bits & (~new_GPIO_state & self.falling_ints)))
-        for pin in self.pin_callbacks.keys():
-            if (1<<pin) & active_edges:
-                self.pin_callbacks[pin](pin) # Called with pin as an argument for consistency with pyb.ExtInt
+        if active_edges:
+            for pin in self.pin_callbacks.keys():
+                if (1<<pin) & active_edges:
+                    self.pin_callbacks[pin](pin) # Called with pin as an argument for consistency with pyb.ExtInt
         self.GPIO_state = new_GPIO_state
 
     def Pin(self, id, mode=None, pull=None):
