@@ -168,9 +168,9 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.logs_button.setText('Hide logs')
         self.startstopclose_all_button.setText('Start All')
         self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
+        self.startstopclose_all_button.setEnabled(False)
         # Setup controls box.
         self.name_text.setText(experiment['name'])
-        self.startstopclose_all_button.setEnabled(False)
         self.logs_button.setEnabled(False)
         self.plots_button.setEnabled(False)
         # Setup subjectboxes
@@ -246,16 +246,17 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.setups_finished = 0
 
     def startstopclose_all(self):
-        '''Called when startstopclose_all_button is clicked.  Button is
-        only active if all setups are in the same state.'''
+        '''Called when startstopclose_all_button is clicked..'''
         if self.startstopclose_all_button.text() == 'Close Exp.':
             self.close_experiment()
         elif self.startstopclose_all_button.text() == 'Start All':
             for box in self.subjectboxes:
-                box.start_task()
+                if box.state == 'pre_run':
+                    box.start_task()
         elif self.startstopclose_all_button.text() == 'Stop All':
             for box in self.subjectboxes:
-                box.stop_task()
+                if box.state == 'running':
+                    box.stop_task()
 
     def update_startstopclose_button(self):
         '''Called when a setup is started or stopped to update the
@@ -263,13 +264,9 @@ class Run_experiment_tab(QtWidgets.QWidget):
         if self.setups_finished == len(self.boards):
             self.startstopclose_all_button.setText('Close Exp.')
             self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/close.svg"))
-        else:
+        elif self.setups_started == len(self.boards):
             self.startstopclose_all_button.setText('Stop All')
             self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
-            if self.setups_started == len(self.boards) and self.setups_finished == 0:
-                self.startstopclose_all_button.setEnabled(True)
-            else:
-                self.startstopclose_all_button.setEnabled(False)
 
     def stop_experiment(self):
         self.update_timer.stop()
@@ -507,6 +504,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         '''Called to stop task or if task stops automatically.'''
         if self.board.framework_running:
             self.board.stop_framework()
+        self.state = 'post_run'
         self.task_info.state_text.setText('Stopped')
         self.task_info.state_text.setStyleSheet('color: grey;')
         self.status_text.setText('Stopped')
