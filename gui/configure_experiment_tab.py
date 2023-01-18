@@ -1,11 +1,12 @@
 import os
 import re
 import json
+from pathlib import Path
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 from gui.settings import dirs, get_setting
 from gui.dialogs import invalid_run_experiment_dialog, invalid_save_experiment_dialog,unrun_subjects_dialog
-from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants, init_keyboard_shortcuts,TaskSelectMenu
+from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants, init_keyboard_shortcuts, NestedMenu
 
 # --------------------------------------------------------------------------------
 # Experiments_tab
@@ -36,7 +37,8 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.expbox_Vlayout.addLayout(self.expbox_Hlayout_2)
         self.expbox_Vlayout.addLayout(self.expbox_Hlayout_3)
 
-        self.experiment_select = QtWidgets.QComboBox()
+        self.experiment_select = NestedMenu('select experiment',".json")
+        self.experiment_select.set_callback(self.experiment_changed)
 
         self.run_button = QtWidgets.QPushButton('Run')
         self.run_button.setIcon(QtGui.QIcon("gui/icons/run.svg"))
@@ -47,12 +49,11 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.save_button = QtWidgets.QPushButton('Save')
         self.save_button.setIcon(QtGui.QIcon("gui/icons/save.svg"))
         self.save_button.setEnabled(False)
-        self.name_label = QtWidgets.QLabel('Experiment name:')
-        self.name_text = QtWidgets.QLineEdit()
+        self.name_text = ""
         self.task_label = QtWidgets.QLabel('Task:')
-        self.task_select = TaskSelectMenu('select task')
+        self.task_select = NestedMenu('select task',".py")
         self.hardware_test_label = QtWidgets.QLabel('Hardware test:')
-        self.hardware_test_select = TaskSelectMenu('no hardware test',add_default=True)
+        self.hardware_test_select = NestedMenu("no hardware test", ".py",add_default=True)
         self.data_dir_label = QtWidgets.QLabel('Data directory:')
         self.data_dir_text = QtWidgets.QLineEdit(get_setting("folders","data"))
         self.data_dir_button = QtWidgets.QPushButton('')
@@ -65,13 +66,11 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.expbox_Hlayout_1.addWidget(self.delete_button)
         self.expbox_Hlayout_1.addWidget(self.save_button)
         self.expbox_Hlayout_1.addWidget(self.run_button)
-        self.expbox_Hlayout_2.addWidget(self.name_label)
-        self.expbox_Hlayout_2.addWidget(self.name_text)
         self.expbox_Hlayout_2.addWidget(self.task_label)
         self.expbox_Hlayout_2.addWidget(self.task_select)
         self.expbox_Hlayout_2.addWidget(self.hardware_test_label)
         self.expbox_Hlayout_2.addWidget(self.hardware_test_select)
-        self.expbox_Hlayout_2.setStretchFactor(self.name_text, 1)
+        self.expbox_Hlayout_2.addStretch()
         self.expbox_Hlayout_3.addWidget(self.data_dir_label)
         self.expbox_Hlayout_3.addWidget(self.data_dir_button)
         self.expbox_Hlayout_3.addWidget(self.data_dir_text)
@@ -94,14 +93,10 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.task_select.set_callback(self.variables_table.task_changed)
         self.variablesbox_layout.addWidget(self.variables_table)
 
-        # Initialise widgets
-        self.experiment_select.addItems(['select experiment'])
 
         # Connect signals.
-        self.name_text.textChanged.connect(self.name_edited)
         self.data_dir_text.textEdited.connect(lambda: setattr(self, 'custom_dir', True))
         self.data_dir_button.clicked.connect(self.select_data_dir)
-        self.experiment_select.textActivated[str].connect(self.experiment_changed)
         self.new_button.clicked.connect(lambda: self.new_experiment(dialog=True))
         self.delete_button.clicked.connect(self.delete_experiment)
         self.save_button.clicked.connect(self.save_experiment)
@@ -120,9 +115,20 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         # Initialise variables.
         self.saved_exp_dict = self.experiment_dict()
 
-    def name_edited(self):
-        if not self.custom_dir:
-            self.data_dir_text.setText(os.path.join(get_setting("folders","data"), self.name_text.text()))
+        self.experiment_enable(False)
+
+    def experiment_enable(self,do_enable=True):
+        self.subjects_groupbox.setEnabled(do_enable)
+        self.variables_groupbox.setEnabled(do_enable)
+        self.task_label.setEnabled(do_enable)
+        self.task_select.setEnabled(do_enable)
+        self.hardware_test_label.setEnabled(do_enable)
+        self.hardware_test_select.setEnabled(do_enable)
+        self.data_dir_label.setEnabled(do_enable)
+        self.data_dir_button.setEnabled(do_enable)
+        self.data_dir_text.setEnabled(do_enable)
+        self.run_button.setEnabled(do_enable)
+        self.delete_button.setEnabled(do_enable)
 
     def select_data_dir(self):
         new_path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select data folder', get_setting("folders","data"))
@@ -132,7 +138,6 @@ class Configure_experiment_tab(QtWidgets.QWidget):
 
     def experiment_changed(self, experiment_name):
         if experiment_name in self.GUI_main.available_experiments:
-            cbox_set_item(self.experiment_select, 'select experiment', insert=True)
             if not self.save_dialog():
                 return
             self.load_experiment(experiment_name)
@@ -144,7 +149,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
             self.hardware_test_select.update_menu(get_setting("folders","tasks"))
             self.GUI_main.available_tasks_changed = False
         if self.GUI_main.available_experiments_changed:
-            cbox_update_options(self.experiment_select, self.GUI_main.available_experiments)
+            self.experiment_select.update_menu(dirs['experiments'])
             self.GUI_main.available_experiments_changed = False
         if self.GUI_main.setups_tab.available_setups_changed:
             self.subjects_table.all_setups = set(self.GUI_main.setups_tab.setup_names)
@@ -154,12 +159,13 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         else:
             self.save_button.setEnabled(False)
         if self.GUI_main.data_dir_changed:
-            if (str(self.name_text.text()) == '') and not self.custom_dir:
+            if (self.name_text == '') and not self.custom_dir:
                 self.data_dir_text.setText(get_setting("folders","data"))
 
     def experiment_dict(self, filtered=False):
         '''Return the current state of the experiments tab as a dictionary.'''
-        return {'name': self.name_text.text(),
+
+        return {'name': self.name_text,
                 'task': str(self.task_select.text()),
                 'hardware_test': str(self.hardware_test_select.text()),
                 'data_dir': self.data_dir_text.text(),
@@ -167,34 +173,61 @@ class Configure_experiment_tab(QtWidgets.QWidget):
                 'variables': self.variables_table.variables_list(),
                 'subset_warning':self.subset_warning_checkbox.isChecked()}
 
-    def new_experiment(self, dialog=True):
-        '''Clear experiment configuration.'''
-        if dialog:
-            if not self.save_dialog(): return
-        self.name_text.setText('')
+    def reset(self):
+        self.name_text = ""
         self.data_dir_text.setText(get_setting("folders","data"))
         self.custom_dir = False
         self.subjects_table.reset()
         self.variables_table.reset()
-        cbox_set_item(self.experiment_select, 'select experiment', insert=True)
         self.task_select.setText('select task')
         self.hardware_test_select.setText('no hardware test')
         self.subset_warning_checkbox.setChecked(True)
         self.saved_exp_dict = self.experiment_dict()
         self.saved_exp_path = None
 
+    def new_experiment(self, dialog=True):
+        '''Clear experiment configuration.'''
+        if dialog:
+            if not self.save_dialog(): return
+        savefilename = QtWidgets.QFileDialog.getSaveFileName(self, '', dirs['experiments'],("JSON files (*.json)"))[0]
+        if savefilename != "":
+            self.reset()
+            new_path = Path(savefilename)
+            if str(new_path).find(dirs['experiments'])<0:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "Unable to create experiment",
+                    "New experiment files must be inside the experiments folder",
+                    QtWidgets.QMessageBox.StandardButton.Ok,
+                )
+                return
+            exp_name = str(new_path.parent / new_path.stem).split(dirs['experiments'])[1][1:]
+            self.name_text = exp_name
+            self.experiment_select.setText(exp_name)
+            nested_path = str(exp_name.split(new_path.stem)[0])
+            new_data_dir = Path(get_setting("folders","data")) / nested_path
+            try: # make new data dir if it doesn't exist
+                os.makedirs(new_data_dir)
+            except FileExistsError:
+                pass
+            self.data_dir_text.setText(str(new_data_dir))
+            self.save_experiment()
+            self.experiment_enable(True)
+
     def delete_experiment(self):
         '''Delete an experiment file after dialog to confirm deletion.'''
-        exp_path = os.path.join(dirs['experiments'], self.name_text.text()+'.json')
+        exp_path = os.path.join(dirs['experiments'], self.name_text+'.json')
         if os.path.exists(exp_path):
             reply = QtWidgets.QMessageBox.question(
                 self,
                 "Delete experiment",
-                f"Delete experiment '{self.name_text.text()}'",
+                f"Delete experiment '{self.name_text}'",
                 QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.Cancel,
             )
             if reply == QtWidgets.QMessageBox.StandardButton.Yes:
-                self.new_experiment(dialog=False)
+                self.experiment_select.setText('select experiment')
+                self.experiment_enable(False)
+                self.reset()
                 os.remove(exp_path)
 
     def save_experiment(self, from_dialog=False):
@@ -218,21 +251,12 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         # Store the current state of the experiment tab as a JSON object
         # saved in the experiments folder as .json file.
         experiment = self.experiment_dict()
-        file_name = self.name_text.text()+'.json'
+        file_name = self.name_text+'.json'
         exp_path = os.path.join(dirs['experiments'], file_name)
-        if os.path.exists(exp_path) and (exp_path != self.saved_exp_path):
-            reply = QtWidgets.QMessageBox.question(
-                self,
-                "Replace file",
-                f"File '{file_name}' already exists, do you want to replace it?",
-                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
-            )
-            if reply == QtWidgets.QMessageBox.StandardButton.No:
-                return False
         with open(exp_path,'w', encoding='utf-8') as exp_file:
             exp_file.write(json.dumps(experiment, sort_keys=True, indent=4))
         if not from_dialog:
-            cbox_set_item(self.experiment_select, experiment['name'], insert=True)
+            self.experiment_select.setText(experiment['name'])
         self.saved_exp_dict = experiment
         self.saved_exp_path = exp_path
         self.save_button.setEnabled(False)
@@ -241,9 +265,9 @@ class Configure_experiment_tab(QtWidgets.QWidget):
     def load_experiment(self, experiment_name):
         '''Load experiment  .json file and set fields of experiment tab.'''
         exp_path = os.path.join(dirs['experiments'], experiment_name +'.json')
+        self.name_text = experiment_name
         with open(exp_path,'r', encoding='utf-8') as exp_file:
             experiment = json.loads(exp_file.read())
-        self.name_text.setText(experiment['name'])
         if experiment['task'] in self.GUI_main.available_tasks:
             self.task_select.setText(experiment['task'])
         else:
@@ -252,7 +276,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
             self.hardware_test_select.setText(experiment['hardware_test'])
         else:
             self.hardware_test_select.setText('no hardware test')
-        cbox_set_item(self.experiment_select, experiment['name'])
+        self.experiment_select.setText(experiment['name'])
         if 'subset_warning' in experiment.keys(): # New style experiment file.
             self.subset_warning_checkbox.setChecked(experiment['subset_warning'])
             self.subjects_table.set_from_dict(experiment['subjects'])
@@ -267,6 +291,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.saved_exp_dict = experiment
         self.saved_exp_path = exp_path
         self.save_button.setEnabled(False)
+        self.experiment_enable(True)
 
     def run_experiment(self):
         '''Check that the experiment is valid. Prompt user to save experiment if
@@ -333,9 +358,11 @@ class Configure_experiment_tab(QtWidgets.QWidget):
     def save_dialog(self):
         '''Dialog to save experiment if it has been edited.  Returns False if
         cancel is selected, True otherwise.'''
+        if self.experiment_select.text() == 'select experiment':
+            return True
         if self.saved_exp_dict == self.experiment_dict():
             return True # Experiment has not been edited.
-        exp_path = os.path.join(dirs['experiments'], self.name_text.text()+'.json')
+        exp_path = os.path.join(dirs['experiments'], self.name_text+'.json')
         dialog_text = None
         if not os.path.exists(exp_path):
             dialog_text = 'Experiment not saved, save experiment?'

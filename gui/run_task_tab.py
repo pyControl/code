@@ -12,7 +12,7 @@ from gui.settings import get_setting
 from gui.dialogs import Variables_dialog
 from gui.custom_variables_dialog import Custom_variables_dialog
 from gui.plotting import Task_plot
-from gui.utility import init_keyboard_shortcuts, TaskSelectMenu, TaskInfo
+from gui.utility import init_keyboard_shortcuts, NestedMenu, TaskInfo
 
 
 # Run_task_gui ------------------------------------------------------------------------
@@ -101,7 +101,7 @@ class Run_task_tab(QtWidgets.QWidget):
 
         self.task_groupbox = QtWidgets.QGroupBox("Task")
 
-        self.task_select = TaskSelectMenu("select task")
+        self.task_select = NestedMenu("select task",".py")
         self.task_select.set_callback(self.task_changed)
         self.upload_button = QtWidgets.QPushButton("Upload")
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
