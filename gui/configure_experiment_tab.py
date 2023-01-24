@@ -204,8 +204,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
             exp_name = str(new_path.parent / new_path.stem).split(dirs['experiments'])[1][1:]
             self.name_text = exp_name
             self.experiment_select.setText(exp_name)
-            nested_path = str(exp_name.split(new_path.stem)[0])
-            new_data_dir = Path(get_setting("folders","data")) / nested_path
+            new_data_dir = Path(get_setting("folders","data")) / exp_name
             try: # make new data dir if it doesn't exist
                 os.makedirs(new_data_dir)
             except FileExistsError:
