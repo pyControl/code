@@ -30,7 +30,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.expbox_Vlayout = QtWidgets.QVBoxLayout(self.experiment_groupbox)
         self.expbox_Hlayout_1 = QtWidgets.QHBoxLayout()
         self.separator = QtWidgets.QLabel("<hr>")
-        self.expbox_Hlayout_2 = QtWidgets.QHBoxLayout()
+        self.expbox_Hlayout_2 = QtWidgets.QGridLayout()
         self.expbox_Hlayout_3 = QtWidgets.QHBoxLayout()
         self.expbox_Vlayout.addLayout(self.expbox_Hlayout_1)
         self.expbox_Vlayout.addWidget(self.separator)
@@ -46,15 +46,19 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.new_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
         self.delete_button = QtWidgets.QPushButton('Delete')
         self.delete_button.setIcon(QtGui.QIcon("gui/icons/delete.svg"))
+        self.vert_seperator1 = QtWidgets.QLabel(" ")
         self.save_button = QtWidgets.QPushButton('Save')
         self.save_button.setIcon(QtGui.QIcon("gui/icons/save.svg"))
+        self.save_as_button = QtWidgets.QPushButton('Save as')
+        self.save_as_button.setIcon(QtGui.QIcon("gui/icons/save.svg"))
+        self.vert_seperator2 = QtWidgets.QLabel(" ")
         self.save_button.setEnabled(False)
         self.name_text = ""
-        self.task_label = QtWidgets.QLabel('Task:')
+        self.task_label = QtWidgets.QLabel('Task')
         self.task_select = NestedMenu('select task',".py")
-        self.hardware_test_label = QtWidgets.QLabel('Hardware test:')
+        self.hardware_test_label = QtWidgets.QLabel('Hardware test')
         self.hardware_test_select = NestedMenu("no hardware test", ".py",add_default=True)
-        self.data_dir_label = QtWidgets.QLabel('Data directory:')
+        self.data_dir_label = QtWidgets.QLabel('Data directory')
         self.data_dir_text = QtWidgets.QLineEdit(get_setting("folders","data"))
         self.data_dir_button = QtWidgets.QPushButton('')
         self.data_dir_button.setIcon(QtGui.QIcon("gui/icons/folder.svg"))
@@ -64,17 +68,21 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.expbox_Hlayout_1.setStretchFactor(self.experiment_select, 2)
         self.expbox_Hlayout_1.addWidget(self.new_button)
         self.expbox_Hlayout_1.addWidget(self.delete_button)
+        self.expbox_Hlayout_1.addWidget(self.vert_seperator1)
+        self.expbox_Hlayout_1.addWidget(self.save_as_button)
         self.expbox_Hlayout_1.addWidget(self.save_button)
+        self.expbox_Hlayout_1.addWidget(self.vert_seperator2)
         self.expbox_Hlayout_1.addWidget(self.run_button)
-        self.expbox_Hlayout_2.addWidget(self.task_label)
-        self.expbox_Hlayout_2.addWidget(self.task_select)
-        self.expbox_Hlayout_2.addWidget(self.hardware_test_label)
-        self.expbox_Hlayout_2.addWidget(self.hardware_test_select)
-        self.expbox_Hlayout_2.addStretch()
-        self.expbox_Hlayout_3.addWidget(self.data_dir_label)
-        self.expbox_Hlayout_3.addWidget(self.data_dir_button)
-        self.expbox_Hlayout_3.addWidget(self.data_dir_text)
-        self.expbox_Hlayout_3.setStretchFactor(self.data_dir_text, 1)
+
+
+        self.expbox_Hlayout_2.addWidget(self.task_label,0,0,QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.expbox_Hlayout_2.addWidget(self.hardware_test_label,0,1,QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.expbox_Hlayout_2.addWidget(self.data_dir_label,0,2,1,2,QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.expbox_Hlayout_2.addWidget(self.task_select,1,0)
+        self.expbox_Hlayout_2.addWidget(self.hardware_test_select,1,1)
+        self.expbox_Hlayout_2.addWidget(self.data_dir_text,1,2)
+        self.expbox_Hlayout_2.addWidget(self.data_dir_button,1,3)
+        # self.expbox_Hlayout_2.setStretchFactor(self.data_dir_text, 1)
 
         # Subjects Groupbox
         self.subjects_groupbox = QtWidgets.QGroupBox('Subjects')
@@ -97,9 +105,10 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         # Connect signals.
         self.data_dir_text.textEdited.connect(lambda: setattr(self, 'custom_dir', True))
         self.data_dir_button.clicked.connect(self.select_data_dir)
-        self.new_button.clicked.connect(lambda: self.new_experiment(dialog=True))
+        self.new_button.clicked.connect(self.new_experiment)
         self.delete_button.clicked.connect(self.delete_experiment)
         self.save_button.clicked.connect(self.save_experiment)
+        self.save_as_button.clicked.connect(lambda: self.new_experiment(from_existing=True))
         self.run_button.clicked.connect(self.run_experiment)
 
         # Keyboard shortcuts
@@ -129,6 +138,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.data_dir_text.setEnabled(do_enable)
         self.run_button.setEnabled(do_enable)
         self.delete_button.setEnabled(do_enable)
+        self.save_as_button.setEnabled(do_enable)
 
     def select_data_dir(self):
         new_path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select data folder', get_setting("folders","data"))
@@ -185,13 +195,12 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.saved_exp_dict = self.experiment_dict()
         self.saved_exp_path = None
 
-    def new_experiment(self, dialog=True):
+    def new_experiment(self, from_existing=False):
         '''Clear experiment configuration.'''
-        if dialog:
-            if not self.save_dialog(): return
         savefilename = QtWidgets.QFileDialog.getSaveFileName(self, '', dirs['experiments'],("JSON files (*.json)"))[0]
         if savefilename != "":
-            self.reset()
+            if not from_existing:
+                self.reset()
             new_path = Path(savefilename)
             if str(new_path).find(dirs['experiments'])<0:
                 QtWidgets.QMessageBox.warning(
