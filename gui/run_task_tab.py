@@ -77,7 +77,7 @@ class Run_task_tab(QtWidgets.QWidget):
 
         self.data_dir_label = QtWidgets.QLabel("Data dir:")
         self.data_dir_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
-        self.data_dir_text = QtWidgets.QLineEdit(get_setting("folders","data"))
+        self.data_dir_text = QtWidgets.QLineEdit(get_setting("folders", "data"))
         self.data_dir_button = QtWidgets.QPushButton()
         self.data_dir_button.setIcon(QtGui.QIcon("gui/icons/folder.svg"))
         self.data_dir_button.setFixedWidth(30)
@@ -101,7 +101,7 @@ class Run_task_tab(QtWidgets.QWidget):
 
         self.task_groupbox = QtWidgets.QGroupBox("Task")
 
-        self.task_select = NestedMenu("select task",".py")
+        self.task_select = NestedMenu("select task", ".py")
         self.task_select.set_callback(self.task_changed)
         self.upload_button = QtWidgets.QPushButton("Upload")
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
@@ -144,7 +144,7 @@ class Run_task_tab(QtWidgets.QWidget):
         # Log text and task plots.
 
         self.log_textbox = QtWidgets.QTextEdit()
-        self.log_textbox.setFont(QtGui.QFont("Courier New", get_setting("GUI","log_font_size")))
+        self.log_textbox.setFont(QtGui.QFont("Courier New", get_setting("GUI", "log_font_size")))
         self.log_textbox.setReadOnly(True)
 
         self.task_plot = Task_plot()
@@ -221,12 +221,14 @@ class Run_task_tab(QtWidgets.QWidget):
                 self.board_select.addItems(["No setups found"])
                 self.connect_button.setEnabled(False)
         if self.GUI_main.available_tasks_changed:
-            self.task_select.update_menu(get_setting("folders","tasks"))
+            self.task_select.update_menu(get_setting("folders", "tasks"))
         if self.GUI_main.data_dir_changed and not self.custom_dir:
-            self.data_dir_text.setText(get_setting("folders","data"))
+            self.data_dir_text.setText(get_setting("folders", "data"))
         if self.task:
             try:
-                task_path = os.path.join(self.GUI_main.task_directory, self.task + ".py") #gets called frequently, so not using get_setting()
+                task_path = os.path.join(
+                    self.GUI_main.task_directory, self.task + ".py"
+                )  # gets called frequently, so not using get_setting()
                 if not self.task_hash == _djb2_file(task_path):  # Task file modified.
                     self.task_changed()
             except FileNotFoundError:
@@ -342,7 +344,9 @@ class Run_task_tab(QtWidgets.QWidget):
             self.status_text.setText("Error setting up state machine.")
 
     def select_data_dir(self):
-        new_path = QtWidgets.QFileDialog.getExistingDirectory(self, "Select data folder", get_setting("folders","data"))
+        new_path = QtWidgets.QFileDialog.getExistingDirectory(
+            self, "Select data folder", get_setting("folders", "data")
+        )
         if new_path:
             self.data_dir_text.setText(new_path)
             self.custom_dir = True
@@ -378,7 +382,7 @@ class Run_task_tab(QtWidgets.QWidget):
         if self.using_json_gui:
             self.variables_dialog.edit_action.setEnabled(False)
         self.print_to_log(f"\nRun started at: {datetime.now().strftime('%Y/%m/%d %H:%M:%S')}\n")
-        self.update_timer.start(get_setting("plotting","update_interval"))
+        self.update_timer.start(get_setting("plotting", "update_interval"))
         self.GUI_main.refresh_timer.stop()
         self.status_text.setText("Running: " + self.task)
         self.GUI_main.tab_widget.setTabEnabled(1, False)  # Disable experiments tab.
