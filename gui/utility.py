@@ -330,15 +330,12 @@ class NestedMenu(QtWidgets.QPushButton):
             subdirList.sort()
             sub_dir = dirName.split(root_folder)[1][1:]
             if sub_dir:
-                sub_dir_created = False
+                parent_menu = self.get_parent_menu(sub_dir)
+                sub_menu_name = sub_dir.split(os.path.sep)[-1]
+                sub_menu = parent_menu.addMenu(sub_menu_name)
+                self.submenus_dictionary[sub_dir] = sub_menu
                 for filename in sorted(fileList):
-                    if filename.endswith(self.file_extension): # we found files with the correct extension
-                        if not sub_dir_created: #create subdir menu now that we know there are files inside
-                            sub_dir_created = True
-                            parent_menu = self.get_parent_menu(sub_dir)
-                            sub_menu_name = sub_dir.split(os.path.sep)[-1]
-                            sub_menu = parent_menu.addMenu(sub_menu_name)
-                            self.submenus_dictionary[sub_dir] = sub_menu
+                    if filename.endswith(self.file_extension):
                         menuItem = filename[:-len(self.file_extension)]
                         sub_menu.addAction(menuItem,self.create_action(os.path.join(sub_dir,menuItem)))
             else: # add root level files
