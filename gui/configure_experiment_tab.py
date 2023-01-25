@@ -47,10 +47,10 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.delete_button = QtWidgets.QPushButton('Delete')
         self.delete_button.setIcon(QtGui.QIcon("gui/icons/delete.svg"))
         self.vert_seperator1 = QtWidgets.QLabel(" ")
+        self.save_as_button = QtWidgets.QPushButton('Save as')
+        self.save_as_button.setIcon(QtGui.QIcon("gui/icons/save_as.svg"))
         self.save_button = QtWidgets.QPushButton('Save')
         self.save_button.setIcon(QtGui.QIcon("gui/icons/save.svg"))
-        self.save_as_button = QtWidgets.QPushButton('Save as')
-        self.save_as_button.setIcon(QtGui.QIcon("gui/icons/save.svg"))
         self.vert_seperator2 = QtWidgets.QLabel(" ")
         self.save_button.setEnabled(False)
         self.name_text = ""
