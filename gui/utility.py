@@ -5,18 +5,17 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 # GUI utility functions, classes, variables.
 # --------------------------------------------------------------------------------
 
-variable_constants = {  #  Constants that can be used in setting the value of task variables.
-    "ms": 1,
-    "second": 1000,
-    "minute": 60000,
-    "hour": 3600000,
-}
+variable_constants = { #  Constants that can be used in setting the value of task variables.
+                        'ms'    : 1,
+                        'second': 1000,
+                        'minute': 60000,
+                        'hour'  : 3600000
+                     }
 
 # --------------------------------------------------------------------------------
 
-
 class TableCheckbox(QtWidgets.QWidget):
-    """Checkbox that is centered in cell when placed in table."""
+    '''Checkbox that is centered in cell when placed in table.'''
 
     def __init__(self, parent=None):
         super(QtWidgets.QWidget, self).__init__(parent)
@@ -24,7 +23,7 @@ class TableCheckbox(QtWidgets.QWidget):
         self.layout = QtWidgets.QHBoxLayout(self)
         self.layout.addWidget(self.checkbox)
         self.layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setContentsMargins(0,0,0,0)
 
     def isChecked(self):
         return self.checkbox.isChecked()
@@ -32,24 +31,21 @@ class TableCheckbox(QtWidgets.QWidget):
     def setChecked(self, state):
         self.checkbox.setChecked(state)
 
-
 # --------------------------------------------------------------------------------
 
-
 def cbox_update_options(cbox, options):
-    """Update the options available in a qcombobox without changing the selection."""
+    '''Update the options available in a qcombobox without changing the selection.'''
     selected = str(cbox.currentText())
-    available = sorted(list(set([selected] + options)))
+    available = sorted(list(set([selected]+options)))
     i = available.index(selected)
     cbox.clear()
     cbox.addItems(available)
     cbox.setCurrentIndex(i)
 
-
 def cbox_set_item(cbox, item_name, insert=False):
-    """Set the selected item in a combobox to the name provided.  If name is
-    not in item list returns False if insert is False or inserts item if insert
-    is True."""
+    '''Set the selected item in a combobox to the name provided.  If name is
+    not in item list returns False if insert is False or inserts item if insert 
+    is True.'''
     index = cbox.findText(item_name, QtCore.Qt.MatchFlag.MatchFixedString)
     if index >= 0:
         cbox.setCurrentIndex(index)
@@ -62,40 +58,34 @@ def cbox_set_item(cbox, item_name, insert=False):
         else:
             return False
 
-
 # --------------------------------------------------------------------------------
 
-
 def null_resize(widget):
-    """Call a widgets resize event with its current size.  Used when rows are added
-    by user to tables to prevent mangling of the table layout."""
+    '''Call a widgets resize event with its current size.  Used when rows are added
+    by user to tables to prevent mangling of the table layout.'''
     size = QtCore.QSize(widget.frameGeometry().width(), widget.frameGeometry().height())
     resize = QtGui.QResizeEvent(size, size)
     widget.resizeEvent(resize)
 
-
 # ----------------------------------------------------------------------------------
 
-
 def init_keyboard_shortcuts(widget, shortcut_dict):
-    """Initialises keyboard shortcuts in the qtgui object ‘widget’.
-    Shortcuts are defined in shortcut_dict where the keys are strings
-    of the keysequence and values are the action (e.g. a function call) to
-    execute when the keysequence is pressed."""
+    '''Initialises keyboard shortcuts in the qtgui object ‘widget’.
+       Shortcuts are defined in shortcut_dict where the keys are strings
+       of the keysequence and values are the action (e.g. a function call) to
+       execute when the keysequence is pressed.'''
     for key_str, action in shortcut_dict.items():
         key_seq = QtGui.QKeySequence(key_str)
         shortcut = QtGui.QShortcut(key_seq, widget, action)
-
 
 # ----------------------------------------------------------------------------------
 # Detachable Tab Widget
 # ----------------------------------------------------------------------------------
 
-
 class detachableTabWidget(QtWidgets.QTabWidget):
-    """The DetachableTabWidget adds functionality to QTabWidget that allows tabs to be
-    detached and re-attached. Tabs can be detached by dragging the tab away from the
-    tab bar or by double clicking the tab. Tabs are be re-attached by closing the
+    '''The DetachableTabWidget adds functionality to QTabWidget that allows tabs to be
+    detached and re-attached. Tabs can be detached by dragging the tab away from the 
+    tab bar or by double clicking the tab. Tabs are be re-attached by closing the 
     detached tab window. The original ordering of the tabs is preserved when they are
     re-attached.
 
@@ -104,7 +94,7 @@ class detachableTabWidget(QtWidgets.QTabWidget):
 
     Original by Stack Overflow user Blackwood.
     Adapted for PyQt5 by Stack Overflow user Bridgetjs.
-    """
+    '''
 
     def __init__(self, parent=None):
 
@@ -118,15 +108,15 @@ class detachableTabWidget(QtWidgets.QTabWidget):
         self.detachedTabs = {}
 
     def setMovable(self, movable):
-        """Disable default movable functionality of QTabWidget."""
+        '''Disable default movable functionality of QTabWidget.'''
         pass
 
     @QtCore.pyqtSlot(int, QtCore.QPoint)
     def detachTab(self, index, point):
-        """Detach the tab, creating a new DetachedTab window with the contents.
+        '''Detach the tab, creating a new DetachedTab window with the contents.
         - index:  index location of the tab to be detached
         - point:  screen position for creating the new DetachedTab window.
-        """
+        '''
         # Get the tab content
         name = self.tabText(index)
         contentWidget = self.widget(index)
@@ -148,19 +138,19 @@ class detachableTabWidget(QtWidgets.QTabWidget):
         self.detachedTabs[name] = detachedTab
 
     def addTab(self, contentWidget, name):
-        """Assign a rank to the tab equal to the number of tabs already added.
+        '''Assign a rank to the tab equal to the number of tabs already added.  
         Tabs are ordered by rank when re-attached.
-        """
+        '''
         contentWidget.rank = self.count()
         super(detachableTabWidget, self).addTab(contentWidget, name)
 
     def attachTab(self, contentWidget, name):
-        """Re-attach the tab by removing the content from the DetachedTab window,
-        closing it, and placing the content back into the DetachableTabWidget.
+        '''Re-attach the tab by removing the content from the DetachedTab window,
+        closing it, and placing the content back into the DetachableTabWidget.  
         The tab is inserted at the index needed to order the tabs by rank.
         - contentWidget : content widget from the DetachedTab window
         - name          : name of the detached tab
-        """
+        '''
         # Make the content widget a child of this widget
         contentWidget.setParent(self)
 
@@ -168,11 +158,12 @@ class detachableTabWidget(QtWidgets.QTabWidget):
         del self.detachedTabs[name]
 
         # Insert tab at correct location to order tabs by rank.
-        insertAt = sum([self.widget(i).rank < contentWidget.rank for i in range(self.count())])
+        insertAt = sum([self.widget(i).rank < contentWidget.rank
+                        for i in range(self.count())])
         self.insertTab(insertAt, contentWidget, name)
 
     def closeDetachedTabs(self):
-        """Close all tabs that are currently detached."""
+        '''Close all tabs that are currently detached.'''
         listOfDetachedTabs = []
 
         for key in self.detachedTabs:
@@ -183,10 +174,9 @@ class detachableTabWidget(QtWidgets.QTabWidget):
 
 
 class DetachedTab(QtWidgets.QMainWindow):
-    """When a tab is detached, the contents are placed into this QMainWindow.
+    '''When a tab is detached, the contents are placed into this QMainWindow.  
     The tab can be re-attached by closing the detached tab window.
-    """
-
+    '''
     onCloseSignal = QtCore.pyqtSignal(QtWidgets.QWidget, str)
 
     def __init__(self, name, contentWidget):
@@ -200,18 +190,17 @@ class DetachedTab(QtWidgets.QMainWindow):
         self.contentWidget.show()
 
     def closeEvent(self, event):
-        """If the window is closed, emit the onCloseSignal and give the content
+        '''If the window is closed, emit the onCloseSignal and give the content
         widget back to the DetachableTabWidget
         - event : a close event
-        """
+        '''
         self.onCloseSignal.emit(self.contentWidget, self.objectName())
 
 
 class TabBar(QtWidgets.QTabBar):
-    """The TabBar class re-implements some of the functionality of the QTabBar widget
+    '''The TabBar class re-implements some of the functionality of the QTabBar widget
     to detect drag events and double clicks, and cause them to detach the tab.
-    """
-
+    '''
     onDetachTabSignal = QtCore.pyqtSignal(int, QtCore.QPoint)
 
     def __init__(self, parent=None):
@@ -227,16 +216,16 @@ class TabBar(QtWidgets.QTabBar):
         self.dragInitiated = False
 
     def mouseDoubleClickEvent(self, event):
-        """Send the onDetachTabSignal when a tab is double clicked.
+        '''Send the onDetachTabSignal when a tab is double clicked.
         - event : a mouse double click event
-        """
+        '''
         event.accept()
         self.onDetachTabSignal.emit(self.tabAt(event.pos()), self.mouseCursor.pos())
 
     def mousePressEvent(self, event):
-        """Set the starting position for a drag event when the mouse button is pressed.
+        '''Set the starting position for a drag event when the mouse button is pressed.
         - event : a mouse press event.
-        """
+        '''
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
             self.dragStartPos = event.pos()
 
@@ -248,27 +237,19 @@ class TabBar(QtWidgets.QTabBar):
         QtWidgets.QTabBar.mousePressEvent(self, event)
 
     def mouseMoveEvent(self, event):
-        """If the current movement is a drag convert it into a QDrag. If the drag ends
+        '''If the current movement is a drag convert it into a QDrag. If the drag ends
         outside the tab bar emit an onDetachTabSignal.
         - event : a mouse move event.
-        """
+        '''
         # Determine if the current movement is detected as a drag
-        if not self.dragStartPos.isNull() and (
-            (event.pos() - self.dragStartPos).manhattanLength() < QtWidgets.QApplication.startDragDistance()
-        ):
+        if not self.dragStartPos.isNull() and ((event.pos() - self.dragStartPos).manhattanLength() < QtWidgets.QApplication.startDragDistance()):
             self.dragInitiated = True
 
         # If the current movement is a drag initiated by the left button
-        if ((event.buttons() & QtCore.Qt.MouseButton.LeftButton)) and self.dragInitiated:
+        if (((event.buttons() & QtCore.Qt.MouseButton.LeftButton)) and self.dragInitiated):
 
             # Stop the move event
-            finishMoveEvent = QtGui.QMouseEvent(
-                QtCore.QEvent.Type.MouseMove,
-                QtCore.QPointF(event.pos()),
-                QtCore.Qt.MouseButton.NoButton,
-                QtCore.Qt.MouseButton.NoButton,
-                QtCore.Qt.KeyboardModifier.NoModifier,
-            )
+            finishMoveEvent = QtGui.QMouseEvent(QtCore.QEvent.Type.MouseMove, QtCore.QPointF(event.pos()), QtCore.Qt.MouseButton.NoButton, QtCore.Qt.MouseButton.NoButton, QtCore.Qt.KeyboardModifier.NoModifier)
             QtWidgets.QTabBar.mouseMoveEvent(self, finishMoveEvent)
 
             # Convert the move event into a drag
@@ -298,32 +279,29 @@ class TabBar(QtWidgets.QTabBar):
             if dropAction == QtCore.Qt.DropAction.IgnoreAction:
                 event.accept()
                 self.onDetachTabSignal.emit(self.tabAt(self.dragStartPos), self.mouseCursor.pos())
-
+                
         else:
             QtWidgets.QTabBar.mouseMoveEvent(self, event)
 
     def dropEvent(self, event):
-        """Get the position of the end of the drag.
-        event : a drop event.
-        """
+        '''Get the position of the end of the drag.
+         event : a drop event.
+         '''
         self.dragDropedPos = event.pos()
         QtWidgets.QTabBar.dropEvent(self, event)
-
 
 # ----------------------------------------------------------------------------------
 # TaskSelectMenu
 # ----------------------------------------------------------------------------------
 
-
 class NestedMenu(QtWidgets.QPushButton):
-    """Nested menu used to select tasks. The menu items are the names of
-    any .py files in root_folder and it's sub-directories.  Items are
-    nested in the menu according to the sub-directory structure.
+    '''Nested menu used to select tasks. The menu items are the names of
+    any .py files in root_folder and it's sub-directories.  Items are 
+    nested in the menu according to the sub-directory structure. 
     initial_text is shown before anything is selected, and if add_default
     is True, initial_text is included as a menu option.
     Adapted from: https://stackoverflow.com/questions/35924235
-    """
-
+    '''
     def __init__(self, initial_text, file_extension, add_default=False):
         self.callback = lambda task: None
         self.root_menu = QtWidgets.QMenu()
@@ -332,22 +310,21 @@ class NestedMenu(QtWidgets.QPushButton):
         self.file_extension = file_extension
         super().__init__(initial_text)
 
-    def set_callback(self, callback_fxn):
+    def set_callback(self,callback_fxn):
         self.callback = callback_fxn
 
-    def create_action(self, text):
+    def create_action(self,text):
         def fxn():
             if self.text() != text:
                 self.callback(text)
                 self.setText(text)
-
         return fxn
 
     def update_menu(self, root_folder):
         self.root_menu.clear()
         self.submenus_dictionary = {}
         if self.add_default:
-            self.root_menu.addAction(self.default_text, self.create_action(self.default_text))
+            self.root_menu.addAction(self.default_text,self.create_action(self.default_text))
             self.root_menu.addSeparator()
         for dirName, subdirList, fileList in os.walk(root_folder):
             subdirList.sort()
@@ -359,89 +336,82 @@ class NestedMenu(QtWidgets.QPushButton):
                 self.submenus_dictionary[sub_dir] = sub_menu
                 for filename in sorted(fileList):
                     if filename.endswith(self.file_extension):
-                        menuItem = filename[: -len(self.file_extension)]
-                        sub_menu.addAction(menuItem, self.create_action(os.path.join(sub_dir, menuItem)))
-            else:  # add root level files
+                        menuItem = filename[:-len(self.file_extension)]
+                        sub_menu.addAction(menuItem,self.create_action(os.path.join(sub_dir,menuItem)))
+            else: # add root level files
                 for filename in sorted(fileList):
                     if filename.endswith(self.file_extension):
-                        menuItem = filename[: -len(self.file_extension)]
-                        self.root_menu.addAction(menuItem, self.create_action(menuItem))
+                        menuItem = filename[:-len(self.file_extension)]
+                        self.root_menu.addAction(menuItem,self.create_action(menuItem))
         self.setMenu(self.root_menu)
 
-    def get_parent_menu(self, sub_dir):
+    def get_parent_menu(self,sub_dir):
         split_folder = sub_dir.split(os.path.sep)
-        if len(split_folder) == 1:
+        if len(split_folder)==1:
             return self.root_menu
         else:
             return self.submenus_dictionary[os.path.sep.join(split_folder[:-1])]
-
 
 # ----------------------------------------------------------------------------------
 # Task Info
 # ----------------------------------------------------------------------------------
 
-
-class TaskInfo:
-    """Class for displaying the current state and most recent event and printed line.
+class TaskInfo():
+    '''Class for displaying the current state and most recent event and printed line.
     Instantiates the GUI elements and has their process data method, but does not
     handle layout of the elements.
-    """
+    '''
 
     def __init__(self):
-        self.state_label = QtWidgets.QLabel("State:")
-        self.state_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
-        self.state_text = QtWidgets.QLineEdit("")
+        self.state_label = QtWidgets.QLabel('State:')
+        self.state_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight|QtCore.Qt.AlignmentFlag.AlignVCenter)
+        self.state_text = QtWidgets.QLineEdit('')
         self.state_text.setReadOnly(True)
 
-        self.event_label = QtWidgets.QLabel("Event:")
-        self.event_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
-        self.event_text = QtWidgets.QLineEdit("")
+        self.event_label = QtWidgets.QLabel('Event:')
+        self.event_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight|QtCore.Qt.AlignmentFlag.AlignVCenter)
+        self.event_text = QtWidgets.QLineEdit('')
         self.event_text.setReadOnly(True)
 
-        self.print_label = QtWidgets.QLabel("Print:")
-        self.print_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
-        self.print_text = QtWidgets.QLineEdit("")
+        self.print_label = QtWidgets.QLabel('Print:')
+        self.print_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight|QtCore.Qt.AlignmentFlag.AlignVCenter)
+        self.print_text = QtWidgets.QLineEdit('')
         self.print_text.setReadOnly(True)
 
     def process_data(self, new_data):
-        """Update the state, event and print line info."""
+        '''Update the state, event and print line info.'''
         try:
-            new_state = next(
-                self.sm_info["ID2name"][nd[2]]
-                for nd in reversed(new_data)
-                if nd[0] == "D" and nd[2] in self.sm_info["states"].values()
-            )
+            new_state = next(self.sm_info['ID2name'][nd[2]] for nd in reversed(new_data)
+                if nd[0] == 'D' and nd[2] in self.sm_info['states'].values())
             self.state_text.setText(new_state)
             self.state_text.home(False)
         except StopIteration:
             pass
         try:
-            new_event = next(
-                self.sm_info["ID2name"][nd[2]]
-                for nd in reversed(new_data)
-                if nd[0] == "D" and nd[2] in self.sm_info["events"].values()
-            )
+            new_event = next(self.sm_info['ID2name'][nd[2]] for nd in reversed(new_data)
+                if nd[0] == 'D' and nd[2] in self.sm_info['events'].values())
             self.event_text.setText(new_event)
             self.event_text.home(False)
         except StopIteration:
             pass
         try:
-            new_print = next(nd[-1] for nd in reversed(new_data) if nd[0] == "P")
+            new_print = next(nd[-1] for nd in reversed(new_data) if nd[0] == 'P')
             self.print_text.setText(new_print)
-            self.print_text.setStyleSheet("color: black;")
+            self.print_text.setStyleSheet('color: black;')
             self.print_text.home(False)
         except StopIteration:
             pass
         try:
-            new_warning = next(nd[-1] for nd in reversed(new_data) if nd[0] == "!")
-            self.print_text.setText("! " + new_warning)
-            self.print_text.setStyleSheet("color: orange;")
+            new_warning = next(nd[-1] for nd in reversed(new_data) if nd[0] == '!')
+            self.print_text.setText('! ' + new_warning)
+            self.print_text.setStyleSheet('color: orange;')
             self.print_text.home(False)
         except StopIteration:
             pass
 
     def set_state_machine(self, sm_info):
         self.sm_info = sm_info
-        self.state_text.setText("")
-        self.event_text.setText("")
-        self.print_text.setText("")
+        self.state_text.setText('')
+        self.event_text.setText('')
+        self.print_text.setText('')
+
