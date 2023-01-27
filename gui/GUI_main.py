@@ -136,8 +136,8 @@ class GUI_main(QtWidgets.QMainWindow):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://github.com/pyControl/pyControl"))
 
     def get_nested_file_list(self,folder_to_walk,file_extension):
-        '''Return list of .json files in experiments folder and subfolders in format:
-        subdir_1/subdir_2/filename.extension'''
+        """Return list of files within a parent directory and subdirectories in the format:
+        subdir_1/subdir_2/filename.extension"""
         nested_files = []
         for (dirpath, dirnames, filenames) in os.walk(folder_to_walk):
             nested_files += [os.path.join(dirpath, file).split(folder_to_walk)[1][1:-len(file_extension)]
