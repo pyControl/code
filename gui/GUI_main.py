@@ -135,17 +135,14 @@ class GUI_main(QtWidgets.QMainWindow):
     def view_github(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://github.com/pyControl/pyControl"))
 
-    def get_task_file_list(self):
-        '''Return list of .py files in tasks folder and subfolders in format:
-        subdir_1/subdir_2/task_file_name.py'''
-        task_files = []
-        # this function gets called every second. Normally we would use get_setting("folder","tasks")
-        # but there is no need to constantly be rereading the user_settings.json file that isn't changing
-        # so we use this self.task_directory variable that is only updated when a new user settting is saved
-        for (dirpath, dirnames, filenames) in os.walk(self.task_directory):
-            task_files += [os.path.join(dirpath, file).split(self.task_directory)[1][1:-3]
-                           for file in filenames if file.endswith('.py')]
-        return task_files
+    def get_nested_file_list(self,folder_to_walk,file_extension):
+        """Return list of files within a parent directory and subdirectories in the format:
+        subdir_1/subdir_2/filename.extension"""
+        nested_files = []
+        for (dirpath, dirnames, filenames) in os.walk(folder_to_walk):
+            nested_files += [os.path.join(dirpath, file).split(folder_to_walk)[1][1:-len(file_extension)]
+                           for file in filenames if file.endswith(file_extension)]
+        return nested_files
 
     def pcx2json(self):
         """Converts legacy .pcx files to .json files"""
@@ -156,12 +153,15 @@ class GUI_main(QtWidgets.QMainWindow):
     def refresh(self):
         '''Called regularly when framework not running.'''
         # Scan task folder.
-        tasks = self.get_task_file_list()
+        # this function gets called every second. Normally we would use get_setting("folder","tasks")
+        # but there is no need to constantly be rereading the user_settings.json file that isn't changing
+        # so we use this self.task_directory variable that is only updated when a new user settting is saved
+        tasks = self.get_nested_file_list(self.task_directory,'.py')
         self.available_tasks_changed = tasks != self.available_tasks
         if self.available_tasks_changed:
             self.available_tasks = tasks
         # Scan experiments folder.
-        experiments = [exp_file.stem for exp_file in Path(dirs['experiments']).glob('*.json')]
+        experiments = self.get_nested_file_list(dirs['experiments'],'.json')
         self.available_experiments_changed = experiments != self.available_experiments
         if self.available_experiments_changed:
             self.available_experiments = experiments

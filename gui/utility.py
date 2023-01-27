@@ -294,7 +294,7 @@ class TabBar(QtWidgets.QTabBar):
 # TaskSelectMenu
 # ----------------------------------------------------------------------------------
 
-class TaskSelectMenu(QtWidgets.QPushButton):
+class NestedMenu(QtWidgets.QPushButton):
     '''Nested menu used to select tasks. The menu items are the names of
     any .py files in root_folder and it's sub-directories.  Items are 
     nested in the menu according to the sub-directory structure. 
@@ -302,11 +302,12 @@ class TaskSelectMenu(QtWidgets.QPushButton):
     is True, initial_text is included as a menu option.
     Adapted from: https://stackoverflow.com/questions/35924235
     '''
-    def __init__(self, initial_text, add_default=False):
+    def __init__(self, initial_text, file_extension, add_default=False):
         self.callback = lambda task: None
         self.root_menu = QtWidgets.QMenu()
         self.add_default = add_default
         self.default_text = initial_text
+        self.file_extension = file_extension
         super().__init__(initial_text)
 
     def set_callback(self,callback_fxn):
@@ -318,13 +319,13 @@ class TaskSelectMenu(QtWidgets.QPushButton):
                 self.callback(text)
                 self.setText(text)
         return fxn
-    
+
     def update_menu(self, root_folder):
         self.root_menu.clear()
         self.submenus_dictionary = {}
         if self.add_default:
             self.root_menu.addAction(self.default_text,self.create_action(self.default_text))
-            self.root_menu.addSeparator() 
+            self.root_menu.addSeparator()
         for dirName, subdirList, fileList in os.walk(root_folder):
             subdirList.sort()
             sub_dir = dirName.split(root_folder)[1][1:]
@@ -334,13 +335,13 @@ class TaskSelectMenu(QtWidgets.QPushButton):
                 sub_menu = parent_menu.addMenu(sub_menu_name)
                 self.submenus_dictionary[sub_dir] = sub_menu
                 for filename in sorted(fileList):
-                    if filename.endswith('.py'):
-                        menuItem = filename[:-3]
+                    if filename.endswith(self.file_extension):
+                        menuItem = filename[:-len(self.file_extension)]
                         sub_menu.addAction(menuItem,self.create_action(os.path.join(sub_dir,menuItem)))
             else: # add root level files
                 for filename in sorted(fileList):
-                    if filename.endswith('.py'):
-                        menuItem = filename[:-3]
+                    if filename.endswith(self.file_extension):
+                        menuItem = filename[:-len(self.file_extension)]
                         self.root_menu.addAction(menuItem,self.create_action(menuItem))
         self.setMenu(self.root_menu)
 
