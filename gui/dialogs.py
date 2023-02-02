@@ -261,6 +261,8 @@ class Keyboard_shortcuts_dialog(QtWidgets.QDialog):
             '<b><u>Global:</u></b>',
             '<b style="color:#0220e0;">Ctrl + t</b> : Open tasks folder',
             '<b style="color:#0220e0;">Ctrl + d</b> : Open data folder',
+            '<b style="color:#0220e0;">Ctrl + e</b> : Open error log',
+            '<b style="color:#0220e0;">Ctrl + ,</b> : Open settings',
 
             '<br></br><b><u>Run task tab:</u></b>',
             '<b style="color:#0220e0;">    t    </b> : Select task',
@@ -367,6 +369,8 @@ class Settings_dialog(QtWidgets.QDialog):
         self.setFixedSize(self.sizeHint())
         self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+W"), self)
         self.close_shortcut.activated.connect(self.close)
+        self.save_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
+        self.save_shortcut.activated.connect(self.saveChanges)
 
     def reset(self):
         """Resets values to whatever is saved in user_settings.json, or to default_user_settings if no user_settings.json exists"""
@@ -543,3 +547,33 @@ class Spin_setter:
 
     def get(self):
         return self.spn.value()
+
+
+# Error log dialog. ---------------------------------------------------------
+class Error_log_dialog(QtWidgets.QDialog):
+    def __init__(self, parent):
+        super(QtWidgets.QDialog, self).__init__(parent)
+        self.setWindowTitle("Error Log")
+
+        log_layout = QtWidgets.QVBoxLayout()
+        self.log_viewer = QtWidgets.QTextEdit()
+        log_layout.addWidget(self.log_viewer)
+
+        self.log_viewer.setMinimumWidth(800)
+        self.log_viewer.setMinimumHeight(800)
+        self.log_viewer.setReadOnly(True)
+        self.log_viewer.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+        self.setLayout(log_layout)
+
+        self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+W"), self)
+        self.close_shortcut.activated.connect(self.close)
+
+    def showEvent(self,event):
+        try:
+            with open("ErrorLog.txt", "r", encoding="utf-8") as reader:
+                text = reader.read()
+        except FileNotFoundError:
+            text = ""
+            with open("ErrorLog.txt", "w", encoding="utf-8") as f:
+                f.write(text)
+        self.log_viewer.setText(text)
