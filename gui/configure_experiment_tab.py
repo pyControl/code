@@ -27,81 +27,83 @@ class Configure_experiment_tab(QtWidgets.QWidget):
 
         # Experiment Groupbox
         self.experiment_groupbox = QtWidgets.QGroupBox('Experiment')
-        self.expbox_Vlayout = QtWidgets.QVBoxLayout(self.experiment_groupbox)
-        self.experiment_actions_layout = QtWidgets.QHBoxLayout()
-        self.separator = QtWidgets.QLabel("<hr>")
-        self.experiment_parameters_layout = QtWidgets.QGridLayout()
-        self.expbox_Vlayout.addLayout(self.experiment_actions_layout)
-        self.expbox_Vlayout.addWidget(self.separator)
-        self.expbox_Vlayout.addLayout(self.experiment_parameters_layout)
 
         self.experiment_select = NestedMenu('select experiment',".json")
         self.experiment_select.set_callback(self.experiment_changed)
 
         self.run_button = QtWidgets.QPushButton('Run')
         self.run_button.setIcon(QtGui.QIcon("gui/icons/run.svg"))
-        self.new_button = QtWidgets.QPushButton('New')
-        self.new_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+        new_button = QtWidgets.QPushButton('New')
+        new_button.setIcon(QtGui.QIcon("gui/icons/new_file.svg"))
         self.delete_button = QtWidgets.QPushButton('Delete')
         self.delete_button.setIcon(QtGui.QIcon("gui/icons/delete.svg"))
-        self.vert_seperator1 = QtWidgets.QLabel(" ")
         self.save_as_button = QtWidgets.QPushButton('Save as')
         self.save_as_button.setIcon(QtGui.QIcon("gui/icons/save_as.svg"))
         self.save_button = QtWidgets.QPushButton('Save')
         self.save_button.setIcon(QtGui.QIcon("gui/icons/save.svg"))
-        self.vert_seperator2 = QtWidgets.QLabel(" ")
         self.save_button.setEnabled(False)
         self.name_text = ""
-        self.task_label = QtWidgets.QLabel('Task')
+
+        experiment_actions_layout = QtWidgets.QHBoxLayout()
+        experiment_actions_layout.addWidget(self.experiment_select)
+        experiment_actions_layout.setStretchFactor(self.experiment_select, 2)
+        experiment_actions_layout.addWidget(new_button)
+        experiment_actions_layout.addWidget(self.delete_button)
+        experiment_actions_layout.addWidget(QtWidgets.QLabel(" "))
+        experiment_actions_layout.addWidget(self.save_as_button)
+        experiment_actions_layout.addWidget(self.save_button)
+        experiment_actions_layout.addWidget(QtWidgets.QLabel(" "))
+        experiment_actions_layout.addWidget(self.run_button)
+
+        task_label = QtWidgets.QLabel('Task')
         self.task_select = NestedMenu('select task',".py")
-        self.hardware_test_label = QtWidgets.QLabel('Hardware test')
+        hardware_test_label = QtWidgets.QLabel('Hardware test')
         self.hardware_test_select = NestedMenu("no hardware test", ".py",add_default=True)
-        self.data_dir_label = QtWidgets.QLabel('Data directory')
+        data_dir_label = QtWidgets.QLabel('Data directory')
         self.data_dir_text = QtWidgets.QLineEdit(get_setting("folders","data"))
-        self.data_dir_button = QtWidgets.QPushButton('')
-        self.data_dir_button.setIcon(QtGui.QIcon("gui/icons/folder.svg"))
-        self.data_dir_button.setFixedWidth(30)
+        data_dir_button = QtWidgets.QPushButton('')
+        data_dir_button.setIcon(QtGui.QIcon("gui/icons/folder.svg"))
+        data_dir_button.setFixedWidth(30)
 
-        self.experiment_actions_layout.addWidget(self.experiment_select)
-        self.experiment_actions_layout.setStretchFactor(self.experiment_select, 2)
-        self.experiment_actions_layout.addWidget(self.new_button)
-        self.experiment_actions_layout.addWidget(self.delete_button)
-        self.experiment_actions_layout.addWidget(self.vert_seperator1)
-        self.experiment_actions_layout.addWidget(self.save_as_button)
-        self.experiment_actions_layout.addWidget(self.save_button)
-        self.experiment_actions_layout.addWidget(self.vert_seperator2)
-        self.experiment_actions_layout.addWidget(self.run_button)
-
-        self.experiment_parameters_layout.addWidget(self.task_label,0,0,QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.experiment_parameters_layout.addWidget(self.hardware_test_label,0,1,QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.experiment_parameters_layout.addWidget(self.data_dir_label,0,2,1,2,QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.experiment_parameters_layout = QtWidgets.QGridLayout()
+        self.experiment_parameters_layout.addWidget(task_label,0,0,QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.experiment_parameters_layout.addWidget(hardware_test_label,0,1,QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.experiment_parameters_layout.addWidget(data_dir_label,0,2,1,2,QtCore.Qt.AlignmentFlag.AlignCenter)
         self.experiment_parameters_layout.addWidget(self.task_select,1,0)
         self.experiment_parameters_layout.addWidget(self.hardware_test_select,1,1)
         self.experiment_parameters_layout.addWidget(self.data_dir_text,1,2)
-        self.experiment_parameters_layout.addWidget(self.data_dir_button,1,3)
+        self.experiment_parameters_layout.addWidget(data_dir_button,1,3)
+
+        expbox_Vlayout = QtWidgets.QVBoxLayout(self.experiment_groupbox)
+        expbox_Vlayout.addLayout(experiment_actions_layout)
+        expbox_Vlayout.addWidget(QtWidgets.QLabel("<hr>"))
+        expbox_Vlayout.addLayout(self.experiment_parameters_layout)
+        self.experiment_groupbox.setMaximumWidth(get_setting("GUI","ui_max_width"))
 
         # Subjects Groupbox
         self.subjects_groupbox = QtWidgets.QGroupBox('Subjects')
-        self.subjectsbox_layout = QtWidgets.QGridLayout(self.subjects_groupbox)
+        subjectsbox_layout = QtWidgets.QGridLayout(self.subjects_groupbox)
         self.subset_warning_checkbox = QtWidgets.QCheckBox('Warn me if any subjects will not be run')
         self.subset_warning_checkbox.setChecked(True)
-        self.subjectsbox_layout.addWidget(self.subset_warning_checkbox,0,0)
+        subjectsbox_layout.addWidget(self.subset_warning_checkbox,0,0)
         self.subjects_table = SubjectsTable(self)
-        self.subjectsbox_layout.addWidget(self.subjects_table,1,0,1,2)
-        self.subjectsbox_layout.setColumnStretch(1,1)
+        subjectsbox_layout.addWidget(self.subjects_table,1,0,1,2)
+        subjectsbox_layout.setColumnStretch(1,1)
+        self.subjects_groupbox.setMaximumWidth(get_setting("GUI","ui_max_width"))
 
         # Variables Groupbox
         self.variables_groupbox = QtWidgets.QGroupBox('Variables')
-        self.variablesbox_layout = QtWidgets.QHBoxLayout(self.variables_groupbox)
+        variablesbox_layout = QtWidgets.QHBoxLayout(self.variables_groupbox)
         self.variables_table = VariablesTable(self)
         self.task_select.set_callback(self.variables_table.task_changed)
-        self.variablesbox_layout.addWidget(self.variables_table)
-
+        variablesbox_layout.addWidget(self.variables_table)
+        self.variables_groupbox.setMaximumWidth(get_setting("GUI","ui_max_width"))
+        
 
         # Connect signals.
         self.data_dir_text.textEdited.connect(lambda: setattr(self, 'custom_dir', True))
-        self.data_dir_button.clicked.connect(self.select_data_dir)
-        self.new_button.clicked.connect(self.new_experiment)
+        data_dir_button.clicked.connect(self.select_data_dir)
+        new_button.clicked.connect(self.new_experiment)
         self.delete_button.clicked.connect(self.delete_experiment)
         self.save_button.clicked.connect(self.save_experiment)
         self.save_as_button.clicked.connect(lambda: self.new_experiment(from_existing=True))
@@ -111,27 +113,64 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         shortcut_dict = {'Ctrl+s': self.save_experiment}
         init_keyboard_shortcuts(self, shortcut_dict)
 
-        # Main layout
-        self.vertical_layout = QtWidgets.QVBoxLayout(self)
-        self.vertical_layout.addWidget(self.experiment_groupbox)
-        self.vertical_layout.addWidget(self.subjects_groupbox)
-        self.vertical_layout.addWidget(self.variables_groupbox)
+        # # Main layout
+        self.configure_exp_layout = QtWidgets.QGridLayout()
+        self.configure_exp_layout.addWidget(self.experiment_groupbox,0,0)
+        self.configure_exp_layout.addWidget(self.subjects_groupbox,1,0)
+        self.configure_exp_layout.addWidget(self.variables_groupbox,2,0)
+        self.setLayout(self.configure_exp_layout)
 
         # Initialise variables.
         self.saved_exp_dict = self.experiment_dict()
 
         self.experiment_enable(False)
 
+    def adjust_to_small(self):
+        max_width = get_setting("GUI","ui_max_width")
+        for widget in [self.experiment_groupbox,self.subjects_groupbox,self.variables_groupbox]:
+            widget.setMaximumWidth(max_width)
+            widget.setMinimumWidth(0)
+
+        self.configure_exp_layout.addWidget(self.experiment_groupbox,0,0)
+        self.configure_exp_layout.addWidget(self.subjects_groupbox,1,0)
+        self.configure_exp_layout.addWidget(self.variables_groupbox,2,0)
+
+        self.configure_exp_layout.setColumnStretch(0,1)
+        self.configure_exp_layout.setColumnStretch(1,0)
+        self.configure_exp_layout.setColumnStretch(2,0)
+
+        self.configure_exp_layout.setRowStretch(1,1)
+        self.configure_exp_layout.setRowStretch(2,1)
+
+    def adjust_to_med(self):
+
+        for widget in [self.experiment_groupbox,self.subjects_groupbox,self.variables_groupbox]:
+            widget.setMinimumWidth(get_setting("GUI","ui_max_width"))
+
+        self.configure_exp_layout.addWidget(self.experiment_groupbox,0,0)
+        self.configure_exp_layout.addWidget(self.subjects_groupbox,1,0)
+        self.configure_exp_layout.addWidget(self.variables_groupbox,2,0)
+
+        self.configure_exp_layout.setColumnStretch(1,1)
+        self.configure_exp_layout.setColumnStretch(2,0)
+        
+        self.configure_exp_layout.setRowStretch(1,1)
+        self.configure_exp_layout.setRowStretch(2,1)
+
+    def adjust_to_large(self):
+        self.configure_exp_layout.addWidget(self.experiment_groupbox,0,0)
+        self.configure_exp_layout.addWidget(self.subjects_groupbox,1,0,2,1)
+        self.configure_exp_layout.addWidget(self.variables_groupbox,0,1,3,1)
+
+        self.configure_exp_layout.setColumnStretch(2,1)
+        
+        self.configure_exp_layout.setRowStretch(1,1)
+
+
     def experiment_enable(self,do_enable=True):
         self.subjects_groupbox.setEnabled(do_enable)
         self.variables_groupbox.setEnabled(do_enable)
-        self.task_label.setEnabled(do_enable)
-        self.task_select.setEnabled(do_enable)
-        self.hardware_test_label.setEnabled(do_enable)
-        self.hardware_test_select.setEnabled(do_enable)
-        self.data_dir_label.setEnabled(do_enable)
-        self.data_dir_button.setEnabled(do_enable)
-        self.data_dir_text.setEnabled(do_enable)
+        self.experiment_parameters_layout.setEnabled(do_enable)
         self.run_button.setEnabled(do_enable)
         self.delete_button.setEnabled(do_enable)
         self.save_as_button.setEnabled(do_enable)
@@ -391,6 +430,7 @@ class SubjectsTable(QtWidgets.QTableWidget):
     def __init__(self, parent=None):
         super(QtWidgets.QTableWidget, self).__init__(1,4, parent=parent)
         self.setHorizontalHeaderLabels(['Run','Setup', 'Subject', ''])
+        self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.horizontalHeader().setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)

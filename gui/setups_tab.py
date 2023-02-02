@@ -1,11 +1,9 @@
 import os
 import json
-
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-
-from gui.settings import dirs
-from com.pycboard import Pycboard, PyboardError
+from gui.settings import dirs, get_setting
 from gui.utility import TableCheckbox
+from com.pycboard import Pycboard, PyboardError
 
 class Setups_tab(QtWidgets.QWidget):
     '''The setups tab is used to name and configure setups, where one setup is one
@@ -15,14 +13,12 @@ class Setups_tab(QtWidgets.QWidget):
         super(QtWidgets.QWidget, self).__init__(parent)
 
         # Variables
-
         self.GUI_main = self.parent()
         self.setups = {} # Dictionary {serial_port:Setup}
         self.setup_names = []
         self.available_setups_changed = False
 
         # Load saved setup names.
-
         self.save_path = os.path.join(dirs['config'], 'setup_names.json')
         if os.path.exists(self.save_path):
             with open(self.save_path, 'r') as f:
@@ -31,85 +27,155 @@ class Setups_tab(QtWidgets.QWidget):
             self.saved_names = {} # {setup.port:setup.name}
 
         # Select setups group box.
+        self.setup_groupbox = QtWidgets.QGroupBox("Setups")
 
-        self.select_groupbox = QtWidgets.QGroupBox('Setups')
-
-        self.select_all_button = QtWidgets.QPushButton('Select all')
-        self.select_all_button.setIcon(QtGui.QIcon("gui/icons/checkbox_checked.svg"))
-        self.deselect_all_button = QtWidgets.QPushButton('Deselect all')
-        self.deselect_all_button.setIcon(QtGui.QIcon("gui/icons/checkbox_empty.svg"))
-
-        self.select_all_button.clicked.connect(self.select_all_setups)
-        self.deselect_all_button.clicked.connect(self.deselect_all_setups)
+        self.select_all_checkbox = QtWidgets.QCheckBox("Select all")
+        self.select_all_checkbox.stateChanged.connect(self.select_all_setups)
 
         self.setups_table = QtWidgets.QTableWidget(0, 4, parent=self)
-        self.setups_table.setHorizontalHeaderLabels(['Serial port', 'Name', 'Select', 'Configure'])
-        self.setups_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.setups_table.setHorizontalHeaderLabels(["Select", "Serial port", "Name", "Firmware Update"])
+        self.setups_table.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        self.setups_table.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        self.setups_table.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.setups_table.horizontalHeader().setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.setups_table.verticalHeader().setVisible(False)
-        self.setups_table.itemChanged.connect(
-            lambda item: item.changed() if hasattr(item, 'changed') else None)
+        self.setups_table.itemChanged.connect(lambda item: item.changed() if hasattr(item, "changed") else None)
 
-        self.select_Hlayout = QtWidgets.QHBoxLayout()
-        self.select_Hlayout.addWidget(self.select_all_button)
-        self.select_Hlayout.addWidget(self.deselect_all_button)
-        self.select_Vlayout = QtWidgets.QVBoxLayout(self.select_groupbox)
+        # Configuration buttons
+        self.configure_group = QtWidgets.QGroupBox("Configure selected")
+        load_fw_button = QtWidgets.QPushButton("Load framework")
+        load_fw_button.setIcon(QtGui.QIcon("gui/icons/upload.svg"))
+        load_hw_button = QtWidgets.QPushButton("Load hardware definition")
+        load_hw_button.setIcon(QtGui.QIcon("gui/icons/upload.svg"))
+        enable_flashdrive_button = QtWidgets.QPushButton("Enable flashdrive")
+        enable_flashdrive_button.setIcon(QtGui.QIcon("gui/icons/enable.svg"))
+        disable_flashdrive_button = QtWidgets.QPushButton("Disable flashdrive")
+        disable_flashdrive_button.setIcon(QtGui.QIcon("gui/icons/disable.svg"))
+        load_fw_button.clicked.connect(self.load_framework)
+        load_hw_button.clicked.connect(self.load_hardware_definition)
+        enable_flashdrive_button.clicked.connect(self.enable_flashdrive)
+        disable_flashdrive_button.clicked.connect(self.disable_flashdrive)
 
-        self.select_Vlayout.addLayout(self.select_Hlayout)
-        self.select_Vlayout.addWidget(self.setups_table)
+        config_layout = QtWidgets.QGridLayout()
+        config_layout.addWidget(load_fw_button, 0, 0)
+        config_layout.addWidget(load_hw_button, 0, 1)
+        config_layout.addWidget(enable_flashdrive_button, 0, 2)
+        config_layout.addWidget(disable_flashdrive_button, 0, 3)
+        config_layout.setColumnStretch(6, 1)
+        self.configure_group.setLayout(config_layout)
+        self.configure_group.setEnabled(False)
 
-        # Configure groupbox.
-
-        self.configure_groupbox = QtWidgets.QGroupBox('Configure selected')
-        self.configure_groupbox.setEnabled(False)
-
-        self.load_fw_button = QtWidgets.QPushButton('Load framework')
-        self.load_hw_button = QtWidgets.QPushButton('Load hardware definition')
-        self.enable_flashdrive_button = QtWidgets.QPushButton('Enable flashdrive')
-        self.disable_flashdrive_button = QtWidgets.QPushButton('Disable flashdrive')
-
-        self.load_fw_button.clicked.connect(self.load_framework)
-        self.load_hw_button.clicked.connect(self.load_hardware_definition)
-        self.enable_flashdrive_button.clicked.connect(self.enable_flashdrive)
-        self.disable_flashdrive_button.clicked.connect(self.disable_flashdrive)
-
-        self.config_layout = QtWidgets.QHBoxLayout(self.configure_groupbox)
-        self.config_layout.addWidget(self.load_fw_button)
-        self.config_layout.addWidget(self.load_hw_button)
-        self.config_layout.addWidget(self.enable_flashdrive_button)
-        self.config_layout.addWidget(self.disable_flashdrive_button)
+        select_layout = QtWidgets.QGridLayout()
+        select_layout.addWidget(self.select_all_checkbox, 0, 0)
+        select_layout.addWidget(self.setups_table, 1, 0, 1, 6)
+        self.setup_groupbox.setLayout(select_layout)
 
         # Log textbox.
-
         self.log_textbox = QtWidgets.QTextEdit()
         self.log_textbox.setMinimumHeight(180)
-        self.log_textbox.setFont(QtGui.QFont('Courier', 9))
+        self.log_textbox.setFont(QtGui.QFont("Courier", get_setting("GUI", "log_font_size")))
         self.log_textbox.setReadOnly(True)
+        self.log_textbox.setPlaceholderText("pyControl output")
 
-        # Main layout.
+        # Clear log
+        self.clear_output_btn = QtWidgets.QPushButton("Clear output")
+        self.clear_output_btn.clicked.connect(self.log_textbox.clear)
 
-        self.VLayout = QtWidgets.QVBoxLayout(self)
-        self.VLayout.addWidget(self.select_groupbox)
-        self.VLayout.addWidget(self.configure_groupbox)
-        self.VLayout.addWidget(self.log_textbox)
+        # # Main layout.
+        self.setups_layout = QtWidgets.QGridLayout()
+        self.setups_layout.addWidget(self.setup_groupbox,0,0)
+        self.setups_layout.addWidget(self.configure_group,1,0)
+        self.setups_layout.addWidget(self.log_textbox,2,0)
+        self.setups_layout.addWidget(self.clear_output_btn,3,0,QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.setups_layout.setRowStretch(0,1)
+        self.setups_layout.setRowStretch(2,1)
+        self.setLayout(self.setups_layout)
 
-    def print_to_log(self, print_string, end='\n'):
+
+    def adjust_to_small(self):
+        max_width = get_setting("GUI","ui_max_width")
+        for widget in [self.setup_groupbox,self.configure_group,self.log_textbox]:
+            widget.setMaximumWidth(max_width)
+            widget.setMinimumWidth(0)
+
+        self.setups_layout.addWidget(self.setup_groupbox,0,0)
+        self.setups_layout.addWidget(self.configure_group,1,0)
+        self.setups_layout.addWidget(self.log_textbox,2,0)
+        self.setups_layout.addWidget(self.clear_output_btn,3,0,QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        self.setups_layout.setColumnStretch(0,1)
+        self.setups_layout.setColumnStretch(1,0)
+        self.setups_layout.setColumnStretch(2,0)
+
+        self.setups_layout.setRowStretch(0,1)
+        self.setups_layout.setRowStretch(2,1)
+
+
+    def adjust_to_med(self):
+        for widget in [self.setup_groupbox,self.configure_group,self.log_textbox]:
+            widget.setMinimumWidth(get_setting("GUI","ui_max_width"))
+
+        self.setups_layout.addWidget(self.setup_groupbox,0,0)
+        self.setups_layout.addWidget(self.configure_group,1,0)
+        self.setups_layout.addWidget(self.log_textbox,2,0)
+        self.setups_layout.addWidget(self.clear_output_btn,3,0,QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        self.setups_layout.setColumnStretch(1,1)
+        self.setups_layout.setColumnStretch(2,0)
+
+        self.setups_layout.setRowStretch(0,1)
+        self.setups_layout.setRowStretch(2,1)
+
+    def adjust_to_large(self):
+        self.setups_layout.addWidget(self.setup_groupbox,0,0,4,1)
+        self.setups_layout.addWidget(self.configure_group,0,1)
+        self.setups_layout.addWidget(self.log_textbox,1,1,2,1)
+        self.setups_layout.addWidget(self.clear_output_btn,3,1,QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        self.setups_layout.setColumnStretch(2,1)
+
+        self.setups_layout.setRowStretch(0,0)
+        self.setups_layout.setRowStretch(2,1)
+
+    def print_to_log(self, print_string, end="\n"):
         self.log_textbox.moveCursor(QtGui.QTextCursor.MoveOperation.End)
-        self.log_textbox.insertPlainText(print_string+end)
+        self.log_textbox.insertPlainText(print_string + end)
         self.log_textbox.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         self.GUI_main.app.processEvents()
 
     def select_all_setups(self):
-        for setup in self.setups.values():
-            setup.select_checkbox.setChecked(True)
+        if self.select_all_checkbox.isChecked():
+            for setup in self.setups.values():
+                setup.signal_from_rowcheck = False
+                setup.select_checkbox.setChecked(True)
+                setup.signal_from_rowcheck = True
+        else:
+            for setup in self.setups.values():
+                setup.signal_from_rowcheck = False
+                setup.select_checkbox.setChecked(False)
+                setup.signal_from_rowcheck = True
+        self.multi_config_enable()
 
-    def deselect_all_setups(self):
+    def multi_config_enable(self):
+        self.select_all_checkbox.blockSignals(True)
+        num_checked = 0
         for setup in self.setups.values():
-            setup.select_checkbox.setChecked(False)
+            if setup.select_checkbox.isChecked():
+                num_checked += 1
+        if num_checked > 0:
+            self.configure_group.setEnabled(True)
+            if num_checked < len(self.setups.values()):  # some selected
+                self.select_all_checkbox.setChecked(False)
+            else:  # all selected
+                self.select_all_checkbox.setChecked(True)
+        else:  # none selected
+            self.select_all_checkbox.setChecked(False)
+            self.configure_group.setEnabled(False)
+        self.select_all_checkbox.blockSignals(False)
 
     def update_available_setups(self):
-        '''Called when boards are plugged, unplugged or renamed.'''
-        setup_names =  sorted([setup.name for setup in self.setups.values()
-                               if setup.name != '_hidden_'])
+        """Called when boards are plugged, unplugged or renamed."""
+        setup_names = sorted([setup.name for setup in self.setups.values() if setup.name != "_hidden_"])
         if setup_names != self.setup_names:
             self.available_setups_changed = True
             self.setup_names = setup_names
@@ -206,23 +272,21 @@ class Setup():
             self.name_item.setText(self.name)
 
         self.select_checkbox = TableCheckbox()
-        self.config_button = QtWidgets.QPushButton('Configure')
-        self.config_button.setIcon(QtGui.QIcon("gui/icons/settings.svg"))
-        self.config_button.clicked.connect(self.open_config_dialog)
+        dfu_btn = QtWidgets.QPushButton("DFU mode")
+        dfu_btn.setIcon(QtGui.QIcon("gui/icons/wrench.svg"))
+        dfu_btn.clicked.connect(self.DFU_mode)
 
         self.setups_tab.setups_table.insertRow(0)
-        self.setups_tab.setups_table.setItem(0, 0, self.port_item)
-        self.setups_tab.setups_table.setItem(0, 1, self.name_item)
-        self.setups_tab.setups_table.setCellWidget(0, 2, self.select_checkbox)
-        self.setups_tab.setups_table.setCellWidget(0, 3, self.config_button)
+        self.setups_tab.setups_table.setCellWidget(0, 0, self.select_checkbox)
+        self.setups_tab.setups_table.setItem(0, 1, self.port_item)
+        self.setups_tab.setups_table.setItem(0, 2, self.name_item)
+        self.setups_tab.setups_table.setCellWidget(0, 3, dfu_btn)
+        self.select_checkbox.checkbox.stateChanged.connect(self.checkbox_handler)
+        self.signal_from_rowcheck = True
 
-        self.select_checkbox.checkbox.stateChanged.connect(self.multi_config_enable)
-
-    def multi_config_enable(self):
-        self.setups_tab.configure_groupbox.setEnabled(False)
-        for setup in self.setups_tab.setups.values():
-            if setup.select_checkbox.isChecked():
-                self.setups_tab.configure_groupbox.setEnabled(True)
+    def checkbox_handler(self):
+        if self.signal_from_rowcheck:
+            self.setups_tab.multi_config_enable()
 
     def name_edited(self):
         '''If name entry in table is blank setup name is set to serial port.'''
@@ -230,14 +294,6 @@ class Setup():
         self.name = name if name else self.port
         self.setups_tab.update_available_setups()
         self.setups_tab.update_saved_setups(self)
-
-    def open_config_dialog(self):
-        '''Open the config dialog and update board status as required.'''
-        if not self.board: self.connect()
-        if self.board:
-            self.setups_tab.GUI_main.config_dialog.exec(self.board)
-            if self.setups_tab.GUI_main.config_dialog.disconnect:
-                self.disconnect()
 
     def print(self, print_string):
         ''' Print a string to the log prepended with the setup name.'''
@@ -252,7 +308,6 @@ class Setup():
             self.print('Unable to connect.')
 
     def disconnect(self):
-        
         if self.board:
             self.board.close()
             self.board = None
@@ -276,7 +331,17 @@ class Setup():
             self.print('Loading hardware definition.')
             self.board.load_hardware_definition(hwd_path)
 
+    def DFU_mode(self):
+        """Enter DFU mode"""
+        self.select_checkbox.setChecked(False)
+        if not self.board:
+            self.connect()
+        if self.board:
+            self.board.DFU_mode()
+            self.board.close()
+
     def enable_flashdrive(self):
+        self.select_checkbox.setChecked(False)
         if not self.board: self.connect()
         if self.board:
             self.print('Enabling flashdrive.')
@@ -285,6 +350,7 @@ class Setup():
             self.board = None
 
     def disable_flashdrive(self):
+        self.select_checkbox.setChecked(False)
         if not self.board: self.connect()
         if self.board:
             self.print('Disabling flashdrive.')

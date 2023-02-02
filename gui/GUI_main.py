@@ -201,6 +201,21 @@ class GUI_main(QtWidgets.QMainWindow):
             self.tab_widget.currentWidget().excepthook(ex_type, ex_value, ex_traceback)
         logging.error(''.join(traceback.format_exception(ex_type, ex_value, ex_traceback)))
 
+    def resizeEvent(self, event):
+        if self.width() > 2* get_setting("GUI","ui_max_width")+30: 
+            self.run_task_tab.adjust_to_large()
+            self.configure_experiment_tab.adjust_to_large()
+            self.setups_tab.adjust_to_large()
+        elif self.width() > get_setting("GUI","ui_max_width")+ 30: 
+            self.run_task_tab.adjust_to_med()
+            self.configure_experiment_tab.adjust_to_med()
+            self.setups_tab.adjust_to_med()
+        else:
+            self.run_task_tab.adjust_to_small()
+            self.configure_experiment_tab.adjust_to_small()
+            self.setups_tab.adjust_to_small()
+
+
 # --------------------------------------------------------------------------------
 # Launch GUI.
 # --------------------------------------------------------------------------------
