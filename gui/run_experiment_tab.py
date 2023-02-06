@@ -31,7 +31,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.name_text  = QtWidgets.QLineEdit()
         self.name_text.setReadOnly(True)
         self.plots_button =  QtWidgets.QPushButton('Show plots')
-        self.plots_button.setIcon(QtGui.QIcon("gui/icons/line-chart.svg"))
+        self.plots_button.setIcon(QtGui.QIcon("gui/icons/bar-graph.svg"))
         self.plots_button.clicked.connect(self.experiment_plot.show)
         self.logs_button = QtWidgets.QPushButton('Hide logs')
         self.logs_button.clicked.connect(self.show_hide_logs)

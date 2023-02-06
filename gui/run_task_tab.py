@@ -103,7 +103,7 @@ class Run_task_tab(QtWidgets.QWidget):
         self.task_select = NestedMenu("select task",".py")
         self.task_select.set_callback(self.task_changed)
         self.upload_button = QtWidgets.QPushButton("Upload")
-        self.upload_button.setIcon(QtGui.QIcon("gui/icons/upload.svg"))
+        self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
         self.variables_button = QtWidgets.QPushButton("Variables")
         self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
 
@@ -336,7 +336,7 @@ class Run_task_tab(QtWidgets.QWidget):
     def task_changed(self, *args):
         self.uploaded = False
         self.upload_button.setText("Upload")
-        self.upload_button.setIcon(QtGui.QIcon("gui/icons/upload.svg"))
+        self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
         self.start_button.setEnabled(False)
         self.variables_button.setEnabled(False)
 

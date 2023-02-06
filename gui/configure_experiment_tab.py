@@ -34,7 +34,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.run_button = QtWidgets.QPushButton('Run')
         self.run_button.setIcon(QtGui.QIcon("gui/icons/run.svg"))
         new_button = QtWidgets.QPushButton('New')
-        new_button.setIcon(QtGui.QIcon("gui/icons/new_file.svg"))
+        new_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
         self.delete_button = QtWidgets.QPushButton('Delete')
         self.delete_button.setIcon(QtGui.QIcon("gui/icons/delete.svg"))
         self.save_as_button = QtWidgets.QPushButton('Save as')
