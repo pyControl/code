@@ -92,7 +92,7 @@ class GUI_main(QtWidgets.QMainWindow):
         # View error log
         error_log_action = QtGui.QAction("&Error log", self)
         error_log_action.setShortcut("Ctrl+E")
-        error_log_action.triggered.connect(self.error_log_dialog.exec)
+        error_log_action.triggered.connect(self.show_error_log)
         view_menu.addAction(error_log_action)
         ## --------Settings menu--------
         settings_menu = main_menu.addMenu('Settings')
@@ -141,6 +141,20 @@ class GUI_main(QtWidgets.QMainWindow):
 
     def view_github(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://github.com/pyControl/pyControl"))
+    
+    def show_error_log(self):
+        try:
+            with open("ErrorLog.txt", "r", encoding="utf-8") as reader:
+                text = reader.read()
+            self.error_log_dialog.log_viewer.setText(text)
+            self.error_log_dialog.exec()
+        except FileNotFoundError:
+            QtWidgets.QMessageBox.information(
+                self,
+                "No error log",
+                f"You have no errors",
+                QtWidgets.QMessageBox.StandardButton.Ok,
+            )
 
     def get_nested_file_list(self,folder_to_walk,file_extension):
         """Return list of files within a parent directory and subdirectories in the format:
