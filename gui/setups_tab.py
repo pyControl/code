@@ -32,12 +32,11 @@ class Setups_tab(QtWidgets.QWidget):
         self.select_all_checkbox = QtWidgets.QCheckBox("Select all")
         self.select_all_checkbox.stateChanged.connect(self.select_all_setups)
 
-        self.setups_table = QtWidgets.QTableWidget(0, 4, parent=self)
-        self.setups_table.setHorizontalHeaderLabels(["Select", "Serial port", "Name", "Firmware Update"])
+        self.setups_table = QtWidgets.QTableWidget(0, 3, parent=self)
+        self.setups_table.setHorizontalHeaderLabels(["Select", "Serial port", "Name"])
         self.setups_table.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.setups_table.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.setups_table.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.setups_table.horizontalHeader().setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.setups_table.verticalHeader().setVisible(False)
         self.setups_table.itemChanged.connect(lambda item: item.changed() if hasattr(item, "changed") else None)
 
@@ -55,13 +54,16 @@ class Setups_tab(QtWidgets.QWidget):
         load_hw_button.clicked.connect(self.load_hardware_definition)
         enable_flashdrive_button.clicked.connect(self.enable_flashdrive)
         disable_flashdrive_button.clicked.connect(self.disable_flashdrive)
+        self.dfu_btn = QtWidgets.QPushButton("DFU mode")
+        self.dfu_btn.setIcon(QtGui.QIcon("gui/icons/wrench.svg"))
+        self.dfu_btn.clicked.connect(self.DFU_mode)
 
-        config_layout = QtWidgets.QGridLayout()
-        config_layout.addWidget(load_fw_button, 0, 0)
-        config_layout.addWidget(load_hw_button, 0, 1)
-        config_layout.addWidget(enable_flashdrive_button, 0, 2)
-        config_layout.addWidget(disable_flashdrive_button, 0, 3)
-        config_layout.setColumnStretch(6, 1)
+        config_layout = QtWidgets.QHBoxLayout()
+        config_layout.addWidget(load_fw_button)
+        config_layout.addWidget(load_hw_button)
+        config_layout.addWidget(enable_flashdrive_button)
+        config_layout.addWidget(disable_flashdrive_button)
+        config_layout.addWidget(self.dfu_btn)
         self.configure_group.setLayout(config_layout)
         self.configure_group.setEnabled(False)
 
@@ -162,6 +164,10 @@ class Setups_tab(QtWidgets.QWidget):
         for setup in self.setups.values():
             if setup.select_checkbox.isChecked():
                 num_checked += 1
+        if num_checked == 1:
+            self.dfu_btn.setEnabled(True)
+        else:
+            self.dfu_btn.setEnabled(False)
         if num_checked > 0:
             self.configure_group.setEnabled(True)
             if num_checked < len(self.setups.values()):  # some selected
@@ -179,6 +185,7 @@ class Setups_tab(QtWidgets.QWidget):
         if setup_names != self.setup_names:
             self.available_setups_changed = True
             self.setup_names = setup_names
+            self.multi_config_enable()
         else:
             self.available_setups_changed = False
 
@@ -223,6 +230,10 @@ class Setups_tab(QtWidgets.QWidget):
     def disable_flashdrive(self):
         for setup in self.get_selected_setups():
             setup.disable_flashdrive()
+
+    def DFU_mode(self):
+        for setup in self.get_selected_setups():
+            setup.DFU_mode()
 
     def load_hardware_definition(self):
         hwd_path = QtWidgets.QFileDialog.getOpenFileName(self,
@@ -272,15 +283,10 @@ class Setup():
             self.name_item.setText(self.name)
 
         self.select_checkbox = TableCheckbox()
-        dfu_btn = QtWidgets.QPushButton("DFU mode")
-        dfu_btn.setIcon(QtGui.QIcon("gui/icons/wrench.svg"))
-        dfu_btn.clicked.connect(self.DFU_mode)
-
         self.setups_tab.setups_table.insertRow(0)
         self.setups_tab.setups_table.setCellWidget(0, 0, self.select_checkbox)
         self.setups_tab.setups_table.setItem(0, 1, self.port_item)
         self.setups_tab.setups_table.setItem(0, 2, self.name_item)
-        self.setups_tab.setups_table.setCellWidget(0, 3, dfu_btn)
         self.select_checkbox.checkbox.stateChanged.connect(self.checkbox_handler)
         self.signal_from_rowcheck = True
 
