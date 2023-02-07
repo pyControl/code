@@ -291,13 +291,13 @@ class TabBar(QtWidgets.QTabBar):
         QtWidgets.QTabBar.dropEvent(self, event)
 
 # ----------------------------------------------------------------------------------
-# TaskSelectMenu
+# Nested Menu
 # ----------------------------------------------------------------------------------
 
 class NestedMenu(QtWidgets.QPushButton):
-    '''Nested menu used to select tasks. The menu items are the names of
-    any .py files in root_folder and it's sub-directories.  Items are 
-    nested in the menu according to the sub-directory structure. 
+    '''Nested menu dropdown used to select files. The menu items are the names of
+    any files of a specified extension in the root_folder and it's sub-directories.  
+    Items are nested in the menu according to the sub-directory structure. 
     initial_text is shown before anything is selected, and if add_default
     is True, initial_text is included as a menu option.
     Adapted from: https://stackoverflow.com/questions/35924235
