@@ -94,51 +94,6 @@ class Setups_tab(QtWidgets.QWidget):
         self.setLayout(self.setups_layout)
 
 
-    def adjust_to_small(self):
-        max_width = get_setting("GUI","ui_max_width")
-        for widget in [self.setup_groupbox,self.configure_group,self.log_textbox]:
-            widget.setMaximumWidth(max_width)
-            widget.setMinimumWidth(0)
-
-        self.setups_layout.addWidget(self.setup_groupbox,0,0)
-        self.setups_layout.addWidget(self.configure_group,1,0)
-        self.setups_layout.addWidget(self.log_textbox,2,0)
-        self.setups_layout.addWidget(self.clear_output_btn,3,0,QtCore.Qt.AlignmentFlag.AlignCenter)
-
-        self.setups_layout.setColumnStretch(0,1)
-        self.setups_layout.setColumnStretch(1,0)
-        self.setups_layout.setColumnStretch(2,0)
-
-        self.setups_layout.setRowStretch(0,1)
-        self.setups_layout.setRowStretch(2,1)
-
-
-    def adjust_to_med(self):
-        for widget in [self.setup_groupbox,self.configure_group,self.log_textbox]:
-            widget.setMinimumWidth(get_setting("GUI","ui_max_width"))
-
-        self.setups_layout.addWidget(self.setup_groupbox,0,0)
-        self.setups_layout.addWidget(self.configure_group,1,0)
-        self.setups_layout.addWidget(self.log_textbox,2,0)
-        self.setups_layout.addWidget(self.clear_output_btn,3,0,QtCore.Qt.AlignmentFlag.AlignCenter)
-
-        self.setups_layout.setColumnStretch(1,1)
-        self.setups_layout.setColumnStretch(2,0)
-
-        self.setups_layout.setRowStretch(0,1)
-        self.setups_layout.setRowStretch(2,1)
-
-    def adjust_to_large(self):
-        self.setups_layout.addWidget(self.setup_groupbox,0,0,4,1)
-        self.setups_layout.addWidget(self.configure_group,0,1)
-        self.setups_layout.addWidget(self.log_textbox,1,1,2,1)
-        self.setups_layout.addWidget(self.clear_output_btn,3,1,QtCore.Qt.AlignmentFlag.AlignCenter)
-
-        self.setups_layout.setColumnStretch(2,1)
-
-        self.setups_layout.setRowStretch(0,0)
-        self.setups_layout.setRowStretch(2,1)
-
     def print_to_log(self, print_string, end="\n"):
         self.log_textbox.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         self.log_textbox.insertPlainText(print_string + end)

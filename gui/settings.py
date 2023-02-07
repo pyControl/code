@@ -27,7 +27,6 @@ default_user_settings = {
     "GUI": {
         "ui_font_size": 11,
         "log_font_size": 9,
-        "ui_max_width": 1000,
     },
 }
 

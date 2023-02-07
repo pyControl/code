@@ -193,49 +193,6 @@ class Run_task_tab(QtWidgets.QWidget):
 
     # General methods
 
-    def adjust_to_small(self):
-        max_width = get_setting("GUI","ui_max_width")
-        for widget in [self.first_row,self.second_row,self.session_groupbox,self.log_textbox,self.task_plot]:
-            widget.setMaximumWidth(max_width)
-            widget.setMinimumWidth(0)
-
-        self.run_layout.addWidget(self.first_row,0,0)
-        self.run_layout.addWidget(self.second_row,1,0)
-        self.run_layout.addWidget(self.session_groupbox,2,0)
-        self.run_layout.addWidget(self.log_textbox,3,0)
-        self.run_layout.addWidget(self.task_plot,4,0)
-
-        self.run_layout.setColumnStretch(0,1)
-        self.run_layout.setColumnStretch(1,0)
-        self.run_layout.setColumnStretch(2,0)
-
-        self.run_layout.setRowStretch(3,20)
-        self.run_layout.setRowStretch(4,80)
-
-    def adjust_to_med(self):
-        for widget in [self.first_row,self.second_row,self.session_groupbox,self.log_textbox,self.task_plot]:
-            widget.setMinimumWidth(get_setting("GUI","ui_max_width"))
-
-        self.run_layout.addWidget(self.first_row,0,0)
-        self.run_layout.addWidget(self.second_row,1,0)
-        self.run_layout.addWidget(self.session_groupbox,2,0)
-        self.run_layout.addWidget(self.log_textbox,3,0)
-        self.run_layout.addWidget(self.task_plot,4,0)
-
-        self.run_layout.setColumnStretch(1,1)
-        self.run_layout.setColumnStretch(2,0)
-
-    def adjust_to_large(self):
-        self.task_plot.setMaximumWidth(9999)
-
-        self.run_layout.addWidget(self.first_row,0,0)
-        self.run_layout.addWidget(self.second_row,1,0)
-        self.run_layout.addWidget(self.session_groupbox,2,0)
-        self.run_layout.addWidget(self.log_textbox,3,0,2,1)
-        self.run_layout.addWidget(self.task_plot,0,1,5,2)
-
-        self.run_layout.setColumnStretch(2,1)
-
     def print_to_log(self, print_string, end="\n"):
         self.log_textbox.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         self.log_textbox.insertPlainText(print_string + end)

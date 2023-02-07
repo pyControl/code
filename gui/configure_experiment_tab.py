@@ -78,7 +78,6 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         expbox_Vlayout.addLayout(experiment_actions_layout)
         expbox_Vlayout.addWidget(QtWidgets.QLabel("<hr>"))
         expbox_Vlayout.addLayout(self.experiment_parameters_layout)
-        self.experiment_groupbox.setMaximumWidth(get_setting("GUI","ui_max_width"))
 
         # Subjects Groupbox
         self.subjects_groupbox = QtWidgets.QGroupBox('Subjects')
@@ -89,7 +88,6 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.subjects_table = SubjectsTable(self)
         subjectsbox_layout.addWidget(self.subjects_table,1,0,1,2)
         subjectsbox_layout.setColumnStretch(1,1)
-        self.subjects_groupbox.setMaximumWidth(get_setting("GUI","ui_max_width"))
 
         # Variables Groupbox
         self.variables_groupbox = QtWidgets.QGroupBox('Variables')
@@ -97,7 +95,6 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.variables_table = VariablesTable(self)
         self.task_select.set_callback(self.variables_table.task_changed)
         variablesbox_layout.addWidget(self.variables_table)
-        self.variables_groupbox.setMaximumWidth(get_setting("GUI","ui_max_width"))
         
 
         # Connect signals.
@@ -124,48 +121,6 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.saved_exp_dict = self.experiment_dict()
 
         self.experiment_enable(False)
-
-    def adjust_to_small(self):
-        max_width = get_setting("GUI","ui_max_width")
-        for widget in [self.experiment_groupbox,self.subjects_groupbox,self.variables_groupbox]:
-            widget.setMaximumWidth(max_width)
-            widget.setMinimumWidth(0)
-
-        self.configure_exp_layout.addWidget(self.experiment_groupbox,0,0)
-        self.configure_exp_layout.addWidget(self.subjects_groupbox,1,0)
-        self.configure_exp_layout.addWidget(self.variables_groupbox,2,0)
-
-        self.configure_exp_layout.setColumnStretch(0,1)
-        self.configure_exp_layout.setColumnStretch(1,0)
-        self.configure_exp_layout.setColumnStretch(2,0)
-
-        self.configure_exp_layout.setRowStretch(1,1)
-        self.configure_exp_layout.setRowStretch(2,1)
-
-    def adjust_to_med(self):
-
-        for widget in [self.experiment_groupbox,self.subjects_groupbox,self.variables_groupbox]:
-            widget.setMinimumWidth(get_setting("GUI","ui_max_width"))
-
-        self.configure_exp_layout.addWidget(self.experiment_groupbox,0,0)
-        self.configure_exp_layout.addWidget(self.subjects_groupbox,1,0)
-        self.configure_exp_layout.addWidget(self.variables_groupbox,2,0)
-
-        self.configure_exp_layout.setColumnStretch(1,1)
-        self.configure_exp_layout.setColumnStretch(2,0)
-        
-        self.configure_exp_layout.setRowStretch(1,1)
-        self.configure_exp_layout.setRowStretch(2,1)
-
-    def adjust_to_large(self):
-        self.configure_exp_layout.addWidget(self.experiment_groupbox,0,0)
-        self.configure_exp_layout.addWidget(self.subjects_groupbox,1,0,2,1)
-        self.configure_exp_layout.addWidget(self.variables_groupbox,0,1,3,1)
-
-        self.configure_exp_layout.setColumnStretch(2,1)
-        
-        self.configure_exp_layout.setRowStretch(1,1)
-
 
     def experiment_enable(self,do_enable=True):
         self.subjects_groupbox.setEnabled(do_enable)

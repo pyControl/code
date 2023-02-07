@@ -338,9 +338,8 @@ class Settings_dialog(QtWidgets.QDialog):
         gui_layout = QtWidgets.QGridLayout()
         self.ui_font_size = Spin_setter(self, "UI font size*", ("GUI", "ui_font_size"), " pt")
         self.log_font_size = Spin_setter(self, "Log font size*", ("GUI", "log_font_size"), " pt")
-        self.max_width = Spin_setter(self, "1st column max width*", ("GUI", "ui_max_width"), " px")
 
-        self.gui_spins = [self.ui_font_size, self.log_font_size,self.max_width]
+        self.gui_spins = [self.ui_font_size, self.log_font_size]
         for i, variable in enumerate(self.gui_spins):
             variable.add_to_grid(gui_layout, i)
         gui_layout.setColumnStretch(2, 1)
