@@ -261,6 +261,8 @@ class Keyboard_shortcuts_dialog(QtWidgets.QDialog):
             '<b><u>Global:</u></b>',
             '<b style="color:#0220e0;">Ctrl + t</b> : Open tasks folder',
             '<b style="color:#0220e0;">Ctrl + d</b> : Open data folder',
+            '<b style="color:#0220e0;">Ctrl + e</b> : Open error log',
+            '<b style="color:#0220e0;">Ctrl + ,</b> : Open settings',
 
             '<br></br><b><u>Run task tab:</u></b>',
             '<b style="color:#0220e0;">    t    </b> : Select task',
@@ -367,6 +369,8 @@ class Settings_dialog(QtWidgets.QDialog):
         self.setFixedSize(self.sizeHint())
         self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+W"), self)
         self.close_shortcut.activated.connect(self.close)
+        self.save_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
+        self.save_shortcut.activated.connect(self.saveChanges)
 
     def reset(self):
         """Resets values to whatever is saved in user_settings.json, or to default_user_settings if no user_settings.json exists"""
@@ -543,3 +547,40 @@ class Spin_setter:
 
     def get(self):
         return self.spn.value()
+
+
+# Error log dialog. ---------------------------------------------------------
+class Error_log_dialog(QtWidgets.QDialog):
+    def __init__(self, parent):
+        super(QtWidgets.QDialog, self).__init__(parent)
+        self.setWindowTitle("Error Log")
+
+        log_layout = QtWidgets.QGridLayout(self)
+        self.log_viewer = QtWidgets.QTextEdit()
+        self.log_viewer.setMinimumWidth(800)
+        self.log_viewer.setMinimumHeight(800)
+        self.log_viewer.setReadOnly(True)
+        self.log_viewer.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+
+        clear_log_btn = QtWidgets.QPushButton("Clear log")
+        clear_log_btn.clicked.connect(self.clear_log)
+
+        log_layout.addWidget(self.log_viewer,0,0,1,3)
+        log_layout.addWidget(clear_log_btn,1,1)
+        log_layout.setColumnStretch(0,1)
+        log_layout.setColumnStretch(2,1)
+
+        self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+W"), self)
+        self.close_shortcut.activated.connect(self.close)
+
+    def clear_log(self):
+        reply = QtWidgets.QMessageBox.question(
+            self,
+            "Clear error log",
+            f"Are you sure you want to clear the error log?",
+            QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.Cancel,
+        )
+        if reply == QtWidgets.QMessageBox.StandardButton.Yes:
+            self.log_viewer.clear()
+            os.remove(r'ErrorLog.txt')
+            self.close()

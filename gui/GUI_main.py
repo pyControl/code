@@ -10,7 +10,7 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 from gui.settings import VERSION, dirs, get_setting
 from gui.run_task_tab import Run_task_tab
-from gui.dialogs import Board_config_dialog, Keyboard_shortcuts_dialog, Settings_dialog
+from gui.dialogs import Board_config_dialog, Keyboard_shortcuts_dialog, Settings_dialog, Error_log_dialog
 from gui.configure_experiment_tab import Configure_experiment_tab
 from gui.run_experiment_tab import Run_experiment_tab
 from gui.setups_tab import Setups_tab
@@ -45,6 +45,7 @@ class GUI_main(QtWidgets.QMainWindow):
         self.config_dialog = Board_config_dialog(parent=self)
         self.shortcuts_dialog = Keyboard_shortcuts_dialog(parent=self)
         self.settings_dialog = Settings_dialog(parent=self)
+        self.error_log_dialog = Error_log_dialog(parent=self)
 
         # Widgets.
         self.tab_widget = QtWidgets.QTabWidget(self)
@@ -76,22 +77,28 @@ class GUI_main(QtWidgets.QMainWindow):
 
         # Add Menu Bar
         main_menu = self.menuBar()
-        ## --------Folders menu--------
-        folders_menu = main_menu.addMenu('Folders')
+        ## --------View menu--------
+        view_menu = main_menu.addMenu('View')
         # View Data Directory
-        data_action = QtGui.QAction("&Data", self)
+        data_action = QtGui.QAction("&Data directory", self)
         data_action.setShortcut("Ctrl+D")
         data_action.triggered.connect(self.go_to_data)
-        folders_menu.addAction(data_action)
+        view_menu.addAction(data_action)
         # View Task Directory
-        task_action = QtGui.QAction("&Tasks", self)
+        task_action = QtGui.QAction("&Tasks directory", self)
         task_action.setShortcut("Ctrl+T")
         task_action.triggered.connect(self.go_to_tasks)
-        folders_menu.addAction(task_action)
+        view_menu.addAction(task_action)
+        # View error log
+        error_log_action = QtGui.QAction("&Error log", self)
+        error_log_action.setShortcut("Ctrl+E")
+        error_log_action.triggered.connect(self.show_error_log)
+        view_menu.addAction(error_log_action)
         ## --------Settings menu--------
         settings_menu = main_menu.addMenu('Settings')
         # Folder paths
         settings_action = QtGui.QAction("&Edit settings", self)
+        settings_action.setShortcut("Ctrl+,")
         settings_action.triggered.connect(self.settings_dialog.exec)
         settings_menu.addAction(settings_action)
         # ---------Help menu----------
@@ -134,10 +141,24 @@ class GUI_main(QtWidgets.QMainWindow):
 
     def view_github(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://github.com/pyControl/pyControl"))
+    
+    def show_error_log(self):
+        try:
+            with open("ErrorLog.txt", "r", encoding="utf-8") as reader:
+                text = reader.read()
+            self.error_log_dialog.log_viewer.setText(text)
+            self.error_log_dialog.exec()
+        except FileNotFoundError:
+            QtWidgets.QMessageBox.information(
+                self,
+                "No error log",
+                f"You have no errors",
+                QtWidgets.QMessageBox.StandardButton.Ok,
+            )
 
     def get_nested_file_list(self,folder_to_walk,file_extension):
         """Return list of files within a parent directory and subdirectories in the format:
-        subdir_1/subdir_2/filename.extension"""
+        subdir_1/subdir_2/filename"""
         nested_files = []
         for (dirpath, dirnames, filenames) in os.walk(folder_to_walk):
             nested_files += [os.path.join(dirpath, file).split(folder_to_walk)[1][1:-len(file_extension)]
@@ -193,6 +214,8 @@ class GUI_main(QtWidgets.QMainWindow):
         if hasattr(self.tab_widget.currentWidget(), 'excepthook'):
             self.tab_widget.currentWidget().excepthook(ex_type, ex_value, ex_traceback)
         logging.error(''.join(traceback.format_exception(ex_type, ex_value, ex_traceback)))
+
+
 
 # --------------------------------------------------------------------------------
 # Launch GUI.
