@@ -19,27 +19,21 @@ class Ring_buffer():
         self.read_ind  = 0
         self.write_ind = 0
         self.available = False
-        self.full = False
 
     @micropython.native
     def put(self, x: int):
         # Put value in buffer.
-        if self.full:
-            return
         self.buffer[self.write_ind] = x
         self.write_ind = (self.write_ind + 1) % self.buffer_length
         self.available = True
-        self.full = self.read_ind == self.write_ind
 
     @micropython.native
     def get(self) -> int:
         # Get value from buffer
-        if self.available:
-            x = self.buffer[self.read_ind]
-            self.read_ind = (self.read_ind + 1) % self.buffer_length
-            self.available = self.read_ind != self.write_ind
-            self.full = False
-            return x
+        x = self.buffer[self.read_ind]
+        self.read_ind = (self.read_ind + 1) % self.buffer_length
+        self.available = self.read_ind != self.write_ind
+        return x
 
 # Variables -------------------------------------------------------------------
 
@@ -140,9 +134,11 @@ class Digital_input(IO_object):
         if isinstance(pin, IO_expander_pin): # Pin is on an IO expander.
             self.pin = pin
             self.ExtInt = pin.IOx.ExtInt
+            self.expander_pin = True
         else:                                # Pin is pyboard pin.
             self.pin = pyb.Pin(pin, pyb.Pin.IN, pull=pull)
             self.ExtInt = pyb.ExtInt
+            self.expander_pin = False
         self.rising_event = rising_event
         self.falling_event = falling_event
         self.debounce = debounce     
@@ -176,7 +172,10 @@ class Digital_input(IO_object):
             self.pin_state = not self.pin_state
         elif self.use_both_edges:
             self.pin_state = self.pin.value()
-        interrupt_queue.put(self.ID)
+        if self.expander_pin: # _ISR() called from main loop.
+            self._process_interrupt()
+        else: # _ISR() called by interrupt.
+            interrupt_queue.put(self.ID)
 
     def _process_interrupt(self):
         # Put apropriate event for interrupt in event queue.

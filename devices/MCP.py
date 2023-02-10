@@ -30,7 +30,6 @@ class _MCP(hw.IO_object):
                 v = int.from_bytes(self.i2c.mem_read(n_bytes, self.addr, self.reg_addr[register], timeout=5), 'little')
                 if attempt > 0:
                     warning('Intermittant serial communication with device ' + self.name)
-                    self.check_config = True
                 return v
             except:
                 pass
@@ -43,12 +42,9 @@ class _MCP(hw.IO_object):
         for attempt in range(5):
             try:
                 self.i2c.mem_write(values.to_bytes(n_bytes,'little'), self.addr, self.reg_addr[register], timeout=5)
-                v = int.from_bytes(self.i2c.mem_read(n_bytes, self.addr, self.reg_addr[register], timeout=5), 'little')
-                if v == values: # Register set correctly.
-                    if attempt > 0:
-                        warning('Intermittant serial communication with device ' + self.name)
-                        self.check_config = True
-                    return
+                if attempt > 0:
+                    warning('Intermittant serial communication with device ' + self.name)
+                return
             except:
                 pass
         raise pyControlError('Unable to communicate with device '+ self.name)
@@ -74,41 +70,27 @@ class _MCP(hw.IO_object):
         self.interrupts_enabled = True
 
     def extint_ISR(self, i):
-        self.extint_triggered = True
         hw.interrupt_queue.put(self.ID)
 
     def timer_ISR(self, i):
-        if self.interrupts_enabled and self.extint_pin.value():
-            self.extint_triggered = True
-        if self.extint_triggered or self.check_config:
+        if self.extint_pin.value():
             hw.interrupt_queue.put(self.ID)
-        
+
     def _process_interrupt(self):
-        if self.extint_triggered:
-            # Find out which pin triggered the interrupt and call the appropriate function.
-            self._process_changed_inputs(self.read_register('INTCAP'))
-            self._process_changed_inputs(self.read_register('GPIO'))
-            self.extint_triggered = False
-        if self.check_config: 
-            # Check the state of the registers on the MCP device is correct and correct them if not.
-            for register, values in self.reg_values.items():
-                n_bytes = 1 if register == 'IOCON' else self.reg_size
-                read_values = self.read_register(register, n_bytes=n_bytes)
-                if read_values != values:
-                    self.write_register(register, values, n_bytes=n_bytes)
-                    warning('Corrected bad '+ register + ' register value on device ' + self.name)
-            self.check_config = False
+        # Find out which pin triggered the interrupt and call the appropriate function.      
+        self._process_changed_inputs(self.read_register('INTCAP'))
+        self._process_changed_inputs(self.read_register('GPIO'))
 
     def _process_changed_inputs(self, new_GPIO_state):
         # Detect which pins have changed and call any relevant callbacks. Store new GPIO pin state.
         changed_bits = self.GPIO_state ^ new_GPIO_state
         active_edges = ((changed_bits & ( new_GPIO_state & self.rising_ints )) | 
                         (changed_bits & (~new_GPIO_state & self.falling_ints)))
+        self.GPIO_state = new_GPIO_state
         if active_edges:
             for pin in self.pin_callbacks.keys():
                 if (1<<pin) & active_edges:
                     self.pin_callbacks[pin](pin) # Called with pin as an argument for consistency with pyb.ExtInt
-        self.GPIO_state = new_GPIO_state
 
     def Pin(self, id, mode=None, pull=None):
         # Instantiate and return a Pin object, pull argument currently ignored.
@@ -119,15 +101,14 @@ class _MCP(hw.IO_object):
         pin.enable_interrupt(callback, mode)
 
     def _run_start(self):
-        self.interrupt_timestamp = 0  # Time of last interrupt.
-        self.check_config = False     # Set True if i2c communication error occurs to trigger checking of config registers.
-        self.extint_triggered = False # Set to True on external interrupt.  
-        self.GPIO_state = self.read_register('GPIO') # Read state of inputs.
-        self.timer.init(freq=10)      # Set timer to periodically call timer_ISR to avoid lockup if an interrupt is missed.
-        self.timer.callback(self.timer_ISR)
+        self.GPIO_state = self.read_register('GPIO') # Clear any interrupts.
+        if self.interrupts_enabled:
+            self.timer.init(freq=10)
+            self.timer.callback(self.timer_ISR)
 
     def _run_stop(self):
         self.timer.deinit()
+
 
 class MCP23017(_MCP):
     # MCP23017 16 bit port expander. Ports A and B are addressed as single 16 bit port
