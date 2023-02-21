@@ -1,7 +1,7 @@
 import os
 import json
 
-VERSION = "1.8"
+VERSION = "1.8.1"
 
 top_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Top level pyControl folder.
 dirs = {
