@@ -343,7 +343,7 @@ class Pycboard(Pyboard):
         for device_file in all_device_files:
             with open(os.path.join(dirs['devices'],device_file), 'r') as f:
                 file_content = f.read()
-            pattern = "[\n\r]class\s*(?P<dcname>\w+)\s*\("
+            pattern = "[\n\r]class\s*(?P<dcname>\w+)\s*"
             list(set([d_name for d_name in re.findall(pattern, file_content)]))
             device_classes = list(set([device_class for device_class in re.findall(pattern, file_content)]))
             for device_class in device_classes:
