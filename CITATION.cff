@@ -1,0 +1,112 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: pyControl
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Thomas
+    family-names: Akam
+    email: thomas.akam@psy.ox.ac.uk
+    orcid: 'https://orcid.org/0000-0002-1810-0494'
+    affiliation: >-
+      Department of Experimental Psychology, University of Oxford
+      Champalimaud Neuroscience Program, Champalimaud Centre for the Unknown
+  - given-names: Andy
+    family-names: Lustig
+    email: lustiga@janelia.hhmi.org
+    orcid: 'https://orcid.org/0000-0002-1358-8363'
+    affiliation: >-
+      Janelia Research Campus, Howard Hughes Medical
+      Institute
+identifiers:
+  - type: doi
+    value: 10.7554/eLife.67846
+repository-code: 'https://github.com/pyControl/code'
+url: 'https://pycontrol.readthedocs.io'
+repository: 'https://github.com/pycontrol'
+abstract: 'Open source, Python based, behavioural experiment control'
+license: GPL-3.0
+preferred-citation:
+  type: article
+  authors:
+    - given-names: Thomas
+      family-names: Akam
+      email: thomas.akam@psy.ox.ac.uk
+      orcid: 'https://orcid.org/0000-0002-1810-0494'
+      affiliation: >-
+        Department of Experimental Psychology, University of Oxford
+        Champalimaud Neuroscience Program, Champalimaud Centre for the Unknown
+    - given-names: Andy
+      family-names: Lustig
+      email: lustiga@janelia.hhmi.org
+      orcid: 'https://orcid.org/0000-0002-1358-8363'
+      affiliation: >-
+        Janelia Research Campus, Howard Hughes Medical
+        Institute
+    - given-names: James
+      name-particle: M
+      family-names: Rowland
+      orcid: 'https://orcid.org/0000-0001-9140-8260'
+      affiliation: >-
+        Department of Physiology Anatomy & Genetics,
+        University of Oxford
+    - given-names: Sampath
+      family-names: Kapanaiah
+      name-particle: KT
+      affiliation: 'Institute of Applied Physiology, Ulm University'
+    - affiliation: >-
+        Instituto de Neurociencias (Universidad Miguel Hernández-Consejo Superior de Investigaciones Científicas)
+      given-names: Joan
+      family-names: Esteve-Agraz
+    - given-names: Mariangela
+      family-names: Panniello
+      affiliation: >-
+        Department of Physiology Anatomy & Genetics,
+        University of Oxford
+        Institute of Neuroscience and
+        Psychology, University of Glasgow 
+    - orcid: 'https://orcid.org/0000-0003-1948-2727'
+      affiliation: >-
+        Instituto de Neurociencias (Universidad Miguel
+        Hernández-Consejo Superior de Investigaciones
+        Científicas)
+      given-names: Cristina
+      family-names: Márquez
+    - given-names: Michael
+      family-names: Kohl
+      name-particle: M
+      affiliation: >-
+        Department of Physiology Anatomy & Genetics,University of Oxford
+        Institute of Neuroscience and Psychology, University of Glasgow
+      orcid: 'https://orcid.org/0000-0002-2566-5426'
+    - given-names: Dennis
+      family-names: Kätzel
+      affiliation: 'Institute of Applied Physiology, Ulm University'
+    - affiliation: Champalimaud Neuroscience Program.
+      given-names: Rui
+      name-particle: M
+      family-names: Costa
+      orcid: 'https://orcid.org/0000-0003-1707-1051'
+    - given-names: Mark
+      name-particle: E
+      family-names: Walton
+      orcid: 'https://orcid.org/0000-0003-0117-2894'
+      affiliation: >-
+        Department of Experimental Psychology, University of Oxford
+        Wellcome Centre for Integrative Neuroimaging, University of Oxford
+  doi: "10.7554/eLife.67846"
+  url: "https://doi.org/10.7554/eLife.67846"
+  journal: "eLife"
+  publisher:
+    name: "eLife Sciences Publications, Ltd"
+  title: "Open-source, Python-based, hardware and software for controlling behavioural neuroscience experiments"
+  volume: 11
+  month: 1
+  year: 2022
+  issn: "2050-084X"
+  pages: "e67846"
+  date-published: "2022-01-19"
