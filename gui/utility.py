@@ -1,4 +1,5 @@
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 # --------------------------------------------------------------------------------
@@ -415,3 +416,20 @@ class TaskInfo():
         self.event_text.setText('')
         self.print_text.setText('')
 
+
+# ----------------------------------------------------------------------------------
+# Parallel call
+# ----------------------------------------------------------------------------------
+
+def parallel_call(method_name, setups):
+    '''Call specified method of each setup in in parallel using
+    ThreadPoolExecutor. Print output is delayed during multithreaded
+    operations to avoid error message when trying to call PyQt method
+    from annother thread.'''
+    func = lambda setup: getattr(setup, method_name)()
+    for setup in setups:
+      setup.start_delayed_print()    
+    with ThreadPoolExecutor(max_workers=len(setups)) as executor:
+        list(executor.map(func, setups))
+    for setup in setups:
+        setup.end_delayed_print()

@@ -5,7 +5,6 @@ import importlib
 from datetime import datetime
 from collections import OrderedDict
 
-from concurrent.futures import ThreadPoolExecutor
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException
 
@@ -14,7 +13,7 @@ from com.data_logger import Data_logger
 from gui.settings import get_setting
 from gui.plotting import Experiment_plot
 from gui.dialogs import Variables_dialog, Summary_variables_dialog
-from gui.utility import variable_constants, TaskInfo
+from gui.utility import variable_constants, TaskInfo, parallel_call
 from gui.custom_variables_dialog import Custom_variables_dialog
 
 class Run_experiment_tab(QtWidgets.QWidget):
@@ -60,21 +59,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
 
         self.update_timer = QtCore.QTimer() # Timer to regularly call update() during run.
         self.update_timer.timeout.connect(self.update)
-
-    # Functions used for multithreaded task setup.
-
-    def parallel_call(self, method_name, setups):
-        '''Call specified method of each setup in in parallel. Print
-        output is delayed during multithreaded operations to avoid error
-        message when trying to call PyQt method from annother thread.'''
-        func = lambda setup: getattr(setup, method_name)()
-        for setup in setups:
-          setup.start_delayed_print()    
-        with ThreadPoolExecutor(max_workers=len(setups)) as executor:
-            list(executor.map(func, setups))
-        for setup in setups:
-            setup.end_delayed_print()
-    
+  
     # Main setup experiment function.
 
     def setup_experiment(self, experiment):
@@ -116,7 +101,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         # Setup boards.
         self.print_to_logs('Connecting to board.. ')
         self.n_setups = len(self.subjects)
-        self.parallel_call('connect_to_board', self.subjectboxes)
+        parallel_call('connect_to_board', self.subjectboxes)
         if self.setup_has_failed(): return
         # Hardware test.
         if experiment['hardware_test'] != 'no hardware test':
@@ -124,7 +109,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
                 QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No)
             if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 self.print_to_logs('\nStarting hardware test.')
-                self.parallel_call('start_hardware_test', self.subjectboxes)
+                parallel_call('start_hardware_test', self.subjectboxes)
                 if self.setup_has_failed(): return
                 QtWidgets.QMessageBox.question(self, 'Hardware test',
                     'Press OK when finished with hardware test.', QtWidgets.QMessageBox.StandardButton.Ok)
@@ -139,12 +124,12 @@ class Run_experiment_tab(QtWidgets.QWidget):
                 if self.setup_has_failed(): return
         # Setup task
         self.print_to_logs('\nSetting up task.')
-        self.parallel_call('setup_task', self.subjectboxes)
+        parallel_call('setup_task', self.subjectboxes)
         if self.setup_has_failed(): return
         # Copy task file to experiments data folder.
         self.subjectboxes[0].data_logger.copy_task_file(self.experiment['data_dir'], get_setting("folders","tasks"))
         # Configure GUI ready to run.
-        self.parallel_call('set_ready_to_start', self.subjectboxes) 
+        parallel_call('set_ready_to_start', self.subjectboxes) 
         self.experiment_plot.set_state_machine(self.subjectboxes[0].board.sm_info)
         self.startstopclose_all_button.setEnabled(True)
         self.logs_button.setEnabled(True)
@@ -161,7 +146,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
                 if box.state == 'pre_run':
                     box.start_task()
         elif self.startstopclose_all_button.text() == 'Stop All':
-            self.parallel_call('stop_task', 
+            parallel_call('stop_task', 
                 [box for box in self.subjectboxes if box.state == 'running'])
 
     def update_startstopclose_button(self):
