@@ -158,6 +158,7 @@ class Events_plot():
         self.axis.setMouseEnabled(x=True,y=False)
         self.axis.showGrid(x=True,alpha=0.75)
         self.axis.setLimits(xMax=0)
+        self.event_IDs = []
         self.data_len = data_len
 
     def set_state_machine(self, sm_info):
@@ -206,6 +207,7 @@ class Analog_plot():
         self.axis.setMouseEnabled(x=True,y=False)
         self.axis.showGrid(x=True,alpha=0.75)
         self.axis.setLimits(xMax=0)
+        self.inputs = {}
 
     def set_state_machine(self, sm_info):
         self.inputs = {ID: ai for ID,ai in sm_info['analog_inputs'].items() if ai['plot']}

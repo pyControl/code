@@ -133,10 +133,9 @@ class Run_experiment_tab(QtWidgets.QWidget):
                         box.board.stop_framework()
                         time.sleep(0.05)
                         box.board.process_data()
-                    except PyboardError as e:
+                    except PyboardError:
                         box.setup_failed = True
-                        box.print_to_log('\n' + str(e))
-                        self.box.error()
+                        box.error()
                 if self.setup_has_failed(): return
         # Setup task
         self.print_to_logs('\nSetting up task.')
