@@ -23,24 +23,40 @@ class Data_logger():
 
     def open_data_file(self, data_dir, experiment_name, setup_ID, subject_ID, datetime_now=None):
         '''Open data file and write header information.'''
+        self.file_type = 'tsv'
         self.data_dir = data_dir
         self.experiment_name = experiment_name
         self.subject_ID = subject_ID
         self.setup_ID = setup_ID
         if datetime_now is None: datetime_now = datetime.now()
-        file_name = os.path.join(self.subject_ID + datetime_now.strftime('-%Y-%m-%d-%H%M%S') + '.txt')
+        file_name = self.subject_ID + datetime_now.strftime('-%Y-%m-%d-%H%M%S') + '.' + self.file_type
         self.file_path = os.path.join(self.data_dir, file_name)
         self.data_file = open(self.file_path, 'w', newline = '\n')
-        self.data_file.write('I Experiment name  : {}\n'.format(self.experiment_name))
-        self.data_file.write('I Task name : {}\n'.format(self.sm_info['name']))
-        self.data_file.write('I Task file hash : {}\n'.format(self.sm_info['task_hash']))
-        self.data_file.write('I Setup ID : {}\n'.format(self.setup_ID))
-        self.data_file.write('I Framework version : {}\n'.format(self.sm_info['framework_version']))
-        self.data_file.write('I Micropython version : {}\n'.format(self.sm_info['micropython_version']))
-        self.data_file.write('I Subject ID : {}\n'.format(self.subject_ID))
-        self.data_file.write('I Start date : ' + datetime_now.strftime('%Y/%m/%d %H:%M:%S') + '\n\n')
-        self.data_file.write('S {}\n\n'.format(json.dumps(self.sm_info['states'])))
-        self.data_file.write('E {}\n\n'.format(json.dumps(self.sm_info['events'])))
+        if self.file_type == 'tsv': # Write header.
+            self.data_file.write(self.tsv_row_str(
+                rtype='type', time='time', name='name', value='value'))
+        self.write_info_line('Experiment name', self.experiment_name)
+        self.write_info_line('Task name', self.sm_info['name'])
+        self.write_info_line('Task file hash', self.sm_info['task_hash'])
+        self.write_info_line('Setup ID', self.setup_ID)
+        self.write_info_line('Framework version', self.sm_info['framework_version'])
+        self.write_info_line('Micropython version', self.sm_info['micropython_version'])
+        self.write_info_line('Subject ID', self.subject_ID)
+        self.write_info_line('Start date', datetime_now.strftime('%Y/%m/%d %H:%M:%S'))
+        if self.file_type == 'txt':
+            self.data_file.write('\n')
+            self.data_file.write('S {}\n\n'.format(json.dumps(self.sm_info['states'])))
+            self.data_file.write('E {}\n\n'.format(json.dumps(self.sm_info['events'])))
+
+    def write_info_line(self, name, value):
+        if self.file_type == 'tsv':
+            name = name.lower().replace(' ', '_')
+            self.data_file.write(self.tsv_row_str('info', name=name, value=value))
+        elif self.file_type == 'txt':
+            self.data_file.write(f'I {name} : {value}\n')
+
+    def tsv_row_str(self, rtype, time='', name='', value=''):
+        return f'{rtype}\t{time}\t{name}\t{value}\n'
 
     def copy_task_file(self, data_dir, tasks_dir, dir_name='task_files'):
         '''If not already present, copy task file to data_dir/dir_name
@@ -86,22 +102,36 @@ class Data_logger():
     def data_to_string(self, new_data, verbose=False):
         '''Convert list of data tuples into a string.  If verbose=True state and event names are used,
         if verbose=False state and event IDs are used.'''
-        data_string = ''
         for nd in new_data:
-            if nd[0] == 'D':  # State entry or event.
-                    if verbose: # Print state or event name.
-                        data_string += 'D {} {}\n'.format(nd[1], self.ID2name_fw[nd[2]])
-                    else:       # Print state or event ID.
-                        data_string += 'D {} {}\n'.format(nd[1], nd[2])
-            elif nd[0] in ('P', 'V'): # User print output or set variable.
-                data_string += '{} {} {}\n'.format(*nd)
-            elif nd[0] == '!': # Warning
-                data_string = '! {}\n'.format(nd[1])
-            elif nd[0] == '!!': # Crash traceback.
-                error_string = nd[1]
-                if not verbose: # In data files multi-line tracebacks have ! prepended to all lines aid parsing data file.
-                    error_string = '! ' + error_string.replace('\n', '\n! ')
-                data_string += '\n' + error_string + '\n'
+            if self.file_type == 'txt' or verbose: 
+                if nd[0] == 'D':  # State entry or event.
+                        if verbose: # Print state or event name.
+                            data_string = f'D {nd[1]} {self.ID2name_fw[nd[2]]}\n'
+                        else:       # Print state or event ID.
+                            data_string = f'D {nd[1]} {nd[2]}\n'
+                elif nd[0] in ('P', 'V'): # User print output or set variable.
+                    data_string = '{} {} {}\n'.format(*nd)
+                elif nd[0] == '!': # Warning
+                    data_string = f'! {nd[1]}\n'
+                elif nd[0] == '!!': # Crash traceback.
+                    error_string = nd[1]
+                    if not verbose: # In data files multi-line tracebacks have ! prepended to all lines aid parsing data file.
+                        error_string = '! ' + error_string.replace('\n', '\n! ')
+                    data_string = '\n' + error_string + '\n'
+            elif self.file_type == 'tsv':
+                if nd[0] == 'D':  # State entry or event.
+                    if nd[2] in self.sm_info['states'].keys():
+                        data_string = self.tsv_row_str('state', time=nd[1], name=self.ID2name_fw[nd[2]])
+                    else:
+                        data_string = self.tsv_row_str('event', time=nd[1], name=self.ID2name_fw[nd[2]])
+                elif nd[0] == 'P': # User print output.
+                    data_string = self.tsv_row_str('print', time=nd[1], value=nd[2])
+                elif nd[0] == 'V': # Variable.
+                    data_string = self.tsv_row_str('variable', time=nd[1], value=nd[2])
+                elif nd[0] == '!': # Warning
+                    data_string = self.tsv_row_str('warning', value=nd[1])
+                elif nd[0] == '!!': # Error
+                    data_string = self.tsv_row_str('error', value=nd[1].replace('\n','|'))
         return data_string
 
     def save_analog_chunk(self, ID, sampling_rate, timestamp, data_array):
