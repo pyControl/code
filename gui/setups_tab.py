@@ -189,8 +189,9 @@ class Setups_tab(QtWidgets.QWidget):
         self.hwd_path = QtWidgets.QFileDialog.getOpenFileName(self,
             'Select hardware definition:', 
             dirs['hardware_definitions'], filter='*.py')[0]
-        self.print_to_log('\nLoading hardware definition')
-        parallel_call('load_hardware_definition', self.get_selected_setups())
+        if self.hwd_path:
+            self.print_to_log('\nLoading hardware definition')
+            parallel_call('load_hardware_definition', self.get_selected_setups())
 
     def refresh(self):
         '''Called regularly when no task running to update tab with currently 

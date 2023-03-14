@@ -129,7 +129,9 @@ class Run_experiment_tab(QtWidgets.QWidget):
         # Copy task file to experiments data folder.
         self.subjectboxes[0].data_logger.copy_task_file(self.experiment['data_dir'], get_setting("folders","tasks"))
         # Configure GUI ready to run.
-        parallel_call('set_ready_to_start', self.subjectboxes) 
+        for box in self.subjectboxes:
+            box.make_variables_dialog() # Don't use parallel_call to avoid 'parent in a different thread error'.
+            box.set_ready_to_start()
         self.experiment_plot.set_state_machine(self.subjectboxes[0].board.sm_info)
         self.startstopclose_all_button.setEnabled(True)
         self.logs_button.setEnabled(True)
@@ -276,6 +278,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.start_stop_button = QtWidgets.QPushButton('Start')
         self.start_stop_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
         self.start_stop_button.setEnabled(False)
+        self.start_stop_button.clicked.connect(self.start_stop_task)
         self.status_label = QtWidgets.QLabel('Status:')
         self.status_text = QtWidgets.QLineEdit()
         self.status_text.setReadOnly(True)
@@ -404,21 +407,24 @@ class Subjectbox(QtWidgets.QGroupBox):
                 self.setup_failed = True
         return
 
-    def set_ready_to_start(self):
+    def make_variables_dialog(self):
         '''Configure variables dialog and ready subjectbox to start experiment. '''
-        self.variables_dialog = Variables_dialog(self, self.board)
-        if 'custom_variables_dialog' in self.board.sm_info['variables']:
+        if 'custom_variables_dialog' in self.board.sm_info['variables']: # Task uses custon variables dialog
             custom_variables_name = eval(self.board.sm_info['variables']['custom_variables_dialog'])
-            potential_dialog = Custom_variables_dialog(self,custom_variables_name,is_experiment=True)
+            potential_dialog = Custom_variables_dialog(self,custom_variables_name, is_experiment=True)
             if potential_dialog.custom_gui == "json_gui":
                 self.variables_dialog = potential_dialog
             elif potential_dialog.custom_gui == "pyfile_gui":
                 py_gui_file = importlib.import_module(f"config.user_variable_dialogs.{custom_variables_name}")
                 importlib.reload(py_gui_file)
                 self.variables_dialog = py_gui_file.Custom_variables_dialog(self, self.board)
+        else: # Board uses standard variables dialog.
+            self.variables_dialog = Variables_dialog(self, self.board)
         self.variables_button.clicked.connect(self.variables_dialog.exec)
+
+    def set_ready_to_start(self):
+        '''Set GUI elements ready to start run.'''
         self.variables_button.setEnabled(True)
-        self.start_stop_button.clicked.connect(self.start_stop_task)
         self.start_stop_button.setEnabled(True)
         self.task_info.set_state_machine(self.board.sm_info)
         self.status_text.setText('Ready')
