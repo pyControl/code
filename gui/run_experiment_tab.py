@@ -448,7 +448,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.data_logger.open_data_file(ex['data_dir'], ex['name'], self.setup_name, self.subject, datetime.now())
         if self.subject_variables: # Write variables set pre run to data file.
             for v_name, v_value, pv in self.variables_set_pre_run:
-                self.data_logger.data_file.write(f"V 0 {v_name} {v_value}\n")
+                self.data_logger.write_to_file([('V', 0, f'{v_name} {v_value}')])
         self.data_logger.data_file.write('\n')
         self.board.start_framework()
 

@@ -127,9 +127,10 @@ class Data_logger():
                 elif nd[0] == 'P': # User print output.
                     data_string = self.tsv_row_str('print', time=nd[1], value=nd[2])
                 elif nd[0] == 'V': # Variable.
-                    data_string = self.tsv_row_str('variable', time=nd[1], value=nd[2])
+                    v_name, v_value = nd[2].split(' ')
+                    data_string = self.tsv_row_str('var', time=nd[1], name=v_name, value=v_value)
                 elif nd[0] == '!': # Warning
-                    data_string = self.tsv_row_str('warning', value=nd[1])
+                    data_string = self.tsv_row_str('warn', value=nd[1])
                 elif nd[0] == '!!': # Error
                     data_string = self.tsv_row_str('error', value=nd[1].replace('\n','|'))
         return data_string
