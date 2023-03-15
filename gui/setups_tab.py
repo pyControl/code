@@ -2,7 +2,7 @@ import os
 import json
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from gui.settings import dirs, get_setting
-from gui.utility import TableCheckbox
+from gui.utility import TableCheckbox, parallel_call
 from com.pycboard import Pycboard, PyboardError
 
 class Setups_tab(QtWidgets.QWidget):
@@ -165,36 +165,33 @@ class Setups_tab(QtWidgets.QWidget):
         return sorted([setup for setup in self.setups.values()
             if setup.select_checkbox.isChecked()], key=lambda setup: setup.port)
 
-    def connect(self, setups):
-        for setup in setups:
-            setup.connect()
-
     def disconnect(self):
-        '''Disconect from all pyboards.'''
-        for setup in self.setups.values():
-            setup.disconnect()
+        '''Disconect from all pyboards, called on tab change.'''
+        parallel_call('disconnect', self.setups.values())
 
     def load_framework(self):
-        for setup in self.get_selected_setups():
-            setup.load_framework()
+        self.print_to_log('Loading framework...\n')
+        parallel_call('load_framework', self.get_selected_setups())
 
     def enable_flashdrive(self):
-        for setup in self.get_selected_setups():
-            setup.enable_flashdrive()
+        self.print_to_log('Enabling flashdrive...\n')
+        parallel_call('enable_flashdrive', self.get_selected_setups())
 
     def disable_flashdrive(self):
-        for setup in self.get_selected_setups():
-            setup.disable_flashdrive()
+        self.print_to_log('Disabling flashdrive...\n')
+        parallel_call('disable_flashdrive', self.get_selected_setups())
 
     def DFU_mode(self):
-        for setup in self.get_selected_setups():
-            setup.DFU_mode()
+        self.print_to_log('Enabling DFU mode...\n')
+        parallel_call('DFU_mode', self.get_selected_setups())
 
     def load_hardware_definition(self):
-        hwd_path = QtWidgets.QFileDialog.getOpenFileName(self,
-            'Select hardware definition:', dirs['hardware_definitions'], filter='*.py')[0]
-        for setup in self.get_selected_setups():
-            setup.load_hardware_definition(hwd_path)
+        self.hwd_path = QtWidgets.QFileDialog.getOpenFileName(self,
+            'Select hardware definition:', 
+            dirs['hardware_definitions'], filter='*.py')[0]
+        if self.hwd_path:
+            self.print_to_log('Loading hardware definition...\n')
+            parallel_call('load_hardware_definition', self.get_selected_setups())
 
     def refresh(self):
         '''Called regularly when no task running to update tab with currently 
@@ -227,6 +224,7 @@ class Setup():
         self.port = serial_port
         self.setups_tab = setups_tab
         self.board = None
+        self.delay_printing = False
 
         self.port_item = QtWidgets.QTableWidgetItem()
         self.port_item.setText(serial_port)
@@ -256,17 +254,36 @@ class Setup():
         self.setups_tab.update_available_setups()
         self.setups_tab.update_saved_setups(self)
 
-    def print(self, print_string):
+    def print(self, print_string, end="\n"):
         ''' Print a string to the log prepended with the setup name.'''
-        self.setups_tab.print_to_log('\n{}: '.format(self.name) + print_string)
+        if self.delay_printing:
+            self.print_queue.append((print_string, end))
+            return
+        self.setups_tab.print_to_log(f'\n{self.name}: ' + print_string)
+
+    def start_delayed_print(self):
+        '''Store print output to display later to avoid error
+        message when calling print from different thread.'''
+        self.print_queue = []
+        self.delay_printing = True
+
+    def end_delayed_print(self):
+        '''Print output stored in print queue to log with setup
+        name and horisontal line above.'''
+        self.delay_printing = False
+        if self.print_queue:
+            self.setups_tab.print_to_log(f'{self.name} ' +'-'*70)
+            for p in self.print_queue:
+                self.setups_tab.print_to_log(*p)
+            self.setups_tab.print_to_log('') # Add blank line.
 
     def connect(self):
         '''Instantiate pyboard object, opening serial connection to board.'''
-        self.print('Connecting to board.')
+        self.print('\nConnecting to board.')
         try:
-            self.board = Pycboard(self.port, print_func=self.setups_tab.print_to_log)
+            self.board = Pycboard(self.port, print_func=self.print)
         except PyboardError:
-            self.print('Unable to connect.')
+            self.print('\nUnable to connect.')
 
     def disconnect(self):
         if self.board:
@@ -283,14 +300,12 @@ class Setup():
     def load_framework(self):
         if not self.board: self.connect()
         if self.board:
-            self.print('Loading framework.')
             self.board.load_framework()
 
-    def load_hardware_definition(self, hwd_path):
+    def load_hardware_definition(self):
         if not self.board: self.connect()
         if self.board:
-            self.print('Loading hardware definition.')
-            self.board.load_hardware_definition(hwd_path)
+            self.board.load_hardware_definition(self.setups_tab.hwd_path)
 
     def DFU_mode(self):
         """Enter DFU mode"""
@@ -305,7 +320,6 @@ class Setup():
         self.select_checkbox.setChecked(False)
         if not self.board: self.connect()
         if self.board:
-            self.print('Enabling flashdrive.')
             self.board.enable_mass_storage()
             self.board.close()
             self.board = None
@@ -314,7 +328,6 @@ class Setup():
         self.select_checkbox.setChecked(False)
         if not self.board: self.connect()
         if self.board:
-            self.print('Disabling flashdrive.')
             self.board.disable_mass_storage()
             self.board.close()
             self.board = None

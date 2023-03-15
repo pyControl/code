@@ -158,6 +158,7 @@ class Events_plot():
         self.axis.setMouseEnabled(x=True,y=False)
         self.axis.showGrid(x=True,alpha=0.75)
         self.axis.setLimits(xMax=0)
+        self.event_IDs = []
         self.data_len = data_len
 
     def set_state_machine(self, sm_info):
@@ -206,6 +207,7 @@ class Analog_plot():
         self.axis.setMouseEnabled(x=True,y=False)
         self.axis.showGrid(x=True,alpha=0.75)
         self.axis.setLimits(xMax=0)
+        self.inputs = {}
 
     def set_state_machine(self, sm_info):
         self.inputs = {ID: ai for ID,ai in sm_info['analog_inputs'].items() if ai['plot']}
@@ -285,8 +287,8 @@ class Experiment_plot(QtWidgets.QMainWindow):
         self.setGeometry(720, 30, 700, 800) # Left, top, width, height.
         self.subject_tabs = detachableTabWidget(self)
         self.setCentralWidget(self.subject_tabs)
-        self.subject_plots = []
-        self.active_plots = []
+        self.subject_plots = {}
+        self.running_subjects = []
 
     def setup_experiment(self, experiment):
         '''Create task plotters in seperate tabs for each subject.'''
@@ -294,22 +296,25 @@ class Experiment_plot(QtWidgets.QMainWindow):
         subjects = list(experiment['subjects'].keys())
         subjects.sort(key=lambda s: experiment['subjects'][s]['setup'])
         for subject in subjects:
-            self.subject_plots.append(Task_plot(self))
-            self.subject_tabs.addTab(self.subject_plots[-1], f"{subject_dict[subject]['setup']} : {subject}")
+            self.subject_plots[subject] = Task_plot(self)
+            self.subject_tabs.addTab(self.subject_plots[subject],
+                f"{subject_dict[subject]['setup']} : {subject}")
 
     def set_state_machine(self, sm_info):
         '''Provide the task plotters with the state machine info.'''
-        for subject_plot in self.subject_plots:
+        for subject_plot in self.subject_plots.values():
             subject_plot.set_state_machine(sm_info)
 
-    def start_experiment(self,rig):
-        self.subject_plots[rig].run_start(False)
-        self.active_plots.append(rig)
+    def run_start(self, subject):
+        self.subject_plots[subject].run_start(False)
+        self.running_subjects.append(subject)
+
+    def run_stop(self, subject):
+        self.running_subjects.remove(subject)
 
     def close_experiment(self):
         '''Remove and delete all subject plot tabs.'''
-        while len(self.subject_plots) > 0:
-            subject_plot = self.subject_plots.pop()
+        for subject_plot in self.subject_plots.values():
             subject_plot.setParent(None)
             subject_plot.deleteLater()
         self.subject_tabs.closeDetachedTabs()
@@ -317,6 +322,6 @@ class Experiment_plot(QtWidgets.QMainWindow):
 
     def update(self):
         '''Update the plots of the active tab.'''
-        for i,subject_plot in enumerate(self.subject_plots):
-            if not subject_plot.visibleRegion().isEmpty() and i in self.active_plots:
-                subject_plot.update()
+        for subject in self.running_subjects:
+            if not self.subject_plots[subject].visibleRegion().isEmpty():
+                self.subject_plots[subject].update()

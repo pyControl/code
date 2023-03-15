@@ -5,7 +5,6 @@ import importlib
 from datetime import datetime
 from collections import OrderedDict
 
-from concurrent.futures import ThreadPoolExecutor
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException
 
@@ -14,7 +13,7 @@ from com.data_logger import Data_logger
 from gui.settings import get_setting
 from gui.plotting import Experiment_plot
 from gui.dialogs import Variables_dialog, Summary_variables_dialog
-from gui.utility import variable_constants, TaskInfo
+from gui.utility import variable_constants, TaskInfo, parallel_call
 from gui.custom_variables_dialog import Custom_variables_dialog
 
 class Run_experiment_tab(QtWidgets.QWidget):
@@ -60,100 +59,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
 
         self.update_timer = QtCore.QTimer() # Timer to regularly call update() during run.
         self.update_timer.timeout.connect(self.update)
-
-    # Functions used for multithreaded task setup.
-
-    def thread_map(self, func):
-        '''Map func over range(self.n_setups) using seperate threads for each call.
-        Used to run experiment setup functions on all boards in parallel. Print
-        output is delayed during multithreaded operations to avoid error message
-        when trying to call PyQt method from annother thread.'''
-        for subject_box in self.subjectboxes:
-            subject_box.start_delayed_print()
-        with ThreadPoolExecutor(max_workers=self.n_setups) as executor:
-            return_value = executor.map(func, range(self.n_setups))
-        for subject_box in self.subjectboxes:
-            subject_box.end_delayed_print()
-        return return_value
-
-    def connect_to_board(self, i):
-        '''Connect to the i-th board.'''
-        subject = self.subjects[i]
-        setup = self.experiment['subjects'][subject]['setup']
-        print_func = self.subjectboxes[i].print_to_log
-        serial_port = self.GUI_main.setups_tab.get_port(setup)
-        try:
-            board = Pycboard(serial_port, print_func=print_func)
-        except SerialException:
-            print_func('\nConnection failed.')
-            self.setup_failed[i] = True
-            return
-        if not board.status['framework']:
-            print_func('\nInstall pyControl framework on board before running experiment.')
-            self.setup_failed[i] = True
-            self.subjectboxes[i].error()
-        board.subject = subject
-        board.setup_ID = setup
-        return board
-
-    def start_hardware_test(self, i):
-        '''Start hardware test on i-th board'''
-        try:
-            board = self.boards[i]
-            board.setup_state_machine(self.experiment['hardware_test'])
-            board.start_framework(data_output=False)
-            time.sleep(0.01)
-            board.process_data()
-        except PyboardError:
-            self.setup_failed[i] = True
-            self.subjectboxes[i].error()
-
-    def setup_task(self, i):
-        '''Load the task state machine and set variables on i-th board.'''
-        board = self.boards[i]
-        # Setup task state machine.
-        try:
-            board.data_logger = Data_logger(print_func=board.print, data_consumers=
-                [self.experiment_plot.subject_plots[i], self.subjectboxes[i].task_info])
-            board.setup_state_machine(self.experiment['task'])
-        except PyboardError:
-            self.setup_failed[i] = True
-            self.subjectboxes[i].error()
-            return
-        # Set variables.
-        board.subject_variables = [v for v in self.experiment['variables']
-                                   if v['subject'] in ('all', board.subject)]
-        if board.subject_variables:
-            board.print('\nSetting variables.\n')
-            board.variables_set_pre_run = []
-            try:
-                try:
-                    subject_pv_dict = self.persistent_variables[board.subject]
-                except KeyError:
-                    subject_pv_dict = {}
-                for v in board.subject_variables:
-                    if v['persistent'] and v['name'] in subject_pv_dict.keys(): # Use stored value.
-                        v_value =  subject_pv_dict[v['name']]
-                        board.variables_set_pre_run.append(
-                            (v['name'], str(v_value), '(persistent value)'))
-                    else:
-                        if v['value'] == '':
-                            continue
-                        v_value = eval(v['value'], variable_constants) # Use value from variables table.
-                        board.variables_set_pre_run.append((v['name'], v['value'], ''))
-                    board.set_variable(v['name'], v_value)
-                # Print set variables to log.
-                if board.variables_set_pre_run:
-                    name_len  = max([len(v[0]) for v in board.variables_set_pre_run])
-                    value_len = max([len(v[1]) for v in board.variables_set_pre_run])
-                    for v_name, v_value, pv_str in board.variables_set_pre_run:
-                        self.subjectboxes[i].print_to_log(
-                            v_name.ljust(name_len+4) + v_value.ljust(value_len+4) + pv_str)
-            except PyboardError as e:
-                board.print('Setting variable failed. ' + str(e))
-                self.setup_failed[i] = True
-        return
-
+  
     # Main setup experiment function.
 
     def setup_experiment(self, experiment):
@@ -175,10 +81,11 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.plots_button.setEnabled(False)
         # Setup subjectboxes
         self.subjects = list(experiment['subjects'].keys())
+        self.n_subjects = len(self.subjects)
         self.subjects.sort(key=lambda s: experiment['subjects'][s]['setup'])
-        for i,subject in enumerate(self.subjects):
+        for subject in self.subjects:
             self.subjectboxes.append(
-                Subjectbox(f"{experiment['subjects'][subject]['setup']} : {subject}", i, self))
+                Subjectbox(subject, experiment['subjects'][subject]['setup'], self))
             self.boxes_layout.addWidget(self.subjectboxes[-1])
         # Create data folder if needed.
         if not os.path.exists(self.experiment['data_dir']):
@@ -194,51 +101,38 @@ class Run_experiment_tab(QtWidgets.QWidget):
         # Setup boards.
         self.print_to_logs('Connecting to board.. ')
         self.n_setups = len(self.subjects)
-        self.setup_failed = [False] * self.n_setups # Element i set to True to indicate setup has failed on board i.
-        self.boards = [board for board in self.thread_map(self.connect_to_board)]
-        if any(self.setup_failed):
-            self.abort_experiment()
-            return
+        parallel_call('connect_to_board', self.subjectboxes)
+        if self.setup_has_failed(): return
         # Hardware test.
         if experiment['hardware_test'] != 'no hardware test':
             reply = QtWidgets.QMessageBox.question(self, 'Hardware test', 'Run hardware test?',
                 QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No)
             if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 self.print_to_logs('\nStarting hardware test.')
-                self.thread_map(self.start_hardware_test)
-                if any(self.setup_failed):
-                    self.abort_experiment()
-                    return
+                parallel_call('start_hardware_test', self.subjectboxes)
+                if self.setup_has_failed(): return
                 QtWidgets.QMessageBox.question(self, 'Hardware test',
                     'Press OK when finished with hardware test.', QtWidgets.QMessageBox.StandardButton.Ok)
-                for i, board in enumerate(self.boards):
+                for box in self.subjectboxes:
                     try:
-                        board.stop_framework()
+                        box.board.stop_framework()
                         time.sleep(0.05)
-                        board.process_data()
-                    except PyboardError as e:
-                        self.setup_failed[i] = True
-                        board.print('\n' + str(e))
-                        self.subjectboxes[i].error()
-                if any(self.setup_failed):
-                    self.abort_experiment()
-                    return
-
+                        box.board.process_data()
+                    except PyboardError:
+                        box.setup_failed = True
+                        box.error()
+                if self.setup_has_failed(): return
         # Setup task
         self.print_to_logs('\nSetting up task.')
-        self.thread_map(self.setup_task)
-        if any(self.setup_failed):
-            self.abort_experiment()
-            return
+        parallel_call('setup_task', self.subjectboxes)
+        if self.setup_has_failed(): return
         # Copy task file to experiments data folder.
-        self.boards[0].data_logger.copy_task_file(self.experiment['data_dir'], get_setting("folders","tasks"))
+        self.subjectboxes[0].data_logger.copy_task_file(self.experiment['data_dir'], get_setting("folders","tasks"))
         # Configure GUI ready to run.
-        for subjectbox, board in zip(self.subjectboxes,self.boards):
-            subjectbox.assign_board(board)
-            subjectbox.start_stop_button.setEnabled(True)
-            subjectbox.status_text.setText('Ready')
-            subjectbox.task_info.set_state_machine(board.sm_info)
-        self.experiment_plot.set_state_machine(board.sm_info)
+        for box in self.subjectboxes:
+            box.make_variables_dialog() # Don't use parallel_call to avoid 'parent in a different thread error'.
+            box.set_ready_to_start()
+        self.experiment_plot.set_state_machine(self.subjectboxes[0].board.sm_info)
         self.startstopclose_all_button.setEnabled(True)
         self.logs_button.setEnabled(True)
         self.plots_button.setEnabled(True)
@@ -246,7 +140,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.setups_finished = 0
 
     def startstopclose_all(self):
-        '''Called when startstopclose_all_button is clicked..'''
+        '''Called when startstopclose_all_button is clicked.'''
         if self.startstopclose_all_button.text() == 'Close Exp.':
             self.close_experiment()
         elif self.startstopclose_all_button.text() == 'Start All':
@@ -254,141 +148,137 @@ class Run_experiment_tab(QtWidgets.QWidget):
                 if box.state == 'pre_run':
                     box.start_task()
         elif self.startstopclose_all_button.text() == 'Stop All':
-            for box in self.subjectboxes:
-                if box.state == 'running':
-                    box.stop_task()
+            parallel_call('stop_task', 
+                [box for box in self.subjectboxes if box.state == 'running'])
 
     def update_startstopclose_button(self):
         '''Called when a setup is started or stopped to update the
         startstopclose_all button.'''
-        if self.setups_finished == len(self.boards):
+        if self.setups_finished == self.n_subjects:
             self.startstopclose_all_button.setText('Close Exp.')
             self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/close.svg"))
-        elif self.setups_started == len(self.boards):
+        elif self.setups_started == self.n_subjects:
             self.startstopclose_all_button.setText('Stop All')
             self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
 
     def stop_experiment(self):
+        '''Called when all setups have stopped running. Configure GUI update
+        timers, store persistant variables and display summary variables.'''
         self.update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
-        for i, board in enumerate(self.boards):
-            time.sleep(0.05)
-            try:
-                board.process_data()
-            except PyboardError:
-                self.subjectboxes[i].print_to_log("\nError while stopping framework run.")
-        # Summary and persistent variables.
-        summary_variables = [v for v in self.experiment['variables'] if v['summary']]
-        sv_dict = OrderedDict()
+        # Store persistent variables.
         if os.path.exists(self.pv_path):
             with open(self.pv_path, 'r') as pv_file:
                 persistent_variables = json.loads(pv_file.read())
         else:
             persistent_variables = {}
-        for board in self.boards:
-            #  Store persistent variables.
-            subject_pvs = [v for v in board.subject_variables if v['persistent']]
-            if subject_pvs:
-                board.print('\nStoring persistent variables.')
-                persistent_variables[board.subject] = {
-                    v['name']: board.get_variable(v['name']) for v in subject_pvs}
-            # Read summary variables.
-            if summary_variables:
-                sv_dict[board.subject] = {v['name']: board.get_variable(v['name'])
-                                          for v in summary_variables}
-                for v_name, v_value in sv_dict[board.subject].items():
-                    board.data_logger.data_file.write(f"\nV -1 {v_name} {v_value}")
-                    board.data_logger.data_file.flush()
+        for box in self.subjectboxes:
+            if box.subject_pers_vars:
+                persistent_variables[box.subject] = box.subject_pers_vars
         if persistent_variables:
             with open(self.pv_path, 'w') as pv_file:
                 pv_file.write(json.dumps(persistent_variables, sort_keys=True, indent=4))
+        # Display summary variables.
+        summary_variables = [v for v in self.experiment['variables'] if v['summary']]
         if summary_variables:
+            sv_dict = OrderedDict()
+            for box in self.subjectboxes:
+                sv_dict[box.subject] = box.subject_sumr_vars
             Summary_variables_dialog(self, sv_dict).show()
         self.startstopclose_all_button.setEnabled(True)
 
-    def abort_experiment(self):
-        '''Called if an error occurs while the experiment is being set up.'''
-        self.update_timer.stop()
-        self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
-        for i, board in enumerate(self.boards):
-            # Stop running boards.
-            if board and board.framework_running:
-                board.stop_framework()
-                time.sleep(0.05)
-                board.process_data()
-                self.subjectboxes[i].stop_task()
-        msg = QtWidgets.QMessageBox()
-        msg.setWindowTitle('Error')
-        msg.setText('An error occured while setting up experiment')
-        msg.setIcon(QtWidgets.QMessageBox.Icon.Warning)
-        msg.exec()
-        self.startstopclose_all_button.setText('Close Exp.')
-        self.startstopclose_all_button.setEnabled(True)
+    def setup_has_failed(self):
+        '''Check if setup has failed on any subjectbox and if so abort experiment.'''
+        if any([box.setup_failed for box in self.subjectboxes]):
+            # Setup has failed abort experiment setup.
+            self.update_timer.stop()
+            self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
+            for box in self.subjectboxes:
+                # Stop running boards.
+                if box.board and box.board.framework_running:
+                    box.board.stop_framework()
+                    time.sleep(0.05)
+                    box.board.process_data()
+                    box.stop_task()
+            msg = QtWidgets.QMessageBox()
+            msg.setWindowTitle('Error')
+            msg.setText('An error occured while setting up experiment')
+            msg.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+            msg.exec()
+            self.startstopclose_all_button.setText('Close Exp.')
+            self.startstopclose_all_button.setEnabled(True)
+            return True
+        else:
+            return False
 
     def close_experiment(self):
+        '''Close the Run_experiment_tab and return to Setup_experiment_tab.'''
         self.GUI_main.tab_widget.setTabEnabled(0, True) # Enable run task tab.
         self.GUI_main.tab_widget.setTabEnabled(2, True) # Enable setups tab.
         self.GUI_main.experiments_tab.setCurrentWidget(self.GUI_main.configure_experiment_tab)
         self.experiment_plot.close_experiment()
         # Close boards.
-        for board in self.boards:
-            if board.data_logger: board.data_logger.close_files()
-            board.close()
+        for box in self.subjectboxes:
+            if box.board.data_logger: box.data_logger.close_files()
+            box.board.close()
         # Clear subjectboxes.
         while len(self.subjectboxes) > 0:
-            subjectbox = self.subjectboxes.pop()
-            subjectbox.setParent(None)
-            subjectbox.deleteLater()
+            box = self.subjectboxes.pop()
+            box.setParent(None)
+            box.deleteLater()
         if not self.logs_visible:
             self.boxes_layout.takeAt(self.boxes_layout.count()-1) # Remove stretch.
 
     def show_hide_logs(self):
         '''Show/hide the log textboxes in subjectboxes.'''
         if self.logs_visible:
-            for subjectbox in self.subjectboxes:
-                subjectbox.log_textbox.hide()
+            for box in self.subjectboxes:
+                box.log_textbox.hide()
             self.boxes_layout.addStretch(100)
             self.logs_visible = False
             self.logs_button.setText('Show logs')
         else:
-            for subjectbox in self.subjectboxes:
-                subjectbox.log_textbox.show()
+            for box in self.subjectboxes:
+                box.log_textbox.show()
             self.boxes_layout.takeAt(self.boxes_layout.count()-1) # Remove stretch.
             self.logs_visible = True
             self.logs_button.setText('Hide logs')
 
     def update(self):
         '''Called regularly while experiment is running'''
-        for subjectbox in self.subjectboxes:
-            subjectbox.update()
+        for box in self.subjectboxes:
+            box.update()
         self.experiment_plot.update()
-        if self.setups_finished == len(self.boards):
+        if self.setups_finished == self.n_subjects:
             self.stop_experiment()
 
     def print_to_logs(self, print_str):
         '''Print to all subjectbox logs.'''
-        for subjectbox in self.subjectboxes:
-            subjectbox.print_to_log(print_str)
+        for box in self.subjectboxes:
+            box.print_to_log(print_str)
 
 # -----------------------------------------------------------------------------
 
 class Subjectbox(QtWidgets.QGroupBox):
     '''Groupbox for displaying data from a single subject.'''
 
-    def __init__(self, name, setup_number, parent=None):
-
-        super(QtWidgets.QGroupBox, self).__init__(name, parent=parent)
-        self.board = None # Overwritten with board once instantiated.
+    def __init__(self, subject, setup_name, parent=None):
+        super(QtWidgets.QGroupBox, self).__init__(f"{setup_name} : {subject}", parent=parent)
+        self.subject = subject
+        self.setup_name = setup_name
         self.GUI_main = self.parent().GUI_main
         self.run_exp_tab = self.parent()
         self.state = 'pre_run'
-        self.setup_number = setup_number
+        self.setup_failed = False
         self.print_queue = []
         self.delay_printing = False
+        self.subject_pers_vars = {}
+        self.subject_sumr_vars = {}
 
         self.start_stop_button = QtWidgets.QPushButton('Start')
         self.start_stop_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
         self.start_stop_button.setEnabled(False)
+        self.start_stop_button.clicked.connect(self.start_stop_task)
         self.status_label = QtWidgets.QLabel('Status:')
         self.status_text = QtWidgets.QLineEdit()
         self.status_text.setReadOnly(True)
@@ -441,27 +331,103 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.delay_printing = True
 
     def end_delayed_print(self):
+        '''Print output stored in print queue to log.'''
         self.delay_printing = False
         for p in self.print_queue:
             self.print_to_log(*p)
 
-    def assign_board(self, board):
-        self.board = board
-        self.variables_dialog = Variables_dialog(self, self.board)
-        if 'custom_variables_dialog' in self.board.sm_info['variables']:
+    def connect_to_board(self):
+        '''Connect to pyboard and instantiate Pycboard and Data_logger objects.'''
+        serial_port = self.GUI_main.setups_tab.get_port(self.setup_name)
+        try:
+            self.data_logger = Data_logger(print_func=self.print_to_log, data_consumers=
+                [self.run_exp_tab.experiment_plot.subject_plots[self.subject], self.task_info])
+            self.board = Pycboard(serial_port, print_func=self.print_to_log, data_logger=self.data_logger)
+        except SerialException:
+            self.print_to_log('\nConnection failed.')
+            self.setup_failed = True
+            self.error()
+            return
+        if not self.board.status['framework']:
+            self.print_to_log('\nInstall pyControl framework on board before running experiment.')
+            self.setup_failed = True
+            self.error()
+
+    def start_hardware_test(self):
+        '''Transefer hardware test file to board and start framework running.'''
+        try:
+            self.board.setup_state_machine(self.run_exp_tab.experiment['hardware_test'])
+            self.board.start_framework(data_output=False)
+            time.sleep(0.01)
+            self.board.process_data()
+        except PyboardError:
+            self.setup_failed = True
+            self.error()
+
+    def setup_task(self):
+        '''Load the task state machine and set variables'''
+        # Setup task state machine.
+        try:
+            self.board.setup_state_machine(self.run_exp_tab.experiment['task'])
+        except PyboardError:
+            self.setup_failed = True
+            self.error()
+            return
+        # Set variables.
+        self.subject_variables = [v for v in self.run_exp_tab.experiment['variables']
+                                   if v['subject'] in ('all', self.subject)]
+        if self.subject_variables:
+            self.print_to_log('\nSetting variables.\n')
+            self.variables_set_pre_run = []
+            try:
+                try:
+                    subject_pv_dict = self.run_exp_tab.persistent_variables[self.subject]
+                except KeyError:
+                    subject_pv_dict = {}
+                for v in self.subject_variables:
+                    if v['persistent'] and v['name'] in subject_pv_dict.keys(): # Use stored value.
+                        v_value =  subject_pv_dict[v['name']]
+                        self.variables_set_pre_run.append(
+                            (v['name'], str(v_value), '(persistent value)'))
+                    else:
+                        if v['value'] == '':
+                            continue
+                        v_value = eval(v['value'], variable_constants) # Use value from variables table.
+                        self.variables_set_pre_run.append((v['name'], v['value'], ''))
+                    self.board.set_variable(v['name'], v_value)
+                # Print set variables to log.
+                if self.variables_set_pre_run:
+                    name_len  = max([len(v[0]) for v in self.variables_set_pre_run])
+                    value_len = max([len(v[1]) for v in self.variables_set_pre_run])
+                    for v_name, v_value, pv_str in self.variables_set_pre_run:
+                        self.print_to_log(
+                            v_name.ljust(name_len+4) + v_value.ljust(value_len+4) + pv_str)
+            except PyboardError as e:
+                self.print_to_log('Setting variable failed. ' + str(e))
+                self.setup_failed = True
+        return
+
+    def make_variables_dialog(self):
+        '''Configure variables dialog and ready subjectbox to start experiment. '''
+        if 'custom_variables_dialog' in self.board.sm_info['variables']: # Task uses custon variables dialog
             custom_variables_name = eval(self.board.sm_info['variables']['custom_variables_dialog'])
-            potential_dialog = Custom_variables_dialog(self,custom_variables_name,is_experiment=True)
+            potential_dialog = Custom_variables_dialog(self,custom_variables_name, is_experiment=True)
             if potential_dialog.custom_gui == "json_gui":
                 self.variables_dialog = potential_dialog
             elif potential_dialog.custom_gui == "pyfile_gui":
                 py_gui_file = importlib.import_module(f"config.user_variable_dialogs.{custom_variables_name}")
                 importlib.reload(py_gui_file)
                 self.variables_dialog = py_gui_file.Custom_variables_dialog(self, self.board)
-
-
+        else: # Board uses standard variables dialog.
+            self.variables_dialog = Variables_dialog(self, self.board)
         self.variables_button.clicked.connect(self.variables_dialog.exec)
+
+    def set_ready_to_start(self):
+        '''Set GUI elements ready to start run.'''
         self.variables_button.setEnabled(True)
-        self.start_stop_button.clicked.connect(self.start_stop_task)
+        self.start_stop_button.setEnabled(True)
+        self.task_info.set_state_machine(self.board.sm_info)
+        self.status_text.setText('Ready')
 
     def start_stop_task(self):
         '''Called when start/stop button on Subjectbox pressed or
@@ -475,17 +441,16 @@ class Subjectbox(QtWidgets.QGroupBox):
         '''Start the task running on the Subjectbox's board.'''
         self.status_text.setText('Running')
         self.state = 'running'
-        self.run_exp_tab.experiment_plot.start_experiment(self.setup_number)
+        self.run_exp_tab.experiment_plot.run_start(self.subject)
         self.start_time = datetime.now()
         ex = self.run_exp_tab.experiment
-        board = self.board
-        board.print('\nStarting experiment.\n')
-        board.data_logger.open_data_file(ex['data_dir'], ex['name'], board.setup_ID, board.subject, datetime.now())
-        if board.subject_variables: # Write variables set pre run to data file.
-            for v_name, v_value, pv in self.board.variables_set_pre_run:
-                board.data_logger.data_file.write(f"V 0 {v_name} {v_value}\n")
-        board.data_logger.data_file.write('\n')
-        board.start_framework()
+        self.board.print('\nStarting experiment.\n')
+        self.data_logger.open_data_file(ex['data_dir'], ex['name'], self.setup_name, self.subject, datetime.now())
+        if self.subject_variables: # Write variables set pre run to data file.
+            for v_name, v_value, pv in self.variables_set_pre_run:
+                self.data_logger.data_file.write(f"V 0 {v_name} {v_value}\n")
+        self.data_logger.data_file.write('\n')
+        self.board.start_framework()
 
         self.start_stop_button.setText('Stop')
         self.start_stop_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
@@ -504,12 +469,33 @@ class Subjectbox(QtWidgets.QGroupBox):
         '''Called to stop task or if task stops automatically.'''
         if self.board.framework_running:
             self.board.stop_framework()
+            time.sleep(0.05)
+            try:
+                self.board.process_data()
+            except PyboardError:
+                self.print_to_log("\nError while stopping framework run.")
+        # Read persistant variables.
+        subject_pvs = [v for v in self.subject_variables if v['persistent']]
+        if subject_pvs:
+            self.print_to_log('\nReading persistent variables.')
+            self.subject_pers_vars = {v['name']: 
+                self.board.get_variable(v['name']) for v in subject_pvs}
+        # Read summary variables.
+        summary_variables = [v for v in 
+            self.run_exp_tab.experiment['variables'] if v['summary']]
+        if summary_variables:
+            self.subject_sumr_vars = {v['name']: 
+                self.board.get_variable(v['name']) for v in summary_variables}
+            for v_name, v_value in self.subject_sumr_vars.items():
+                self.data_logger.data_file.write(f"\nV -1 {v_name} {v_value}")
+                self.data_logger.data_file.flush()
+        # Update GUI elements.
         self.state = 'post_run'
         self.task_info.state_text.setText('Stopped')
         self.task_info.state_text.setStyleSheet('color: grey;')
         self.status_text.setText('Stopped')
         self.start_stop_button.setEnabled(False)
-        self.run_exp_tab.experiment_plot.active_plots.remove(self.setup_number)
+        self.run_exp_tab.experiment_plot.run_stop(self.subject)
         self.run_exp_tab.setups_finished += 1
         self.variables_button.setEnabled(False)
         self.run_exp_tab.update_startstopclose_button()
