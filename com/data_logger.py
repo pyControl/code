@@ -21,13 +21,14 @@ class Data_logger():
                            in self.sm_info['analog_inputs'].items()}
         self.analog_files = {ai['ID']: None for ai in self.sm_info['analog_inputs'].values()}
 
-    def open_data_file(self, data_dir, experiment_name, setup_ID, subject_ID, datetime_now=None):
+    def open_data_file(self, data_dir, experiment_name, setup_ID, subject_ID,
+                       file_type, datetime_now=None):
         '''Open data file and write header information.'''
-        self.file_type = 'tsv'
         self.data_dir = data_dir
         self.experiment_name = experiment_name
         self.subject_ID = subject_ID
         self.setup_ID = setup_ID
+        self.file_type = file_type
         if datetime_now is None: datetime_now = datetime.now()
         file_name = self.subject_ID + datetime_now.strftime('-%Y-%m-%d-%H%M%S') + '.' + self.file_type
         self.file_path = os.path.join(self.data_dir, file_name)

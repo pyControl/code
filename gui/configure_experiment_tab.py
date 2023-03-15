@@ -64,15 +64,20 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         data_dir_button = QtWidgets.QPushButton('')
         data_dir_button.setIcon(QtGui.QIcon("gui/icons/folder.svg"))
         data_dir_button.setFixedWidth(30)
+        filetype_label = QtWidgets.QLabel('File type')
+        self.filetype_select =  QtWidgets.QComboBox()
+        self.filetype_select.addItems(["tsv", "txt"])
 
         self.experiment_parameters_layout = QtWidgets.QGridLayout()
         self.experiment_parameters_layout.addWidget(task_label,0,0,QtCore.Qt.AlignmentFlag.AlignCenter)
         self.experiment_parameters_layout.addWidget(hardware_test_label,0,1,QtCore.Qt.AlignmentFlag.AlignCenter)
         self.experiment_parameters_layout.addWidget(data_dir_label,0,2,1,2,QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.experiment_parameters_layout.addWidget(filetype_label,0,4,QtCore.Qt.AlignmentFlag.AlignCenter)
         self.experiment_parameters_layout.addWidget(self.task_select,1,0)
         self.experiment_parameters_layout.addWidget(self.hardware_test_select,1,1)
         self.experiment_parameters_layout.addWidget(self.data_dir_text,1,2)
         self.experiment_parameters_layout.addWidget(data_dir_button,1,3)
+        self.experiment_parameters_layout.addWidget(self.filetype_select,1,4)
 
         expbox_Vlayout = QtWidgets.QVBoxLayout(self.experiment_groupbox)
         expbox_Vlayout.addLayout(experiment_actions_layout)
@@ -169,6 +174,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
                 'task': str(self.task_select.text()),
                 'hardware_test': str(self.hardware_test_select.text()),
                 'data_dir': self.data_dir_text.text(),
+                'file_type': self.filetype_select.currentText(),
                 'subjects': self.subjects_table.subjects_dict(filtered),
                 'variables': self.variables_table.variables_list(),
                 'subset_warning':self.subset_warning_checkbox.isChecked()}
