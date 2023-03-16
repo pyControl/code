@@ -210,7 +210,7 @@ class Analog_plot():
         self.inputs = {}
 
     def set_state_machine(self, sm_info):
-        self.inputs = {ID: ai for ID,ai in sm_info['analog_inputs'].items() if ai['plot']}
+        self.inputs = {name: ai for name, ai in sm_info['analog_inputs'].items() if ai['plot']}
         if not self.inputs: return # State machine may not have analog inputs.
         self.axis.clear()
         self.legend = self.axis.addLegend(offset=(10, 10))
@@ -234,10 +234,11 @@ class Analog_plot():
         new_analog = [nd for nd in new_data if nd[0] == 'A']
         for na in new_analog:
             ID, sampling_rate, timestamp, data_array = na[1:]
-            new_len = len(data_array)
-            t = timestamp/1000 + np.arange(new_len)/sampling_rate
-            self.data[ID] = np.roll(self.data[ID], -new_len, axis=0)
-            self.data[ID][-new_len:,:] = np.vstack([t,data_array]).T
+            if ID in self.plots.keys():
+                new_len = len(data_array)
+                t = timestamp/1000 + np.arange(new_len)/sampling_rate
+                self.data[ID] = np.roll(self.data[ID], -new_len, axis=0)
+                self.data[ID][-new_len:,:] = np.vstack([t,data_array]).T
 
     def update(self, run_time):
         '''Update plots.'''
