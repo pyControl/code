@@ -103,37 +103,38 @@ class Data_logger():
     def data_to_string(self, new_data, verbose=False):
         '''Convert list of data tuples into a string.  If verbose=True state and event names are used,
         if verbose=False state and event IDs are used.'''
+        data_string = ''
         for nd in new_data:
-            if self.file_type == 'txt' or verbose: 
+            if verbose or self.file_type == 'txt': 
                 if nd[0] == 'D':  # State entry or event.
                         if verbose: # Print state or event name.
-                            data_string = f'D {nd[1]} {self.ID2name_fw[nd[2]]}\n'
+                            data_string += f'D {nd[1]} {self.ID2name_fw[nd[2]]}\n'
                         else:       # Print state or event ID.
-                            data_string = f'D {nd[1]} {nd[2]}\n'
+                            data_string += f'D {nd[1]} {nd[2]}\n'
                 elif nd[0] in ('P', 'V'): # User print output or set variable.
-                    data_string = '{} {} {}\n'.format(*nd)
+                    data_string += '{} {} {}\n'.format(*nd)
                 elif nd[0] == '!': # Warning
-                    data_string = f'! {nd[1]}\n'
+                    data_string += f'! {nd[1]}\n'
                 elif nd[0] == '!!': # Crash traceback.
                     error_string = nd[1]
                     if not verbose: # In data files multi-line tracebacks have ! prepended to all lines aid parsing data file.
                         error_string = '! ' + error_string.replace('\n', '\n! ')
-                    data_string = '\n' + error_string + '\n'
+                    data_string += '\n' + error_string + '\n'
             elif self.file_type == 'tsv':
                 if nd[0] == 'D':  # State entry or event.
                     if nd[2] in self.sm_info['states'].keys():
-                        data_string = self.tsv_row_str('state', time=nd[1], name=self.ID2name_fw[nd[2]])
+                        data_string += self.tsv_row_str('state', time=nd[1], name=self.ID2name_fw[nd[2]])
                     else:
-                        data_string = self.tsv_row_str('event', time=nd[1], name=self.ID2name_fw[nd[2]])
+                        data_string += self.tsv_row_str('event', time=nd[1], name=self.ID2name_fw[nd[2]])
                 elif nd[0] == 'P': # User print output.
-                    data_string = self.tsv_row_str('print', time=nd[1], value=nd[2])
+                    data_string += self.tsv_row_str('print', time=nd[1], value=nd[2])
                 elif nd[0] == 'V': # Variable.
                     v_name, v_value = nd[2].split(' ')
-                    data_string = self.tsv_row_str('var', time=nd[1], name=v_name, value=v_value)
+                    data_string += self.tsv_row_str('var', time=nd[1], name=v_name, value=v_value)
                 elif nd[0] == '!': # Warning
-                    data_string = self.tsv_row_str('warn', value=nd[1])
+                    data_string += self.tsv_row_str('warn', value=nd[1])
                 elif nd[0] == '!!': # Error
-                    data_string = self.tsv_row_str('error', value=nd[1].replace('\n','|'))
+                    data_string += self.tsv_row_str('error', value=nd[1].replace('\n','|'))
         return data_string
 
     def save_analog_chunk(self, ID, sampling_rate, timestamp, data_array):
