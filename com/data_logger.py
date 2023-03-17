@@ -1,5 +1,6 @@
 import os
 import json
+import numpy as np
 from datetime import datetime
 from shutil import copyfile
 
@@ -8,7 +9,7 @@ class Data_logger():
 
     def __init__(self, sm_info=None, print_func=None, data_consumers=[]):
         self.data_file = None
-        self.analog_files = {}
+        self.analog_writers = {}
         self.print_func = print_func
         self.data_consumers = data_consumers
         if sm_info:
@@ -19,11 +20,11 @@ class Data_logger():
         self.ID2name_fw = self.sm_info['ID2name']      # Dict mapping framework IDs to names.
         self.ID2name_hw = {ai['ID']: name for name, ai # Dict mapping hardware IDs to names.
                            in self.sm_info['analog_inputs'].items()}
-        self.analog_files = {ai['ID']: None for ai in self.sm_info['analog_inputs'].values()}
-
+        
     def open_data_file(self, data_dir, experiment_name, setup_ID, subject_ID,
                        file_type, datetime_now=None):
-        '''Open data file and write header information.'''
+        '''Open file tsv/txt file for event data and write header information.
+        If state machine uses analog inputs instantiate analog data writers.'''
         self.data_dir = data_dir
         self.experiment_name = experiment_name
         self.subject_ID = subject_ID
@@ -48,6 +49,9 @@ class Data_logger():
             self.data_file.write('\n')
             self.data_file.write('S {}\n\n'.format(json.dumps(self.sm_info['states'])))
             self.data_file.write('E {}\n\n'.format(json.dumps(self.sm_info['events'])))
+        self.analog_writers = {ai['ID']: 
+            Analog_writer(name, ai['Fs'], ai['dtype'], self.file_path)
+            for name, ai in self.sm_info['analog_inputs'].items()}
 
     def write_info_line(self, name, value):
         if self.file_type == 'tsv':
@@ -57,7 +61,8 @@ class Data_logger():
             self.data_file.write(f'I {name} : {value}\n')
 
     def tsv_row_str(self, rtype, time='', name='', value=''):
-        return f'{rtype}\t{time}\t{name}\t{value}\n'
+        time_str = f'{time/1000:.3f}' if type(time) == int else time
+        return f'{time_str}\t{rtype}\t{name}\t{value}\n'
 
     def copy_task_file(self, data_dir, tasks_dir, dir_name='task_files'):
         '''If not already present, copy task file to data_dir/dir_name
@@ -75,10 +80,9 @@ class Data_logger():
             self.data_file.close()
             self.data_file = None
             self.file_path = None
-        for analog_file in self.analog_files.values():
-            if analog_file:
-                analog_file.close()
-                analog_file = None
+        for analog_writer in self.analog_writers.values():
+            analog_writer.close_files()
+        self.analog_writers = {}
 
     def process_data(self, new_data):
         '''If data _file is open new data is written to file.  If print_func is specified
@@ -98,7 +102,7 @@ class Data_logger():
             self.data_file.flush()
         for nd in new_data:
             if nd[0] == 'A':
-                self.save_analog_chunk(*nd[1:]) 
+                self.analog_writers[nd[1]].save_analog_chunk(timestamp=nd[3], data_array=nd[4])
 
     def data_to_string(self, new_data, verbose=False):
         '''Convert list of data tuples into a string.  If verbose=True state and event names are used,
@@ -122,7 +126,7 @@ class Data_logger():
                     data_string += '\n' + error_string + '\n'
             elif self.file_type == 'tsv':
                 if nd[0] == 'D':  # State entry or event.
-                    if nd[2] in self.sm_info['states'].keys():
+                    if nd[2] in self.sm_info['states'].values():
                         data_string += self.tsv_row_str('state', time=nd[1], name=self.ID2name_fw[nd[2]])
                     else:
                         data_string += self.tsv_row_str('event', time=nd[1], name=self.ID2name_fw[nd[2]])
@@ -137,16 +141,59 @@ class Data_logger():
                     data_string += self.tsv_row_str('error', value=nd[1].replace('\n','|'))
         return data_string
 
-    def save_analog_chunk(self, ID, sampling_rate, timestamp, data_array):
+
+class Analog_writer():
+    '''Class for writing data from one analog input to disk.'''
+
+    def __init__(self, name, sampling_rate, data_type, session_filepath):
+        self.name = name
+        self.sampling_rate = sampling_rate
+        self.data_type = data_type
+        self.open_data_files(session_filepath)
+
+    def open_data_files(self, session_filepath):
+        ses_path_stem, file_ext = os.path.splitext(session_filepath)
+        self.path_stem = ses_path_stem + f'_{self.name}'
+        self.file_type = 'npy' if file_ext[-3:] == 'tsv' else 'pca'
+        if self.file_type == 'pca':
+            file_path = self.path_stem + '.pca'
+            self.pca_file = open(file_path, 'wb')
+        elif self.file_type == 'npy':
+            self.t_tempfile_path = self.path_stem + '.time.temp'
+            self.d_tempfile_path = self.path_stem + f'.data.{self.data_type}.temp'
+            self.time_tempfile  = open(self.t_tempfile_path, 'wb')
+            self.data_tempfile = open(self.d_tempfile_path, 'wb')
+
+    def close_files(self):
+        '''Close data files. Convert temp files to numpy.'''
+        if self.file_type == 'pca':
+            self.pca_file.close()
+        elif self.file_type == 'npy':
+            self.time_tempfile.close()
+            self.data_tempfile.close()
+            with open(self.t_tempfile_path, 'rb') as f:
+                times = np.frombuffer(f.read(), dtype='float64')
+                np.save(self.path_stem + '.time.npy', times)
+            with open(self.d_tempfile_path, 'rb') as f:
+                data = np.frombuffer(f.read(), dtype=self.data_type)
+                np.save(self.path_stem + '.data.npy', data)
+            os.remove(self.t_tempfile_path)
+            os.remove(self.d_tempfile_path)
+
+    def save_analog_chunk(self, timestamp, data_array):
         '''Save a chunk of analog data to .pca data file.  File is created if not 
         already open for that analog input.'''
-        if not self.analog_files[ID]:
-            file_name = os.path.splitext(self.file_path)[0] + '_' + \
-                            self.ID2name_hw[ID] + '.pca'
-            self.analog_files[ID] = open(file_name, 'wb')
-        ms_per_sample = 1000 / sampling_rate
-        for i, x in enumerate(data_array):
-            t = int(timestamp + i*ms_per_sample)
-            self.analog_files[ID].write(t.to_bytes(4,'little', signed=True))
-            self.analog_files[ID].write(x.to_bytes(4,'little', signed=True))
-        self.analog_files[ID].flush()
+        if self.file_type == 'pca':
+            ms_per_sample = 1000 / self.sampling_rate
+            for i, x in enumerate(data_array):
+                t = int(timestamp + i*ms_per_sample)
+                self.pca_file.write(t.to_bytes(4,'little', signed=True))
+                self.pca_file.write(x.to_bytes(4,'little', signed=True))
+            self.pca_file.flush()
+        elif self.file_type == 'npy':
+            times = (np.arange(len(data_array), dtype='float64') 
+                     / self.sampling_rate) + timestamp/1000 # Seconds
+            self.time_tempfile.write(times.tobytes())
+            self.data_tempfile.write(data_array.tobytes())
+            self.time_tempfile.flush()
+            self.data_tempfile.flush()
