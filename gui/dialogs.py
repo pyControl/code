@@ -585,6 +585,5 @@ class Error_log_dialog(QtWidgets.QDialog):
         )
         if reply == QtWidgets.QMessageBox.StandardButton.Yes:
             self.log_viewer.clear()
-            with open("ErrorLog.txt", "w", encoding="utf-8") as error_file:
-                error_file.write("")
+            os.remove(r'ErrorLog.txt')
             self.close()

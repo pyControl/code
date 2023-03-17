@@ -146,20 +146,12 @@ class GUI_main(QtWidgets.QMainWindow):
         try:
             with open("ErrorLog.txt", "r", encoding="utf-8") as reader:
                 text = reader.read()
-            if text:
-                self.error_log_dialog.log_viewer.setText(text)
-                self.error_log_dialog.exec()
-            else:
-                QtWidgets.QMessageBox.information(
-                    self,
-                    "No errors",
-                    f"You have no errors",
-                    QtWidgets.QMessageBox.StandardButton.Ok,
-                )
+            self.error_log_dialog.log_viewer.setText(text)
+            self.error_log_dialog.exec()
         except FileNotFoundError:
             QtWidgets.QMessageBox.information(
                 self,
-                "No errors",
+                "No error log",
                 f"You have no errors",
                 QtWidgets.QMessageBox.StandardButton.Ok,
             )
