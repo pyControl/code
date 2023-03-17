@@ -160,7 +160,7 @@ class Analog_writer():
             self.pca_file = open(file_path, 'wb')
         elif self.file_type == 'npy':
             self.t_tempfile_path = self.path_stem + '.time.temp'
-            self.d_tempfile_path = self.path_stem + f'.data.{self.data_type}.temp'
+            self.d_tempfile_path = self.path_stem + f'.data.1{self.data_type}.temp'
             self.time_tempfile  = open(self.t_tempfile_path, 'wb')
             self.data_tempfile = open(self.d_tempfile_path, 'wb')
 

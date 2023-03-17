@@ -217,10 +217,6 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.GUI_main.tab_widget.setTabEnabled(2, True) # Enable setups tab.
         self.GUI_main.experiments_tab.setCurrentWidget(self.GUI_main.configure_experiment_tab)
         self.experiment_plot.close_experiment()
-        # Close boards.
-        for box in self.subjectboxes:
-            if box.board.data_logger: box.data_logger.close_files()
-            box.board.close()
         # Clear subjectboxes.
         while len(self.subjectboxes) > 0:
             box = self.subjectboxes.pop()
@@ -489,6 +485,9 @@ class Subjectbox(QtWidgets.QGroupBox):
             for v_name, v_value in self.subject_sumr_vars.items():
                 self.data_logger.data_file.write(f"\nV -1 {v_name} {v_value}")
                 self.data_logger.data_file.flush()
+        # Close data files and disconnect from board.
+        self.data_logger.close_files()
+        self.board.close()
         # Update GUI elements.
         self.state = 'post_run'
         self.task_info.state_text.setText('Stopped')
