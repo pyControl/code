@@ -434,17 +434,16 @@ class Pycboard(Pyboard):
                                          ''.join(unexpected_input)))
                     unexpected_input = []
                 type_byte = self.serial.read(1) # Message type identifier.
-                if type_byte == b'A': # Analog data, 13 byte header + variable size content.
-                    data_header = self.serial.read(13)
-                    typecode      = data_header[0:1].decode() 
+                if type_byte == b'A': # Analog data, 11 byte header + variable size content.
+                    data_header = self.serial.read(11)
+                    typecode      = data_header[:1].decode() 
                     if typecode not in ('b','B','h','H','l','L'):
-                        new_data.append(('!','bad typecode A'))
+                        new_data.append(Datatuple(type='!',data='bad typecode A'))
                         continue   
                     ID            = int.from_bytes(data_header[1:3], 'little')
-                    sampling_rate = int.from_bytes(data_header[3:5], 'little')
-                    data_len      = int.from_bytes(data_header[5:7], 'little')
-                    timestamp     = int.from_bytes(data_header[7:11], 'little')
-                    checksum      = int.from_bytes(data_header[11:13], 'little')
+                    data_len      = int.from_bytes(data_header[3:5], 'little')
+                    timestamp     = int.from_bytes(data_header[5:9], 'little')
+                    checksum      = int.from_bytes(data_header[9:11], 'little')
                     data_array    = array(typecode, self.serial.read(data_len))
                     if checksum == (sum(data_header[:-2]) + sum(data_array)) & 0xffff: # Checksum OK.
                         new_data.append(Datatuple(type='A',time=timestamp, ID=ID, data=data_array))
