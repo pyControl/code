@@ -84,9 +84,14 @@ def off():
         IO_object.off()
 
 def get_analog_inputs():
-    # Print dict of analog inputs {name: {'ID': ID, 'Fs':sampling rate, 'dtype':data_type, 'plot': to_plot}}
-    print({io.name:{'ID': io.ID, 'Fs': io.sampling_rate, 'dtype': io.data_type, 'plot': io.plot}
-          for io in IO_dict.values() if isinstance(io, Analog_channel)})
+    # Print dict of analog input info.
+    print(
+        {ai.ID:
+            {'name': ai.name,
+            'fs': ai.sampling_rate, 
+            'dtype': ai.data_type, 
+            'plot': ai.plot}
+        for ai in IO_dict.values() if isinstance(ai, Analog_channel)})
 
 # IO_object -------------------------------------------------------------------
 

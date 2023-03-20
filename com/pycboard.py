@@ -4,8 +4,11 @@ import time
 import inspect
 from serial import SerialException
 from array import array
+from collections import namedtuple
 from .pyboard import Pyboard, PyboardError
 from gui.settings import VERSION, dirs, get_setting
+
+Datatuple = namedtuple('Datatuple', ['type','time','ID','data'], defaults=[None]*4)
 
 # ----------------------------------------------------------------------------------------
 #  Helper functions.
@@ -381,7 +384,7 @@ class Pycboard(Pyboard):
                         'states': states, # {name:ID}
                         'events': events, # {name:ID}
                         'ID2name': {ID: name for name, ID in {**states, **events}.items()}, # {ID:name}
-                        'analog_inputs': self.get_analog_inputs(), # {name: {'ID': ID, 'Fs':sampling rate, 'dtype':data_type, 'plot':to_plot}}
+                        'analog_inputs': self.get_analog_inputs(), # {ID: {'name':, 'fs':, 'dtype': 'plot':}}
                         'variables': self.get_variables(),
                         'framework_version': self.framework_version,
                         'micropython_version': self.micropython_version} # {name: repr(value)}
@@ -401,8 +404,7 @@ class Pycboard(Pyboard):
         return eval(self.eval('{k: repr(v) for k, v in sm.variables.__dict__.items()}'))
 
     def get_analog_inputs(self):
-        '''Return analog_inputs as a directory 
-        {name: {'ID': ID, 'Fs':sampling rate, 'dtype':data_type, 'plot':to_plot}}'''
+        '''Return analog_inputs as a dictionary: {ID: {'name':, 'fs':, 'dtype': 'plot':}}'''
         return eval(self.exec('hw.get_analog_inputs()').decode().strip())
 
     def start_framework(self, data_output=True):
@@ -445,42 +447,44 @@ class Pycboard(Pyboard):
                     checksum      = int.from_bytes(data_header[11:13], 'little')
                     data_array    = array(typecode, self.serial.read(data_len))
                     if checksum == (sum(data_header[:-2]) + sum(data_array)) & 0xffff: # Checksum OK.
-                        new_data.append(('A',ID, sampling_rate, timestamp, data_array))
+                        new_data.append(Datatuple(type='A',time=timestamp, ID=ID, data=data_array))
                     else:
-                        new_data.append(('!','bad checksum A'))
+                        new_data.append(Datatuple(type='!',data='bad data checksum, datatype: A'))
                 elif type_byte == b'D': # Event or state entry, 8 byte data header only.
                     data_header = self.serial.read(8)
                     timestamp = int.from_bytes(data_header[ :4], 'little')
                     ID        = int.from_bytes(data_header[4:6], 'little')
                     checksum  = int.from_bytes(data_header[6:8], 'little')
                     if checksum == sum(data_header[:-2]): # Checksum OK.
-                        new_data.append(('D',timestamp, ID))
+                       new_data.append(Datatuple(type='D', time=timestamp, ID=ID))
                     else:
-                        new_data.append(('!','bad checksum D'))
+                        new_data.append(Datatuple(type='!',data='bad data checksum, datatype: D'))
                 elif type_byte in (b'P', b'V', b'!'): # User print statement, set variable, or warning. 8 byte data header + variable size content.
+                    data_type = type_byte.decode() 
                     data_header = self.serial.read(8)
                     data_len  = int.from_bytes(data_header[ :2], 'little')
                     timestamp = int.from_bytes(data_header[2:6], 'little')
                     checksum  = int.from_bytes(data_header[6:8], 'little')
                     data_bytes = self.serial.read(data_len)
                     if not checksum == (sum(data_header[:-2]) + sum(data_bytes)) & 0xffff: # Bad checksum.
-                        new_data.append(('!','bad checksum ' + type_byte.decode()))
+                        new_data.append(Datatuple(type='!',data='bad data checksum, datatype: ' + data_type))
                         continue
-                    if type_byte == b'!':
-                        new_data.append(('!', data_bytes.decode()))
-                    else:
-                        new_data.append((type_byte.decode(),timestamp, data_bytes.decode()))
-                    if type_byte == b'V': # Store new variable value in sm_info
-                        v_name, v_str = data_bytes.decode().split(' ', 1)
+                    data_str = data_bytes.decode()
+                    if data_type == '!':
+                        new_data.append(Datatuple(type='!',data=data_str))
+                    else:# Variable or print.
+                        new_data.append(Datatuple(type=data_type,time=timestamp, data=data_str))
+                    if data_type == 'V': # Store new variable value in sm_info
+                        v_name, v_str = value_str.split(' ', 1)
                         self.sm_info['variables'][v_name] = eval(v_str)
                 else:
                     unexpected_input.append(type_byte.decode())
             elif new_byte == b'\x04': # End of framework run.
                 self.framework_running = False
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
-                if len(data_err) > 2: # Fatal error during framework run.
+                if len(data_err) > 2: # Error during framework run.
                     error_message = data_err[:-3].decode()
-                    new_data.append(('!!', error_message))                
+                    new_data.append(Datatuple(type='!!', data=error_message))                
                 break
             else:
                 unexpected_input.append(new_byte.decode())
