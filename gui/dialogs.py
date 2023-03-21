@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from gui.settings import dirs, get_setting, default_user_settings
 from gui.utility import variable_constants
@@ -585,5 +586,6 @@ class Error_log_dialog(QtWidgets.QDialog):
         )
         if reply == QtWidgets.QMessageBox.StandardButton.Yes:
             self.log_viewer.clear()
+            logging.shutdown()
             os.remove(r'ErrorLog.txt')
             self.close()
