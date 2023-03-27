@@ -18,6 +18,7 @@ print_typ = const(4) # User print       : (time, print_typ, print_string)
 hardw_typ = const(5) # Harware callback : (time, hardw_typ, hardware_ID)
 varbl_typ = const(6) # Variable change  : (time, varbl_typ, set/get/print byte, json_str)
 warng_typ = const(7) # Warning          : (time, warng_typ, print_string)
+stopf_typ = const(8) # Stop framework   : (time, stopf_type)
 
 # Event_queue -----------------------------------------------------------------
 
@@ -76,6 +77,9 @@ def output_data(event):
         ID        = event[2].to_bytes(2, 'little')
         checksum  = sum(timestamp + ID).to_bytes(2, 'little')
         usb_serial.send(b'\x07D' + timestamp + ID + checksum)
+    elif event[1] == stopf_typ: # Framework stop.
+        timestamp = event[0].to_bytes(4, 'little')
+        usb_serial.send(b'\x07S' + timestamp)
     else:
         if event[1] == varbl_typ: # Variable changed.
             start_byte = b'\x07V'
@@ -164,6 +168,7 @@ def run():
         elif data_output_queue.available:
             output_data(data_output_queue.get())
     # Post run
+    data_output_queue.put((current_time, stopf_typ))
     usb_serial.setinterrupt(3) # Enable 'ctrl+c' on serial raising KeyboardInterrupt.
     clock.deinit()
     hw.run_stop()

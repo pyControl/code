@@ -29,6 +29,7 @@ class Data_logger():
         self.setup_ID = setup_ID
         self.file_type = file_type
         if datetime_now is None: datetime_now = datetime.now()
+        self.end_time = -1
         file_name = self.subject_ID + datetime_now.strftime('-%Y-%m-%d-%H%M%S') + '.' + self.file_type
         self.file_path = os.path.join(self.data_dir, file_name)
         self.data_file = open(self.file_path, 'w', newline = '\n')
@@ -42,19 +43,21 @@ class Data_logger():
         self.write_info_line('Framework version', self.sm_info['framework_version'])
         self.write_info_line('Micropython version', self.sm_info['micropython_version'])
         self.write_info_line('Subject ID', self.subject_ID)
-        self.write_info_line('Start date', datetime_now.strftime('%Y/%m/%d %H:%M:%S'))
         if self.file_type == 'txt':
+            self.write_info_line('Start date', datetime_now.strftime('%Y/%m/%d %H:%M:%S'))
             self.data_file.write('\n')
             self.data_file.write('S {}\n\n'.format(json.dumps(self.sm_info['states'])))
             self.data_file.write('E {}\n\n'.format(json.dumps(self.sm_info['events'])))
+        else:
+            self.write_info_line('start_time', datetime.utcnow().isoformat(timespec='milliseconds'))
         self.analog_writers = {ID: 
             Analog_writer(ai['name'], ai['fs'], ai['dtype'], self.file_path)
             for ID, ai in self.sm_info['analog_inputs'].items()}
 
-    def write_info_line(self, name, value):
+    def write_info_line(self, name, value, time=0):
         if self.file_type == 'tsv':
             name = name.lower().replace(' ', '_')
-            self.data_file.write(self.tsv_row_str('info', name=name, value=value))
+            self.data_file.write(self.tsv_row_str('info', time=time, name=name, value=value))
         elif self.file_type == 'txt':
             self.data_file.write(f'I {name} : {value}\n')
 
@@ -142,6 +145,9 @@ class Data_logger():
                     data_string += self.tsv_row_str('warning', value=nd.data)
                 elif nd.type == '!!': # Error
                     data_string += self.tsv_row_str('error', value=nd.data.replace('\n','|').replace('\r','|'))
+                elif nd.type == 'S': # Framework stop.
+                    self.write_info_line('end_time', datetime.utcnow().isoformat(timespec='milliseconds'), time=nd.time)
+                    self.end_time = nd.time # Used by run_experiment_tab for printing summary variables to file.
         return data_string
 
 

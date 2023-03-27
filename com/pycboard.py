@@ -455,6 +455,9 @@ class Pycboard(Pyboard):
                        new_data.append(Datatuple(type='D', time=timestamp, ID=ID))
                     else:
                         new_data.append(Datatuple(type='!',data='bad data checksum, datatype: D'))
+                elif type_byte == b'S': # Framework stop
+                    timestamp = int.from_bytes(self.serial.read(4), 'little')
+                    new_data.append(Datatuple(type='S', time=timestamp))
                 elif type_byte in (b'P', b'V', b'!'): # User print statement, set variable, or warning. 8 byte data header + variable size content.
                     data_type = type_byte.decode() 
                     data_header = self.serial.read(8)
@@ -475,7 +478,7 @@ class Pycboard(Pyboard):
                         var_dict = json.loads(data_str[1:])
                         for v_name, v_value in var_dict.items():
                             self.sm_info['variables'][v_name] = v_value
-                        new_data.append(Datatuple(type='V',time=timestamp, ID=op_ID, data=var_dict))                        
+                        new_data.append(Datatuple(type='V',time=timestamp, ID=op_ID, data=var_dict))
                 else:
                     unexpected_input.append(type_byte.decode())
             elif new_byte == b'\x04': # End of framework run.
@@ -483,7 +486,7 @@ class Pycboard(Pyboard):
                 data_err = self.read_until(2, b'\x04>', timeout=10) 
                 if len(data_err) > 2: # Error during framework run.
                     error_message = data_err[:-3].decode()
-                    new_data.append(Datatuple(type='!!', data=error_message))                
+                    new_data.append(Datatuple(type='!!', data=error_message))
                 break
             else:
                 unexpected_input.append(new_byte.decode())

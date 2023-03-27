@@ -479,7 +479,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         if summary_variables:
             self.subject_sumr_vars = {v['name']: 
                 self.board.get_variable(v['name']) for v in summary_variables}
-            self.data_logger.write_to_file([Datatuple(type='V',time=-1, ID='get', data=self.subject_sumr_vars)])
+            self.data_logger.write_to_file([Datatuple(type='V',time=self.data_logger.end_time, ID='get', data=self.subject_sumr_vars)])
         # Close data files and disconnect from board.
         self.data_logger.close_files()
         self.board.close()
