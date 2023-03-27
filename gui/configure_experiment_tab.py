@@ -281,7 +281,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         else:
             self.hardware_test_select.setText('no hardware test')
         self.experiment_select.setText(experiment['name'])
-        if 'subset_warning' in experiment.keys(): # New style experiment file.
+        if 'subset_warning' in experiment.keys(): # Experiment file created with GUI version >= 1.5.
             self.subset_warning_checkbox.setChecked(experiment['subset_warning'])
             self.subjects_table.set_from_dict(experiment['subjects'])
         else: # Experiment file created with GUI version <= 1.5.
@@ -289,6 +289,10 @@ class Configure_experiment_tab(QtWidgets.QWidget):
             subjects_dict = {subject: {'run':True, 'setup':setup}
                 for setup, subject in experiment['subjects'].items()}
             self.subjects_table.set_from_dict(subjects_dict)
+        if 'file_type' in experiment.keys(): # Experiment file created with GUI version >= 1.9.
+            self.filetype_select.setCurrentText(experiment['file_type'])
+        else:
+            self.filetype_select.setCurrentText('txt')
         self.variables_table.task_changed(experiment['task'])
         self.data_dir_text.setText(experiment['data_dir'])
         self.variables_table.set_from_list(experiment['variables'])
