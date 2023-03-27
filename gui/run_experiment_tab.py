@@ -8,7 +8,7 @@ from collections import OrderedDict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException
 
-from com.pycboard import Pycboard, PyboardError
+from com.pycboard import Pycboard, PyboardError, Datatuple
 from com.data_logger import Data_logger
 from gui.settings import get_setting
 from gui.plotting import Experiment_plot
@@ -382,7 +382,7 @@ class Subjectbox(QtWidgets.QGroupBox):
                     subject_pv_dict = {}
                 for v in self.subject_variables:
                     if v['persistent'] and v['name'] in subject_pv_dict.keys(): # Use stored value.
-                        v_value =  subject_pv_dict[v['name']]
+                        v_value = subject_pv_dict[v['name']]
                         self.variables_set_pre_run.append(
                             (v['name'], str(v_value), '(persistent value)'))
                     else:
@@ -440,18 +440,15 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.run_exp_tab.experiment_plot.run_start(self.subject)
         self.start_time = datetime.now()
         ex = self.run_exp_tab.experiment
-        self.board.print('\nStarting experiment.\n')
+        self.print_to_log('\nStarting experiment.\n')
         self.data_logger.open_data_file(ex['data_dir'], ex['name'], self.setup_name, self.subject, ex['file_type'], datetime.now())
         if self.subject_variables: # Write variables set pre run to data file.
-            for v_name, v_value, pv in self.variables_set_pre_run:
-                self.data_logger.write_to_file([('V', 0, f'{v_name} {v_value}')])
-        self.data_logger.data_file.write('\n')
+            var_dict  = {v_name: eval(v_value) for v_name, v_value, pv in self.variables_set_pre_run}
+            self.data_logger.write_to_file([Datatuple(type='V',time=0, ID='set', data=var_dict)])
         self.board.start_framework()
-
         self.start_stop_button.setText('Stop')
         self.start_stop_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
         self.run_exp_tab.setups_started += 1
-
         self.run_exp_tab.GUI_main.refresh_timer.stop()
         self.run_exp_tab.update_timer.start(get_setting("plotting","update_interval"))
         self.run_exp_tab.update_startstopclose_button()
@@ -482,9 +479,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         if summary_variables:
             self.subject_sumr_vars = {v['name']: 
                 self.board.get_variable(v['name']) for v in summary_variables}
-            for v_name, v_value in self.subject_sumr_vars.items():
-                self.data_logger.data_file.write(f"\nV -1 {v_name} {v_value}")
-                self.data_logger.data_file.flush()
+            self.data_logger.write_to_file([Datatuple(type='V',time=-1, ID='get', data=self.subject_sumr_vars)])
         # Close data files and disconnect from board.
         self.data_logger.close_files()
         self.board.close()

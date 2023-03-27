@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import json
 import inspect
 from serial import SerialException
 from array import array
@@ -399,10 +400,6 @@ class Pycboard(Pyboard):
         '''Return events as a dictionary {event_name: state_ID}'''
         return eval(self.eval('sm.events').decode())
 
-    def get_variables(self):
-        '''Return variables as a dictionary {variable_name: value}'''
-        return eval(self.eval('{k: repr(v) for k, v in sm.variables.__dict__.items()}'))
-
     def get_analog_inputs(self):
         '''Return analog_inputs as a dictionary: {ID: {'name':, 'fs':, 'dtype': 'plot':}}'''
         return eval(self.exec('hw.get_analog_inputs()').decode().strip())
@@ -471,11 +468,14 @@ class Pycboard(Pyboard):
                     data_str = data_bytes.decode()
                     if data_type == '!':
                         new_data.append(Datatuple(type='!',data=data_str))
-                    else:# Variable or print.
+                    elif data_type == 'P': # User print.
                         new_data.append(Datatuple(type=data_type,time=timestamp, data=data_str))
-                    if data_type == 'V': # Store new variable value in sm_info
-                        v_name, v_str = value_str.split(' ', 1)
-                        self.sm_info['variables'][v_name] = eval(v_str)
+                    elif data_type == 'V': # Store new variable value in sm_info
+                        op_ID = {'g':'get', 's':'set', 'p':'print'}[data_str[0]]
+                        var_dict = json.loads(data_str[1:])
+                        for v_name, v_value in var_dict.items():
+                            self.sm_info['variables'][v_name] = v_value
+                        new_data.append(Datatuple(type='V',time=timestamp, ID=op_ID, data=var_dict))                        
                 else:
                     unexpected_input.append(type_byte.decode())
             elif new_byte == b'\x04': # End of framework run.
@@ -502,18 +502,16 @@ class Pycboard(Pyboard):
         running, but variable event is later output by board.'''
         if v_name not in self.sm_info['variables']:
             raise PyboardError('Invalid variable name: {}'.format(v_name))
-        v_str = repr(v_value)
         if self.framework_running: # Set variable with serial command.
-            data = repr((v_name, v_str)).encode() + b's'
+            data = b's' + repr((v_name, v_value)).encode()
             data_len = len(data).to_bytes(2, 'little')
             checksum = sum(data).to_bytes(2, 'little')
             self.serial.write(b'V' + data_len +  data + checksum)
             return None
         else: # Set variable using REPL.  
-            checksum = sum(v_str.encode())
-            set_OK = eval(self.eval(f'sm.set_variable({repr(v_name)}, {repr(v_str)}, {checksum})').decode())
+            set_OK = eval(self.eval(f'sm.set_variable({repr(v_name)}, {v_value})').decode())
             if set_OK:
-                self.sm_info['variables'][v_name] = v_str
+                self.sm_info['variables'][v_name] = v_value
             return set_OK
 
     def get_variable(self, v_name):
@@ -523,9 +521,13 @@ class Pycboard(Pyboard):
         if v_name not in self.sm_info['variables']:
             raise PyboardError('Invalid variable name: {}'.format(v_name))        
         if self.framework_running: # Get variable with serial command.
-            data = v_name.encode() + b'g'
+            data = b'g' + v_name.encode()
             data_len = len(data).to_bytes(2, 'little')
             checksum = sum(data).to_bytes(2, 'little')
             self.serial.write(b'V' + data_len +  data + checksum)
         else: # Get variable using REPL.
             return eval(self.eval(f'sm.get_variable({repr(v_name)})').decode())
+
+    def get_variables(self):
+        '''Return variables as a dictionary {v_name: v_value}'''
+        return eval(self.eval("{k: v for k, v in sm.variables.__dict__.items() if not hasattr(v, '__init__')}"))

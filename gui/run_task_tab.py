@@ -345,7 +345,6 @@ class Run_task_tab(QtWidgets.QWidget):
             self.uploaded = True
             self.upload_button.setText("Reset")
             self.upload_button.setIcon(QtGui.QIcon("gui/icons/refresh.svg"))
-
         except PyboardError:
             self.status_text.setText("Error setting up state machine.")
 

@@ -110,11 +110,17 @@ class Data_logger():
             if verbose or self.file_type == 'txt': 
                 if nd.type == 'D':  # State entry or event.
                         if verbose: # Print state or event name.
-                            data_string += f'D {nd[1]} {self.ID2name_fw[nd[2]]}\n'
+                            data_string += f'D {nd.time} {self.ID2name_fw[nd.ID]}\n'
                         else:       # Print state or event ID.
-                            data_string += f'D {nd[1]} {nd[2]}\n'
-                elif nd.type in ('P', 'V'): # User print output or set variable.
-                    data_string += f'{nd.type} {nd.time} {nd.data}\n'
+                            data_string += f'D {nd.time} {nd.ID}\n'
+                elif nd.type == 'P': # User print output.
+                    data_string += f'P {nd.time} {nd.data}\n'
+                elif nd.type == 'V': # Variables
+                    if nd.ID == 'print':
+                        data_string += f'P {nd.time} {nd.data}\n'
+                    elif nd.ID in ('set','get'):
+                        for v_name, v_value in nd.data.items():
+                            data_string += f'V {nd.time} {v_name} {v_value}\n'
                 elif nd.type == '!': # Warning
                     data_string += f'! {nd.data}\n'
                 elif nd.type == '!!': # Crash traceback.
@@ -131,12 +137,11 @@ class Data_logger():
                 elif nd.type == 'P': # User print output.
                     data_string += self.tsv_row_str('print', time=nd.time, value=nd.data)
                 elif nd.type == 'V': # Variable.
-                    v_name, v_value = nd.data.split(' ')
-                    data_string += self.tsv_row_str('var', time=nd.time, name=v_name, value=v_value)
+                    data_string += self.tsv_row_str('variable', time=nd.time, name=nd.ID, value=json.dumps(nd.data))
                 elif nd.type == '!': # Warning
-                    data_string += self.tsv_row_str('warn', value=nd.data)
+                    data_string += self.tsv_row_str('warning', value=nd.data)
                 elif nd.type == '!!': # Error
-                    data_string += self.tsv_row_str('error', value=nd.data.replace('\n','|'))
+                    data_string += self.tsv_row_str('error', value=nd.data.replace('\n','|').replace('\r','|'))
         return data_string
 
 

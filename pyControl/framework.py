@@ -1,4 +1,5 @@
 import pyb
+import ujson
 from . import timer
 from . import state_machine as sm
 from . import hardware as hw
@@ -15,7 +16,7 @@ state_typ = const(2) # State transition : (time, state_typ, state_ID)
 timer_typ = const(3) # User timer       : (time, timer_typ, event_ID)
 print_typ = const(4) # User print       : (time, print_typ, print_string)
 hardw_typ = const(5) # Harware callback : (time, hardw_typ, hardware_ID)
-varbl_typ = const(6) # Variable change  : (time, varbl_typ, (v_name, v_str)
+varbl_typ = const(6) # Variable change  : (time, varbl_typ, set/get/print byte, json_str)
 warng_typ = const(7) # Warning          : (time, warng_typ, print_string)
 
 # Event_queue -----------------------------------------------------------------
@@ -78,7 +79,7 @@ def output_data(event):
     else:
         if event[1] == varbl_typ: # Variable changed.
             start_byte = b'\x07V'
-            data_bytes = event[2][0].encode() + b' ' + event[2][1].encode()
+            data_bytes = (event[2] + event[3]).encode()
         else:
             if event[1] == print_typ: # User print string.
                 start_byte = b'\x07P'
@@ -102,14 +103,15 @@ def recieve_data():
         checksum = int.from_bytes(usb_serial.read(2), 'little')
         if not checksum == (sum(data) & 0xFFFF):
             return  # Bad checksum.
-        if data[-1:] == b's': # Set variable.
-            v_name, v_str = eval(data[:-1])
-            if sm.set_variable(v_name, v_str):
-                data_output_queue.put((current_time, varbl_typ, (v_name, v_str)))
-        elif data[-1:] == b'g': # Get variable.
-            v_name = data[:-1].decode()
-            v_str = sm.get_variable(v_name)
-            data_output_queue.put((current_time, varbl_typ, (v_name, v_str)))
+        data_str = data.decode()
+        if data_str[0] == 's': # Set variable.
+            v_name, v_value = eval(data_str[1:])
+            if sm.set_variable(v_name, v_value):
+                data_output_queue.put((current_time, varbl_typ, 's', ujson.dumps({v_name: v_value})))
+        elif data_str[0] == 'g': # Get variable.
+            v_name = data_str[1:]
+            v_value = sm.get_variable(v_name)
+            data_output_queue.put((current_time, varbl_typ, 'g', ujson.dumps({v_name: v_value})))
 
 def run():
     # Run framework for specified number of seconds.
