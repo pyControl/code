@@ -122,7 +122,7 @@ class Data_logger():
                     if nd.ID == 'print':
                         data_string += f'P {nd.time} {nd.data}\n'
                     elif nd.ID in ('set','get'):
-                        for v_name, v_value in nd.data.items():
+                        for v_name, v_value in json.loads(nd.data).items():
                             data_string += f'V {nd.time} {v_name} {v_value}\n'
                 elif nd.type == '!': # Warning
                     data_string += f'! {nd.data}\n'
@@ -140,7 +140,7 @@ class Data_logger():
                 elif nd.type == 'P': # User print output.
                     data_string += self.tsv_row_str('print', time=nd.time, value=nd.data)
                 elif nd.type == 'V': # Variable.
-                    data_string += self.tsv_row_str('variable', time=nd.time, name=nd.ID, value=json.dumps(nd.data))
+                    data_string += self.tsv_row_str('variable', time=nd.time, name=nd.ID, value=nd.data)
                 elif nd.type == '!': # Warning
                     data_string += self.tsv_row_str('warning', value=nd.data)
                 elif nd.type == '!!': # Error

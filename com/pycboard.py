@@ -475,10 +475,10 @@ class Pycboard(Pyboard):
                         new_data.append(Datatuple(type=data_type,time=timestamp, data=data_str))
                     elif data_type == 'V': # Store new variable value in sm_info
                         op_ID = {'g':'get', 's':'set', 'p':'print'}[data_str[0]]
-                        var_dict = json.loads(data_str[1:])
-                        for v_name, v_value in var_dict.items():
-                            self.sm_info['variables'][v_name] = v_value
-                        new_data.append(Datatuple(type='V',time=timestamp, ID=op_ID, data=var_dict))
+                        var_json = data_str[1:]
+                        var_dict = json.loads(var_json)
+                        self.sm_info['variables'].update(var_dict)
+                        new_data.append(Datatuple(type='V',time=timestamp, ID=op_ID, data=var_json))
                 else:
                     unexpected_input.append(type_byte.decode())
             elif new_byte == b'\x04': # End of framework run.
