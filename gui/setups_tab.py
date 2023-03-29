@@ -1,8 +1,9 @@
-import os
 import json
+from pathlib import Path
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from gui.settings import dirs, get_setting
 from gui.utility import TableCheckbox, parallel_call
+from gui.hardware_variables_dialog import Hardware_variables_editor
 from com.pycboard import Pycboard, PyboardError
 
 class Setups_tab(QtWidgets.QWidget):
@@ -18,13 +19,31 @@ class Setups_tab(QtWidgets.QWidget):
         self.setup_names = []
         self.available_setups_changed = False
 
+
+        # rename old file from setup_names.json to setups.json
+        # and change format so that names are a key within a serial port dictionary
+        setup_names = Path(dirs['config'] , 'setup_names.json')
+        try:
+            new_path = Path(dirs['config'] , 'setups.json')
+            setup_names.rename(new_path)
+            with open(new_path, 'r',encoding="utf-8") as names_json:
+                names_dict = json.loads(names_json.read())
+                new_format = {}
+                for k,v in names_dict.items():
+                    new_format[k] = {"name":v}
+                print(new_format)
+                with open(new_path, 'w') as f:
+                    f.write(json.dumps(new_format, sort_keys=True, indent=4))
+        except FileNotFoundError:
+            pass
+
         # Load saved setup names.
-        self.save_path = os.path.join(dirs['config'], 'setup_names.json')
-        if os.path.exists(self.save_path):
+        self.save_path = Path(dirs['config'] , 'setups.json')
+        if self.save_path.exists():
             with open(self.save_path, 'r') as f:
-                self.saved_names = json.loads(f.read())
+                self.saved_setups = json.loads(f.read())
         else:
-            self.saved_names = {} # {setup.port:setup.name}
+            self.saved_setups = {} # {setup.port:setup.name}
 
         # Select setups group box.
         self.setup_groupbox = QtWidgets.QGroupBox("Setups")
@@ -32,11 +51,12 @@ class Setups_tab(QtWidgets.QWidget):
         self.select_all_checkbox = QtWidgets.QCheckBox("Select all")
         self.select_all_checkbox.stateChanged.connect(self.select_all_setups)
 
-        self.setups_table = QtWidgets.QTableWidget(0, 3, parent=self)
-        self.setups_table.setHorizontalHeaderLabels(["Select", "Serial port", "Name"])
+        self.setups_table = QtWidgets.QTableWidget(0, 4, parent=self)
+        self.setups_table.setHorizontalHeaderLabels(["Select", "Serial port", "Name",""])
         self.setups_table.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.setups_table.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.setups_table.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.setups_table.horizontalHeader().setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.setups_table.verticalHeader().setVisible(False)
         self.setups_table.itemChanged.connect(lambda item: item.changed() if hasattr(item, "changed") else None)
 
@@ -75,7 +95,7 @@ class Setups_tab(QtWidgets.QWidget):
         # Log textbox.
         self.log_textbox = QtWidgets.QTextEdit()
         self.log_textbox.setMinimumHeight(180)
-        self.log_textbox.setFont(QtGui.QFont("Courier", get_setting("GUI", "log_font_size")))
+        self.log_textbox.setFont(QtGui.QFont("Courier New", get_setting("GUI", "log_font_size")))
         self.log_textbox.setReadOnly(True)
         self.log_textbox.setPlaceholderText("pyControl output")
 
@@ -92,6 +112,7 @@ class Setups_tab(QtWidgets.QWidget):
         self.setups_layout.setRowStretch(0,1)
         self.setups_layout.setRowStretch(2,1)
         self.setLayout(self.setups_layout)
+
 
 
     def print_to_log(self, print_string, end="\n"):
@@ -147,14 +168,21 @@ class Setups_tab(QtWidgets.QWidget):
     def update_saved_setups(self, setup):
         '''Update the save setup names when a setup name is edited.'''
         if setup.name == setup.port:
-            if setup.port in self.saved_names.keys():
-                del self.saved_names[setup.port]
+            if setup.port in self.saved_setups.keys():
+                del self.saved_setups[setup.port]["name"]
             else:
                 return
         else:
-            self.saved_names[setup.port] = setup.name
+            try: 
+                # edit setup name if there is already an entry in the setups dictionary
+                self.saved_setups[setup.port]["name"] = setup.name
+            except KeyError:
+                # otherwise, create an entry in the dictionary
+                self.saved_setups[setup.port] = {}
+                self.saved_setups[setup.port]["name"] = setup.name
+
         with open(self.save_path, 'w') as f:
-            f.write(json.dumps(self.saved_names, sort_keys=True))
+            f.write(json.dumps(self.saved_setups, sort_keys=True, indent=4))
 
     def get_port(self, setup_name):
         '''Return a setups serial port given the setups name.'''
@@ -217,7 +245,7 @@ class Setup():
         '''Setup is intilised when board is plugged into computer.'''
 
         try:
-            self.name = setups_tab.saved_names[serial_port]
+            self.name = setups_tab.saved_setups[serial_port]["name"]
         except KeyError:
             self.name = serial_port
 
@@ -240,12 +268,20 @@ class Setup():
         self.setups_tab.setups_table.setCellWidget(0, 0, self.select_checkbox)
         self.setups_tab.setups_table.setItem(0, 1, self.port_item)
         self.setups_tab.setups_table.setItem(0, 2, self.name_item)
+        variables_btn = QtWidgets.QPushButton('Variables')
+        variables_btn.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
+        self.setups_tab.setups_table.setCellWidget(0,3, variables_btn)
+        variables_btn.clicked.connect(self.edit_variables)
         self.select_checkbox.checkbox.stateChanged.connect(self.checkbox_handler)
         self.signal_from_rowcheck = True
 
     def checkbox_handler(self):
         if self.signal_from_rowcheck:
             self.setups_tab.multi_config_enable()
+
+    def edit_variables(self):
+        hardware_var_editor = Hardware_variables_editor(self)
+        hardware_var_editor.exec()
 
     def name_edited(self):
         '''If name entry in table is blank setup name is set to serial port.'''

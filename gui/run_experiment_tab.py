@@ -353,6 +353,14 @@ class Subjectbox(QtWidgets.QGroupBox):
             self.setup_failed = True
             self.error()
 
+
+        self.hardware_variables = {}
+        hardware_setups = self.GUI_main.setups_tab.saved_setups
+        try:
+            self.hardware_variables = hardware_setups[serial_port]["variables"][self.run_exp_tab.experiment['task']]
+        except KeyError:
+            pass
+
     def start_hardware_test(self):
         '''Transefer hardware test file to board and start framework running.'''
         try:
@@ -376,10 +384,16 @@ class Subjectbox(QtWidgets.QGroupBox):
         # Set variables.
         self.subject_variables = [v for v in self.run_exp_tab.experiment['variables']
                                    if v['subject'] in ('all', self.subject)]
-        if self.subject_variables:
+        if self.subject_variables or self.hardware_variables:
             self.print_to_log('\nSetting variables.\n')
             self.variables_set_pre_run = []
             try:
+                # hardware specific variables
+                for var_name,var_value in self.hardware_variables.items():
+                    self.variables_set_pre_run.append((var_name, str(var_value), '(hardware variable)'))
+                    self.board.set_variable(var_name,var_value)
+
+                # persistent variables or value specified in variable table
                 try:
                     subject_pv_dict = self.run_exp_tab.persistent_variables[self.subject]
                 except KeyError:

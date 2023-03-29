@@ -315,6 +315,26 @@ class Run_task_tab(QtWidgets.QWidget):
                 self.variables_button.clicked.disconnect()
                 self.variables_dialog.deleteLater()
             self.task = task
+
+            variables_set_pre_run = []
+
+            hardware_setups = self.GUI_main.setups_tab.saved_setups
+            serial_port = self.GUI_main.setups_tab.get_port(self.board_select.currentText())
+            try:
+                hardware_variables = hardware_setups[serial_port]["variables"][task]
+                for var_name,var_value in hardware_variables.items():
+                    variables_set_pre_run.append((var_name, str(var_value), '(hardware variable)'))
+                    self.board.set_variable(var_name,var_value)
+            except KeyError:
+                pass
+
+            if variables_set_pre_run:
+                name_len  = max([len(v[0]) for v in variables_set_pre_run])
+                value_len = max([len(v[1]) for v in variables_set_pre_run])
+                for v_name, v_value, pv_str in variables_set_pre_run:
+                    self.print_to_log(
+                        v_name.ljust(name_len+4) + v_value.ljust(value_len+4) + pv_str)
+
             self.variables_dialog = Variables_dialog(self, self.board)
             self.using_json_gui = False
             if "custom_variables_dialog" in self.board.sm_info["variables"]:
