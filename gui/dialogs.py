@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from gui.settings import dirs, get_setting, default_user_settings
 from gui.utility import variable_constants
@@ -561,7 +562,6 @@ class Error_log_dialog(QtWidgets.QDialog):
         self.log_viewer.setMinimumWidth(800)
         self.log_viewer.setMinimumHeight(800)
         self.log_viewer.setReadOnly(True)
-        self.log_viewer.moveCursor(QtGui.QTextCursor.MoveOperation.End)
 
         clear_log_btn = QtWidgets.QPushButton("Clear log")
         clear_log_btn.clicked.connect(self.clear_log)
@@ -574,6 +574,9 @@ class Error_log_dialog(QtWidgets.QDialog):
         self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+W"), self)
         self.close_shortcut.activated.connect(self.close)
 
+    def showEvent(self, event):
+        self.log_viewer.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+
     def clear_log(self):
         reply = QtWidgets.QMessageBox.question(
             self,
@@ -583,5 +586,6 @@ class Error_log_dialog(QtWidgets.QDialog):
         )
         if reply == QtWidgets.QMessageBox.StandardButton.Yes:
             self.log_viewer.clear()
+            logging.shutdown()
             os.remove(r'ErrorLog.txt')
             self.close()
