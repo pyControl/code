@@ -2,7 +2,7 @@
 # random inter-pulse intervals. 
 # https://pycontrol.readthedocs.io/en/latest/user-guide/synchronisation
 # Dependencies:  Python 3, Numpy, Matplotlib, Scikit-learn.
-# (c) Thomas Akam 2018-2022. Released under the GPL-3 open source licence.
+# (c) Thomas Akam 2018-2023. Released under the GPL-3 open source licence.
 
 import numpy as np
 import pylab as plt
@@ -58,12 +58,9 @@ class Rsync_aligner():
             # Estimate units of B relative to A using the mean of the good intervals.
             units_A = 1
             units_B = np.mean(good_intervals_A)/np.mean(good_intervals_B)
-        # Convert all units to ms.
-        pulse_times_A = pulse_times_A*units_A
-        pulse_times_B = pulse_times_B*units_B
-        # Evalute inter pulse intervals
-        intervals_A = np.diff(pulse_times_A) # Inter-pulse intervals for sequence A
-        intervals_B = np.diff(pulse_times_B) # Inter-pulse intervals for sequence B
+        # Evalute inter-pulse intervals in common units.
+        intervals_A = np.diff(pulse_times_A)*units_A # Inter-pulse intervals for sequence A
+        intervals_B = np.diff(pulse_times_B)*units_B # Inter-pulse intervals for sequence B
         intervals_B2 = intervals_B**2
         # Find alignments of chunks which minimise sum of squared errors.
         chunk_starts_A = np.arange(0, len(pulse_times_A)-chunk_size, chunk_size) # Start indices of each chunk of sequence A.
@@ -103,6 +100,16 @@ class Rsync_aligner():
         self.cor_times_B = cor_times_B
         self.units_A = units_A
         self.units_B = units_B
+        # Compute variables used for extrapolating beyond first/last matching pulse.
+        diff_cor_times_B = np.diff(cor_times_B)
+        self.dAdB = (np.sum(np.diff(pulse_times_A)[~np.isnan(diff_cor_times_B)])/ # Empirical units_A/units_B from matched inter-pulse intervals.
+                     np.sum(      diff_cor_times_B[~np.isnan(diff_cor_times_B)]))
+        matched_pulse_times_A = cor_times_A[~np.isnan(cor_times_A)]
+        matched_pulse_times_B = cor_times_B[~np.isnan(cor_times_B)]
+        self.first_matched_time_A = matched_pulse_times_A[0]
+        self.last_matched_time_A  = matched_pulse_times_A[-1]
+        self.first_matched_time_B = matched_pulse_times_B[0]
+        self.last_matched_time_B  = matched_pulse_times_B[-1]
         # Check quality of alignment.
         separation_OK = (np.abs(gmm.means_[0]-gmm.means_[1])[0] >  # Different in GMM means > 3 x sum of standard deviations.
                          3*np.sum(np.sqrt(gmm.covariances_)))
@@ -129,30 +136,48 @@ class Rsync_aligner():
             plt.xlabel('Inter-pulse interval\ndiscrepancy (ms)')
             plt.ylabel('# pulses')
             plt.subplot2grid((3,1),(1,0),rowspan=2,colspan=1)
-            plt.plot(pulse_times_A/units_A, cor_times_B/units_B , '.', markersize=2)  
-            plt.xlim(pulse_times_A[0]/units_A,pulse_times_A[-1]/units_A)
+            plt.plot(pulse_times_A, cor_times_B , '.', markersize=2)  
+            plt.xlim(pulse_times_A[0],pulse_times_A[-1])
             plt.xlabel('pulse times A')
             plt.ylabel('pulse times B')
             plt.tight_layout()
 
-    def A_to_B(self, times_A):
-        '''Convert times in A reference frame to B reference frame.'''
-        return np.interp(times_A*self.units_A, self.pulse_times_A, self.cor_times_B,
-                         left=np.nan, right=np.nan)/self.units_B
+    def A_to_B(self, times_A, extrapolate=True):
+        '''Convert times in A reference frame to B reference frame.  If extrapolate=True, times
+        before the first matched sync pulse and after the last matched sync pulse will be
+        extrapolated, if False they will be nans.  
+        '''
+        times_B = np.interp(times_A, self.pulse_times_A, self.cor_times_B, left=np.nan, right=np.nan)
+        if extrapolate:
+            pf = times_A < self.first_matched_time_A # Mask indicating times pre first matched pulse.
+            times_B[pf] = (times_A[pf] - self.first_matched_time_A)/self.dAdB + self.first_matched_time_B
+            pl = times_A > self.last_matched_time_A # Mask indicating times post last matched pulse.
+            times_B[pl] = (times_A[pl] - self.last_matched_time_A)/self.dAdB  + self.last_matched_time_B
+        return times_B
 
-    def B_to_A(self, times_B):
-        '''Convert times in B reference frame to A reference frame.'''
-        return np.interp(times_B*self.units_B, self.pulse_times_B, self.cor_times_A,
-                         left=np.nan, right=np.nan)/self.units_A
+    def B_to_A(self, times_B, extrapolate=True):
+        '''Convert times in B reference frame to A reference frame. If extrapolate=True, times
+        before the first matched sync pulse and after the last matched sync pulse will be
+        extrapolated, if False they will be nans.
+        '''
+        times_A = np.interp(times_B, self.pulse_times_B, self.cor_times_A, left=np.nan, right=np.nan)
+        if extrapolate:
+            pf = times_B < self.first_matched_time_B # Mask indicating times pre first matched pulse.
+            times_A[pf] = (times_B[pf] - self.first_matched_time_B)*self.dAdB + self.first_matched_time_A
+            pl = times_B > self.last_matched_time_B # Mask indicating times post last matched pulse.
+            times_A[pl] = (times_B[pl] - self.last_matched_time_B)*self.dAdB  + self.last_matched_time_A
+        return times_A
 
 # --------------------------------------------------------------------------
 
-def simulate_pulses(n_pulse=1000,interval=[100,1900], noise_SD=3, missing_pulses=False):
+def simulate_pulses(n_pulse=1000,interval=[100,1900], units_B=2, noise_SD=2, missing_pulses=False):
     ''' Simulate a pair of pulse trains timestamps with drift between their timings.'''
     pulse_times_A = np.cumsum(np.random.randint(*interval, size=n_pulse)).astype(float)
-    pulse_times_B = pulse_times_A + np.cumsum(np.random.normal(scale=noise_SD, size=n_pulse))
+    pulse_times_B = units_B*(pulse_times_A + np.cumsum(np.random.normal(scale=noise_SD, size=n_pulse)))
     if missing_pulses:
-
-        pulse_times_A = np.hstack([pulse_times_A[int(n_pulse*0.05):int(n_pulse*0.21)],pulse_times_A[int(n_pulse*0.33):]])
+        pulse_times_A = np.hstack([pulse_times_A[int(n_pulse*0.05):int(n_pulse*0.21)],pulse_times_A[int(n_pulse*0.33):]+2e5])
         pulse_times_B = np.hstack([pulse_times_B[:int(n_pulse*0.74)],pulse_times_B[int(n_pulse*0.85):int(n_pulse*0.95)]])
     return pulse_times_A, pulse_times_B
+    
+    
+    

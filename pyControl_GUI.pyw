@@ -2,11 +2,12 @@
 
 import sys
 import logging
+from logging.handlers import WatchedFileHandler
 
 # Setup error logging.
-logging.basicConfig(level=logging.ERROR, 
-    handlers=[logging.FileHandler('ErrorLog.txt', delay=True)],
-    format='%(asctime)s %(message)s')
+logging.basicConfig(
+    level=logging.ERROR, handlers=[WatchedFileHandler("ErrorLog.txt", delay=True)], format="%(asctime)s %(message)s"
+)
 
 # Check dependencies are installed.
 try:
