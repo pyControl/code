@@ -1,10 +1,7 @@
-import os
-import re
 import json
 import ast
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from gui.settings import get_setting
-from gui.utility import cbox_update_options, NestedMenu, cbox_set_item
+
 
 class Hardware_variables_editor(QtWidgets.QDialog):
     """Dialog for editing hadrware specific variables"""
@@ -28,7 +25,7 @@ class Hardware_variables_editor(QtWidgets.QDialog):
         close_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+W"), self)
         close_shortcut.activated.connect(self.close)
 
-        self.setMinimumWidth(700)
+        self.setMinimumWidth(600)
         self.setMinimumHeight(400)
 
         save_btn.clicked.connect(self.var_table.save)
@@ -53,125 +50,95 @@ class Variable_row:
     def __init__(self, variable_table, task_var_val):
         self.variable_table = variable_table
 
-        self.task_select = NestedMenu("select task", ".py")
-        self.task_select.update_menu(get_setting("folders", "tasks"))
-        self.task_select.set_callback(self.variable_table.task_changed)
-
         self.remove_button = QtWidgets.QPushButton("remove")
         self.remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
         ind = QtCore.QPersistentModelIndex(self.variable_table.model().index(self.variable_table.n_variables, 1))
         self.remove_button.clicked.connect(lambda: self.variable_table.remove_row(ind.row()))
 
-        self.variable_cbox = QtWidgets.QComboBox()
-
-        self.var_value = QtWidgets.QLineEdit()
+        self.variable_edit = QtWidgets.QLineEdit()
+        completer = QtWidgets.QCompleter(self.get_existing_hardware_vars())
+        self.variable_edit.setCompleter(completer)
+        expression = QtCore.QRegularExpression("^[a-zA-Z_][a-zA-Z0-9_]*$")
+        valid_python_variable_validator = QtGui.QRegularExpressionValidator(expression)
+        self.variable_edit.setValidator(valid_python_variable_validator)
+        self.value_edit = QtWidgets.QLineEdit()
 
         self.column_order = (
-            self.task_select,
-            self.variable_cbox,
-            self.var_value,
+            self.variable_edit,
+            self.value_edit,
             self.remove_button,
         )
 
         if task_var_val:  # Set cell values from provided dictionary.
             self.fill_row(task_var_val)
 
-    def fill_row(self, task_var_val):
-        task, var, val = task_var_val
-        self.task_select.setText(task)
-        cbox_update_options(self.variable_cbox, list(self.variable_table.get_vars(task)))
-        cbox_set_item(self.variable_cbox, var)
-        self.var_value.setText(str(val))
+    def fill_row(self, var_val):
+        var, val = var_val
+        self.variable_edit.setText(str(var))
+        self.value_edit.setText(str(val))
 
     def put_into_table(self, row_index):
         for column, widget in enumerate(self.column_order):
             self.variable_table.removeCellWidget(row_index, column)  # this removes add_button from underneath
             self.variable_table.setCellWidget(row_index, column, widget)
 
+    def get_existing_hardware_vars(self):
+        with open(self.variable_table.setups_tab.save_path, "r", encoding="utf-8") as f:
+            setups_json = json.loads(f.read())
+
+        existing_vars = []
+        for setup_vals in setups_json.values():
+            try:
+                existing_vars.extend(list(setup_vals["variables"].keys()))
+            except KeyError:
+                pass
+        return list(set(existing_vars))
+
 
 class VariablesTable(QtWidgets.QTableWidget):
     def __init__(self, setup, setup_var_editor):
-        super(QtWidgets.QTableWidget, self).__init__(1, 4)
+        super(QtWidgets.QTableWidget, self).__init__(1, 3)
         self.setup_var_editor = setup_var_editor
         self.setup = setup
         self.setups_tab = setup.setups_tab
         self.serial_port = setup.port_item.text()
-        self.setHorizontalHeaderLabels(["Task", "Variable", "Value", ""])
+        self.setHorizontalHeaderLabels(["Variable", "Value", ""])
         self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.horizontalHeader().setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        self.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.verticalHeader().setVisible(False)
         self.n_variables = 0
 
         with open(self.setups_tab.save_path, "r", encoding="utf-8") as f:
             setups_json = json.loads(f.read())
-
         try:
             setup_vars = setups_json[self.setup.port_item.text()]["variables"]
             if len(setup_vars.keys()):
-                for task in setup_vars.keys():
-                    for variable, val in setup_vars[task].items():
-                        self.add_row([task, variable, val])
-            self.add_row()
+                for variable, val in setup_vars.items():
+                    self.add_row([variable, val])
         except KeyError:
-            self.add_row()
+            pass
 
+        self.add_row()
         self.remove_row(self.n_variables - 1)
 
-        for i in range(3):
-            disabled_item = QtWidgets.QTableWidgetItem("")
-            disabled_item.setFlags(disabled_item.flags() & ~QtCore.Qt.ItemFlag.ItemIsEditable)
-            self.setItem(self.n_variables, i, disabled_item)
-
         self.starting_table = self.get_table_data(do_validation=False)
-
-    def task_changed(self, task):
-        variables_box = self.cellWidget(self.currentRow(), 1)
-        variables_box.clear()
-        cbox_update_options(variables_box, list(self.get_vars(task)))
-
-        var_value = self.cellWidget(self.currentRow(), 2)
-        var_value.setText("")
-
-    def get_vars(self, task):
-        pattern = "[\n\r]v\.(?P<vname>\w+)\s*\="
-        try:
-            with open(os.path.join(get_setting("folders", "tasks"), task + ".py"), "r", encoding="utf-8") as file:
-                file_content = file.read()
-        except FileNotFoundError:
-            return
-        # get list of variables. ignore private variables and the custom_variables_dialog variable
-        return set(
-            [
-                v_name
-                for v_name in re.findall(pattern, file_content)
-                if not v_name[-3:] == "___" and v_name != "custom_variables_dialog"
-            ]
-        )
 
     def add_row(self, task_var_val=None):
         """Add a row to the table."""
         new_widgets = Variable_row(self, task_var_val)
         new_widgets.put_into_table(row_index=self.n_variables)
-        try:
-            # try using the same task for the new row as was chosen in the last row
-            # (saves time from having to repeatedly choose the same task)
-            last_added_task = self.cellWidget(self.currentRow() - 1, 0).text()
-            if last_added_task != "select task":
-                new_widgets.fill_row([last_added_task, "", ""])
-        except AttributeError:
-            pass
         self.insertRow(self.n_variables + 1)
         if not task_var_val:
             add_button = QtWidgets.QPushButton("   add   ")
             add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
             add_button.clicked.connect(self.add_row)
-            self.setCellWidget(self.n_variables + 1, 3, add_button)
-            for i in range(3):  # disable the cells on the add_button row
-                disabled_item = QtWidgets.QTableWidgetItem("")
-                disabled_item.setFlags(disabled_item.flags() & ~QtCore.Qt.ItemFlag.ItemIsEditable)
-                self.setItem(self.n_variables + 1, i, disabled_item)
+            self.setCellWidget(self.n_variables + 1, 2, add_button)
+            for i in range(2):  # disable the cells in the add_button row
+                disabled_item = QtWidgets.QLineEdit()
+                disabled_item.setEnabled(False)
+                disabled_item.setStyleSheet("background:#dcdcdc;")
+                self.setCellWidget(self.n_variables + 1, i, disabled_item)
         self.n_variables += 1
 
     def remove_row(self, variable_n):
@@ -182,42 +149,30 @@ class VariablesTable(QtWidgets.QTableWidget):
     def get_table_data(self, do_validation):
         setup_variables = {}
         for table_row in range(self.n_variables):
-            task_name = self.cellWidget(table_row, 0).text()
-            var_name = self.cellWidget(table_row, 1).currentText()
-            var_text = self.cellWidget(table_row, 2).text()
+            var_name = self.cellWidget(table_row, 0).text()
+            var_text = self.cellWidget(table_row, 1).text()
 
             # validate that all tasks, variables and values are filled in
             if do_validation:
-                if task_name == "select task":
-                    QtWidgets.QMessageBox.warning(
-                        self, "Error trying to save", f"row {table_row} needs a task selection"
-                    )
-                    return False
                 if not var_name:
-                    QtWidgets.QMessageBox.warning(
-                        self, "Error trying to save", f"row {table_row} needs a variable selection"
-                    )
+                    QtWidgets.QMessageBox.warning(self, "Error trying to save", f"row {table_row+1} needs a variable")
                     return False
                 if not var_text:
-                    QtWidgets.QMessageBox.warning(self, "Error trying to save", f"row {table_row} needs a value")
+                    QtWidgets.QMessageBox.warning(self, "Error trying to save", f"row {table_row+1} needs a value")
                     return False
 
             try:  # convert strings into types (int,boolean,float etc.) if possible
-                var_value = ast.literal_eval(var_text)
+                value_edit = ast.literal_eval(var_text)
             except ValueError:
-                var_value = var_text
-
-            # add task key into variables dictionary if it doesn't already exist
-            if task_name not in setup_variables:
-                setup_variables[task_name] = {}
+                value_edit = var_text
 
             # check that the variable isn't repeated
-            if var_name not in setup_variables[task_name]:
-                setup_variables[task_name][var_name] = var_value
+            if var_name not in setup_variables:
+                setup_variables[var_name] = value_edit
             else:
                 if do_validation:
                     QtWidgets.QMessageBox.warning(
-                        self, "Error trying to save", f"A task-variable combination is repeated in row {table_row}"
+                        self, "Error trying to save", f"A variable is repeated in row {table_row+1}"
                     )
                     return False
         return setup_variables
@@ -231,3 +186,21 @@ class VariablesTable(QtWidgets.QTableWidget):
                     f.write(json.dumps(self.setups_tab.saved_setups, sort_keys=True, indent=4))
             self.starting_table = setup_variables
             self.setup_var_editor.close()
+
+
+def set_hardware_variables(parent, hw_vars_in_task, pre_run_vars):
+    """parent is either a run_task tab or an experiment subjectbox"""
+    try:
+        setups_dict = parent.GUI_main.setups_tab.saved_setups
+        setup_hw_variables = setups_dict[parent.serial_port]["variables"]
+        for hw_var in hw_vars_in_task:
+            try:
+                var_name = hw_var
+                var_value = setup_hw_variables[hw_var.replace("hw_", "")]
+                pre_run_vars.append((var_name, str(var_value), "(hardware variable)"))
+                parent.board.set_variable(var_name, var_value)
+            except KeyError:
+                pass
+    except KeyError:
+        pass
+        # A warning of some type should go here? A Qmessagebox would work for a run_task, but in run_experiment it breaks during a parallel call

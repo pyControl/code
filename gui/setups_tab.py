@@ -169,11 +169,18 @@ class Setups_tab(QtWidgets.QWidget):
         '''Update the save setup names when a setup name is edited.'''
         if setup.name == setup.port:
             if setup.port in self.saved_setups.keys():
-                del self.saved_setups[setup.port]["name"]
+                try:
+                    del self.saved_setups[setup.port]["name"]
+                except KeyError:
+                    pass
+                try:
+                    del self.saved_setups[setup.port]["variables"]
+                except KeyError:
+                    pass
             else:
                 return
         else:
-            try: 
+            try:
                 # edit setup name if there is already an entry in the setups dictionary
                 self.saved_setups[setup.port]["name"] = setup.name
             except KeyError:
@@ -258,21 +265,23 @@ class Setup():
         self.port_item.setText(serial_port)
         self.port_item.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled)
 
+        self.variables_btn = QtWidgets.QPushButton('Variables')
+        self.variables_btn.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
+        self.variables_btn.clicked.connect(self.edit_variables)
+
         self.name_item = QtWidgets.QTableWidgetItem()
         self.name_item.changed = self.name_edited
         if self.name != self.port:
             self.name_item.setText(self.name)
 
         self.select_checkbox = TableCheckbox()
+        self.select_checkbox.checkbox.stateChanged.connect(self.checkbox_handler)
+
         self.setups_tab.setups_table.insertRow(0)
         self.setups_tab.setups_table.setCellWidget(0, 0, self.select_checkbox)
         self.setups_tab.setups_table.setItem(0, 1, self.port_item)
         self.setups_tab.setups_table.setItem(0, 2, self.name_item)
-        variables_btn = QtWidgets.QPushButton('Variables')
-        variables_btn.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
-        self.setups_tab.setups_table.setCellWidget(0,3, variables_btn)
-        variables_btn.clicked.connect(self.edit_variables)
-        self.select_checkbox.checkbox.stateChanged.connect(self.checkbox_handler)
+        self.setups_tab.setups_table.setCellWidget(0,3, self.variables_btn)
         self.signal_from_rowcheck = True
 
     def checkbox_handler(self):
@@ -289,6 +298,11 @@ class Setup():
         self.name = name if name else self.port
         self.setups_tab.update_available_setups()
         self.setups_tab.update_saved_setups(self)
+        if name=="":
+            self.variables_btn.setEnabled(False)
+        else:
+            self.variables_btn.setEnabled(True)
+
 
     def print(self, print_string, end="\n"):
         ''' Print a string to the log prepended with the setup name.'''

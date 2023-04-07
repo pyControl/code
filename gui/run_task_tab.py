@@ -13,6 +13,7 @@ from gui.dialogs import Variables_dialog
 from gui.custom_variables_dialog import Custom_variables_dialog
 from gui.plotting import Task_plot
 from gui.utility import init_keyboard_shortcuts, NestedMenu, TaskInfo
+from gui.hardware_variables_dialog import set_hardware_variables
 
 
 # Run_task_gui ------------------------------------------------------------------------
@@ -256,8 +257,8 @@ class Run_task_tab(QtWidgets.QWidget):
             self.variables_button.setEnabled(False)
             self.connect_button.setEnabled(False)
             self.repaint()
-            port = self.GUI_main.setups_tab.get_port(self.board_select.currentText())
-            self.board = Pycboard(port, print_func=self.print_to_log, data_logger=self.data_logger)
+            self.serial_port = self.GUI_main.setups_tab.get_port(self.board_select.currentText())
+            self.board = Pycboard(self.serial_port, print_func=self.print_to_log, data_logger=self.data_logger)
             self.connected = True
             self.config_button.setEnabled(True)
             self.connect_button.setEnabled(True)
@@ -318,15 +319,9 @@ class Run_task_tab(QtWidgets.QWidget):
 
             variables_set_pre_run = []
 
-            hardware_setups = self.GUI_main.setups_tab.saved_setups
-            serial_port = self.GUI_main.setups_tab.get_port(self.board_select.currentText())
-            try:
-                hardware_variables = hardware_setups[serial_port]["variables"][task]
-                for var_name,var_value in hardware_variables.items():
-                    variables_set_pre_run.append((var_name, str(var_value), '(hardware variable)'))
-                    self.board.set_variable(var_name,var_value)
-            except KeyError:
-                pass
+            hw_vars_in_task = [task_var for task_var in self.board.sm_info["variables"] if task_var.startswith("hw_")]
+            if hw_vars_in_task:
+                set_hardware_variables(self,hw_vars_in_task,variables_set_pre_run)
 
             if variables_set_pre_run:
                 name_len  = max([len(v[0]) for v in variables_set_pre_run])
