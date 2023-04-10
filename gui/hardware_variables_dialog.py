@@ -165,6 +165,8 @@ class VariablesTable(QtWidgets.QTableWidget):
                 value_edit = ast.literal_eval(var_text)
             except ValueError:
                 value_edit = var_text
+            except SyntaxError:
+                value_edit = var_text
 
             # check that the variable isn't repeated
             if var_name not in setup_variables:
