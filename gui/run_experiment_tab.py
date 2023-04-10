@@ -387,10 +387,7 @@ class Subjectbox(QtWidgets.QGroupBox):
                 set_hardware_variables(self,hw_vars_in_task,self.variables_set_pre_run)
 
                 # persistent variables or value specified in variable table
-                try:
-                    subject_pv_dict = self.run_exp_tab.persistent_variables[self.subject]
-                except KeyError:
-                    subject_pv_dict = {}
+                subject_pv_dict = self.run_exp_tab.persistent_variables.get(self.subject,{})
                 for v in self.subject_variables:
                     if v['persistent'] and v['name'] in subject_pv_dict.keys(): # Use stored value.
                         v_value =  subject_pv_dict[v['name']]

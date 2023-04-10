@@ -111,13 +111,10 @@ class VariablesTable(QtWidgets.QTableWidget):
 
         with open(self.setups_tab.save_path, "r", encoding="utf-8") as f:
             setups_json = json.loads(f.read())
-        try:
-            setup_vars = setups_json[self.setup.port_item.text()]["variables"]
-            if len(setup_vars.keys()):
-                for variable, val in setup_vars.items():
-                    self.add_row([variable, val])
-        except KeyError:
-            pass
+        setup_vars = setups_json[self.setup.port_item.text()].get("variables")
+        if setup_vars:
+            for variable, val in setup_vars.items():
+                self.add_row([variable, val])
 
         self.add_row()
         self.remove_row(self.n_variables - 1)
@@ -192,17 +189,19 @@ class VariablesTable(QtWidgets.QTableWidget):
 
 def set_hardware_variables(parent, hw_vars_in_task, pre_run_vars):
     """parent is either a run_task tab or an experiment subjectbox"""
-    try:
-        setups_dict = parent.GUI_main.setups_tab.saved_setups
-        setup_hw_variables = setups_dict[parent.serial_port]["variables"]
+    setups_dict = parent.GUI_main.setups_tab.saved_setups
+    setup_hw_variables = setups_dict[parent.serial_port].get("variables")
+    if not setup_hw_variables:
+        # there are no "variables" specified for this setup. add some sort of warning here?
+        return
+    else:
         for hw_var in hw_vars_in_task:
-            try:
-                var_name = hw_var
-                var_value = setup_hw_variables[hw_var.replace("hw_", "")]
+            var_name = hw_var
+            var_value = setup_hw_variables.get(hw_var.replace("hw_", ""))
+            if var_value:
                 pre_run_vars.append((var_name, str(var_value), "(hardware variable)"))
                 parent.board.set_variable(var_name, var_value)
-            except KeyError:
+            else:
+                # the hw variable specified in the task file was not found in the hardware setup's variables
+                # add some sort of warning here?
                 pass
-    except KeyError:
-        pass
-        # A warning of some type should go here? A Qmessagebox would work for a run_task, but in run_experiment it breaks during a parallel call

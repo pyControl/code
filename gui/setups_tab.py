@@ -168,24 +168,17 @@ class Setups_tab(QtWidgets.QWidget):
     def update_saved_setups(self, setup):
         '''Update the save setup names when a setup name is edited.'''
         if setup.name == setup.port:
-            if setup.port in self.saved_setups.keys():
-                try:
-                    del self.saved_setups[setup.port]["name"]
-                except KeyError:
-                    pass
-                try:
-                    del self.saved_setups[setup.port]["variables"]
-                except KeyError:
-                    pass
-            else:
+            if setup.port not in self.saved_setups.keys():
                 return
+            else:
+                del self.saved_setups[setup.port]
         else:
-            try:
-                # edit setup name if there is already an entry in the setups dictionary
-                self.saved_setups[setup.port]["name"] = setup.name
-            except KeyError:
-                # otherwise, create an entry in the dictionary
+            if setup.port not in self.saved_setups:
+                # create a new setup
                 self.saved_setups[setup.port] = {}
+                self.saved_setups[setup.port]["name"] = setup.name
+            else:
+                # edit existing setup name
                 self.saved_setups[setup.port]["name"] = setup.name
 
         with open(self.save_path, 'w') as f:
@@ -251,10 +244,7 @@ class Setup():
     def __init__(self, serial_port, setups_tab):
         '''Setup is intilised when board is plugged into computer.'''
 
-        try:
-            self.name = setups_tab.saved_setups[serial_port]["name"]
-        except KeyError:
-            self.name = serial_port
+        self.name = setups_tab.saved_setups[serial_port].get("name", serial_port)
 
         self.port = serial_port
         self.setups_tab = setups_tab
