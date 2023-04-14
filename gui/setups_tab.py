@@ -32,7 +32,7 @@ class Setups_tab(QtWidgets.QWidget):
                 for k,v in names_dict.items():
                     new_format[k] = {"name":v}
                 print(new_format)
-                with open(new_path, 'w') as f:
+                with open(new_path, 'w', encoding="utf-8") as f:
                     f.write(json.dumps(new_format, sort_keys=True, indent=4))
         except FileNotFoundError:
             pass
@@ -40,7 +40,7 @@ class Setups_tab(QtWidgets.QWidget):
         # Load saved setup names.
         self.save_path = Path(dirs['config'] , 'setups.json')
         if self.save_path.exists():
-            with open(self.save_path, 'r') as f:
+            with open(self.save_path, 'r', encoding="utf-8") as f:
                 self.saved_setups = json.loads(f.read())
         else:
             self.saved_setups = {} # {setup.port:setup.name}
@@ -181,7 +181,7 @@ class Setups_tab(QtWidgets.QWidget):
                 # edit existing setup name
                 self.saved_setups[setup.port]["name"] = setup.name
 
-        with open(self.save_path, 'w') as f:
+        with open(self.save_path, 'w', encoding="utf-8") as f:
             f.write(json.dumps(self.saved_setups, sort_keys=True, indent=4))
 
     def get_port(self, setup_name):
@@ -227,7 +227,7 @@ class Setups_tab(QtWidgets.QWidget):
         if self.GUI_main.available_ports_changed:
             # Add any newly connected setups.
             for serial_port in self.GUI_main.available_ports:
-                if not serial_port in self.setups.keys():
+                if serial_port not in self.setups.keys():
                     self.setups[serial_port] = Setup(serial_port, self)
             # Remove any unplugged setups.
             for serial_port in list(self.setups.keys()):

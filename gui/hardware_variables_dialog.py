@@ -188,7 +188,7 @@ class VariablesTable(QtWidgets.QTableWidget):
 
 
 def set_hardware_variables(parent, hw_vars_in_task, pre_run_vars):
-    """parent is either a run_task tab or an experiment subjectbox"""
+    # parent is either a run_task tab or an experiment subjectbox
     setups_dict = parent.GUI_main.setups_tab.saved_setups
     setup_hw_variables = setups_dict[parent.serial_port].get("variables")
     if not setup_hw_variables:
