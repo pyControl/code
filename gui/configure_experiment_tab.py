@@ -636,7 +636,7 @@ class VariablesTable(QtWidgets.QTableWidget):
         except FileNotFoundError:
             return
         self.variable_names = list(set([v_name for v_name in
-            re.findall(pattern, file_content) if not v_name[-3:] == '___']))
+            re.findall(pattern, file_content) if not v_name.endswith("___") and v_name != "custom_variables_dialog" and not v_name.startswith("hw_")]))
         # Remove variables that are not in new task.
         for i in reversed(range(self.n_variables)):
             if not self.cellWidget(i,0).currentText() in self.variable_names:

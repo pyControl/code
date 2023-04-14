@@ -372,6 +372,9 @@ class Custom_variables_dialog(QtWidgets.QDialog):
             return True
         return False
 
+    def process_data(self,new_data):
+        pass
+
 
 class Custom_variables_grid(QtWidgets.QWidget):
     def __init__(self, parent, board, generator_data):
@@ -425,7 +428,7 @@ class Custom_variables_grid(QtWidgets.QWidget):
         leftover_layout = QtWidgets.QGridLayout()
         leftover_vars = sorted(list(set(variables) - set(used_vars)), key=str.lower)
         leftover_vars = [
-            v_name for v_name in leftover_vars if not v_name[-3:] == "___" and v_name != "custom_variables_dialog"
+            v_name for v_name in leftover_vars if not v_name.endswith("___") and v_name != "custom_variables_dialog" and not v_name.startswith("hw_")
         ]
         if len(leftover_vars) > 0:
             for row, var in enumerate(leftover_vars):
@@ -580,7 +583,7 @@ class Variables_dialog_editor(QtWidgets.QDialog):
             [
                 v_name
                 for v_name in re.findall(pattern, file_content)
-                if not v_name[-3:] == "___" and v_name != "custom_variables_dialog"
+                if not v_name.endswith("___") and v_name != "custom_variables_dialog" and not v_name.startswith("hw_")
             ]
         )
 
