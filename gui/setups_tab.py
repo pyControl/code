@@ -124,29 +124,34 @@ class Setups_tab(QtWidgets.QWidget):
     def select_all_setups(self):
         if self.select_all_checkbox.isChecked():
             for setup in self.setups.values():
-                setup.signal_from_rowcheck = False
-                setup.select_checkbox.setChecked(True)
-                setup.signal_from_rowcheck = True
+                if setup.select_checkbox.isEnabled():
+                    setup.signal_from_rowcheck = False
+                    setup.select_checkbox.setChecked(True)
+                    setup.signal_from_rowcheck = True
         else:
             for setup in self.setups.values():
-                setup.signal_from_rowcheck = False
-                setup.select_checkbox.setChecked(False)
-                setup.signal_from_rowcheck = True
+                if setup.select_checkbox.isEnabled():
+                    setup.signal_from_rowcheck = False
+                    setup.select_checkbox.setChecked(False)
+                    setup.signal_from_rowcheck = True
         self.multi_config_enable()
 
     def multi_config_enable(self):
         self.select_all_checkbox.blockSignals(True)
         num_checked = 0
+        num_disabled = 0
         for setup in self.setups.values():
             if setup.select_checkbox.isChecked():
                 num_checked += 1
+            if not setup.select_checkbox.isEnabled():
+                num_disabled += 1
         if num_checked == 1:
             self.dfu_btn.setEnabled(True)
         else:
             self.dfu_btn.setEnabled(False)
         if num_checked > 0:
             self.configure_group.setEnabled(True)
-            if num_checked < len(self.setups.values()):  # some selected
+            if num_checked + num_disabled < len(self.setups.values()):  # some selected
                 self.select_all_checkbox.setChecked(False)
             else:  # all selected
                 self.select_all_checkbox.setChecked(True)
@@ -295,8 +300,12 @@ class Setup():
         self.setups_tab.update_saved_setups(self)
         if name=="" or name=="_hidden_":
             self.variables_btn.setEnabled(False)
+            self.select_checkbox.setEnabled(False)
+            self.select_checkbox.setChecked(False)
         else:
             self.variables_btn.setEnabled(True)
+            self.select_checkbox.setEnabled(True)
+            self.setups_tab.multi_config_enable()
 
 
     def print(self, print_string, end="\n"):
