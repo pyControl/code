@@ -56,11 +56,14 @@ class Variable_row:
         self.remove_button.clicked.connect(lambda: self.variable_table.remove_row(ind.row()))
 
         self.variable_edit = QtWidgets.QLineEdit()
+        self.variable_edit.setText("hw_")
         completer = QtWidgets.QCompleter(self.get_existing_hardware_vars())
         self.variable_edit.setCompleter(completer)
-        expression = QtCore.QRegularExpression("^[a-zA-Z_][a-zA-Z0-9_]*$")
+        expression = QtCore.QRegularExpression("^hw_[a-zA-Z_][a-zA-Z0-9_]*$")
         valid_python_variable_validator = QtGui.QRegularExpressionValidator(expression)
         self.variable_edit.setValidator(valid_python_variable_validator)
+        self.variable_edit.textChanged.connect(self.start_with_hw)
+
         self.value_edit = QtWidgets.QLineEdit()
 
         self.column_order = (
@@ -71,6 +74,14 @@ class Variable_row:
 
         if task_var_val:  # Set cell values from provided dictionary.
             self.fill_row(task_var_val)
+
+    def start_with_hw(self):
+        # even though the regex validator will enforce hw_ being at the beginning
+        # it is still possible to delete hw_ if there have not yet been additional
+        # letters added. This fixes that edge case and automatically
+        # adds back hw_ if it is deleted
+        if not self.variable_edit.text().startswith("hw_"):
+            self.variable_edit.setText("hw_")
 
     def fill_row(self, var_val):
         var, val = var_val
