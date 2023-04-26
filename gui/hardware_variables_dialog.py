@@ -1,7 +1,10 @@
 import json
 import ast
 import re
+import os
+from pathlib import Path
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
+from gui.utility import cbox_update_options, cbox_set_item
 
 
 class Hardware_variables_editor(QtWidgets.QDialog):
@@ -56,19 +59,16 @@ class Variable_row:
         ind = QtCore.QPersistentModelIndex(self.variable_table.model().index(self.variable_table.n_variables, 1))
         self.remove_button.clicked.connect(lambda: self.variable_table.remove_row(ind.row()))
 
+        self.variable_cbox = QtWidgets.QComboBox()
+        cbox_update_options(self.variable_cbox, self.get_existing_hardware_vars())
+
         self.variable_edit = QtWidgets.QLineEdit()
         self.variable_edit.setText("hw_")
-        completer = QtWidgets.QCompleter(self.get_existing_hardware_vars())
-        self.variable_edit.setCompleter(completer)
-        expression = QtCore.QRegularExpression("^hw_[a-zA-Z_][a-zA-Z0-9_]*$")
-        valid_python_variable_validator = QtGui.QRegularExpressionValidator(expression)
-        self.variable_edit.setValidator(valid_python_variable_validator)
-        self.variable_edit.textChanged.connect(self.start_with_hw)
 
         self.value_edit = QtWidgets.QLineEdit()
 
         self.column_order = (
-            self.variable_edit,
+            self.variable_cbox,
             self.value_edit,
             self.remove_button,
         )
@@ -76,17 +76,9 @@ class Variable_row:
         if task_var_val:  # Set cell values from provided dictionary.
             self.fill_row(task_var_val)
 
-    def start_with_hw(self):
-        # even though the regex validator will enforce hw_ being at the beginning
-        # it is still possible to delete hw_ if there have not yet been additional
-        # letters added. This fixes that edge case and automatically
-        # adds back hw_ if it is deleted
-        if not self.variable_edit.text().startswith("hw_"):
-            self.variable_edit.setText("hw_")
-
     def fill_row(self, var_val):
         var, val = var_val
-        self.variable_edit.setText(str(var))
+        cbox_set_item(self.variable_cbox, str(var))
         self.value_edit.setText(str(val))
 
     def put_into_table(self, row_index):
@@ -95,16 +87,27 @@ class Variable_row:
             self.variable_table.setCellWidget(row_index, column, widget)
 
     def get_existing_hardware_vars(self):
+        # scan all task files and gather any v.hw_ variables
+        hw_vars_from_all_tasks = []
+        for dirName, _, fileList in os.walk("tasks"):
+            # Loop through all the files in the current directory
+            for file_name in fileList:
+                if file_name.endswith(".py"):
+                    task_path = Path(dirName, file_name)
+                    hw_vars_from_all_tasks = hw_vars_from_all_tasks + get_task_hw_vars(task_path)
+
+        # scan setups.json and gather all 
         with open(self.variable_table.setups_tab.save_path, "r", encoding="utf-8") as f:
             setups_json = json.loads(f.read())
 
-        existing_vars = []
+        hw_vars_from_setups_json = []
         for setup_vals in setups_json.values():
             try:
-                existing_vars.extend(list(setup_vals["variables"].keys()))
+                hw_vars_from_setups_json.extend(list(setup_vals["hw_variables"].keys()))
             except KeyError:
                 pass
-        return list(set(existing_vars))
+
+        return sorted(list(set(hw_vars_from_all_tasks + hw_vars_from_setups_json)))
 
 
 class VariablesTable(QtWidgets.QTableWidget):
@@ -123,7 +126,7 @@ class VariablesTable(QtWidgets.QTableWidget):
 
         with open(self.setups_tab.save_path, "r", encoding="utf-8") as f:
             setups_json = json.loads(f.read())
-        setup_vars = setups_json[self.setup.port_item.text()].get("variables")
+        setup_vars = setups_json[self.setup.port_item.text()].get("hw_variables")
         if setup_vars:
             for variable, val in setup_vars.items():
                 self.add_row([variable, val])
@@ -158,7 +161,7 @@ class VariablesTable(QtWidgets.QTableWidget):
     def get_table_data(self, do_validation):
         setup_variables = {}
         for table_row in range(self.n_variables):
-            var_name = self.cellWidget(table_row, 0).text()
+            var_name = self.cellWidget(table_row, 0).currentText()
             var_text = self.cellWidget(table_row, 1).text()
 
             # validate that all tasks, variables and values are filled in
@@ -192,7 +195,7 @@ class VariablesTable(QtWidgets.QTableWidget):
         setup_variables = self.get_table_data(do_validation=True)
         if setup_variables is not False:
             if setup_variables != self.starting_table:
-                self.setups_tab.saved_setups[self.serial_port]["variables"] = setup_variables
+                self.setups_tab.saved_setups[self.serial_port]["hw_variables"] = setup_variables
                 with open(self.setups_tab.save_path, "w", encoding="utf-8") as f:
                     f.write(json.dumps(self.setups_tab.saved_setups, sort_keys=True, indent=4))
             self.starting_table = setup_variables
@@ -208,7 +211,7 @@ def get_task_hw_vars(task_file_path):
 def set_hardware_variables(parent, hw_vars_in_task, pre_run_vars):
     # parent is either a run_task tab or an experiment subjectbox
     setups_dict = parent.GUI_main.setups_tab.saved_setups
-    setup_hw_variables = setups_dict[parent.serial_port].get("variables")
+    setup_hw_variables = setups_dict[parent.serial_port].get("hw_variables")
     for hw_var in hw_vars_in_task:
         var_name = hw_var
         var_value = setup_hw_variables.get(hw_var)
@@ -218,7 +221,7 @@ def set_hardware_variables(parent, hw_vars_in_task, pre_run_vars):
 
 def hw_var_defined_in_setup(parent, setup_name, task_name, task_hw_vars):
     serial_port = parent.GUI_main.setups_tab.get_port(setup_name)
-    setup_hw_variables = parent.GUI_main.setups_tab.saved_setups[serial_port].get("variables")
+    setup_hw_variables = parent.GUI_main.setups_tab.saved_setups[serial_port].get("hw_variables")
     for hw_var in task_hw_vars:
         if setup_hw_variables.get(hw_var) is None:
             QtWidgets.QMessageBox.warning(
