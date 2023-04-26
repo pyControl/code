@@ -1,5 +1,6 @@
 import json
 import ast
+import re
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 
@@ -198,21 +199,33 @@ class VariablesTable(QtWidgets.QTableWidget):
             self.setup_var_editor.close()
 
 
+def get_task_hw_vars(task_file_path):
+    task_file_content = task_file_path.read_text(encoding="utf-8")
+    pattern = "^v\.hw_(?P<vname>\w+)\s*\="
+    return list(set(["hw_" + v_name for v_name in re.findall(pattern, task_file_content, flags=re.MULTILINE)]))
+
+
 def set_hardware_variables(parent, hw_vars_in_task, pre_run_vars):
     # parent is either a run_task tab or an experiment subjectbox
     setups_dict = parent.GUI_main.setups_tab.saved_setups
     setup_hw_variables = setups_dict[parent.serial_port].get("variables")
-    if not setup_hw_variables:
-        # there are no "variables" specified for this setup. add some sort of warning here?
-        return
-    else:
-        for hw_var in hw_vars_in_task:
-            var_name = hw_var
-            var_value = setup_hw_variables.get(hw_var.replace("hw_", ""))
-            if var_value:
-                pre_run_vars.append((var_name, str(var_value), "(hardware variable)"))
-                parent.board.set_variable(var_name, var_value)
-            else:
-                # the hw variable specified in the task file was not found in the hardware setup's variables
-                # add some sort of warning here?
-                pass
+    for hw_var in hw_vars_in_task:
+        var_name = hw_var
+        var_value = setup_hw_variables.get(hw_var)
+        pre_run_vars.append((var_name, str(var_value), "(hardware variable)"))
+        parent.board.set_variable(var_name, var_value)
+
+
+def hw_var_defined_in_setup(parent, setup_name, task_name, task_hw_vars):
+    serial_port = parent.GUI_main.setups_tab.get_port(setup_name)
+    setup_hw_variables = parent.GUI_main.setups_tab.saved_setups[serial_port].get("variables")
+    for hw_var in task_hw_vars:
+        if setup_hw_variables.get(hw_var) is None:
+            QtWidgets.QMessageBox.warning(
+                parent,
+                "Undefined hardware variable",
+                f'"{hw_var}" is not defined in the {setup_name} setup\n\nEither remove "{hw_var}" from the {task_name} task, or add "{hw_var}" as a variable in the {setup_name} setup.',
+                QtWidgets.QMessageBox.StandardButton.Ok,
+            )
+            return False
+    return True

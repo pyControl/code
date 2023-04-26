@@ -244,7 +244,12 @@ class Setup():
     def __init__(self, serial_port, setups_tab):
         '''Setup is intilised when board is plugged into computer.'''
 
-        self.name = setups_tab.saved_setups[serial_port].get("name", serial_port)
+        try:
+            self.name = setups_tab.saved_setups[serial_port]["name"]
+        except KeyError:
+            # key error could be from the serial_port not being connected
+            # or the serial port was never assigned a name before
+            self.name = serial_port
 
         self.port = serial_port
         self.setups_tab = setups_tab
@@ -288,7 +293,7 @@ class Setup():
         self.name = name if name else self.port
         self.setups_tab.update_available_setups()
         self.setups_tab.update_saved_setups(self)
-        if name=="":
+        if name=="" or name=="_hidden_":
             self.variables_btn.setEnabled(False)
         else:
             self.variables_btn.setEnabled(True)

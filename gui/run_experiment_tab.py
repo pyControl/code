@@ -384,7 +384,8 @@ class Subjectbox(QtWidgets.QGroupBox):
             self.variables_set_pre_run = []
             try:
                 # hardware specific variables
-                set_hardware_variables(self,hw_vars_in_task,self.variables_set_pre_run)
+                if hw_vars_in_task:
+                    set_hardware_variables(self,hw_vars_in_task,self.variables_set_pre_run)
 
                 # persistent variables or value specified in variable table
                 subject_pv_dict = self.run_exp_tab.persistent_variables.get(self.subject,{})
