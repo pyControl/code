@@ -19,7 +19,7 @@ class Hardware_variables_editor(QtWidgets.QDialog):
         self.variable_cbox = QtWidgets.QComboBox()
         self.variable_cbox.addItems(self.get_hw_vars_from_task_files())
         self.variable_cbox.currentTextChanged.connect(self.update_var_table)
-        hlayout.addStretch(1)
+        hlayout.addWidget(QtWidgets.QLabel("Hardware variable:"))
         hlayout.addWidget(self.variable_cbox)
         hlayout.addStretch(1)
 
