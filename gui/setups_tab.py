@@ -30,20 +30,14 @@ class Setups_tab(QtWidgets.QWidget):
                 names_dict = json.loads(names_json.read())
                 new_format = {}
                 for k,v in names_dict.items():
-                    new_format[k] = {"name":v}
-                print(new_format)
+                    new_format[k] = {"name":v,"variables":{}}
                 with open(new_path, 'w', encoding="utf-8") as f:
                     f.write(json.dumps(new_format, sort_keys=True, indent=4))
         except FileNotFoundError:
             pass
 
         # Load saved setup names.
-        self.save_path = Path(dirs['config'] , 'setups.json')
-        if self.save_path.exists():
-            with open(self.save_path, 'r', encoding="utf-8") as f:
-                self.saved_setups = json.loads(f.read())
-        else:
-            self.saved_setups = {} # {setup.port:setup.name}
+        self.saved_setups = self.get_setups_from_json()
 
         # Select setups group box.
         self.setup_groupbox = QtWidgets.QGroupBox("Setups")
@@ -51,12 +45,11 @@ class Setups_tab(QtWidgets.QWidget):
         self.select_all_checkbox = QtWidgets.QCheckBox("Select all")
         self.select_all_checkbox.stateChanged.connect(self.select_all_setups)
 
-        self.setups_table = QtWidgets.QTableWidget(0, 4, parent=self)
-        self.setups_table.setHorizontalHeaderLabels(["Select", "Serial port", "Name",""])
+        self.setups_table = QtWidgets.QTableWidget(0, 3, parent=self)
+        self.setups_table.setHorizontalHeaderLabels(["Select", "Serial port", "Name"])
         self.setups_table.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.setups_table.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.setups_table.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.setups_table.horizontalHeader().setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.setups_table.verticalHeader().setVisible(False)
         self.setups_table.itemChanged.connect(lambda item: item.changed() if hasattr(item, "changed") else None)
 
@@ -74,16 +67,21 @@ class Setups_tab(QtWidgets.QWidget):
         load_hw_button.clicked.connect(self.load_hardware_definition)
         enable_flashdrive_button.clicked.connect(self.enable_flashdrive)
         disable_flashdrive_button.clicked.connect(self.disable_flashdrive)
+        variables_btn = QtWidgets.QPushButton('Variables')
+        variables_btn.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
+        variables_btn.clicked.connect(self.edit_hardware_vars)
+
         self.dfu_btn = QtWidgets.QPushButton("DFU mode")
         self.dfu_btn.setIcon(QtGui.QIcon("gui/icons/wrench.svg"))
         self.dfu_btn.clicked.connect(self.DFU_mode)
 
-        config_layout = QtWidgets.QHBoxLayout()
-        config_layout.addWidget(load_fw_button)
-        config_layout.addWidget(load_hw_button)
-        config_layout.addWidget(enable_flashdrive_button)
-        config_layout.addWidget(disable_flashdrive_button)
-        config_layout.addWidget(self.dfu_btn)
+        config_layout = QtWidgets.QGridLayout()
+        config_layout.addWidget(load_fw_button,0,0)
+        config_layout.addWidget(load_hw_button,1,0)
+        config_layout.addWidget(variables_btn,0,1)
+        config_layout.addWidget(self.dfu_btn,1,1)
+        config_layout.addWidget(enable_flashdrive_button,0,2)
+        config_layout.addWidget(disable_flashdrive_button,1,2)
         self.configure_group.setLayout(config_layout)
         self.configure_group.setEnabled(False)
 
@@ -113,6 +111,16 @@ class Setups_tab(QtWidgets.QWidget):
         self.setups_layout.setRowStretch(2,1)
         self.setLayout(self.setups_layout)
 
+
+    def get_setups_from_json(self):
+        self.save_path = Path(dirs['config'] , 'setups.json')
+        if self.save_path.exists():
+            with open(self.save_path, 'r', encoding="utf-8") as f:
+                setups_from_json = json.loads(f.read())
+        else:
+            setups_from_json = {} # {setup.port:setup.name}
+        
+        return setups_from_json
 
 
     def print_to_log(self, print_string, end="\n"):
@@ -182,6 +190,7 @@ class Setups_tab(QtWidgets.QWidget):
                 # create a new setup
                 self.saved_setups[setup.port] = {}
                 self.saved_setups[setup.port]["name"] = setup.name
+                self.saved_setups[setup.port]["variables"] = {}
             else:
                 # edit existing setup name
                 self.saved_setups[setup.port]["name"] = setup.name
@@ -201,6 +210,18 @@ class Setups_tab(QtWidgets.QWidget):
     def disconnect(self):
         '''Disconect from all pyboards, called on tab change.'''
         parallel_call('disconnect', self.setups.values())
+
+    def edit_hardware_vars(self):
+        hardware_var_editor = Hardware_variables_editor(self)
+        if not hardware_var_editor.get_hw_vars_from_task_files():
+            QtWidgets.QMessageBox.warning(
+                self,
+                "No hardware variables found",
+                'There were no hardware variables found in your task files. To use a hardware variable, add a variable beginning with "hw_" set to None in a task file\n\n for example "v.hw_solenoid_dur = None"',
+                QtWidgets.QMessageBox.StandardButton.Ok,
+            )
+            return
+        hardware_var_editor.exec()
 
     def load_framework(self):
         self.print_to_log('Loading framework...\n')
@@ -265,10 +286,6 @@ class Setup():
         self.port_item.setText(serial_port)
         self.port_item.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled)
 
-        self.variables_btn = QtWidgets.QPushButton('Variables')
-        self.variables_btn.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
-        self.variables_btn.clicked.connect(self.edit_variables)
-
         self.name_item = QtWidgets.QTableWidgetItem()
         self.name_item.changed = self.name_edited
         if self.name != self.port:
@@ -281,7 +298,6 @@ class Setup():
         self.setups_tab.setups_table.setCellWidget(0, 0, self.select_checkbox)
         self.setups_tab.setups_table.setItem(0, 1, self.port_item)
         self.setups_tab.setups_table.setItem(0, 2, self.name_item)
-        self.setups_tab.setups_table.setCellWidget(0,3, self.variables_btn)
         self.signal_from_rowcheck = True
 
     def checkbox_handler(self):
@@ -299,11 +315,9 @@ class Setup():
         self.setups_tab.update_available_setups()
         self.setups_tab.update_saved_setups(self)
         if name=="" or name=="_hidden_":
-            self.variables_btn.setEnabled(False)
             self.select_checkbox.setEnabled(False)
             self.select_checkbox.setChecked(False)
         else:
-            self.variables_btn.setEnabled(True)
             self.select_checkbox.setEnabled(True)
             self.setups_tab.multi_config_enable()
 
