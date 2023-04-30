@@ -214,10 +214,15 @@ class Setups_tab(QtWidgets.QWidget):
     def edit_hardware_vars(self):
         hardware_var_editor = Hardware_variables_editor(self)
         if not hardware_var_editor.get_hw_vars_from_task_files():
+            warning_msg = """
+There were no hardware variables found in your task files. To use a hardware variable, add a variable beginning with "hw_" to a task file
+
+for example "v.hw_solenoid_dur = None"
+            """
             QtWidgets.QMessageBox.warning(
                 self,
                 "No hardware variables found",
-                'There were no hardware variables found in your task files. To use a hardware variable, add a variable beginning with "hw_" set to None in a task file\n\n for example "v.hw_solenoid_dur = None"',
+                warning_msg,
                 QtWidgets.QMessageBox.StandardButton.Ok,
             )
             return

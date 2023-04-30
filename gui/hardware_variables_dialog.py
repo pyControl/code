@@ -4,7 +4,6 @@ import re
 import os
 from pathlib import Path
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from gui.utility import cbox_update_options, cbox_set_item
 
 
 class Hardware_variables_editor(QtWidgets.QDialog):
@@ -45,7 +44,7 @@ class Hardware_variables_editor(QtWidgets.QDialog):
 
         self.save_button.clicked.connect(self.var_table.save)
 
-        self.setWindowTitle(f"Edit Hardware Variables")
+        self.setWindowTitle("Edit Hardware Variables")
         self.update_var_table()
 
     def update_var_table(self):
@@ -172,12 +171,19 @@ def hw_var_defined_in_setup(parent, setup_name, task_name, task_hw_vars):
     serial_port = parent.GUI_main.setups_tab.get_port(setup_name)
     saved_setups = parent.GUI_main.setups_tab.get_setups_from_json()
     setup_hw_variables = saved_setups[serial_port].get("variables")
+
     for hw_var in task_hw_vars:
         if setup_hw_variables.get(hw_var) is None:
+            warning_msg = f"""
+"{hw_var}" is not defined for the {setup_name} setup
+
+
+Either remove "{hw_var}" from the "{task_name}" task, or add "{hw_var}" as a variable in the {setup_name} setup.
+            """
             QtWidgets.QMessageBox.warning(
                 parent,
                 "Undefined hardware variable",
-                f'"{hw_var}" is not defined in the {setup_name} setup\n\nEither remove "{hw_var}" from the {task_name} task, or add "{hw_var}" as a variable in the {setup_name} setup.',
+                warning_msg,
                 QtWidgets.QMessageBox.StandardButton.Ok,
             )
             return False
