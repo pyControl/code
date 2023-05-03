@@ -84,7 +84,9 @@ class VariablesTable(QtWidgets.QTableWidget):
     def __init__(self, setup_var_editor):
         super(QtWidgets.QTableWidget, self).__init__(1, 2)
         self.setup_var_editor = setup_var_editor
-        self.num_selected = len(self.setup_var_editor.setups_tab.get_selected_setups())
+
+        self.selected_setups = self.setup_var_editor.setups_tab.get_selected_setups(has_name_filter=True)
+        self.num_selected = len(self.selected_setups)
         for i in range(self.num_selected - 1):
             self.insertRow(i)
         self.setHorizontalHeaderLabels(["Setup", "Value"])
@@ -94,9 +96,7 @@ class VariablesTable(QtWidgets.QTableWidget):
     def fill_table(self, hw_variable):
         with open(self.setup_var_editor.setups_tab.save_path, "r", encoding="utf-8") as f:
             setups_json = json.loads(f.read())
-        selected_setups = self.setup_var_editor.setups_tab.get_selected_setups()
-
-        for row, setup in enumerate(selected_setups):
+        for row, setup in enumerate(self.selected_setups):
             setup_name = QtWidgets.QLabel(setup.name)
             value_edit = QtWidgets.QLineEdit()
             value_edit.textChanged.connect(self.refresh_save_button)

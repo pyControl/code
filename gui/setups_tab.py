@@ -67,9 +67,9 @@ class Setups_tab(QtWidgets.QWidget):
         load_hw_button.clicked.connect(self.load_hardware_definition)
         enable_flashdrive_button.clicked.connect(self.enable_flashdrive)
         disable_flashdrive_button.clicked.connect(self.disable_flashdrive)
-        variables_btn = QtWidgets.QPushButton('Variables')
-        variables_btn.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
-        variables_btn.clicked.connect(self.edit_hardware_vars)
+        self.variables_btn = QtWidgets.QPushButton('Variables')
+        self.variables_btn.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
+        self.variables_btn.clicked.connect(self.edit_hardware_vars)
 
         self.dfu_btn = QtWidgets.QPushButton("DFU mode")
         self.dfu_btn.setIcon(QtGui.QIcon("gui/icons/wrench.svg"))
@@ -78,7 +78,7 @@ class Setups_tab(QtWidgets.QWidget):
         config_layout = QtWidgets.QGridLayout()
         config_layout.addWidget(load_fw_button,0,0)
         config_layout.addWidget(load_hw_button,1,0)
-        config_layout.addWidget(variables_btn,0,1)
+        config_layout.addWidget(self.variables_btn,0,1)
         config_layout.addWidget(self.dfu_btn,1,1)
         config_layout.addWidget(enable_flashdrive_button,0,2)
         config_layout.addWidget(disable_flashdrive_button,1,2)
@@ -147,19 +147,20 @@ class Setups_tab(QtWidgets.QWidget):
     def multi_config_enable(self):
         self.select_all_checkbox.blockSignals(True)
         num_checked = 0
-        num_disabled = 0
         for setup in self.setups.values():
             if setup.select_checkbox.isChecked():
                 num_checked += 1
-            if not setup.select_checkbox.isEnabled():
-                num_disabled += 1
         if num_checked == 1:
             self.dfu_btn.setEnabled(True)
         else:
             self.dfu_btn.setEnabled(False)
+        if len(self.get_selected_setups(has_name_filter=True)):
+            self.variables_btn.setEnabled(True)
+        else:
+            self.variables_btn.setEnabled(False)
         if num_checked > 0:
             self.configure_group.setEnabled(True)
-            if num_checked + num_disabled < len(self.setups.values()):  # some selected
+            if num_checked < len(self.setups.values()):  # some selected
                 self.select_all_checkbox.setChecked(False)
             else:  # all selected
                 self.select_all_checkbox.setChecked(True)
@@ -202,10 +203,12 @@ class Setups_tab(QtWidgets.QWidget):
         '''Return a setups serial port given the setups name.'''
         return next(setup.port for setup in self.setups.values() if setup.name == setup_name)
 
-    def get_selected_setups(self):
+    def get_selected_setups(self,has_name_filter=False):
         '''Return sorted list of setups whose select checkboxes are ticked.'''
-        return sorted([setup for setup in self.setups.values()
-            if setup.select_checkbox.isChecked()], key=lambda setup: setup.port)
+        if has_name_filter:
+            return sorted([setup for setup in self.setups.values() if setup.select_checkbox.isChecked() and setup.name!=setup.port], key=lambda setup: setup.port)
+        else:
+            return sorted([setup for setup in self.setups.values() if setup.select_checkbox.isChecked()], key=lambda setup: setup.port)
 
     def disconnect(self):
         '''Disconect from all pyboards, called on tab change.'''
@@ -291,10 +294,11 @@ class Setup():
         self.port_item.setText(serial_port)
         self.port_item.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled)
 
-        self.name_item = QtWidgets.QTableWidgetItem()
-        self.name_item.changed = self.name_edited
+        self.name_edit = QtWidgets.QLineEdit()
+        self.name_edit.setPlaceholderText("name required if you want to edit setup variables")
+        self.name_edit.textChanged.connect(self.name_changed)
         if self.name != self.port:
-            self.name_item.setText(self.name)
+            self.name_edit.setText(self.name)
 
         self.select_checkbox = TableCheckbox()
         self.select_checkbox.checkbox.stateChanged.connect(self.checkbox_handler)
@@ -302,8 +306,10 @@ class Setup():
         self.setups_tab.setups_table.insertRow(0)
         self.setups_tab.setups_table.setCellWidget(0, 0, self.select_checkbox)
         self.setups_tab.setups_table.setItem(0, 1, self.port_item)
-        self.setups_tab.setups_table.setItem(0, 2, self.name_item)
+        self.setups_tab.setups_table.setCellWidget(0, 2, self.name_edit)
         self.signal_from_rowcheck = True
+
+        self.name_changed()
 
     def checkbox_handler(self):
         if self.signal_from_rowcheck:
@@ -313,18 +319,19 @@ class Setup():
         hardware_var_editor = Hardware_variables_editor(self)
         hardware_var_editor.exec()
 
-    def name_edited(self):
+    def name_changed(self):
         '''If name entry in table is blank setup name is set to serial port.'''
-        name = str(self.name_item.text())
+        name = str(self.name_edit.text())
         self.name = name if name else self.port
         self.setups_tab.update_available_setups()
         self.setups_tab.update_saved_setups(self)
-        if name=="" or name=="_hidden_":
-            self.select_checkbox.setEnabled(False)
-            self.select_checkbox.setChecked(False)
+
+        if name=="":
+            self.name_edit.setStyleSheet("color: red;")
+        elif name == "_hidden_":
+            self.name_edit.setStyleSheet("color: grey;")
         else:
-            self.select_checkbox.setEnabled(True)
-            self.setups_tab.multi_config_enable()
+            self.name_edit.setStyleSheet("color: black;")
 
 
     def print(self, print_string, end="\n"):
