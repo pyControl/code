@@ -79,6 +79,8 @@ class Hardware_variables_editor(QtWidgets.QDialog):
 
 
 class VariablesTable(QtWidgets.QTableWidget):
+    """Table of setups and values for the hardware variable that is chosed from the dropdown"""
+
     def __init__(self, setup_var_editor):
         super(QtWidgets.QTableWidget, self).__init__(1, 2)
         self.setup_var_editor = setup_var_editor
@@ -94,7 +96,7 @@ class VariablesTable(QtWidgets.QTableWidget):
             setups_json = json.loads(f.read())
         selected_setups = self.setup_var_editor.setups_tab.get_selected_setups()
 
-        for i, setup in enumerate(selected_setups):
+        for row, setup in enumerate(selected_setups):
             setup_name = QtWidgets.QLabel(setup.name)
             value_edit = QtWidgets.QLineEdit()
             value_edit.textChanged.connect(self.refresh_save_button)
@@ -102,8 +104,8 @@ class VariablesTable(QtWidgets.QTableWidget):
                 value = setups_json[setup.port]["variables"].get(hw_variable)
                 if value:
                     value_edit.setText(str(value))
-            self.setCellWidget(i, 0, setup_name)
-            self.setCellWidget(i, 1, value_edit)
+            self.setCellWidget(row, 0, setup_name)
+            self.setCellWidget(row, 1, value_edit)
 
         self.starting_table = self.get_table_data()
 
@@ -167,7 +169,8 @@ def set_hardware_variables(parent, hw_vars_in_task, pre_run_vars):
         parent.board.set_variable(var_name, var_value)
 
 
-def hw_var_defined_in_setup(parent, setup_name, task_name, task_hw_vars):
+def hw_vars_defined_in_setup(parent, setup_name, task_name, task_hw_vars):
+    """Check if the setup has all of the task's hardware variables fully defined"""
     serial_port = parent.GUI_main.setups_tab.get_port(setup_name)
     saved_setups = parent.GUI_main.setups_tab.get_setups_from_json()
     setup_hw_variables = saved_setups[serial_port].get("variables")
@@ -178,7 +181,8 @@ def hw_var_defined_in_setup(parent, setup_name, task_name, task_hw_vars):
 "{hw_var}" is not defined for the {setup_name} setup
 
 
-Either remove "{hw_var}" from the "{task_name}" task, or add "{hw_var}" as a variable in the {setup_name} setup.
+Either remove "{hw_var}" from the "{task_name}.py" task, or assign a value to "{hw_var}" by editing {setup_name}'s variables.
+
             """
             QtWidgets.QMessageBox.warning(
                 parent,

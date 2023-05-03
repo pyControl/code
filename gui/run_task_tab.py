@@ -13,7 +13,7 @@ from gui.dialogs import Variables_dialog
 from gui.custom_variables_dialog import Custom_variables_dialog
 from gui.plotting import Task_plot
 from gui.utility import init_keyboard_shortcuts, NestedMenu, TaskInfo
-from gui.hardware_variables_dialog import set_hardware_variables, hw_var_defined_in_setup
+from gui.hardware_variables_dialog import set_hardware_variables, hw_vars_defined_in_setup
 
 
 # Run_task_gui ------------------------------------------------------------------------
@@ -320,7 +320,7 @@ class Run_task_tab(QtWidgets.QWidget):
             variables_set_pre_run = []
 
             task_hw_vars = [task_var for task_var in self.board.sm_info["variables"] if task_var.startswith("hw_")]
-            if not hw_var_defined_in_setup(self,self.board_select.currentText(),self.task,task_hw_vars):
+            if not hw_vars_defined_in_setup(self,self.board_select.currentText(),self.task,task_hw_vars):
                 self.status_text.setText("Connected")
                 return
             if task_hw_vars:

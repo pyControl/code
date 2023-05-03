@@ -7,7 +7,7 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from gui.settings import dirs, get_setting
 from gui.dialogs import invalid_run_experiment_dialog, invalid_save_experiment_dialog,unrun_subjects_dialog
 from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants, init_keyboard_shortcuts, NestedMenu
-from gui.hardware_variables_dialog import get_task_hw_vars, hw_var_defined_in_setup
+from gui.hardware_variables_dialog import get_task_hw_vars, hw_vars_defined_in_setup
 
 # --------------------------------------------------------------------------------
 # Experiments_tab
@@ -346,7 +346,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         task_file = Path(get_setting("folders","tasks"), experiment['task'] + ".py")
         task_hw_vars = get_task_hw_vars(task_file)
         for setup_name in setups:
-            if not hw_var_defined_in_setup(self,setup_name,experiment['task'],task_hw_vars):
+            if not hw_vars_defined_in_setup(self,setup_name,experiment['task'],task_hw_vars):
                 return
 
         if self.subset_warning_checkbox.isChecked():
