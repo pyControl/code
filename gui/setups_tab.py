@@ -206,7 +206,7 @@ class Setups_tab(QtWidgets.QWidget):
     def get_selected_setups(self,has_name_filter=False):
         '''Return sorted list of setups whose select checkboxes are ticked.'''
         if has_name_filter:
-            return sorted([setup for setup in self.setups.values() if setup.select_checkbox.isChecked() and setup.name!=setup.port], key=lambda setup: setup.port)
+            return sorted([setup for setup in self.setups.values() if setup.select_checkbox.isChecked() and setup.name!="" and setup.name!="_hidden_"], key=lambda setup: setup.port)
         else:
             return sorted([setup for setup in self.setups.values() if setup.select_checkbox.isChecked()], key=lambda setup: setup.port)
 
