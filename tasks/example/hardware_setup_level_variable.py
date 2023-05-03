@@ -10,7 +10,7 @@ events = ["timer_done"]
 
 initial_state = "print_msg"
 
-# Hardware specific variables
+# Hardware setup level variables
 v.hw_solenoid = None  # this value is just a placeholder and will be overwritten when the task is loaded
 
 

@@ -54,15 +54,15 @@ class Hardware_variables_editor(QtWidgets.QDialog):
 
     def get_hw_vars_from_task_files(self):
         # scan all task files and gather any v.hw_ variables
-        hw_vars_from_all_tasks = []
+        hw_vars_from_all_tasks = set()
         for dirName, _, fileList in os.walk("tasks"):
             # Loop through all the files in the current directory
             for file_name in fileList:
                 if file_name.endswith(".py"):
                     task_path = Path(dirName, file_name)
-                    hw_vars_from_all_tasks = hw_vars_from_all_tasks + get_task_hw_vars(task_path)
+                    hw_vars_from_all_tasks.update(get_task_hw_vars(task_path))
 
-        return sorted(list(set(hw_vars_from_all_tasks)))
+        return sorted(list(hw_vars_from_all_tasks))
 
     def closeEvent(self, event):
         if self.var_table.get_table_data() != self.var_table.starting_table:
