@@ -173,7 +173,22 @@ def hw_vars_defined_in_setup(parent, setup_name, task_name, task_hw_vars):
     """Check if the setup has all of the task's hardware variables fully defined"""
     serial_port = parent.GUI_main.setups_tab.get_port(setup_name)
     saved_setups = parent.GUI_main.setups_tab.get_setups_from_json()
-    setup_hw_variables = saved_setups[serial_port].get("variables")
+    if serial_port in saved_setups:
+        setup_hw_variables = saved_setups[serial_port].get("variables")
+    else:
+        warning_msg = f"""
+{setup_name} does not have hardware variables defined
+
+Either remove the "v.hw_" variables from this task, or name the {setup_name} setup and edit its hardware variables
+        """
+        QtWidgets.QMessageBox.warning(
+            parent,
+            "Undefined hardware variable",
+            warning_msg,
+            QtWidgets.QMessageBox.StandardButton.Ok,
+        )
+        return False
+        
 
     for hw_var in task_hw_vars:
         if setup_hw_variables.get(hw_var) is None:
@@ -181,8 +196,7 @@ def hw_vars_defined_in_setup(parent, setup_name, task_name, task_hw_vars):
 "{hw_var}" is not defined for the {setup_name} setup
 
 
-Either remove "{hw_var}" from the "{task_name}.py" task, or assign a value to "{hw_var}" by editing {setup_name}'s variables.
-
+Either remove "{hw_var}" from this task, or assign a value to "{hw_var}" by editing {setup_name}'s variables.
             """
             QtWidgets.QMessageBox.warning(
                 parent,
