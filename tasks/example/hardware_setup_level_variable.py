@@ -21,5 +21,5 @@ def print_msg(event):
     if event == "entry":
         set_timer("timer_done", 1 * second, output_event=False)
     elif event == "timer_done":
-        print(f'This task is using a hardware setup level variable equal to "{v.hw_solenoid}"')
+        print('This task is using a hardware setup level variable equal to "{}"'.format(v.hw_solenoid))
         set_timer("timer_done", 1 * second, output_event=False)
