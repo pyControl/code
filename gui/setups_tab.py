@@ -195,6 +195,8 @@ class Setups_tab(QtWidgets.QWidget):
             else:
                 # edit existing setup name
                 self.saved_setups[setup.port]["name"] = setup.name
+                if "variables" not in self.saved_setups[setup.port].keys():
+                    self.saved_setups[setup.port]["variables"] = {}
 
         with open(self.save_path, 'w', encoding="utf-8") as f:
             f.write(json.dumps(self.saved_setups, sort_keys=True, indent=4))

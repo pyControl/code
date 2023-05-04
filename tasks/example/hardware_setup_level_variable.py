@@ -1,8 +1,10 @@
-# A simple state machine which flashes the blue LED on the pyboard on and off.
+# An example task that grabs a value from a setup's hardware variables
 # Does not require any hardware except micropython board.
+# Any variable beginning with "v.hw_" is treated as a hardware variable
+# Hardware variables can be assigned values by going to the setups tab, selecting a named setup, and clicking the "variables" button to bring ujp the hardware variables dialog
+# A hardware variable must first be added to a task file before it will be available for editing in the hardware variables dialog
 
 from pyControl.utility import *
-from devices import *
 
 # States and events.
 states = ["print_msg"]
