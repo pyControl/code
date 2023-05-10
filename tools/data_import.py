@@ -39,48 +39,76 @@ class Session():
           with the time in milliseconds at which it was printed.
     '''
 
-    def __init__(self, file_path, int_subject_IDs=True):
+    def __init__(self, file_path, int_subject_IDs=False):
 
-        # Load lines from file.
-
-        with open(file_path, 'r') as f:
-            print('Importing data file: '+os.path.split(file_path)[1])
-            all_lines = [line.strip() for line in f.readlines() if line.strip()]
-
-        # Extract and store session information.
-
+        print('Importing data file: '+os.path.split(file_path)[1])
         self.file_name = os.path.split(file_path)[1]
+        
+        if os.path.splitext(file_path)[1] == '.txt':
 
-        info_lines = [line[2:] for line in all_lines if line[0]=='I']
+            # Load data from txt file.
+            with open(file_path, 'r') as f:
+                all_lines = [line.strip() for line in f.readlines() if line.strip()]
 
-        self.experiment_name = next(line for line in info_lines if 'Experiment name' in line).split(' : ')[1]
-        self.task_name       = next(line for line in info_lines if 'Task name'       in line).split(' : ')[1]
-        subject_ID_string    = next(line for line in info_lines if 'Subject ID'      in line).split(' : ')[1]
-        datetime_string      = next(line for line in info_lines if 'Start date'      in line).split(' : ')[1]
+            # Extract and store session information.
+
+            info_lines = [line[2:] for line in all_lines if line[0]=='I']
+
+            self.experiment_name = next(line for line in info_lines if 'Experiment name' in line).split(' : ')[1]
+            self.task_name       = next(line for line in info_lines if 'Task name'       in line).split(' : ')[1]
+            subject_ID_string    = next(line for line in info_lines if 'Subject ID'      in line).split(' : ')[1]
+            datetime_string      = next(line for line in info_lines if 'Start date'      in line).split(' : ')[1]
+
+            self.datetime = datetime.strptime(datetime_string, '%Y/%m/%d %H:%M:%S')
+
+            # Extract and store session data.
+
+            state_IDs = eval(next(line for line in all_lines if line[0]=='S')[2:])
+            event_IDs = eval(next(line for line in all_lines if line[0]=='E')[2:])
+
+            ID2name = {v: k for k, v in {**state_IDs, **event_IDs}.items()}
+
+            data_lines = [line[2:].split(' ') for line in all_lines if line[0]=='D']
+
+            self.events = [Event(int(dl[0]), ID2name[int(dl[1])]) for dl in data_lines]
+
+            self.times = {event_name: np.array([ev.time for ev in self.events if ev.name == event_name])  
+                          for event_name in ID2name.values()}
+
+            self.print_lines = [line[2:] for line in all_lines if line[0]=='P']
+
+        elif os.path.splitext(file_path)[1] == '.tsv':
+
+            # Load tsv file to pandas dataframe.
+
+            df = pd.read_csv(file_path, delimiter='\t')
+
+            # Extract and store session information.
+
+            self.experiment_name = df.loc[(df["type"]=="info") & (df["name"]=="experiment_name"), "value"].item()
+            self.task_name       = df.loc[(df["type"]=="info") & (df["name"]=="task_name"      ), "value"].item()
+            subject_ID_string    = df.loc[(df["type"]=="info") & (df["name"]=="subject_id"     ), "value"].item()
+            datetime_string      = df.loc[(df["type"]=="info") & (df["name"]=="start_time"     ), "value"].item()
+
+            self.datetime = datetime.fromisoformat(datetime_string)
+
+            # Extract and store session data.
+
+            self.events = [Event(int(row['time']*1000), row['name']) for i,row 
+                           in df[df['type'].isin(['state', 'event'])].iterrows()]
+
+            self.times = {event_name: np.array([ev.time for ev in self.events if ev.name == event_name])  
+                          for event_name in df.loc[df['type'].isin(['state', 'event']), 'name'].unique()}
+
+        # Common to both filetypes.
 
         if int_subject_IDs: # Convert subject ID string to integer.
             self.subject_ID = int(''.join([i for i in subject_ID_string if i.isdigit()]))
         else:
             self.subject_ID = subject_ID_string
 
-        self.datetime = datetime.strptime(datetime_string, '%Y/%m/%d %H:%M:%S')
         self.datetime_string = self.datetime.strftime('%Y-%m-%d %H:%M:%S')
 
-        # Extract and store session data.
-
-        state_IDs = eval(next(line for line in all_lines if line[0]=='S')[2:])
-        event_IDs = eval(next(line for line in all_lines if line[0]=='E')[2:])
-
-        ID2name = {v: k for k, v in {**state_IDs, **event_IDs}.items()}
-
-        data_lines = [line[2:].split(' ') for line in all_lines if line[0]=='D']
-
-        self.events = [Event(int(dl[0]), ID2name[int(dl[1])]) for dl in data_lines]
-
-        self.times = {event_name: np.array([ev.time for ev in self.events if ev.name == event_name])  
-                      for event_name in ID2name.values()}
-
-        self.print_lines = [line[2:] for line in all_lines if line[0]=='P']
 
 #----------------------------------------------------------------------------------
 # Experiment class

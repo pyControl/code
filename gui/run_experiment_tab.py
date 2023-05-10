@@ -194,12 +194,11 @@ class Run_experiment_tab(QtWidgets.QWidget):
             self.update_timer.stop()
             self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
             for box in self.subjectboxes:
-                # Stop running boards.
-                if box.board and box.board.framework_running:
-                    box.board.stop_framework()
-                    time.sleep(0.05)
-                    box.board.process_data()
-                    box.stop_task()
+                # Stop running boards and close serial connections.
+                if box.board: 
+                    if box.board.framework_running:
+                        box.stop_task()
+                    box.board.close()
             msg = QtWidgets.QMessageBox()
             msg.setWindowTitle('Error')
             msg.setText('An error occured while setting up experiment')
