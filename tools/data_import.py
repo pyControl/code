@@ -282,33 +282,47 @@ def session_dataframe(file_path, paired_events={}, pair_end_suffix=None):
     '''
 
     # Load data from file.
-    with open(file_path, 'r') as f:
-        print('Importing data file: '+os.path.split(file_path)[1])
-        all_lines = [line.strip() for line in f.readlines() if line.strip()]
-    
-    # Make dataframe.
-    state_IDs = eval(next(line for line in all_lines if line[0]=='S')[2:])
-    event_IDs = eval(next(line for line in all_lines if line[0]=='E')[2:])
-    ID2name = {v: k for k, v in {**state_IDs, **event_IDs}.items()}
 
-    line_dicts = []
-    for line in all_lines:
-        if line[0] == 'I': # Info line.
-            name, value = line[2:].split(' : ')
-            line_dicts.append({'type'  : 'info',
-                               'name'  : name,
-                               'value' : value})
-        elif line[0] == 'D': # Data line.
-            timestamp, ID = [int(i) for i in line.split(' ')[1:]]
-            line_dicts.append({'type' : 'state' if ID in state_IDs.values() else 'event',
-                                'name' : ID2name[ID],
-                                'time' : int(timestamp)})
-        elif line[0] == 'P': # Print line.
-            line_dicts.append({'type'  : 'print',
-                               'time'  : int(line[2:].split(' ',1)[0]),
-                               'value' : line[2:].split(' ',1)[1]})
+    if os.path.splitext(file_path)[1] == '.txt': # Load data from .txt. file.
 
-    df = pd.DataFrame(line_dicts)
+        with open(file_path, 'r') as f:
+            print('Importing data file: '+os.path.split(file_path)[1])
+            all_lines = [line.strip() for line in f.readlines() if line.strip()]
+        
+        # Make dataframe.
+        state_IDs = eval(next(line for line in all_lines if line[0]=='S')[2:])
+        event_IDs = eval(next(line for line in all_lines if line[0]=='E')[2:])
+        ID2name = {v: k for k, v in {**state_IDs, **event_IDs}.items()}
+
+        line_dicts = []
+        for line in all_lines:
+            if line[0] == 'I': # Info line.
+                name, value = line[2:].split(' : ')
+                # Make info lines consistent with .tsv files.
+                name = name.lower().replace(' ', '_')
+                if name == 'start_date': 
+                    name = 'start_time'
+                    value = datetime.strptime(value, '%Y/%m/%d %H:%M:%S').isoformat()
+                line_dicts.append({'time'  : 0,
+                                   'type'  : 'info',
+                                   'name'  : name,
+                                   'value' : value})
+            elif line[0] == 'D': # Data line.
+                timestamp, ID = [int(i) for i in line.split(' ')[1:]]
+                line_dicts.append({'time' : timestamp/1000,
+                                   'type' : 'state' if ID in state_IDs.values() else 'event',
+                                   'name' : ID2name[ID]})
+            elif line[0] == 'P': # Print line.
+                time_str, print_str =  line[2:].split(' ',1)
+                line_dicts.append({'time'  : int(time_str)/1000,
+                                   'type'  : 'print',
+                                   'value' : print_str})
+
+        df = pd.DataFrame(line_dicts)
+
+    elif os.path.splitext(file_path)[1] == '.tsv': # Load data from .tsv file.
+
+            df = pd.read_csv(file_path, delimiter='\t')
     
     # Add state durations.
     df.loc[df['type'] == 'state','duration'] = -df.loc[df['type'] == 'state','time'].diff(-1)
@@ -344,7 +358,7 @@ def session_dataframe(file_path, paired_events={}, pair_end_suffix=None):
                      
     # Reset index and set column order.    
     df.reset_index(drop=True)
-    df = df.reindex(columns=['type','name','time','duration','value'])
+    df = df.reindex(columns=['time','type','name','value','duration'])
     return df
 
 #----------------------------------------------------------------------------------
