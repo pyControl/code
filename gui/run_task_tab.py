@@ -13,6 +13,7 @@ from gui.dialogs import Variables_dialog
 from gui.custom_variables_dialog import Custom_variables_dialog
 from gui.plotting import Task_plot
 from gui.utility import init_keyboard_shortcuts, NestedMenu, TaskInfo
+from gui.hardware_variables_dialog import set_hardware_variables, hw_vars_defined_in_setup
 
 
 # Run_task_gui ------------------------------------------------------------------------
@@ -256,8 +257,8 @@ class Run_task_tab(QtWidgets.QWidget):
             self.variables_button.setEnabled(False)
             self.connect_button.setEnabled(False)
             self.repaint()
-            port = self.GUI_main.setups_tab.get_port(self.board_select.currentText())
-            self.board = Pycboard(port, print_func=self.print_to_log, data_logger=self.data_logger)
+            self.serial_port = self.GUI_main.setups_tab.get_port(self.board_select.currentText())
+            self.board = Pycboard(self.serial_port, print_func=self.print_to_log, data_logger=self.data_logger)
             self.connected = True
             self.config_button.setEnabled(True)
             self.connect_button.setEnabled(True)
@@ -315,6 +316,23 @@ class Run_task_tab(QtWidgets.QWidget):
                 self.variables_button.clicked.disconnect()
                 self.variables_dialog.deleteLater()
             self.task = task
+
+            variables_set_pre_run = []
+
+            task_hw_vars = [task_var for task_var in self.board.sm_info["variables"] if task_var.startswith("hw_")]
+            if not hw_vars_defined_in_setup(self,self.board_select.currentText(),self.task,task_hw_vars):
+                self.status_text.setText("Connected")
+                return
+            if task_hw_vars:
+                set_hardware_variables(self,task_hw_vars,variables_set_pre_run)
+
+            if variables_set_pre_run:
+                name_len  = max([len(v[0]) for v in variables_set_pre_run])
+                value_len = max([len(v[1]) for v in variables_set_pre_run])
+                for v_name, v_value, pv_str in variables_set_pre_run:
+                    self.print_to_log(
+                        v_name.ljust(name_len+4) + v_value.ljust(value_len+4) + pv_str)
+
             self.variables_dialog = Variables_dialog(self, self.board)
             self.using_json_gui = False
             if "custom_variables_dialog" in self.board.sm_info["variables"]:

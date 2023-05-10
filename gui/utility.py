@@ -37,7 +37,7 @@ class TableCheckbox(QtWidgets.QWidget):
 def cbox_update_options(cbox, options):
     '''Update the options available in a qcombobox without changing the selection.'''
     selected = str(cbox.currentText())
-    available = sorted(list(set([selected]+options)))
+    available = sorted(list(set([selected]+options)),key=str.lower)
     i = available.index(selected)
     cbox.clear()
     cbox.addItems(available)

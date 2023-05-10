@@ -40,9 +40,9 @@ def get_setting(setting_type, setting_name):
     if os.path.exists(json_path): # user has a user_settings.json
         with open(json_path, "r", encoding="utf-8") as f:
             custom_settings = json.loads(f.read())
-        try:
+        if setting_name in custom_settings[setting_type]:
             return custom_settings[setting_type][setting_name]
-        except KeyError:
+        else:
             return default_user_settings[setting_type][setting_name]
     else: # use defaults
         return default_user_settings[setting_type][setting_name]

@@ -7,6 +7,7 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from gui.settings import dirs, get_setting
 from gui.dialogs import invalid_run_experiment_dialog, invalid_save_experiment_dialog,unrun_subjects_dialog
 from gui.utility import TableCheckbox, cbox_update_options, cbox_set_item, null_resize, variable_constants, init_keyboard_shortcuts, NestedMenu
+from gui.hardware_variables_dialog import get_task_hw_vars, hw_vars_defined_in_setup
 
 # --------------------------------------------------------------------------------
 # Experiments_tab
@@ -341,6 +342,13 @@ class Configure_experiment_tab(QtWidgets.QWidget):
                 except:
                     invalid_run_experiment_dialog(self, f"Invalid value '{v['value']}' for variable '{v['name']}'.")
                     return
+        # Validate hw_variables
+        task_file = Path(get_setting("folders","tasks"), experiment['task'] + ".py")
+        task_hw_vars = get_task_hw_vars(task_file)
+        for setup_name in setups:
+            if not hw_vars_defined_in_setup(self,setup_name,experiment['task'],task_hw_vars):
+                return
+
         if self.subset_warning_checkbox.isChecked():
             all_subjects = self.experiment_dict()['subjects']
             will_not_run = ''
@@ -636,7 +644,7 @@ class VariablesTable(QtWidgets.QTableWidget):
         except FileNotFoundError:
             return
         self.variable_names = list(set([v_name for v_name in
-            re.findall(pattern, file_content) if not v_name[-3:] == '___']))
+            re.findall(pattern, file_content) if not v_name.endswith("___") and v_name != "custom_variables_dialog" and not v_name.startswith("hw_")]))
         # Remove variables that are not in new task.
         for i in reversed(range(self.n_variables)):
             if not self.cellWidget(i,0).currentText() in self.variable_names:

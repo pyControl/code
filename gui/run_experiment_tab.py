@@ -15,6 +15,7 @@ from gui.plotting import Experiment_plot
 from gui.dialogs import Variables_dialog, Summary_variables_dialog
 from gui.utility import variable_constants, TaskInfo, parallel_call
 from gui.custom_variables_dialog import Custom_variables_dialog
+from gui.hardware_variables_dialog import set_hardware_variables
 
 class Run_experiment_tab(QtWidgets.QWidget):
     '''The run experiment tab is responsible for setting up, running and stopping
@@ -338,11 +339,11 @@ class Subjectbox(QtWidgets.QGroupBox):
 
     def connect_to_board(self):
         '''Connect to pyboard and instantiate Pycboard and Data_logger objects.'''
-        serial_port = self.GUI_main.setups_tab.get_port(self.setup_name)
+        self.serial_port = self.GUI_main.setups_tab.get_port(self.setup_name)
         try:
             self.data_logger = Data_logger(print_func=self.print_to_log, data_consumers=
                 [self.run_exp_tab.experiment_plot.subject_plots[self.subject], self.task_info])
-            self.board = Pycboard(serial_port, print_func=self.print_to_log, data_logger=self.data_logger)
+            self.board = Pycboard(self.serial_port, print_func=self.print_to_log, data_logger=self.data_logger)
         except SerialException:
             self.print_to_log('\nConnection failed.')
             self.setup_failed = True
@@ -352,6 +353,7 @@ class Subjectbox(QtWidgets.QGroupBox):
             self.print_to_log('\nInstall pyControl framework on board before running experiment.')
             self.setup_failed = True
             self.error()
+
 
     def start_hardware_test(self):
         '''Transefer hardware test file to board and start framework running.'''
@@ -376,14 +378,17 @@ class Subjectbox(QtWidgets.QGroupBox):
         # Set variables.
         self.subject_variables = [v for v in self.run_exp_tab.experiment['variables']
                                    if v['subject'] in ('all', self.subject)]
-        if self.subject_variables:
+        hw_vars_in_task = [task_var for task_var in self.board.sm_info["variables"] if task_var.startswith("hw_")]
+        if self.subject_variables or hw_vars_in_task:
             self.print_to_log('\nSetting variables.\n')
             self.variables_set_pre_run = []
             try:
-                try:
-                    subject_pv_dict = self.run_exp_tab.persistent_variables[self.subject]
-                except KeyError:
-                    subject_pv_dict = {}
+                # hardware specific variables
+                if hw_vars_in_task:
+                    set_hardware_variables(self,hw_vars_in_task,self.variables_set_pre_run)
+
+                # persistent variables or value specified in variable table
+                subject_pv_dict = self.run_exp_tab.persistent_variables.get(self.subject,{})
                 for v in self.subject_variables:
                     if v['persistent'] and v['name'] in subject_pv_dict.keys(): # Use stored value.
                         v_value =  subject_pv_dict[v['name']]

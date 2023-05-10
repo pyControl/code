@@ -102,7 +102,7 @@ class Variables_grid(QtWidgets.QWidget):
         variables = board.sm_info['variables']
         self.grid_layout = QtWidgets.QGridLayout()
         for i, (v_name, v_value_str) in enumerate(sorted(variables.items())):
-            if not v_name[-3:] == '___':
+            if not v_name.endswith("___") and v_name != "custom_variables_dialog" and not v_name.startswith("hw_"):
                 Variable_setter(v_name, v_value_str, self.grid_layout, i, self, board)
         self.setLayout(self.grid_layout)
 
@@ -581,7 +581,7 @@ class Error_log_dialog(QtWidgets.QDialog):
         reply = QtWidgets.QMessageBox.question(
             self,
             "Clear error log",
-            f"Are you sure you want to clear the error log?",
+            "Are you sure you want to clear the error log?",
             QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.Cancel,
         )
         if reply == QtWidgets.QMessageBox.StandardButton.Yes:
