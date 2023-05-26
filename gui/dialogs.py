@@ -343,6 +343,15 @@ class Settings_dialog(QtWidgets.QDialog):
         gui_layout.setRowStretch(i + 1, 1)
         gui_box.setLayout(gui_layout)
 
+
+        saving_box = QtWidgets.QGroupBox("Saving")
+        saving_layout = QtWidgets.QGridLayout()
+
+        self.file_radio = Radio_setter(self, "File type:", ("saving", "file_type"), ("tsv", "txt"))
+        self.saving_settings = [self.file_radio]
+        self.file_radio.add_to_grid(saving_layout, 0)
+        saving_box.setLayout(saving_layout)
+
         self.fill_with_defaults_btn = QtWidgets.QPushButton("Use defaults")
         self.fill_with_defaults_btn.clicked.connect(self.fill_with_defaults)
         self.fill_with_defaults_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
@@ -358,9 +367,10 @@ class Settings_dialog(QtWidgets.QDialog):
         btns_layout.addWidget(self.save_settings_btn)
 
         settings_grid_layout.addWidget(paths_box, 0, 0, 1, 3)
-        settings_grid_layout.addWidget(plotting_box, 1, 0)
+        settings_grid_layout.addWidget(plotting_box, 1, 0,2,1)
         settings_grid_layout.addWidget(gui_box, 1, 1)
-        settings_grid_layout.addLayout(btns_layout, 2, 0, 1, 3)
+        settings_grid_layout.addWidget(saving_box, 2, 1)
+        settings_grid_layout.addLayout(btns_layout, 3, 0, 1, 3)
         settings_grid_layout.setColumnStretch(2, 1)
 
         self.setFixedSize(self.sizeHint())
@@ -371,7 +381,7 @@ class Settings_dialog(QtWidgets.QDialog):
 
     def reset(self):
         """Resets values to whatever is saved in user_settings.json, or to default_user_settings if no user_settings.json exists"""
-        for variable in self.path_setters + self.plotting_spins + self.gui_spins:
+        for variable in self.path_setters + self.plotting_spins + self.gui_spins + self.saving_settings:
             variable.reset()
         self.num_edited_setters = 0
         self.save_settings_btn.setEnabled(False)
@@ -380,12 +390,12 @@ class Settings_dialog(QtWidgets.QDialog):
     def fill_with_defaults(self):
         "Populates inputs with default_user_settings dictionary values from settings.py"
 
-        for variable in self.plotting_spins + self.gui_spins:
+        for variable in self.plotting_spins + self.gui_spins + self.saving_settings:
             variable.fill_with_default()
 
     def saveChanges(self):
-        user_setting_dict_new = {"folders": {}, "plotting": {}, "GUI": {}}
-        for variable in self.path_setters + self.plotting_spins + self.gui_spins:
+        user_setting_dict_new = {"folders": {}, "plotting": {}, "GUI": {}, "saving":{}}
+        for variable in self.path_setters + self.plotting_spins + self.gui_spins + self.saving_settings:
             top_key, sub_key = variable.key
             user_setting_dict_new[top_key][sub_key] = variable.get()
         # Store newly edited paths.
@@ -458,7 +468,7 @@ class Path_setter(QtWidgets.QHBoxLayout):
             self.show_edit()
 
     def show_edit(self):
-        if self.path_text.text() != self.path:
+        if self.get() != self.path:
             if self.edited is False:
                 self.edited = True
                 self.name_label.setStyleSheet("color:red;")
@@ -515,7 +525,7 @@ class Spin_setter:
         also keeps a running tally of how many settings have been edited
         and enables/disables the "Save settings" button accordingly
         """
-        if self.spn.value() != self.start_value:
+        if self.get() != self.start_value:
             if self.edited is False:
                 self.edited = True
                 self.label.setStyleSheet("color:red;")
@@ -544,6 +554,75 @@ class Spin_setter:
 
     def get(self):
         return self.spn.value()
+
+class Radio_setter:
+    """Radio input for changing user settings"""
+
+    def __init__(self, parent, label, key, options):
+        Vcenter = QtCore.Qt.AlignmentFlag.AlignVCenter
+        right = QtCore.Qt.AlignmentFlag.AlignRight
+        self.parent = parent
+        self.key = key
+        self.edited = False
+        self.label = QtWidgets.QLabel(label)
+        self.label.setAlignment(right | Vcenter)
+        self.options = options
+
+        self.button_group = QtWidgets.QButtonGroup()
+        self.button_group.buttonToggled.connect(self.show_edit)
+    
+    def add_to_grid(self, groupbox_grid, row):
+        groupbox_grid.addWidget(self.label, row, 0)
+
+        for i, option in enumerate(self.options):
+            radio_button = QtWidgets.QRadioButton(option)
+            self.button_group.addButton(radio_button)
+            groupbox_grid.addWidget(radio_button, row, 1 + i)
+
+    def show_edit(self):
+        """
+        checks whether the settings has been edited, and changes label color accordingly
+        also keeps a running tally of how many settings have been edited
+        and enables/disables the "Save settings" button accordingly
+        """
+        if self.get() != self.start_value:
+            if self.edited is False:
+                self.edited = True
+                self.label.setStyleSheet("color:red;")
+                self.parent.num_edited_setters += 1
+                self.parent.save_settings_btn.setEnabled(True)
+                self.parent.discard_changes_btn.setEnabled(True)
+        else:
+            if self.edited is True:
+                self.edited = False
+                self.label.setStyleSheet("color:black;")
+                self.parent.num_edited_setters -= 1
+                if self.parent.num_edited_setters < 1:
+                    self.parent.save_settings_btn.setEnabled(False)
+                    self.parent.discard_changes_btn.setEnabled(False)
+
+    def fill_with_default(self):
+        top_key, sub_key = self.key
+        default = default_user_settings[top_key][sub_key]
+        for option in self.button_group.buttons():
+            if option.text() == default:
+                option.setChecked(True)
+            else:
+                option.setChecked(False)
+
+    def reset(self):
+        self.start_value = get_setting(*self.key)
+        for option in self.button_group.buttons():
+            if option.text() == self.start_value:
+                option.setChecked(True)
+            else:
+                option.setChecked(False)
+        self.show_edit()
+
+    def get(self):
+        for option in self.button_group.buttons():
+            if option.isChecked():
+                return option.text()
 
 
 # Error log dialog. ---------------------------------------------------------
