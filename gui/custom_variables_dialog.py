@@ -23,7 +23,7 @@ class Spin_var:
             self.spn = QtWidgets.QSpinBox()
 
         self.spn.setRange(spin_min, spin_max)
-        self.spn.setValue(eval(init_var_dict[varname]))
+        self.spn.setValue(init_var_dict[varname])
         self.spn.setSingleStep(step)
         self.spn.setAlignment(center)
         self.spn.setMinimumWidth(spin_width)
@@ -77,7 +77,7 @@ class Spin_var:
         """Reload value from sm_info.  sm_info is updated when variables are output
         during framework run due to get/set."""
         self.value_text_colour("black")
-        self.spn.setValue(eval(str(self.board.sm_info["variables"][self.varname])))
+        self.spn.setValue(self.board.sm_info["variables"][self.varname])
         QtCore.QTimer.singleShot(1000, self.value_text_colour)
 
     def setVisible(self, makeVisible):
@@ -111,7 +111,7 @@ class Standard_var:
         self.line_edit.setAlignment(center)
         self.line_edit.setMinimumWidth(text_width)
         self.line_edit.setMaximumWidth(text_width)
-        self.line_edit.setText(init_var_dict[varname])
+        self.line_edit.setText(str(init_var_dict[varname]))
         self.line_edit.textChanged.connect(lambda x: self.value_text_colour("black"))
         self.line_edit.returnPressed.connect(self.set)
         self.value_text_colour("gray")
@@ -186,7 +186,7 @@ class Checkbox_var:
         self.label = QtWidgets.QLabel(label)
         self.label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
         self.checkbox = QtWidgets.QCheckBox()
-        self.checkbox.setChecked(eval(init_var_dict[varname]))
+        self.checkbox.setChecked(init_var_dict[varname])
         self.checkbox.clicked.connect(self.set)
 
     def setBoard(self, board):
@@ -264,7 +264,7 @@ class Slider_var:
         self.slider.setTickPosition(QtWidgets.QSlider.TickPosition.TicksBelow)
         self.slider.setInterval(step)
         self.slider.setRange(slide_min, slide_max)
-        self.slider.setValue(eval(init_var_dict[varname]))
+        self.slider.setValue(init_var_dict[varname])
 
         self.suffix = ""
         self.label = QtWidgets.QLabel(label)

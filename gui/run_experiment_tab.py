@@ -405,7 +405,7 @@ class Subjectbox(QtWidgets.QGroupBox):
     def make_variables_dialog(self):
         '''Configure variables dialog and ready subjectbox to start experiment. '''
         if 'custom_variables_dialog' in self.board.sm_info['variables']: # Task uses custon variables dialog
-            custom_variables_name = eval(self.board.sm_info['variables']['custom_variables_dialog'])
+            custom_variables_name = self.board.sm_info['variables']['custom_variables_dialog']
             potential_dialog = Custom_variables_dialog(self,custom_variables_name, is_experiment=True)
             if potential_dialog.custom_gui == "json_gui":
                 self.variables_dialog = potential_dialog

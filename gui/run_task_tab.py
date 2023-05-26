@@ -323,7 +323,7 @@ class Run_task_tab(QtWidgets.QWidget):
             self.variables_dialog = Variables_dialog(self, self.board)
             self.using_json_gui = False
             if "custom_variables_dialog" in self.board.sm_info["variables"]:
-                custom_variables_name = eval(self.board.sm_info["variables"]["custom_variables_dialog"])
+                custom_variables_name = self.board.sm_info["variables"]["custom_variables_dialog"]
                 potential_dialog = Custom_variables_dialog(self, custom_variables_name)
                 if potential_dialog.custom_gui == "json_gui":
                     self.variables_dialog = potential_dialog
