@@ -3,7 +3,7 @@ from array import array
 from . import timer
 from . import framework as fw
 from . import state_machine as sm
-from .utility import randint, warning
+from .utility import randint, warning, print_variables
 
 # Ring buffer -----------------------------------------------------------------
 
@@ -69,6 +69,7 @@ def run_start():
     # Called at start of each framework run.
     interrupt_queue.reset()
     stream_data_queue.reset()
+    print_variables()
     for IO_object in IO_dict.values():
         IO_object._run_start()
 
