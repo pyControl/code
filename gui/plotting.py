@@ -315,6 +315,7 @@ class Experiment_plot(QtWidgets.QMainWindow):
             subject_plot.setParent(None)
             subject_plot.deleteLater()
         self.subject_tabs.closeDetachedTabs()
+        self.subject_plots.clear()
         self.close()
 
     def update(self):
