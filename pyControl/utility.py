@@ -51,8 +51,7 @@ def timer_remaining(event):
 def print(print_string):
     # Used to output data print_string with timestamp.  print_string is stored and only
     #  printed to serial line once higher priority tasks have all been processed. 
-    if fw.data_output:
-        fw.data_output_queue.put((fw.current_time, fw.print_typ, str(print_string)))
+    fw.data_output_queue.put((fw.current_time, fw.print_typ, str(print_string)))
 
 def print_variables(variables='all'):
     # Print specified variables to data log as a json string.

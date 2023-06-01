@@ -57,8 +57,7 @@ def goto_state(next_state):
     transition_in_progress = True
     process_event('exit')
     timer.disarm_type(fw.state_typ) # Clear any timed_goto_states
-    if fw.data_output:
-        fw.data_output_queue.put((fw.current_time, fw.state_typ, states[next_state]))
+    fw.data_output_queue.put((fw.current_time, fw.state_typ, states[next_state]))
     current_state = next_state
     process_event('entry')
     transition_in_progress = False
@@ -79,8 +78,7 @@ def start():
     if event_dispatch_dict['run_start']:
         event_dispatch_dict['run_start']()
     current_state = user_task_file.initial_state
-    if fw.data_output:
-        fw.data_output_queue.put((fw.current_time, fw.state_typ, states[current_state]))
+    fw.data_output_queue.put((fw.current_time, fw.state_typ, states[current_state]))
     process_event('entry')
 
 def stop():

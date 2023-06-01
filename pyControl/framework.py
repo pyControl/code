@@ -114,7 +114,7 @@ def recieve_data():
 def run():
     # Run framework for specified number of seconds.
     # Pre run
-    global current_time, start_time, running
+    global current_time, start_time, running, data_output
     timer.reset()
     event_queue.reset()
     data_output_queue.reset()
@@ -160,7 +160,10 @@ def run():
             hw.IO_dict[hw.stream_data_queue.get()].send_buffer()
         # Priority 7: Output framework data.
         elif data_output_queue.available:
-            output_data(data_output_queue.get())
+            event = data_output_queue.get()
+            if data_output:
+                output_data(event)
+
     # Post run
     usb_serial.setinterrupt(3) # Enable 'ctrl+c' on serial raising KeyboardInterrupt.
     clock.deinit()
