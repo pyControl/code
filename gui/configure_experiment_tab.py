@@ -345,9 +345,10 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         # Validate hw_variables
         task_file = Path(get_setting("folders","tasks"), experiment['task'] + ".py")
         task_hw_vars = get_task_hw_vars(task_file)
-        for setup_name in setups:
-            if not hw_vars_defined_in_setup(self,setup_name,experiment['task'],task_hw_vars):
-                return
+        if task_hw_vars:
+            for setup_name in setups:
+                if not hw_vars_defined_in_setup(self,setup_name,experiment['task'],task_hw_vars):
+                    return
 
         if self.subset_warning_checkbox.isChecked():
             all_subjects = self.experiment_dict()['subjects']

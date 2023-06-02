@@ -148,7 +148,6 @@ class VariablesTable(QtWidgets.QTableWidget):
                 with open(self.setup_var_editor.setups_tab.save_path, "w", encoding="utf-8") as f:
                     f.write(json.dumps(self.setup_var_editor.setups_tab.saved_setups, sort_keys=True, indent=4))
             self.starting_table = setup_variables
-            # self.setup_var_editor.close()
             self.refresh_save_button()
 
 
@@ -158,15 +157,17 @@ def get_task_hw_vars(task_file_path):
     return list(set(["hw_" + v_name for v_name in re.findall(pattern, task_file_content, flags=re.MULTILINE)]))
 
 
-def set_hardware_variables(parent, hw_vars_in_task, pre_run_vars):
+def set_hardware_variables(parent, task_hw_vars):
     # parent is either a run_task tab or an experiment subjectbox
     setups_dict = parent.GUI_main.setups_tab.get_setups_from_json()
     setup_hw_variables = setups_dict[parent.serial_port].get("variables")
-    for hw_var in hw_vars_in_task:
+    hw_vars_set = []
+    for hw_var in task_hw_vars:
         var_name = hw_var
         var_value = setup_hw_variables.get(hw_var)
-        pre_run_vars.append((var_name, str(var_value), "(hardware variable)"))
+        hw_vars_set.append((var_name, str(var_value), "(hardware variable)"))
         parent.board.set_variable(var_name, var_value)
+    return hw_vars_set
 
 
 def hw_vars_defined_in_setup(parent, setup_name, task_name, task_hw_vars):
@@ -189,7 +190,6 @@ Either remove the "v.hw_" variables from this task, or name the {setup_name} set
         )
         return False
         
-
     for hw_var in task_hw_vars:
         if setup_hw_variables.get(hw_var) is None:
             warning_msg = f"""

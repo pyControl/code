@@ -299,6 +299,8 @@ class Run_task_tab(QtWidgets.QWidget):
         self.variables_button.setEnabled(False)
 
     def setup_task(self):
+        '''Upload task, set any hardware variables, ready gui to run task.'''
+        # Upload task to board.
         task = self.task_select.text()
         if task == "select task":
             return
@@ -312,27 +314,24 @@ class Run_task_tab(QtWidgets.QWidget):
             self.variables_button.setEnabled(False)
             self.repaint()
             self.board.setup_state_machine(task, uploaded=self.uploaded)
+            self.task = task
+            # Set values for any hardware variables.
+            task_hw_vars = [task_var for task_var in self.board.sm_info["variables"] if task_var.startswith("hw_")]
+            if task_hw_vars:
+                if not hw_vars_defined_in_setup(self,self.board_select.currentText(), task, task_hw_vars):
+                    self.status_text.setText("Connected")
+                    return
+                else:
+                    hw_vars_set = set_hardware_variables(self, task_hw_vars)
+                    name_len  = max([len(v[0]) for v in hw_vars_set])
+                    value_len = max([len(v[1]) for v in hw_vars_set])
+                    for v_name, v_value, pv_str in hw_vars_set:
+                        self.print_to_log(
+                            v_name.ljust(name_len+4) + v_value.ljust(value_len+4) + pv_str)
+            # Configure GUI ready to run.
             if self.variables_dialog:
                 self.variables_button.clicked.disconnect()
                 self.variables_dialog.deleteLater()
-            self.task = task
-
-            variables_set_pre_run = []
-
-            task_hw_vars = [task_var for task_var in self.board.sm_info["variables"] if task_var.startswith("hw_")]
-            if not hw_vars_defined_in_setup(self,self.board_select.currentText(),self.task,task_hw_vars):
-                self.status_text.setText("Connected")
-                return
-            if task_hw_vars:
-                set_hardware_variables(self,task_hw_vars,variables_set_pre_run)
-
-            if variables_set_pre_run:
-                name_len  = max([len(v[0]) for v in variables_set_pre_run])
-                value_len = max([len(v[1]) for v in variables_set_pre_run])
-                for v_name, v_value, pv_str in variables_set_pre_run:
-                    self.print_to_log(
-                        v_name.ljust(name_len+4) + v_value.ljust(value_len+4) + pv_str)
-
             self.variables_dialog = Variables_dialog(self, self.board)
             self.using_json_gui = False
             if "custom_variables_dialog" in self.board.sm_info["variables"]:

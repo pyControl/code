@@ -378,15 +378,15 @@ class Subjectbox(QtWidgets.QGroupBox):
         # Set variables.
         self.subject_variables = [v for v in self.run_exp_tab.experiment['variables']
                                    if v['subject'] in ('all', self.subject)]
-        hw_vars_in_task = [task_var for task_var in self.board.sm_info["variables"] if task_var.startswith("hw_")]
-        if self.subject_variables or hw_vars_in_task:
+        task_hw_vars = [task_var for task_var in self.board.sm_info["variables"] if task_var.startswith("hw_")]
+        if self.subject_variables or task_hw_vars:
             self.print_to_log('\nSetting variables.\n')
             self.variables_set_pre_run = []
             try:
                 # hardware specific variables
-                if hw_vars_in_task:
-                    set_hardware_variables(self,hw_vars_in_task,self.variables_set_pre_run)
-
+                if task_hw_vars:
+                    hw_vars_set = set_hardware_variables(self, task_hw_vars)
+                    self.variables_set_pre_run += hw_vars_set
                 # persistent variables or value specified in variable table
                 subject_pv_dict = self.run_exp_tab.persistent_variables.get(self.subject,{})
                 for v in self.subject_variables:
