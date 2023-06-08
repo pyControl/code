@@ -99,7 +99,6 @@ class VariablesTable(QtWidgets.QTableWidget):
         for row, setup in enumerate(self.selected_setups):
             setup_name = QtWidgets.QLabel(setup.name)
             value_edit = QtWidgets.QLineEdit()
-            value_edit.textChanged.connect(self.refresh_save_button)
             if setups_json[setup.port].get("variables"):
                 value = setups_json[setup.port]["variables"].get(hw_variable)
                 if value:
@@ -108,6 +107,7 @@ class VariablesTable(QtWidgets.QTableWidget):
             self.setCellWidget(row, 1, value_edit)
 
         self.starting_table = self.get_table_data()
+        value_edit.textChanged.connect(self.refresh_save_button)
 
     def refresh_save_button(self):
         if self.get_table_data() != self.starting_table:
