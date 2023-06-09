@@ -48,7 +48,7 @@ class Hardware_variables_editor(QtWidgets.QDialog):
         self.update_var_table()
 
     def update_var_table(self):
-        self.var_table.fill_table(self.variable_cbox.currentText())
+        self.var_table.fill(self.variable_cbox.currentText())
         self.save_button.setText(f"Save {self.variable_cbox.currentText()} values")
         self.save_button.setEnabled(False)
 
@@ -61,11 +61,10 @@ class Hardware_variables_editor(QtWidgets.QDialog):
                 if file_name.endswith(".py"):
                     task_path = Path(dirName, file_name)
                     hw_vars_from_all_tasks.update(get_task_hw_vars(task_path))
-
         return sorted(list(hw_vars_from_all_tasks))
 
     def closeEvent(self, event):
-        if self.var_table.get_table_data() != self.var_table.starting_table:
+        if self.var_table.get_hw_var_dict() != self.var_table.last_saved_dict:
             reply = QtWidgets.QMessageBox.question(
                 self,
                 "Changes not saved",
@@ -93,7 +92,7 @@ class VariablesTable(QtWidgets.QTableWidget):
         self.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.verticalHeader().setVisible(False)
 
-    def fill_table(self, hw_variable):
+    def fill(self, hw_variable):
         with open(self.setup_var_editor.setups_tab.save_path, "r", encoding="utf-8") as f:
             setups_json = json.loads(f.read())
         for row, setup in enumerate(self.selected_setups):
@@ -105,35 +104,31 @@ class VariablesTable(QtWidgets.QTableWidget):
                     value_edit.setText(str(value))
             self.setCellWidget(row, 0, setup_name)
             self.setCellWidget(row, 1, value_edit)
-
-        self.starting_table = self.get_table_data()
+        self.last_saved_dict = self.get_hw_var_dict()
         value_edit.textChanged.connect(self.refresh_save_button)
 
     def refresh_save_button(self):
-        if self.get_table_data() != self.starting_table:
+        if self.get_hw_var_dict() != self.last_saved_dict:
             self.setup_var_editor.save_button.setEnabled(True)
         else:
             self.setup_var_editor.save_button.setEnabled(False)
 
-    def get_table_data(self):
-        setup_variables = {}
+    def get_hw_var_dict(self):
+        hw_var_dict = {}
         for table_row in range(self.num_selected):
             setup_name = self.cellWidget(table_row, 0).text()
             var_text = self.cellWidget(table_row, 1).text()
-
             try:  # convert strings into types (int,boolean,float etc.) if possible
                 value_edit = ast.literal_eval(var_text)
             except (ValueError, SyntaxError):
                 value_edit = var_text
-
-            setup_variables[setup_name] = value_edit
-
-        return setup_variables
+            hw_var_dict[setup_name] = value_edit
+        return hw_var_dict
 
     def save(self):
-        setup_variables = self.get_table_data()
+        hw_var_dict = self.get_hw_var_dict()
         hw_var_name = self.setup_var_editor.variable_cbox.currentText()
-        for setup_name, hw_val in setup_variables.items():
+        for setup_name, hw_val in hw_var_dict.items():
             serial_port = self.setup_var_editor.setups_tab.get_port(setup_name)
             saved_setups = self.setup_var_editor.setups_tab.saved_setups
             if hw_val:
@@ -143,7 +138,7 @@ class VariablesTable(QtWidgets.QTableWidget):
 
         with open(self.setup_var_editor.setups_tab.save_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(self.setup_var_editor.setups_tab.saved_setups, sort_keys=True, indent=4))
-        self.starting_table = setup_variables
+        self.last_saved_dict = hw_var_dict
         self.refresh_save_button()
 
 
