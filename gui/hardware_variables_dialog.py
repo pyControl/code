@@ -127,28 +127,24 @@ class VariablesTable(QtWidgets.QTableWidget):
                 value_edit = var_text
 
             setup_variables[setup_name] = value_edit
-        setup_variables["hw_var"] = self.setup_var_editor.variable_cbox.currentText()
 
         return setup_variables
 
     def save(self):
         setup_variables = self.get_table_data()
-        if setup_variables is not False:
-            if setup_variables != self.starting_table:
-                hw_var_name = setup_variables["hw_var"]
-                for setup_name, hw_val in setup_variables.items():
-                    if setup_name != "hw_var":
-                        serial_port = self.setup_var_editor.setups_tab.get_port(setup_name)
-                        saved_setups = self.setup_var_editor.setups_tab.saved_setups
-                        if hw_val:
-                            saved_setups[serial_port]["variables"][hw_var_name] = hw_val
-                        else:  # if value is left blank, delete it from the "variables" dictionary if it was there previously
-                            saved_setups[serial_port]["variables"].pop(hw_var_name, None)
+        hw_var_name = self.setup_var_editor.variable_cbox.currentText()
+        for setup_name, hw_val in setup_variables.items():
+            serial_port = self.setup_var_editor.setups_tab.get_port(setup_name)
+            saved_setups = self.setup_var_editor.setups_tab.saved_setups
+            if hw_val:
+                saved_setups[serial_port]["variables"][hw_var_name] = hw_val
+            else:  # if value is left blank, delete it from the "variables" dictionary if it was there previously
+                saved_setups[serial_port]["variables"].pop(hw_var_name, None)
 
-                with open(self.setup_var_editor.setups_tab.save_path, "w", encoding="utf-8") as f:
-                    f.write(json.dumps(self.setup_var_editor.setups_tab.saved_setups, sort_keys=True, indent=4))
-            self.starting_table = setup_variables
-            self.refresh_save_button()
+        with open(self.setup_var_editor.setups_tab.save_path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(self.setup_var_editor.setups_tab.saved_setups, sort_keys=True, indent=4))
+        self.starting_table = setup_variables
+        self.refresh_save_button()
 
 
 def get_task_hw_vars(task_file_path):
@@ -189,7 +185,7 @@ Either remove the "v.hw_" variables from this task, or name the {setup_name} set
             QtWidgets.QMessageBox.StandardButton.Ok,
         )
         return False
-        
+
     for hw_var in task_hw_vars:
         if setup_hw_variables.get(hw_var) is None:
             warning_msg = f"""
