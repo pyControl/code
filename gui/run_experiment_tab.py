@@ -440,7 +440,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.start_time = datetime.now()
         ex = self.run_exp_tab.experiment
         self.print_to_log('\nStarting experiment.\n')
-        self.data_logger.open_data_file(ex['data_dir'], ex['name'], self.setup_name, self.subject, get_setting("saving","file_type"), datetime.now())
+        self.data_logger.open_data_file(ex['data_dir'], ex['name'], self.setup_name, self.subject, "tsv", datetime.now())
         if self.subject_variables: # Write variables set pre run to data file.
             var_dict  = {v_name: eval(v_value) for v_name, v_value, pv in self.variables_set_pre_run}
             self.data_logger.write_to_file([Datatuple(type='V',time=0, ID='set', data=json.dumps(var_dict))])
