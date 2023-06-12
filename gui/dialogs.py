@@ -343,15 +343,6 @@ class Settings_dialog(QtWidgets.QDialog):
         gui_layout.setRowStretch(i + 1, 1)
         gui_box.setLayout(gui_layout)
 
-
-        saving_box = QtWidgets.QGroupBox("Saving")
-        saving_layout = QtWidgets.QGridLayout()
-
-        self.file_radio = Radio_setter(self, "File type:", ("saving", "file_type"), ("tsv", "txt"))
-        self.saving_settings = [self.file_radio]
-        self.file_radio.add_to_grid(saving_layout, 0)
-        saving_box.setLayout(saving_layout)
-
         self.fill_with_defaults_btn = QtWidgets.QPushButton("Use defaults")
         self.fill_with_defaults_btn.clicked.connect(self.fill_with_defaults)
         self.fill_with_defaults_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
@@ -367,10 +358,9 @@ class Settings_dialog(QtWidgets.QDialog):
         btns_layout.addWidget(self.save_settings_btn)
 
         settings_grid_layout.addWidget(paths_box, 0, 0, 1, 3)
-        settings_grid_layout.addWidget(plotting_box, 1, 0,2,1)
+        settings_grid_layout.addWidget(plotting_box, 1, 0)
         settings_grid_layout.addWidget(gui_box, 1, 1)
-        settings_grid_layout.addWidget(saving_box, 2, 1)
-        settings_grid_layout.addLayout(btns_layout, 3, 0, 1, 3)
+        settings_grid_layout.addLayout(btns_layout, 2, 0, 1, 3)
         settings_grid_layout.setColumnStretch(2, 1)
 
         self.setFixedSize(self.sizeHint())
@@ -381,7 +371,7 @@ class Settings_dialog(QtWidgets.QDialog):
 
     def reset(self):
         """Resets values to whatever is saved in user_settings.json, or to default_user_settings if no user_settings.json exists"""
-        for variable in self.path_setters + self.plotting_spins + self.gui_spins + self.saving_settings:
+        for variable in self.path_setters + self.plotting_spins + self.gui_spins:
             variable.reset()
         self.num_edited_setters = 0
         self.save_settings_btn.setEnabled(False)
@@ -390,12 +380,12 @@ class Settings_dialog(QtWidgets.QDialog):
     def fill_with_defaults(self):
         "Populates inputs with default_user_settings dictionary values from settings.py"
 
-        for variable in self.plotting_spins + self.gui_spins + self.saving_settings:
+        for variable in self.plotting_spins + self.gui_spins:
             variable.fill_with_default()
 
     def saveChanges(self):
-        user_setting_dict_new = {"folders": {}, "plotting": {}, "GUI": {}, "saving":{}}
-        for variable in self.path_setters + self.plotting_spins + self.gui_spins + self.saving_settings:
+        user_setting_dict_new = {"folders": {}, "plotting": {}, "GUI": {}}
+        for variable in self.path_setters + self.plotting_spins + self.gui_spins:
             top_key, sub_key = variable.key
             user_setting_dict_new[top_key][sub_key] = variable.get()
         # Store newly edited paths.

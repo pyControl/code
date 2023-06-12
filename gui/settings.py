@@ -28,9 +28,6 @@ default_user_settings = {
         "ui_font_size": 11,
         "log_font_size": 9,
     },
-    "saving": {
-        "file_type": "tsv",
-    },
 }
 
 
