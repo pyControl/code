@@ -2,6 +2,7 @@
 # sessions and experiments.  Dependencies: Python 3.5+, Numpy.
 
 import os
+import json
 import pickle
 import pandas as pd
 import numpy as np
@@ -10,12 +11,17 @@ from collections import namedtuple
 
 Event = namedtuple('Event', ['time','name'])
 
+Variable = namedtuple('Variable', ['time', 'type', 'value'])
+
+Print = namedtuple('Print', ['time','value'])
+
 #----------------------------------------------------------------------------------
 # Session class
 #----------------------------------------------------------------------------------
 
 class Session():
-    '''Import data from a pyControl file and represent it as an object with attributes:
+    '''Import data from a pyControl file (.txt or .tsv) and represent it as an
+    object with attributes:
       - file_name
       - experiment_name
       - task_name
@@ -75,8 +81,18 @@ class Session():
             self.times = {event_name: np.array([ev.time for ev in self.events if ev.name == event_name])  
                           for event_name in ID2name.values()}
 
-            self.print_lines = [line[2:] for line in all_lines if line[0]=='P']
-
+            self.print_lines = [line[2:].split(' ', 1) for line in all_lines if line[0]=='P']
+            
+            self.prints = []
+            self.variables = []
+            
+            for print_line in self.print_lines:
+                try:
+                    value = json.loads(print_line[1])
+                    self.variables.append(Variable(time=int(print_line[0]),type='print',value=value))
+                except json.JSONDecodeError:
+                    self.prints.append(Print(time=int(print_line[0]),value=print_line[1]))
+                    
         elif os.path.splitext(file_path)[1] == '.tsv':
 
             # Load tsv file to pandas dataframe.
@@ -99,6 +115,16 @@ class Session():
 
             self.times = {event_name: np.array([ev.time for ev in self.events if ev.name == event_name])  
                           for event_name in df.loc[df['type'].isin(['state', 'event']), 'name'].unique()}
+            
+            # Create variables dataframe.
+            
+            df.loc[df['type']=='variable', 'value'] = df.loc[df['type']=='variable', 'value'].apply(json.loads) # Convert variables row value fields to dicts.
+            self.variables_df = pd.DataFrame(df.loc[df['type']=='variable','value'].tolist())
+            columns = self.variables_df.columns
+            self.variables_df.columns = pd.MultiIndex.from_arrays([['values']*len(columns),columns])
+            self.variables_df.insert(0,'operation', df.loc[df['type']=='variable', 'name'].tolist())
+            self.variables_df.insert(0,'time', df.loc[df['type']=='variable', 'time'].tolist())
+            self.variables_df.reset_index()
 
         # Common to both filetypes.
 
@@ -250,8 +276,8 @@ def _toDate(d): # Convert input to datetime.date object.
 #----------------------------------------------------------------------------------
 
 def session_dataframe(file_path, paired_events={}, pair_end_suffix=None):
-    '''Generate a pandas dataframe from a pyControl data file containing the 
-    sessions data.  The data frame has columns:
+    '''Generate a pandas dataframe from a pyControl data file (.txt or .tsv)
+    containing the sessions data.  The data frame has columns:
     type : Whether the row contains session 'info', a 'state' entry, 
           'event' or 'print' line.
     name : The name of the state, event or session information in the row.
@@ -314,15 +340,25 @@ def session_dataframe(file_path, paired_events={}, pair_end_suffix=None):
                                    'name' : ID2name[ID]})
             elif line[0] == 'P': # Print line.
                 time_str, print_str =  line[2:].split(' ',1)
-                line_dicts.append({'time'  : int(time_str)/1000,
-                                   'type'  : 'print',
-                                   'value' : print_str})
-
+                try:
+                    value_dict = json.loads(print_str)
+                    line_dicts.append({'time'  : int(time_str)/1000,
+                                       'type'  : 'variable',
+                                       'name'  : 'print',
+                                       'value' : value_dict})
+                
+                except json.JSONDecodeError:
+                    line_dicts.append({'time'  : int(time_str)/1000,
+                                       'type'  : 'print',
+                                       'value' : print_str})     
+            
         df = pd.DataFrame(line_dicts)
 
     elif os.path.splitext(file_path)[1] == '.tsv': # Load data from .tsv file.
 
             df = pd.read_csv(file_path, delimiter='\t')
+            # Convert variables row value fields to dicts from json strings.
+            df.loc[df['type']=='variable', 'value'] = df.loc[df['type']=='variable', 'value'].apply(json.loads)
     
     # Add state durations.
     df.loc[df['type'] == 'state','duration'] = -df.loc[df['type'] == 'state','time'].diff(-1)
