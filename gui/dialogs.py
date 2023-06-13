@@ -458,7 +458,7 @@ class Path_setter(QtWidgets.QHBoxLayout):
             self.show_edit()
 
     def show_edit(self):
-        if self.path_text.text() != self.path:
+        if self.get() != self.path:
             if self.edited is False:
                 self.edited = True
                 self.name_label.setStyleSheet("color:red;")
@@ -515,7 +515,7 @@ class Spin_setter:
         also keeps a running tally of how many settings have been edited
         and enables/disables the "Save settings" button accordingly
         """
-        if self.spn.value() != self.start_value:
+        if self.get() != self.start_value:
             if self.edited is False:
                 self.edited = True
                 self.label.setStyleSheet("color:red;")

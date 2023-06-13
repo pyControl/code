@@ -82,18 +82,13 @@ class Run_task_tab(QtWidgets.QWidget):
         data_dir_button.setFixedWidth(30)
         subject_label = QtWidgets.QLabel("Subject ID:")
         self.subject_text = QtWidgets.QLineEdit()
-        filetype_label = QtWidgets.QLabel("File type:")
-        self.filetype_select =  QtWidgets.QComboBox()
-        self.filetype_select.addItems(["tsv", "txt"])
 
         filegroup_layout = QtWidgets.QGridLayout()
         filegroup_layout.addWidget(data_dir_label, 0, 0)
-        filegroup_layout.addWidget(self.data_dir_text, 0, 1, 1, 2)
-        filegroup_layout.addWidget(data_dir_button, 0, 3)
+        filegroup_layout.addWidget(self.data_dir_text, 0, 1)
+        filegroup_layout.addWidget(data_dir_button, 0, 2)
         filegroup_layout.addWidget(subject_label, 1, 0)
         filegroup_layout.addWidget(self.subject_text, 1, 1)
-        filegroup_layout.addWidget(filetype_label, 1, 2)
-        filegroup_layout.addWidget(self.filetype_select, 1, 3)
         self.file_groupbox.setLayout(filegroup_layout)
 
         self.data_dir_text.textChanged.connect(self.test_data_path)
@@ -323,7 +318,7 @@ class Run_task_tab(QtWidgets.QWidget):
             self.variables_dialog = Variables_dialog(self, self.board)
             self.using_json_gui = False
             if "custom_variables_dialog" in self.board.sm_info["variables"]:
-                custom_variables_name = eval(self.board.sm_info["variables"]["custom_variables_dialog"])
+                custom_variables_name = self.board.sm_info["variables"]["custom_variables_dialog"]
                 potential_dialog = Custom_variables_dialog(self, custom_variables_name)
                 if potential_dialog.custom_gui == "json_gui":
                     self.variables_dialog = potential_dialog
@@ -370,8 +365,7 @@ class Run_task_tab(QtWidgets.QWidget):
                     return
             subject_ID = self.subject_text.text()
             setup_ID =  self.board_select.currentText()
-            file_type = self.filetype_select.currentText()
-            self.data_logger.open_data_file(self.data_dir, "run_task", setup_ID, subject_ID, file_type)
+            self.data_logger.open_data_file(self.data_dir, "run_task", setup_ID, subject_ID, "tsv")
             self.data_logger.copy_task_file(self.data_dir, self.GUI_main.task_directory, "run_task-task_files")
         self.fresh_task = False
         self.running = True
