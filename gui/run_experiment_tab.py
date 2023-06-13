@@ -440,10 +440,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.start_time = datetime.now()
         ex = self.run_exp_tab.experiment
         self.print_to_log('\nStarting experiment.\n')
-        self.data_logger.open_data_file(ex['data_dir'], ex['name'], self.setup_name, self.subject, "tsv", datetime.now())
-        if self.subject_variables: # Write variables set pre run to data file.
-            var_dict  = {v_name: eval(v_value) for v_name, v_value, pv in self.variables_set_pre_run}
-            self.data_logger.write_to_file([Datatuple(type='V',time=0, ID='set', data=json.dumps(var_dict))])
+        self.data_logger.open_data_file(ex['data_dir'], ex['name'], self.setup_name, self.subject, datetime.now())
         self.board.start_framework()
         self.start_stop_button.setText('Stop')
         self.start_stop_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
@@ -478,7 +475,6 @@ class Subjectbox(QtWidgets.QGroupBox):
         if summary_variables:
             self.subject_sumr_vars = {v['name']: 
                 self.board.get_variable(v['name']) for v in summary_variables}
-            self.data_logger.write_to_file([Datatuple(type='V',time=self.data_logger.end_time, ID='get', data=json.dumps(self.subject_sumr_vars))])
         # Close data files and disconnect from board.
         self.data_logger.close_files()
         self.board.close()

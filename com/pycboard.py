@@ -474,7 +474,7 @@ class Pycboard(Pyboard):
                     elif data_type == 'P': # User print.
                         new_data.append(Datatuple(type=data_type,time=timestamp, data=data_str))
                     elif data_type == 'V': # Store new variable value in sm_info
-                        op_ID = {'g':'get', 's':'set', 'p':'print'}[data_str[0]]
+                        op_ID = {'g':'get', 's':'set', 'p':'print', 't':'run_start', 'e':'run_end'}[data_str[0]]
                         var_json = data_str[1:]
                         var_dict = json.loads(var_json)
                         self.sm_info['variables'].update(var_dict)

@@ -1,5 +1,4 @@
 import os
-import json
 import numpy as np
 from datetime import datetime
 from shutil import copyfile
@@ -19,47 +18,34 @@ class Data_logger():
         self.sm_info = sm_info
         self.ID2name_fw = self.sm_info['ID2name'] # Dict mapping framework IDs to names.
         
-    def open_data_file(self, data_dir, experiment_name, setup_ID, subject_ID,
-                       file_type, datetime_now=None):
+    def open_data_file(self, data_dir, experiment_name, setup_ID, subject_ID, datetime_now=None):
         '''Open file tsv/txt file for event data and write header information.
         If state machine uses analog inputs instantiate analog data writers.'''
         self.data_dir = data_dir
         self.experiment_name = experiment_name
         self.subject_ID = subject_ID
         self.setup_ID = setup_ID
-        self.file_type = file_type
         if datetime_now is None: datetime_now = datetime.now()
-        self.end_time = -1
-        file_name = self.subject_ID + datetime_now.strftime('-%Y-%m-%d-%H%M%S') + '.' + self.file_type
+        self.end_timestamp = -1
+        file_name = self.subject_ID + datetime_now.strftime('-%Y-%m-%d-%H%M%S') + '.tsv'
         self.file_path = os.path.join(self.data_dir, file_name)
         self.data_file = open(self.file_path, 'w', newline = '\n')
-        if self.file_type == 'tsv': # Write header.
-            self.data_file.write(self.tsv_row_str(
-                rtype='type', time='time', name='name', value='value'))
-        self.write_info_line('Experiment name', self.experiment_name)
-        self.write_info_line('Task name', self.sm_info['name'])
-        self.write_info_line('Task file hash', self.sm_info['task_hash'])
-        self.write_info_line('Setup ID', self.setup_ID)
-        self.write_info_line('Framework version', self.sm_info['framework_version'])
-        self.write_info_line('Micropython version', self.sm_info['micropython_version'])
-        self.write_info_line('Subject ID', self.subject_ID)
-        if self.file_type == 'txt':
-            self.write_info_line('Start date', datetime_now.strftime('%Y/%m/%d %H:%M:%S'))
-            self.data_file.write('\n')
-            self.data_file.write('S {}\n\n'.format(json.dumps(self.sm_info['states'])))
-            self.data_file.write('E {}\n\n'.format(json.dumps(self.sm_info['events'])))
-        else:
-            self.write_info_line('start_time', datetime.utcnow().isoformat(timespec='milliseconds'))
+        self.data_file.write(self.tsv_row_str( # Write header with row names.
+            rtype='type', time='time', name='name', value='value'))
+        self.write_info_line('experiment_name', self.experiment_name)
+        self.write_info_line('task_name', self.sm_info['name'])
+        self.write_info_line('task_file_hash', self.sm_info['task_hash'])
+        self.write_info_line('setup_ID', self.setup_ID)
+        self.write_info_line('framework_version', self.sm_info['framework_version'])
+        self.write_info_line('micropython_version', self.sm_info['micropython_version'])
+        self.write_info_line('subject_ID', self.subject_ID)
+        self.write_info_line('start_time', datetime.utcnow().isoformat(timespec='milliseconds'))
         self.analog_writers = {ID: 
             Analog_writer(ai['name'], ai['fs'], ai['dtype'], self.file_path)
             for ID, ai in self.sm_info['analog_inputs'].items()}
 
     def write_info_line(self, name, value, time=0):
-        if self.file_type == 'tsv':
-            name = name.lower().replace(' ', '_')
-            self.data_file.write(self.tsv_row_str('info', time=time, name=name, value=value))
-        elif self.file_type == 'txt':
-            self.data_file.write(f'I {name} : {value}\n')
+        self.data_file.write(self.tsv_row_str('info', time=time, name=name, value=value))
 
     def tsv_row_str(self, rtype, time='', name='', value=''):
         time_str = f'{time/1000:.3f}' if type(time) == int else time
@@ -78,6 +64,7 @@ class Data_logger():
             
     def close_files(self):
         if self.data_file:
+            self.write_info_line('end_time', self.end_datetime.isoformat(timespec='milliseconds'), self.end_timestamp)
             self.data_file.close()
             self.data_file = None
             self.file_path = None
@@ -91,7 +78,7 @@ class Data_logger():
         if self.data_file:
             self.write_to_file(new_data)
         if self.print_func:
-            self.print_func(self.data_to_string(new_data, verbose=True), end='')
+            self.print_func(self.data_to_string(new_data).replace('\t\t', '\t'), end='')
         if self.data_consumers:
             for data_consumer in self.data_consumers:
                 data_consumer.process_data(new_data)
@@ -105,49 +92,27 @@ class Data_logger():
             if nd.type == 'A':
                 self.analog_writers[nd.ID].save_analog_chunk(timestamp=nd.time, data_array=nd.data)
 
-    def data_to_string(self, new_data, verbose=False):
+    def data_to_string(self, new_data):
         '''Convert list of data tuples into a string.  If verbose=True state and event names are used,
         if verbose=False state and event IDs are used.'''
         data_string = ''
         for nd in new_data:
-            if verbose or self.file_type == 'txt': 
-                if nd.type == 'D':  # State entry or event.
-                        if verbose: # Print state or event name.
-                            data_string += f'D {nd.time} {self.ID2name_fw[nd.ID]}\n'
-                        else:       # Print state or event ID.
-                            data_string += f'D {nd.time} {nd.ID}\n'
-                elif nd.type == 'P': # User print output.
-                    data_string += f'P {nd.time} {nd.data}\n'
-                elif nd.type == 'V': # Variables
-                    if nd.ID == 'print':
-                        data_string += f'P {nd.time} {nd.data}\n'
-                    elif nd.ID in ('set','get'):
-                        for v_name, v_value in json.loads(nd.data).items():
-                            data_string += f'V {nd.time} {v_name} {v_value}\n'
-                elif nd.type == '!': # Warning
-                    data_string += f'! {nd.data}\n'
-                elif nd.type == '!!': # Crash traceback.
-                    error_string = nd.data
-                    if not verbose: # In data files multi-line tracebacks have ! prepended to all lines aid parsing data file.
-                        error_string = '! ' + error_string.replace('\n', '\n! ')
-                    data_string += '\n' + error_string + '\n'
-            elif self.file_type == 'tsv':
-                if nd.type == 'D':  # State entry or event.
-                    if nd.ID in self.sm_info['states'].values():
-                        data_string += self.tsv_row_str('state', time=nd.time, name=self.ID2name_fw[nd.ID])
-                    else:
-                        data_string += self.tsv_row_str('event', time=nd.time, name=self.ID2name_fw[nd.ID])
-                elif nd.type == 'P': # User print output.
-                    data_string += self.tsv_row_str('print', time=nd.time, value=nd.data)
-                elif nd.type == 'V': # Variable.
-                    data_string += self.tsv_row_str('variable', time=nd.time, name=nd.ID, value=nd.data)
-                elif nd.type == '!': # Warning
-                    data_string += self.tsv_row_str('warning', value=nd.data)
-                elif nd.type == '!!': # Error
-                    data_string += self.tsv_row_str('error', value=nd.data.replace('\n','|').replace('\r','|'))
-                elif nd.type == 'S': # Framework stop.
-                    self.write_info_line('end_time', datetime.utcnow().isoformat(timespec='milliseconds'), time=nd.time)
-                    self.end_time = nd.time # Used by run_experiment_tab for printing summary variables to file.
+            if nd.type == 'D':  # State entry or event.
+                if nd.ID in self.sm_info['states'].values():
+                    data_string += self.tsv_row_str('state', time=nd.time, name=self.ID2name_fw[nd.ID])
+                else:
+                    data_string += self.tsv_row_str('event', time=nd.time, name=self.ID2name_fw[nd.ID])
+            elif nd.type == 'P': # User print output.
+                data_string += self.tsv_row_str('print', time=nd.time, value=nd.data)
+            elif nd.type == 'V': # Variable.
+                data_string += self.tsv_row_str('variable', time=nd.time, name=nd.ID, value=nd.data)
+            elif nd.type == '!': # Warning
+                data_string += self.tsv_row_str('warning', value=nd.data)
+            elif nd.type == '!!': # Error
+                data_string += self.tsv_row_str('error', value=nd.data.replace('\n','|').replace('\r','|'))
+            elif nd.type == 'S': # Framework stop.
+                self.end_datetime = datetime.utcnow()
+                self.end_timestamp = nd.time
         return data_string
 
 
@@ -163,46 +128,29 @@ class Analog_writer():
     def open_data_files(self, session_filepath):
         ses_path_stem, file_ext = os.path.splitext(session_filepath)
         self.path_stem = ses_path_stem + f'_{self.name}'
-        self.file_type = 'npy' if file_ext[-3:] == 'tsv' else 'pca'
-        if self.file_type == 'pca':
-            file_path = self.path_stem + '.pca'
-            self.pca_file = open(file_path, 'wb')
-        elif self.file_type == 'npy':
-            self.t_tempfile_path = self.path_stem + '.time.temp'
-            self.d_tempfile_path = self.path_stem + f'.data.1{self.data_type}.temp'
-            self.time_tempfile  = open(self.t_tempfile_path, 'wb')
-            self.data_tempfile = open(self.d_tempfile_path, 'wb')
+        self.t_tempfile_path = self.path_stem + '.time.temp'
+        self.d_tempfile_path = self.path_stem + f'.data.1{self.data_type}.temp'
+        self.time_tempfile  = open(self.t_tempfile_path, 'wb')
+        self.data_tempfile = open(self.d_tempfile_path, 'wb')
 
     def close_files(self):
         '''Close data files. Convert temp files to numpy.'''
-        if self.file_type == 'pca':
-            self.pca_file.close()
-        elif self.file_type == 'npy':
-            self.time_tempfile.close()
-            self.data_tempfile.close()
-            with open(self.t_tempfile_path, 'rb') as f:
-                times = np.frombuffer(f.read(), dtype='float64')
-                np.save(self.path_stem + '.time.npy', times)
-            with open(self.d_tempfile_path, 'rb') as f:
-                data = np.frombuffer(f.read(), dtype=self.data_type)
-                np.save(self.path_stem + '.data.npy', data)
-            os.remove(self.t_tempfile_path)
-            os.remove(self.d_tempfile_path)
+        self.time_tempfile.close()
+        self.data_tempfile.close()
+        with open(self.t_tempfile_path, 'rb') as f:
+            times = np.frombuffer(f.read(), dtype='float64')
+            np.save(self.path_stem + '.time.npy', times)
+        with open(self.d_tempfile_path, 'rb') as f:
+            data = np.frombuffer(f.read(), dtype=self.data_type)
+            np.save(self.path_stem + '.data.npy', data)
+        os.remove(self.t_tempfile_path)
+        os.remove(self.d_tempfile_path)
 
     def save_analog_chunk(self, timestamp, data_array):
-        '''Save a chunk of analog data to .pca data file.  File is created if not 
-        already open for that analog input.'''
-        if self.file_type == 'pca':
-            ms_per_sample = 1000 / self.sampling_rate
-            for i, x in enumerate(data_array):
-                t = int(timestamp + i*ms_per_sample)
-                self.pca_file.write(t.to_bytes(4,'little', signed=True))
-                self.pca_file.write(x.to_bytes(4,'little', signed=True))
-            self.pca_file.flush()
-        elif self.file_type == 'npy':
-            times = (np.arange(len(data_array), dtype='float64') 
-                     / self.sampling_rate) + timestamp/1000 # Seconds
-            self.time_tempfile.write(times.tobytes())
-            self.data_tempfile.write(data_array.tobytes())
-            self.time_tempfile.flush()
-            self.data_tempfile.flush()
+        '''Save a chunk of analog data to .pca data file.'''
+        times = (np.arange(len(data_array), dtype='float64') 
+                 / self.sampling_rate) + timestamp/1000 # Seconds
+        self.time_tempfile.write(times.tobytes())
+        self.data_tempfile.write(data_array.tobytes())
+        self.time_tempfile.flush()
+        self.data_tempfile.flush()
