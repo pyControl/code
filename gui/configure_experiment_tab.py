@@ -2,6 +2,7 @@ import os
 import re
 import json
 from pathlib import Path
+from dataclasses import dataclass, asdict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 from gui.settings import dirs, get_setting
@@ -12,6 +13,17 @@ from gui.hardware_variables_dialog import get_task_hw_vars, hw_vars_defined_in_s
 # --------------------------------------------------------------------------------
 # Experiments_tab
 # --------------------------------------------------------------------------------
+
+@dataclass
+class Experiment:
+    name: str
+    task: str
+    hardware_test: str
+    data_dir: str
+    subjects: dict
+    variables: list
+    subset_warning: bool = None
+
 
 class Configure_experiment_tab(QtWidgets.QWidget):
     '''The configure experiment tab is used to specify an experiment, i.e. a 
@@ -24,7 +36,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.GUI_main = self.parent()
         self.custom_dir = False    # True if data_dir field has been manually edited.
         self.saved_exp_path = None # Path of last saved/loaded experiment file.
-        self.saved_exp_dict = {}   # Dict of last saved/loaded experiment.
+        self.saved_exp_config = None   # Experiment object of last saved/loaded experiment.
 
         # Experiment Groupbox
         self.experiment_groupbox = QtWidgets.QGroupBox('Experiment')
@@ -164,15 +176,16 @@ class Configure_experiment_tab(QtWidgets.QWidget):
                 self.data_dir_text.setText(get_setting("folders","data"))
 
     def experiment_dict(self, filtered=False):
-        '''Return the current state of the experiments tab as a dictionary.'''
-
-        return {'name': self.name_text,
-                'task': str(self.task_select.text()),
-                'hardware_test': str(self.hardware_test_select.text()),
-                'data_dir': self.data_dir_text.text(),
-                'subjects': self.subjects_table.subjects_dict(filtered),
-                'variables': self.variables_table.variables_list(),
-                'subset_warning':self.subset_warning_checkbox.isChecked()}
+        '''Return the current state of the experiments tab as an Experiment object.'''
+        return Experiment(
+            name=self.name_text,
+            task=str(self.task_select.text()),
+            hardware_test=str(self.hardware_test_select.text()),
+            data_dir=self.data_dir_text.text(),
+            subjects=self.subjects_table.subjects_dict(filtered),
+            variables=self.variables_table.variables_list(),
+            subset_warning=self.subset_warning_checkbox.isChecked(),
+        )
 
     def reset(self):
         self.name_text = ""
@@ -253,9 +266,9 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         file_name = self.name_text+'.json'
         exp_path = os.path.join(dirs['experiments'], file_name)
         with open(exp_path,'w', encoding='utf-8') as exp_file:
-            exp_file.write(json.dumps(experiment, sort_keys=True, indent=4))
+            exp_file.write(json.dumps(asdict(experiment), sort_keys=True, indent=4))
         if not from_dialog:
-            self.experiment_select.setText(experiment['name'])
+            self.experiment_select.setText(experiment.name)
         self.saved_exp_dict = experiment
         self.saved_exp_path = exp_path
         self.save_button.setEnabled(False)
@@ -266,27 +279,28 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         exp_path = os.path.join(dirs['experiments'], experiment_name +'.json')
         self.name_text = experiment_name
         with open(exp_path,'r', encoding='utf-8') as exp_file:
-            experiment = json.loads(exp_file.read())
-        if experiment['task'] in self.GUI_main.available_tasks:
-            self.task_select.setText(experiment['task'])
+            exp_dict = json.loads(exp_file.read())
+            experiment = Experiment(**exp_dict)
+        if experiment.task in self.GUI_main.available_tasks:
+            self.task_select.setText(experiment.task)
         else:
             self.task_select.setText('select task')
-        if experiment['hardware_test'] in self.GUI_main.available_tasks:
-            self.hardware_test_select.setText(experiment['hardware_test'])
+        if experiment.hardware_test in self.GUI_main.available_tasks:
+            self.hardware_test_select.setText(experiment.hardware_test)
         else:
             self.hardware_test_select.setText('no hardware test')
-        self.experiment_select.setText(experiment['name'])
-        if 'subset_warning' in experiment.keys(): # New style experiment file.
-            self.subset_warning_checkbox.setChecked(experiment['subset_warning'])
-            self.subjects_table.set_from_dict(experiment['subjects'])
-        else: # Experiment file created with GUI version <= 1.5.
+        self.experiment_select.setText(experiment.name)
+        if experiment.subset_warning is None: # Experiment file created with GUI version <= 1.5.
             self.subset_warning_checkbox.setChecked(True)
-            subjects_dict = {subject: {'run':True, 'setup':setup}
-                for setup, subject in experiment['subjects'].items()}
+            subjects_dict = {subject: {'run':True, 'setup':setup} for setup, subject in experiment.subjects.items()}
             self.subjects_table.set_from_dict(subjects_dict)
-        self.variables_table.task_changed(experiment['task'])
-        self.data_dir_text.setText(experiment['data_dir'])
-        self.variables_table.set_from_list(experiment['variables'])
+        else:
+            self.subset_warning_checkbox.setChecked(experiment.subset_warning)
+            self.subjects_table.set_from_dict(experiment.subjects)
+
+        self.variables_table.task_changed(experiment.task)
+        self.data_dir_text.setText(experiment.data_dir)
+        self.variables_table.set_from_list(experiment.variables)
         self.saved_exp_dict = experiment
         self.saved_exp_path = exp_path
         self.save_button.setEnabled(False)
@@ -296,31 +310,31 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         '''Check that the experiment is valid. Prompt user to save experiment if
         it is new or has been edited. Then run experiment.'''
         experiment = self.experiment_dict(filtered=True)
-        if not experiment['name']:
+        if not experiment.name:
             invalid_run_experiment_dialog(self, 'Experiment must have a name.')
             return
         # Validate data path.
-        if not (os.path.exists(experiment['data_dir']) or
-                os.path.exists(os.path.split(experiment['data_dir'])[0])):
+        if not (os.path.exists(experiment.data_dir) or
+                os.path.exists(os.path.split(experiment.data_dir)[0])):
             invalid_run_experiment_dialog(self, "Data directory not available.")
             return
         # Validate task and hardware defintion.
-        if experiment['task'] == 'select task':
+        if experiment.task == 'select task':
             invalid_run_experiment_dialog(self, "Task not selected.")
             return
-        if not experiment['task'] in self.GUI_main.available_tasks:
-            invalid_run_experiment_dialog(self, f"Task file '{experiment['task']}.py' not found.")
+        if experiment.task not in self.GUI_main.available_tasks:
+            invalid_run_experiment_dialog(self, f"Task file '{experiment.task}.py' not found.")
             return
-        if (experiment['hardware_test'] != 'no hardware test' and
-            experiment['hardware_test'] not in self.GUI_main.available_tasks):
-            invalid_run_experiment_dialog(self, f"Hardware test file '{experiment['hardware_test']}.py' not found.")
+        if (experiment.hardware_test != 'no hardware test' and
+            experiment.hardware_test not in self.GUI_main.available_tasks):
+            invalid_run_experiment_dialog(self, f"Hardware test file '{experiment.hardware_test}.py' not found.")
             return
         # Validate setups and subjects.
-        if not experiment['subjects']:
+        if not experiment.subjects:
             invalid_run_experiment_dialog(self, 'No subjects selected to run')
             return
-        setups = [experiment['subjects'][subject]['setup'] for subject in experiment['subjects']]
-        subjects = experiment['subjects'].keys()
+        setups = [experiment.subjects[subject]['setup'] for subject in experiment.subjects]
+        subjects = experiment.subjects.keys()
         if len(setups) == 0:
             invalid_run_experiment_dialog(self, 'No subjects specified.')
             return
@@ -331,11 +345,11 @@ class Configure_experiment_tab(QtWidgets.QWidget):
             invalid_run_experiment_dialog(self,'Repeated Setup. Cannot run two experiments on the same Setup.')
             return
         for setup in setups:
-            if not setup in self.GUI_main.setups_tab.setup_names:
+            if setup not in self.GUI_main.setups_tab.setup_names:
                 invalid_run_experiment_dialog(self, f"Setup '{setup}' not available.")
                 return
         # Validate variables.
-        for v in experiment['variables']:
+        for v in experiment.variables:
             if v['value']:
                 try:
                     eval(v['value'], variable_constants)
@@ -343,15 +357,15 @@ class Configure_experiment_tab(QtWidgets.QWidget):
                     invalid_run_experiment_dialog(self, f"Invalid value '{v['value']}' for variable '{v['name']}'.")
                     return
         # Validate hw_variables
-        task_file = Path(get_setting("folders","tasks"), experiment['task'] + ".py")
+        task_file = Path(get_setting("folders","tasks"), experiment.task + ".py")
         task_hw_vars = get_task_hw_vars(task_file)
         if task_hw_vars:
             for setup_name in setups:
-                if not hw_vars_defined_in_setup(self,setup_name,experiment['task'],task_hw_vars):
+                if not hw_vars_defined_in_setup(self,setup_name,experiment.task,task_hw_vars):
                     return
 
         if self.subset_warning_checkbox.isChecked():
-            all_subjects = self.experiment_dict()['subjects']
+            all_subjects = self.experiment_dict().subjects
             will_not_run = ''
             for subject in all_subjects.keys():
                 if all_subjects[subject]['run'] == False:

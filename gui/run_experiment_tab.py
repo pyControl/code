@@ -77,22 +77,22 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
         self.startstopclose_all_button.setEnabled(False)
         # Setup controls box.
-        self.name_text.setText(experiment['name'])
+        self.name_text.setText(experiment.name)
         self.logs_button.setEnabled(False)
         self.plots_button.setEnabled(False)
         # Setup subjectboxes
-        self.subjects = list(experiment['subjects'].keys())
+        self.subjects = list(experiment.subjects.keys())
         self.n_subjects = len(self.subjects)
-        self.subjects.sort(key=lambda s: experiment['subjects'][s]['setup'])
+        self.subjects.sort(key=lambda s: experiment.subjects[s]['setup'])
         for subject in self.subjects:
             self.subjectboxes.append(
-                Subjectbox(subject, experiment['subjects'][subject]['setup'], self))
+                Subjectbox(subject, experiment.subjects[subject]['setup'], self))
             self.boxes_layout.addWidget(self.subjectboxes[-1])
         # Create data folder if needed.
-        if not os.path.exists(self.experiment['data_dir']):
-            os.mkdir(self.experiment['data_dir'])
+        if not os.path.exists(self.experiment.data_dir):
+            os.mkdir(self.experiment.data_dir)
         # Load persistent variables if they exist.
-        self.pv_path = os.path.join(self.experiment['data_dir'], 'persistent_variables.json')
+        self.pv_path = os.path.join(self.experiment.data_dir, 'persistent_variables.json')
         if os.path.exists(self.pv_path):
             with open(self.pv_path, 'r') as pv_file:
                 self.persistent_variables =  json.loads(pv_file.read())
@@ -105,7 +105,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         parallel_call('connect_to_board', self.subjectboxes)
         if self.setup_has_failed(): return
         # Hardware test.
-        if experiment['hardware_test'] != 'no hardware test':
+        if experiment.hardware_test != 'no hardware test':
             reply = QtWidgets.QMessageBox.question(self, 'Hardware test', 'Run hardware test?',
                 QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No)
             if reply == QtWidgets.QMessageBox.StandardButton.Yes:
@@ -128,7 +128,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         parallel_call('setup_task', self.subjectboxes)
         if self.setup_has_failed(): return
         # Copy task file to experiments data folder.
-        self.subjectboxes[0].data_logger.copy_task_file(self.experiment['data_dir'], get_setting("folders","tasks"))
+        self.subjectboxes[0].data_logger.copy_task_file(self.experiment.data_dir, get_setting("folders","tasks"))
         # Configure GUI ready to run.
         for box in self.subjectboxes:
             box.make_variables_dialog() # Don't use parallel_call to avoid 'parent in a different thread error'.
@@ -180,7 +180,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
             with open(self.pv_path, 'w') as pv_file:
                 pv_file.write(json.dumps(persistent_variables, sort_keys=True, indent=4))
         # Display summary variables.
-        summary_variables = [v for v in self.experiment['variables'] if v['summary']]
+        summary_variables = [v for v in self.experiment.variables if v['summary']]
         if summary_variables:
             sv_dict = OrderedDict()
             for box in self.subjectboxes:
@@ -358,7 +358,7 @@ class Subjectbox(QtWidgets.QGroupBox):
     def start_hardware_test(self):
         '''Transefer hardware test file to board and start framework running.'''
         try:
-            self.board.setup_state_machine(self.run_exp_tab.experiment['hardware_test'])
+            self.board.setup_state_machine(self.run_exp_tab.experiment.hardware_test)
             self.board.start_framework(data_output=False)
             time.sleep(0.01)
             self.board.process_data()
@@ -370,13 +370,13 @@ class Subjectbox(QtWidgets.QGroupBox):
         '''Load the task state machine and set variables'''
         # Setup task state machine.
         try:
-            self.board.setup_state_machine(self.run_exp_tab.experiment['task'])
+            self.board.setup_state_machine(self.run_exp_tab.experiment.task)
         except PyboardError:
             self.setup_failed = True
             self.error()
             return
         # Set variables.
-        self.subject_variables = [v for v in self.run_exp_tab.experiment['variables']
+        self.subject_variables = [v for v in self.run_exp_tab.experiment.variables
                                    if v['subject'] in ('all', self.subject)]
         task_hw_vars = [task_var for task_var in self.board.sm_info["variables"] if task_var.startswith("hw_")]
         if self.subject_variables or task_hw_vars:
@@ -450,7 +450,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.start_time = datetime.now()
         ex = self.run_exp_tab.experiment
         self.board.print('\nStarting experiment.\n')
-        self.data_logger.open_data_file(ex['data_dir'], ex['name'], self.setup_name, self.subject, datetime.now())
+        self.data_logger.open_data_file(ex.data_dir, ex.name, self.setup_name, self.subject, datetime.now())
         if self.subject_variables: # Write variables set pre run to data file.
             for v_name, v_value, pv in self.variables_set_pre_run:
                 self.data_logger.data_file.write(f"V 0 {v_name} {v_value}\n")
@@ -487,7 +487,7 @@ class Subjectbox(QtWidgets.QGroupBox):
                 self.board.get_variable(v['name']) for v in subject_pvs}
         # Read summary variables.
         summary_variables = [v for v in 
-            self.run_exp_tab.experiment['variables'] if v['summary']]
+            self.run_exp_tab.experiment.variables if v['summary']]
         if summary_variables:
             self.subject_sumr_vars = {v['name']: 
                 self.board.get_variable(v['name']) for v in summary_variables}
