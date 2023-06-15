@@ -108,15 +108,14 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.variables_table = VariablesTable(self)
         self.task_select.set_callback(self.variables_table.task_changed)
         variablesbox_layout.addWidget(self.variables_table)
-        
 
         # Connect signals.
         self.data_dir_text.textEdited.connect(lambda: setattr(self, 'custom_dir', True))
         data_dir_button.clicked.connect(self.select_data_dir)
-        new_button.clicked.connect(self.new_experiment)
+        new_button.clicked.connect(self.create_new_experiment)
         self.delete_button.clicked.connect(self.delete_experiment)
         self.save_button.clicked.connect(self.save_experiment)
-        self.save_as_button.clicked.connect(lambda: self.new_experiment(from_existing=True))
+        self.save_as_button.clicked.connect(lambda: self.create_new_experiment(from_existing=True))
         self.run_button.clicked.connect(self.run_experiment)
 
         # Keyboard shortcuts
@@ -131,7 +130,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.setLayout(self.configure_exp_layout)
 
         # Initialise variables.
-        self.saved_exp_dict = self.experiment_dict()
+        self.saved_exp_config = self.get_exp_config()
 
         self.experiment_enable(False)
 
@@ -151,7 +150,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
 
     def experiment_changed(self, experiment_name):
         if experiment_name in self.GUI_main.available_experiments:
-            if not self.save_dialog():
+            if not self.save_changes_dialog():
                 return
             self.load_experiment(experiment_name)
 
@@ -167,7 +166,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         if self.GUI_main.setups_tab.available_setups_changed:
             self.subjects_table.all_setups = set(self.GUI_main.setups_tab.setup_names)
             self.subjects_table.update_available_setups()
-        if self.saved_exp_dict != self.experiment_dict():
+        if self.saved_exp_config != self.get_exp_config():
             self.save_button.setEnabled(True)
         else:
             self.save_button.setEnabled(False)
@@ -175,15 +174,15 @@ class Configure_experiment_tab(QtWidgets.QWidget):
             if (self.name_text == '') and not self.custom_dir:
                 self.data_dir_text.setText(get_setting("folders","data"))
 
-    def experiment_dict(self, filtered=False):
+    def get_exp_config(self, filtered=False):
         '''Return the current state of the experiments tab as an Experiment object.'''
         return Experiment(
             name=self.name_text,
             task=str(self.task_select.text()),
             hardware_test=str(self.hardware_test_select.text()),
             data_dir=self.data_dir_text.text(),
-            subjects=self.subjects_table.subjects_dict(filtered),
-            variables=self.variables_table.variables_list(),
+            subjects=self.subjects_table.get_subjects_dict(filtered),
+            variables=self.variables_table.get_variables_list(),
             subset_warning=self.subset_warning_checkbox.isChecked(),
         )
 
@@ -196,10 +195,10 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.task_select.setText('select task')
         self.hardware_test_select.setText('no hardware test')
         self.subset_warning_checkbox.setChecked(True)
-        self.saved_exp_dict = self.experiment_dict()
+        self.saved_exp_config = self.get_exp_config()
         self.saved_exp_path = None
 
-    def new_experiment(self, from_existing=False):
+    def create_new_experiment(self, from_existing=False):
         '''Clear experiment configuration.'''
         savefilename = QtWidgets.QFileDialog.getSaveFileName(self, '', dirs['experiments'],("JSON files (*.json)"))[0]
         if savefilename != "":
@@ -244,32 +243,32 @@ class Configure_experiment_tab(QtWidgets.QWidget):
 
     def save_experiment(self, from_dialog=False):
         '''Check that experiment setup/subject combinations are valid and unique'''
-        d = {}
-        for s in range(self.subjects_table.n_subjects):
+        subjects_dict = {}
+        for table_row in range(self.subjects_table.num_subjects):
             try:
-                subject = str(self.subjects_table.item(s, 2).text())
+                subject = str(self.subjects_table.item(table_row, 2).text())
                 if len(subject) == 0:
                     invalid_save_experiment_dialog(self.subjects_table, 'All subjects must have names.')
                     return False
-            except:
+            except AttributeError:
                 invalid_save_experiment_dialog(self.subjects_table, 'All subjects must have names.')
                 return False
-            if subject in d:
+            if subject in subjects_dict:
                 invalid_save_experiment_dialog(self.subjects_table, 'Duplicate subjects.')
                 return False
-            setup = str(self.subjects_table.cellWidget(s,1).currentText())
-            run = self.subjects_table.cellWidget(s,0).isChecked()
-            d[subject] =  {'setup':setup,'run':run} # add dict subject entry
+            setup = str(self.subjects_table.cellWidget(table_row,1).currentText())
+            run = self.subjects_table.cellWidget(table_row,0).isChecked()
+            subjects_dict[subject] =  {'setup':setup,'run':run} # add dict subject entry
         # Store the current state of the experiment tab as a JSON object
         # saved in the experiments folder as .json file.
-        experiment = self.experiment_dict()
+        experiment = self.get_exp_config()
         file_name = self.name_text+'.json'
         exp_path = os.path.join(dirs['experiments'], file_name)
         with open(exp_path,'w', encoding='utf-8') as exp_file:
             exp_file.write(json.dumps(asdict(experiment), sort_keys=True, indent=4))
         if not from_dialog:
             self.experiment_select.setText(experiment.name)
-        self.saved_exp_dict = experiment
+        self.saved_exp_config = experiment
         self.saved_exp_path = exp_path
         self.save_button.setEnabled(False)
         return True
@@ -301,7 +300,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.variables_table.task_changed(experiment.task)
         self.data_dir_text.setText(experiment.data_dir)
         self.variables_table.set_from_list(experiment.variables)
-        self.saved_exp_dict = experiment
+        self.saved_exp_config = experiment
         self.saved_exp_path = exp_path
         self.save_button.setEnabled(False)
         self.experiment_enable(True)
@@ -309,7 +308,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
     def run_experiment(self):
         '''Check that the experiment is valid. Prompt user to save experiment if
         it is new or has been edited. Then run experiment.'''
-        experiment = self.experiment_dict(filtered=True)
+        experiment = self.get_exp_config(filtered=True)
         if not experiment.name:
             invalid_run_experiment_dialog(self, 'Experiment must have a name.')
             return
@@ -365,7 +364,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
                     return
 
         if self.subset_warning_checkbox.isChecked():
-            all_subjects = self.experiment_dict().subjects
+            all_subjects = self.get_exp_config().subjects
             will_not_run = ''
             for subject in all_subjects.keys():
                 if all_subjects[subject]['run'] == False:
@@ -373,15 +372,15 @@ class Configure_experiment_tab(QtWidgets.QWidget):
             if will_not_run != '':
                 okay = unrun_subjects_dialog(self.subjects_groupbox,will_not_run)
                 if not okay :return
-        if not self.save_dialog(): return
+        if not self.save_changes_dialog(): return
         self.GUI_main.run_experiment_tab.setup_experiment(experiment)
 
-    def save_dialog(self):
+    def save_changes_dialog(self):
         '''Dialog to save experiment if it has been edited.  Returns False if
         cancel is selected, True otherwise.'''
         if self.experiment_select.text() == 'select experiment':
             return True
-        if self.saved_exp_dict == self.experiment_dict():
+        if self.saved_exp_config == self.get_exp_config():
             return True # Experiment has not been edited.
         exp_path = os.path.join(dirs['experiments'], self.name_text+'.json')
         dialog_text = None
@@ -418,16 +417,16 @@ class SubjectsTable(QtWidgets.QTableWidget):
         self.available_setups = []
         self.unallocated_setups = []
         self.subjects = []
-        self.n_subjects = 0
+        self.num_subjects = 0
         self.add_subject()
 
     def reset(self):
         '''Clear all rows of table.'''
-        for i in reversed(range(self.n_subjects)):
+        for i in reversed(range(self.num_subjects)):
             self.removeRow(i)
         self.available_setups = sorted(list(self.all_setups))
         self.subjects = []
-        self.n_subjects = 0
+        self.num_subjects = 0
 
     def cell_changed(self, row, column):
         '''If cell in subject row is changed, update subjects list and variables table.'''
@@ -446,7 +445,7 @@ class SubjectsTable(QtWidgets.QTableWidget):
         setup_cbox.activated.connect(self.update_available_setups)
         remove_button = QtWidgets.QPushButton('remove')
         remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
-        ind = QtCore.QPersistentModelIndex(self.model().index(self.n_subjects, 2))
+        ind = QtCore.QPersistentModelIndex(self.model().index(self.num_subjects, 2))
         remove_button.clicked.connect(lambda :self.remove_subject(ind.row()))
         add_button = QtWidgets.QPushButton('   add   ')
         add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
@@ -456,18 +455,18 @@ class SubjectsTable(QtWidgets.QTableWidget):
             run_checkbox.setChecked(True) #new subjects are set to "Run" by default
         else:
             run_checkbox.setChecked(do_run)
-        self.setCellWidget(self.n_subjects,0,run_checkbox)
-        self.setCellWidget(self.n_subjects,1, setup_cbox)
-        self.setCellWidget(self.n_subjects,3, remove_button)
-        self.insertRow(self.n_subjects+1)
-        self.setCellWidget(self.n_subjects+1,3, add_button)
+        self.setCellWidget(self.num_subjects,0,run_checkbox)
+        self.setCellWidget(self.num_subjects,1, setup_cbox)
+        self.setCellWidget(self.num_subjects,3, remove_button)
+        self.insertRow(self.num_subjects+1)
+        self.setCellWidget(self.num_subjects+1,3, add_button)
         if setup:
             cbox_set_item(setup_cbox, setup)
         if subject:
             subject_item = QtWidgets.QTableWidgetItem()
             subject_item.setText(subject)
-            self.setItem(self.n_subjects, 2, subject_item)
-        self.n_subjects += 1
+            self.setItem(self.num_subjects, 2, subject_item)
+        self.num_subjects += 1
         self.update_available_setups()
         null_resize(self)
 
@@ -477,7 +476,7 @@ class SubjectsTable(QtWidgets.QTableWidget):
             s_name = self.item(subject_n, 2).text()
             self.parent().parent().variables_table.remove_subject(s_name)
         self.removeRow(subject_n)
-        self.n_subjects -= 1
+        self.num_subjects -= 1
         self.update_available_setups()
         self.update_subjects()
         null_resize(self)
@@ -485,33 +484,33 @@ class SubjectsTable(QtWidgets.QTableWidget):
     def update_available_setups(self, i=None):
         '''Update which setups are available for selection in dropdown menus.'''
         selected_setups = set([str(self.cellWidget(s,1).currentText())
-                               for s in range(self.n_subjects)])
+                               for s in range(self.num_subjects)])
         self.available_setups = sorted(list(self.all_setups))
         self.unallocated_setups = sorted(list(self.all_setups - selected_setups))
-        for s in range(self.n_subjects):
+        for s in range(self.num_subjects):
             cbox_update_options(self.cellWidget(s,1), self.available_setups)
 
     def update_subjects(self):
         '''Update the subjects list'''
         self.subjects = [str(self.item(s, 2).text())
-                         for s in range(self.n_subjects) if self.item(s, 2)]
+                         for s in range(self.num_subjects) if self.item(s, 2)]
 
-    def subjects_dict(self,filtered=False):
+    def get_subjects_dict(self,filtered=False):
         '''Return setups and subjects as a dictionary {subject:{'setup':setup,'run':run}}'''
-        d = {}
-        for s in range(self.n_subjects):
+        subjects_dict = {}
+        for s in range(self.num_subjects):
             try:
                 subject = str(self.item(s, 2).text())
-            except:
+            except AttributeError:
                 return
             setup = str(self.cellWidget(s,1).currentText())
             run = self.cellWidget(s,0).isChecked()
             if filtered:
                 if run:
-                    d[subject] =  {'setup':setup,'run':run} # add dict subject entry
+                    subjects_dict[subject] =  {'setup':setup,'run':run} # add dict subject entry
             else:
-                d[subject] =  {'setup':setup,'run':run} # add dict subject entry
-        return d
+                subjects_dict[subject] =  {'setup':setup,'run':run} # add dict subject entry
+        return subjects_dict
 
     def set_from_dict(self, subjects_dict):
         '''Fill table with subjects and setups from subjects_dict'''
@@ -668,7 +667,7 @@ class VariablesTable(QtWidgets.QTableWidget):
         null_resize(self)
         self.update_available()
 
-    def variables_list(self):
+    def get_variables_list(self):
         '''Return the variables table contents as a list of dictionaries.'''
         return [{'name'  : str(self.cellWidget(v,0).currentText()),
                  'subject'   : str(self.cellWidget(v,1).currentText()),

@@ -125,7 +125,7 @@ class Experiment():
         # Assign session numbers.
 
         self.subject_IDs = list(set([s.subject_ID for s in self.sessions]))
-        self.n_subjects = len(self.subject_IDs)
+        self.num_subjects = len(self.subject_IDs)
 
         self.sessions.sort(key = lambda s:s.datetime_string + str(s.subject_ID))
         

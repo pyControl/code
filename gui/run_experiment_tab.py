@@ -82,7 +82,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.plots_button.setEnabled(False)
         # Setup subjectboxes
         self.subjects = list(experiment.subjects.keys())
-        self.n_subjects = len(self.subjects)
+        self.num_subjects = len(self.subjects)
         self.subjects.sort(key=lambda s: experiment.subjects[s]['setup'])
         for subject in self.subjects:
             self.subjectboxes.append(
@@ -155,10 +155,10 @@ class Run_experiment_tab(QtWidgets.QWidget):
     def update_startstopclose_button(self):
         '''Called when a setup is started or stopped to update the
         startstopclose_all button.'''
-        if self.setups_finished == self.n_subjects:
+        if self.setups_finished == self.num_subjects:
             self.startstopclose_all_button.setText('Close Exp.')
             self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/close.svg"))
-        elif self.setups_started == self.n_subjects:
+        elif self.setups_started == self.num_subjects:
             self.startstopclose_all_button.setText('Stop All')
             self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
 
@@ -250,7 +250,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         for box in self.subjectboxes:
             box.update()
         self.experiment_plot.update()
-        if self.setups_finished == self.n_subjects:
+        if self.setups_finished == self.num_subjects:
             self.stop_experiment()
 
     def print_to_logs(self, print_str):
