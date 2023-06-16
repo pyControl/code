@@ -292,13 +292,12 @@ class Experiment_plot(QtWidgets.QMainWindow):
 
     def setup_experiment(self, experiment):
         '''Create task plotters in seperate tabs for each subject.'''
-        subject_dict = experiment['subjects']
-        subjects = list(experiment['subjects'].keys())
-        subjects.sort(key=lambda s: experiment['subjects'][s]['setup'])
+        subject_dict = experiment.subjects
+        subjects = list(experiment.subjects.keys())
+        subjects.sort(key=lambda s: experiment.subjects[s]['setup'])
         for subject in subjects:
             self.subject_plots[subject] = Task_plot(self)
-            self.subject_tabs.addTab(self.subject_plots[subject],
-                f"{subject_dict[subject]['setup']} : {subject}")
+            self.subject_tabs.addTab(self.subject_plots[subject], f"{subject_dict[subject]['setup']} : {subject}")
 
     def set_state_machine(self, sm_info):
         '''Provide the task plotters with the state machine info.'''
