@@ -126,15 +126,15 @@ def run():
     event_queue.reset()
     data_output_queue.reset()
     if not hw.initialised: hw.initialise()
+    usb_serial.setinterrupt(-1) # Disable 'ctrl+c' on serial raising KeyboardInterrupt.
     current_time = 0
     ut.print_variables(when='t')
-    hw.run_start()
     start_time = pyb.millis()
     clock.init(freq=1000)
-    clock.callback(_clock_tick)
-    usb_serial.setinterrupt(-1) # Disable 'ctrl+c' on serial raising KeyboardInterrupt.
-    running = True
+    clock.callback(_clock_tick) 
     sm.start()
+    hw.run_start()
+    running = True
     # Run
     while running:
         # Priority 1: Process hardware interrupts.

@@ -235,10 +235,12 @@ class Analog_input(IO_object):
         assign_ID(self)
 
     def _run_start(self):
+        # Start sampling timer, initialise threshold, aquire first sample.
         self.timer.init(freq=self.Analog_channel.sampling_rate)
         self.timer.callback(self._timer_ISR)
         if self.threshold:
             self.threshold.run_start(self.read_sample())
+        self._timer_ISR(0)
 
     def _run_stop(self):
         self.timer.deinit()

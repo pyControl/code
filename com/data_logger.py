@@ -132,6 +132,7 @@ class Analog_writer():
         self.d_tempfile_path = self.path_stem + f'.data.1{self.data_type}.temp'
         self.time_tempfile  = open(self.t_tempfile_path, 'wb')
         self.data_tempfile = open(self.d_tempfile_path, 'wb')
+        self.next_chunk_start_time = 0
 
     def close_files(self):
         '''Close data files. Convert temp files to numpy.'''
@@ -148,9 +149,14 @@ class Analog_writer():
 
     def save_analog_chunk(self, timestamp, data_array):
         '''Save a chunk of analog data to .pca data file.'''
+        if np.abs(self.next_chunk_start_time - timestamp/1000)<0.001:
+            chunk_start_time = self.next_chunk_start_time
+        else:
+            chunk_start_time = timestamp/1000
         times = (np.arange(len(data_array), dtype='float64') 
-                 / self.sampling_rate) + timestamp/1000 # Seconds
+                 / self.sampling_rate) + chunk_start_time # Seconds
         self.time_tempfile.write(times.tobytes())
         self.data_tempfile.write(data_array.tobytes())
         self.time_tempfile.flush()
         self.data_tempfile.flush()
+        self.next_chunk_start_time = chunk_start_time+len(data_array)/self.sampling_rate
