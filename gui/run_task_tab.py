@@ -105,7 +105,7 @@ class Run_task_tab(QtWidgets.QWidget):
         self.task_select.set_callback(self.task_changed)
         self.upload_button = QtWidgets.QPushButton("Upload")
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
-        self.variables_button = QtWidgets.QPushButton("Variables")
+        self.variables_button = QtWidgets.QPushButton("Controls")
         self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
 
         taskgroup_layout = QtWidgets.QGridLayout()

@@ -1,9 +1,11 @@
 import os
 import json
 import re
+from dataclasses import dataclass, asdict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from gui.settings import dirs, get_setting
 from gui.utility import variable_constants, null_resize, cbox_set_item, cbox_update_options
+
 
 # input widgets ---------------------------------------------------------------
 class Spin_var:
@@ -301,6 +303,27 @@ class Slider_var:
         self.val_label.setText(f"{str(self.slider.value())}{self.suffix}")
 
 
+class Event_button:
+    def __init__(self, event_name, button_text):  # Should split into seperate init and provide info.
+        self.event_name = eval(event_name)
+        self.event_btn = QtWidgets.QPushButton(button_text)
+        self.event_btn.clicked.connect(self.generate)
+        self.event_btn.setAutoDefault(False)
+
+    def generate(self):
+        if self.board.framework_running:  # Value returned later.
+            self.board.generate_event(self.event_name)
+
+    def setHint(self, hint):
+        self.event_btn.setToolTip(hint)
+
+    def setBoard(self, board):
+        self.board = board
+
+    def add_to_grid(self, grid, row):
+        grid.addWidget(self.event_btn, row, 0)
+
+
 # GUI created from dictionary describing custom widgets and layout ------------
 class Custom_variables_dialog(QtWidgets.QDialog):
     def __init__(self, parent, gui_name, is_experiment=False):
@@ -348,9 +371,7 @@ class Custom_variables_dialog(QtWidgets.QDialog):
                 self.parent.print_to_log(f"\nCould not find custom variable dialog data: {json_file}")
                 if not is_experiment:
                     # ask if they want to create a new custom gui
-                    not_found_dialog = Custom_variables_not_found_dialog(
-                        missing_file=self.gui_name, parent=self.parent
-                    )
+                    not_found_dialog = Custom_variables_not_found_dialog(missing_file=self.gui_name, parent=self.parent)
                     do_create_custom = not_found_dialog.exec()
                     if do_create_custom:
                         gui_created = self.open_gui_editor(self.gui_name, None)
@@ -372,8 +393,19 @@ class Custom_variables_dialog(QtWidgets.QDialog):
             return True
         return False
 
-    def process_data(self,new_data):
+    def process_data(self, new_data):
         pass
+
+
+@dataclass
+class Control_specs:
+    widget: str
+    label: str
+    hint: str
+    min: str = ""
+    max: str = ""
+    step: str = ""
+    suffix: str = ""
 
 
 class Custom_variables_grid(QtWidgets.QWidget):
@@ -391,34 +423,36 @@ class Custom_variables_grid(QtWidgets.QWidget):
             tab_data = generator_data[tab]
             used_vars.extend(tab_data["ordered_inputs"])
             for row, var in enumerate(tab_data["ordered_inputs"]):
-                if var.find("sep") > -1:
-                    layout.addWidget(QtWidgets.QLabel("<hr>"), row, 0, 1, 4)
-                else:
-                    try:
-                        control = tab_data[var]
-                        if control["widget"] == "slider":
+                try:
+                    control = Control_specs(**tab_data[var])
+                    if control.widget == "separator":
+                        layout.addWidget(QtWidgets.QLabel("<hr>"), row, 0, 1, 4)
+                    else:
+                        if control.widget == "button":
+                            self.widget_dict[var] = Event_button(init_vars[var], control.label)
+                        elif control.widget == "slider":
                             self.widget_dict[var] = Slider_var(
-                                init_vars, control["label"], control["min"], control["max"], control["step"], var
+                                init_vars, control.label, control.min, control.max, control.step, var
                             )
-                            self.widget_dict[var].setSuffix(" " + control["suffix"])
-                        elif control["widget"] == "spinbox":
+                            self.widget_dict[var].setSuffix(" " + control.suffix)
+                        elif control.widget == "spinbox":
                             self.widget_dict[var] = Spin_var(
-                                init_vars, control["label"], control["min"], control["max"], control["step"], var
+                                init_vars, control.label, control.min, control.max, control.step, var
                             )
-                            self.widget_dict[var].setSuffix(" " + control["suffix"])
-                        elif control["widget"] == "checkbox":
-                            self.widget_dict[var] = Checkbox_var(init_vars, control["label"], var)
-                        elif control["widget"] == "line edit":
-                            self.widget_dict[var] = Standard_var(init_vars, control["label"], var)
+                            self.widget_dict[var].setSuffix(" " + control.suffix)
+                        elif control.widget == "checkbox":
+                            self.widget_dict[var] = Checkbox_var(init_vars, control.label, var)
+                        elif control.widget == "line edit":
+                            self.widget_dict[var] = Standard_var(init_vars, control.label, var)
 
-                        self.widget_dict[var].setHint(control["hint"])
+                        self.widget_dict[var].setHint(control.hint)
                         self.widget_dict[var].setBoard(board)
                         self.widget_dict[var].add_to_grid(layout, row)
 
-                    except KeyError:
-                        parent.parent.print_to_log(
-                            f'- Loading error: could not find "{var}" variable in the task file. The variable name has been changed or no longer exists.'
-                        )
+                except KeyError:
+                    parent.parent.print_to_log(
+                        f'- Loading error: could not find "{var}" variable in the task file. The variable name has been changed or no longer exists.'
+                    )
 
             layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
             widget.setLayout(layout)
@@ -428,11 +462,16 @@ class Custom_variables_grid(QtWidgets.QWidget):
         leftover_layout = QtWidgets.QGridLayout()
         leftover_vars = sorted(list(set(variables) - set(used_vars)), key=str.lower)
         leftover_vars = [
-            v_name for v_name in leftover_vars if not v_name.endswith("___") and v_name != "custom_variables_dialog" and not v_name.startswith("hw_")
+            v_name
+            for v_name in leftover_vars
+            if not v_name.endswith("___") and v_name != "custom_variables_dialog" and not v_name.startswith("hw_")
         ]
         if len(leftover_vars) > 0:
             for row, var in enumerate(leftover_vars):
-                self.widget_dict[var] = Standard_var(init_vars, var, var)
+                if var.startswith("btn_"):
+                    self.widget_dict[var] = Event_button(init_vars[var], f"'{init_vars[var]}' event")
+                else:
+                    self.widget_dict[var] = Standard_var(init_vars, var, var)
                 self.widget_dict[var].setBoard(board)
                 self.widget_dict[var].add_to_grid(leftover_layout, row)
             leftover_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
@@ -574,7 +613,7 @@ class Variables_dialog_editor(QtWidgets.QDialog):
         """Remove variables that are not defined in the new task."""
         pattern = "[\n\r]v\.(?P<vname>\w+)\s*\="
         try:
-            with open(os.path.join(get_setting("folders","tasks"), task + ".py"), "r", encoding="utf-8") as file:
+            with open(os.path.join(get_setting("folders", "tasks"), task + ".py"), "r", encoding="utf-8") as file:
                 file_content = file.read()
         except FileNotFoundError:
             return
@@ -646,7 +685,7 @@ class Variables_dialog_editor(QtWidgets.QDialog):
         self.deleteLater()
 
 
-class Variable_row:
+class Widget_row:
     def __init__(self, parent, var_name=False, row_data=False):
         self.parent = parent
         # buttons
@@ -709,6 +748,7 @@ class Variable_row:
         if var_name[:4] == "sep_":
             self.variable_cbox.addItems(["--- separator ---"])
             cbox_set_item(self.variable_cbox, "--- separator ---")
+            cbox_set_item(self.input_type_combo, "bob")
         else:
             self.variable_cbox.addItems([var_name])
             cbox_set_item(self.variable_cbox, var_name)
@@ -731,7 +771,7 @@ class Variables_table(QtWidgets.QTableWidget):
         super(QtWidgets.QTableWidget, self).__init__(1, 11, parent=parent)
         self.parent = parent
         self.setHorizontalHeaderLabels(
-            ["", "", "Variable", "Label", "Input type", "Min", "Max", "Step", "Suffix", "Hint", ""]
+            ["", "", "Variable", "Label", "Control type", "Min", "Max", "Step", "Suffix", "Hint", ""]
         )
         self.verticalHeader().setVisible(False)
         self.setColumnWidth(0, 30)
@@ -760,7 +800,7 @@ class Variables_table(QtWidgets.QTableWidget):
 
     def add_row(self, varname=False, row_dict=False):
         # populate row with widgets
-        new_widgets = Variable_row(self, varname, row_dict)
+        new_widgets = Widget_row(self, varname, row_dict)
         new_widgets.put_into_table(row_index=self.n_variables)
 
         # connect buttons to functions
@@ -786,7 +826,7 @@ class Variables_table(QtWidgets.QTableWidget):
 
     def swap_with_above(self, row):
         if self.n_variables > row > 0:
-            new_widgets = Variable_row(self)
+            new_widgets = Widget_row(self)
             new_widgets.copy_vals_from_row(row)
             self.removeRow(row)  # delete old row
             above_row = row - 1
@@ -824,15 +864,27 @@ class Variables_table(QtWidgets.QTableWidget):
         for row in range(self.n_variables):
             v_name = self.cellWidget(row, 2).currentText()
             input_type = self.cellWidget(row, 4).currentText()
-            if v_name == "     select variable     " or v_name == "--- separator ---":
-                for i in (3, 4, 5, 6, 7, 8, 9):  # disable inputs until a variable as been selected
+            if v_name == "     select variable     " or v_name == "--- separator ---" or v_name.startswith("btn_"):
+                for i in (3, 5, 6, 7, 8, 9):  # disable inputs until a variable as been selected
                     self.cellWidget(row, i).setEnabled(False)
                     self.cellWidget(row, i).setStyleSheet("background: #dcdcdc;")
                 if v_name == "--- separator ---":
-                    self.cellWidget(row, 4).setEnabled(False)
+                    cbox_set_item(self.cellWidget(row, 4), "separator", insert=True)
+                    cbox_update_options(self.cellWidget(row, 4), ["separator"])
                     for i in (3, 5, 6, 7, 8, 9):
                         self.cellWidget(row, i).setText("")
+                elif v_name.startswith("btn_"):
+                    cbox_set_item(self.cellWidget(row, 4), "button", insert=True)
+                    cbox_update_options(self.cellWidget(row, 4), ["button"])
+                    if self.cellWidget(row, 3).text() == self.clear_label_flag:
+                        self.cellWidget(row, 3).setText(v_name[4:].replace("_", " "))
+                    for i in (3, 9):  # disable inputs until a variable as been selected
+                        self.cellWidget(row, i).setEnabled(True)
+                        self.cellWidget(row, i).setStyleSheet("background: #ffffff;")
             else:
+                if self.cellWidget(row, 4).currentText() in ("separator", "button"):
+                    cbox_set_item(self.cellWidget(row, 4), "line edit", insert=True)
+                cbox_update_options(self.cellWidget(row, 4), ["line edit", "checkbox", "spinbox", "slider"])
                 self.cellWidget(row, 3).setStyleSheet("background: #ffffff;")
                 self.cellWidget(row, 4).setStyleSheet("color: black; background: none;")
                 self.cellWidget(row, 9).setStyleSheet("background: #ffffff;")
@@ -859,39 +911,37 @@ class Variables_table(QtWidgets.QTableWidget):
         ordered_inputs = []
         num_separators = 0
         for row in range(self.n_variables):
-            input_specs = {}
             varname = self.cellWidget(row, 2).currentText()
             if varname != "     select variable     ":
                 if varname == "--- separator ---":
                     varname = f"sep_{num_separators}"
                     num_separators += 1
                 ordered_inputs.append(varname)
-                input_specs["label"] = self.cellWidget(row, 3).text()
-                input_specs["widget"] = self.cellWidget(row, 4).currentText()
-                input_specs["min"] = ""
-                input_specs["max"] = ""
-                input_specs["step"] = ""
-                input_specs["suffix"] = ""
-                input_specs["hint"] = self.cellWidget(row, 9).text()
+                control_specs = Control_specs(
+                    label=self.cellWidget(row, 3).text(),
+                    widget=self.cellWidget(row, 4).currentText(),
+                    hint=self.cellWidget(row, 9).text(),
+                )
 
-                if input_specs["widget"] == "spinbox" or input_specs["widget"] == "slider":
+                if control_specs.widget in ("spinbox", "slider"):
                     # store the value as an integer or float.
                     # If the string is empty or not a number, an error message will be shown.
                     try:
                         value = self.cellWidget(row, 5).text()
-                        input_specs["min"] = float(value) if value.find(".") > -1 else int(value)
+                        control_specs.min = float(value) if value.find(".") > -1 else int(value)
                         value = self.cellWidget(row, 6).text()
-                        input_specs["max"] = float(value) if value.find(".") > -1 else int(value)
+                        control_specs.max = float(value) if value.find(".") > -1 else int(value)
                         value = self.cellWidget(row, 7).text()
-                        input_specs["step"] = float(value) if value.find(".") > -1 else int(value)
+                        control_specs.step = float(value) if value.find(".") > -1 else int(value)
+
                     except ValueError:
                         msg = QtWidgets.QMessageBox()
                         msg.setText("Numbers for min, max, and step are required for spinboxes and sliders")
                         msg.exec()
                         return None
-                    input_specs["suffix"] = self.cellWidget(row, 8).text()
+                    control_specs.suffix = self.cellWidget(row, 8).text()
 
-                tab_dictionary[varname] = input_specs
+                tab_dictionary[varname] = asdict(control_specs)
         # after Python 3.6, dictionaries became ordered, but to be backwards compatible we add ordering here
         tab_dictionary["ordered_inputs"] = ordered_inputs
 

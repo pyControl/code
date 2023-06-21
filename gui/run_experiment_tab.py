@@ -289,7 +289,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.time_text.setReadOnly(True)
         self.time_text.setFixedWidth(50)
         self.task_info = TaskInfo()
-        self.variables_button = QtWidgets.QPushButton('Variables')
+        self.variables_button = QtWidgets.QPushButton('Controls')
         self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
         self.variables_button.setEnabled(False)
         self.log_textbox = QtWidgets.QTextEdit()

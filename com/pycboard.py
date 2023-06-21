@@ -492,6 +492,14 @@ class Pycboard(Pyboard):
     # Getting and setting variables.
     # ------------------------------------------------------------------------------------
 
+    def send_serial_data(self, data, header, subheader=None):
+        encoded_data = data.encode()
+        if subheader:
+            encoded_data += subheader.encode()
+        data_len = len(encoded_data).to_bytes(2, 'little')
+        checksum = sum(encoded_data).to_bytes(2, 'little')
+        self.serial.write(header.encode()+ data_len + encoded_data + checksum)
+
     def set_variable(self, v_name, v_value):
         '''Set the value of a state machine variable. If framework is not running
         returns True if variable set OK, False if set failed.  Returns None framework
@@ -500,10 +508,7 @@ class Pycboard(Pyboard):
             raise PyboardError('Invalid variable name: {}'.format(v_name))
         v_str = repr(v_value)
         if self.framework_running: # Set variable with serial command.
-            data = repr((v_name, v_str)).encode() + b's'
-            data_len = len(data).to_bytes(2, 'little')
-            checksum = sum(data).to_bytes(2, 'little')
-            self.serial.write(b'V' + data_len +  data + checksum)
+            self.send_serial_data(repr((v_name, v_str)),'V','s')
             return None
         else: # Set variable using REPL.  
             checksum = sum(v_str.encode())
@@ -517,11 +522,12 @@ class Pycboard(Pyboard):
         variable value if got OK, None if get fails.  Returns None if framework 
         running, but variable event is later output by board.'''
         if v_name not in self.sm_info['variables']:
-            raise PyboardError('Invalid variable name: {}'.format(v_name))        
+            raise PyboardError('Invalid variable name: {}'.format(v_name))
         if self.framework_running: # Get variable with serial command.
-            data = v_name.encode() + b'g'
-            data_len = len(data).to_bytes(2, 'little')
-            checksum = sum(data).to_bytes(2, 'little')
-            self.serial.write(b'V' + data_len +  data + checksum)
+            self.send_serial_data(v_name,'V','g')
         else: # Get variable using REPL.
             return eval(self.eval(f'sm.get_variable({repr(v_name)})').decode())
+    
+    def generate_event(self,event):
+        if self.framework_running: # Set variable with serial command.
+            self.send_serial_data(repr(event),'E')

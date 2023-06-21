@@ -83,7 +83,7 @@ class Variables_dialog(QtWidgets.QDialog):
     # Dialog for setting and getting task variables.
     def __init__(self, parent, board):
         super(QtWidgets.QDialog, self).__init__(parent)
-        self.setWindowTitle('Set variables')
+        self.setWindowTitle('Controls')
         self.scroll_area = QtWidgets.QScrollArea(parent=self)
         self.scroll_area.setWidgetResizable(True)
         self.variables_grid = Variables_grid(self.scroll_area, board)
@@ -101,10 +101,32 @@ class Variables_grid(QtWidgets.QWidget):
         super(QtWidgets.QWidget, self).__init__(parent)
         variables = board.sm_info['variables']
         self.grid_layout = QtWidgets.QGridLayout()
-        for i, (v_name, v_value_str) in enumerate(sorted(variables.items())):
-            if not v_name.endswith("___") and v_name != "custom_variables_dialog" and not v_name.startswith("hw_"):
-                Variable_setter(v_name, v_value_str, self.grid_layout, i, self, board)
+        # add event publishing buttons
+        control_row = 0
+        for (v_name, v_value_str) in sorted(variables.items()):
+            if v_name.startswith("btn_"):
+                Event_generator(v_value_str, self.grid_layout, control_row, self, board)
+                control_row += 1
+        for (v_name, v_value_str) in sorted(variables.items()):
+            if not v_name.endswith("___") and v_name != "custom_variables_dialog" and not v_name.startswith("hw_") and not v_name.startswith("btn_") and v_name!="api_class":
+                Variable_setter(v_name, v_value_str, self.grid_layout, control_row, self, board)
+                control_row += 1
         self.setLayout(self.grid_layout)
+
+class Event_generator(QtWidgets.QWidget):
+    def __init__(self, v_value_str, grid_layout, i, parent, board): # Should split into seperate init and provide info.
+        super(QtWidgets.QWidget, self).__init__(parent)
+        self.board = board
+        self.event_name = eval(v_value_str)
+        self.event_btn = QtWidgets.QPushButton(f"'{self.event_name}' event")
+        self.event_btn.setDefault(False)
+        self.event_btn.setAutoDefault(False)
+        self.event_btn.clicked.connect(self.generate)
+        grid_layout.addWidget(self.event_btn, i, 1)
+
+    def generate(self):
+        if self.board.framework_running: # Value returned later.
+            self.board.generate_event(self.event_name)
 
 class Variable_setter(QtWidgets.QWidget):
     # For setting and getting a single variable.
