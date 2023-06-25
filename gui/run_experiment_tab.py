@@ -371,6 +371,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         # Setup task state machine.
         try:
             self.board.setup_state_machine(self.run_exp_tab.experiment.task)
+            self.initialise_API()
         except PyboardError:
             self.setup_failed = True
             self.error()
@@ -411,6 +412,34 @@ class Subjectbox(QtWidgets.QGroupBox):
                 self.print_to_log('Setting variable failed. ' + str(e))
                 self.setup_failed = True
         return
+    
+    def initialise_API(self):
+        # If task file specifies a user API attempt to initialise it.
+        self.user_API = None # Remove previous API.
+        if 'api_class' not in self.board.sm_info['variables']:
+            return # Task does not use API.
+        API_name = eval(self.board.sm_info['variables']['api_class'])
+        # Try to import and instantiate the user API.
+        try:
+            user_module_name = f'config.user_classes.{API_name}'
+            user_module = importlib.import_module(user_module_name)
+            importlib.reload(user_module)
+        except ModuleNotFoundError:
+            self.print_to_log(f'\nCould not find user API module: {user_module_name}')
+            return
+        if not hasattr(user_module, API_name):
+            self.print_to_log(f'\nCould not find user API class "{API_name}" in {user_module_name}')
+            return
+        try:
+            user_API_class = getattr(user_module, API_name)
+            self.user_API = user_API_class()
+            self.user_API.interface(self.board, self.print_to_log)
+            self.data_logger.data_consumers.append(self.user_API)
+            1/0
+            self.print_to_log(f'\nInitialised API: {API_name}')
+        except Exception as e:
+            self.print_to_log(f'Unable to intialise API: {API_name}\nTraceback: {e}')
+            raise(PyboardError)
 
     def make_variables_dialog(self):
         '''Configure variables dialog and ready subjectbox to start experiment. '''
@@ -456,6 +485,8 @@ class Subjectbox(QtWidgets.QGroupBox):
                 self.data_logger.data_file.write(f"V 0 {v_name} {v_value}\n")
         self.data_logger.data_file.write('\n')
         self.board.start_framework()
+        if self.user_API:
+            self.user_API.run_start()
 
         self.start_stop_button.setText('Stop')
         self.start_stop_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
@@ -479,6 +510,8 @@ class Subjectbox(QtWidgets.QGroupBox):
                 self.board.process_data()
             except PyboardError:
                 self.print_to_log("\nError while stopping framework run.")
+            if self.user_API: 
+                self.user_API.run_stop()
         # Read persistant variables.
         subject_pvs = [v for v in self.subject_variables if v['persistent']]
         if subject_pvs:
@@ -516,3 +549,5 @@ class Subjectbox(QtWidgets.QGroupBox):
             except PyboardError:
                 self.stop_task()
                 self.error()
+            if self.user_API:
+                self.user_API.update()

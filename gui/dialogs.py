@@ -107,8 +107,14 @@ class Variables_grid(QtWidgets.QWidget):
             if v_name.startswith("btn_"):
                 Event_generator(v_value_str, self.grid_layout, control_row, self, board)
                 control_row += 1
-        for (v_name, v_value_str) in sorted(variables.items()):
-            if not v_name.endswith("___") and v_name != "custom_variables_dialog" and not v_name.startswith("hw_") and not v_name.startswith("btn_") and v_name!="api_class":
+        for v_name, v_value_str in sorted(variables.items()):
+            if (
+                not v_name.endswith("___")
+                and v_name != "custom_variables_dialog"
+                and not v_name.startswith("hw_")
+                and not v_name.startswith("btn_")
+                and v_name != "api_class"
+            ):
                 Variable_setter(v_name, v_value_str, self.grid_layout, control_row, self, board)
                 control_row += 1
         self.setLayout(self.grid_layout)

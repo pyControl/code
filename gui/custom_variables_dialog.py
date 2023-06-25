@@ -464,7 +464,10 @@ class Custom_variables_grid(QtWidgets.QWidget):
         leftover_vars = [
             v_name
             for v_name in leftover_vars
-            if not v_name.endswith("___") and v_name != "custom_variables_dialog" and not v_name.startswith("hw_")
+            if not v_name.endswith("___")
+            and v_name != "custom_variables_dialog"
+            and not v_name.startswith("hw_")
+            and v_name != "api_class"
         ]
         if len(leftover_vars) > 0:
             for row, var in enumerate(leftover_vars):
@@ -622,7 +625,10 @@ class Variables_dialog_editor(QtWidgets.QDialog):
             [
                 v_name
                 for v_name in re.findall(pattern, file_content)
-                if not v_name.endswith("___") and v_name != "custom_variables_dialog" and not v_name.startswith("hw_")
+                if not v_name.endswith("___")
+                and v_name != "custom_variables_dialog"
+                and not v_name.startswith("hw_")
+                and v_name != "api_class"
             ]
         )
 
