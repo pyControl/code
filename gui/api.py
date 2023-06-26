@@ -98,7 +98,7 @@ class Api:
 
     def process_data(self, new_data):
         """Called directly by the gui every time there is new data.
-        Recieves new_data from the board and processes it to a user
+        receives new_data from the board and processes it to a user
         friendly data structure. Then passes new data structure to
         process_data_user.
         """

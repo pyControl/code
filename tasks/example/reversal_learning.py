@@ -40,7 +40,7 @@ v.bad_prob  = 0.2                # Reward probabilities on the bad side.
 
 # Variables.
 v.n_rewards = 0                  # Number of rewards obtained.
-v.n_trials = 0                   # Number of trials recieved.
+v.n_trials = 0                   # Number of trials received.
 v.n_blocks = 0                   # Number of reversals.
 v.good_side = choice(['left', 'right']) # Which side is currently good.
 v.correct_mov_ave = exp_mov_ave(tau=v.tau, init_value = 0.5) # Moving average of correct/incorrect choices

@@ -97,7 +97,7 @@ class Pycboard(Pyboard):
         '''Enter raw repl (soft reboots pyboard), import modules.'''
         self.enter_raw_repl() # Soft resets pyboard.
         self.exec(inspect.getsource(_djb2_file))     # define djb2 hashing function.
-        self.exec(inspect.getsource(_receive_file))  # define recieve file function.
+        self.exec(inspect.getsource(_receive_file))  # define receive file function.
         self.exec('import os; import gc; import sys; import pyb')
         self.framework_running = False
         error_message = None
@@ -427,7 +427,7 @@ class Pycboard(Pyboard):
             new_byte = self.serial.read(1)
             if new_byte == b'\x07':   # Start of pyControl message.  
                 if unexpected_input: # Output any unexpected characters recived prior to message start.
-                    new_data.append(('!', 'Unexpected input recieved from board: ' +
+                    new_data.append(('!', 'Unexpected input received from board: ' +
                                          ''.join(unexpected_input)))
                     unexpected_input = []
                 type_byte = self.serial.read(1) # Message type identifier.
