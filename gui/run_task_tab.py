@@ -176,8 +176,8 @@ class Run_task_tab(QtWidgets.QWidget):
         self.setLayout(self.run_layout)
 
         # Create timers
-        self.update_timer = QtCore.QTimer()  # Timer to regularly call update() during run.
-        self.update_timer.timeout.connect(self.update)
+        self.plot_update_timer = QtCore.QTimer()  # Timer to regularly call update() during run.
+        self.plot_update_timer.timeout.connect(self.plot_update)
 
         # Keyboard Shortcuts
 
@@ -431,7 +431,7 @@ class Run_task_tab(QtWidgets.QWidget):
         if self.using_json_gui:
             self.variables_dialog.edit_action.setEnabled(False)
         self.print_to_log(f"\nRun started at: {datetime.now().strftime('%Y/%m/%d %H:%M:%S')}\n")
-        self.update_timer.start(get_setting("plotting","update_interval"))
+        self.plot_update_timer.start(get_setting("plotting","update_interval"))
         self.GUI_main.refresh_timer.stop()
         self.status_text.setText("Running: " + self.task)
         self.GUI_main.tab_widget.setTabEnabled(1, False)  # Disable experiments tab.
@@ -439,7 +439,7 @@ class Run_task_tab(QtWidgets.QWidget):
 
     def stop_task(self, error=False, stopped_by_task=False):
         self.running = False
-        self.update_timer.stop()
+        self.plot_update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
         if not (error or stopped_by_task):
             self.board.stop_framework()
@@ -467,8 +467,9 @@ class Run_task_tab(QtWidgets.QWidget):
 
     # Timer updates
 
-    def update(self):
-        # Called regularly during run to process data from board and update plots.
+    def plot_update(self):
+        '''Called every plotting update interval (default=10ms) 
+        while experiment is running'''
         try:
             self.board.process_data()
             if not self.board.framework_running:
@@ -478,7 +479,7 @@ class Run_task_tab(QtWidgets.QWidget):
             self.stop_task(error=True)
         self.task_plot.update()
         if self.user_API:
-            self.user_API.update()
+            self.user_API.plot_update()
 
 
     # Cleanup.

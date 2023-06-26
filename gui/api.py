@@ -22,19 +22,16 @@ class Api:
         """Called whenever there is a state transition, event
         or printed line. Gives the user access to data dictionary
 
-        data : a dictionary with keys 'states', 'events' and 'prints'
+        data : a dictionary with keys 'states', 'events' and 'prints', 'vars' and 'analog'
                and values a list of tuples in format
                (name of state or event / printed string, time)
         """
         pass
 
-    def update(self):
-        """Called several times / second regardless of whether
-        there is a state transition or event.
-
-        The user should be cautious when overwriting this function
-        as code that does not execute in sub-millisecond time will
-        impact the performance of pyControl
+    def plot_update(self):
+        """ Called whenever the plots are updated
+        The default plotting update interval is 10ms
+        and can be adjusted in settings dialog
         """
         pass
 

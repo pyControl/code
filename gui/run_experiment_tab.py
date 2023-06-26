@@ -58,8 +58,8 @@ class Run_experiment_tab(QtWidgets.QWidget):
 
         self.subjectboxes = []
 
-        self.update_timer = QtCore.QTimer() # Timer to regularly call update() during run.
-        self.update_timer.timeout.connect(self.update)
+        self.plot_update_timer = QtCore.QTimer() # Timer to regularly call update() during run.
+        self.plot_update_timer.timeout.connect(self.plot_update)
   
     # Main setup experiment function.
 
@@ -165,7 +165,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
     def stop_experiment(self):
         '''Called when all setups have stopped running. Configure GUI update
         timers, store persistant variables and display summary variables.'''
-        self.update_timer.stop()
+        self.plot_update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
         # Store persistent variables.
         if os.path.exists(self.pv_path):
@@ -192,7 +192,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         '''Check if setup has failed on any subjectbox and if so abort experiment.'''
         if any([box.setup_failed for box in self.subjectboxes]):
             # Setup has failed abort experiment setup.
-            self.update_timer.stop()
+            self.plot_update_timer.stop()
             self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
             for box in self.subjectboxes:
                 # Stop running boards.
@@ -245,8 +245,9 @@ class Run_experiment_tab(QtWidgets.QWidget):
             self.logs_visible = True
             self.logs_button.setText('Hide logs')
 
-    def update(self):
-        '''Called regularly while experiment is running'''
+    def plot_update(self):
+        '''Called every plotting update interval (default=10ms) 
+        while experiment is running'''
         for box in self.subjectboxes:
             box.update()
         self.experiment_plot.update()
@@ -493,7 +494,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.run_exp_tab.setups_started += 1
 
         self.run_exp_tab.GUI_main.refresh_timer.stop()
-        self.run_exp_tab.update_timer.start(get_setting("plotting","update_interval"))
+        self.run_exp_tab.plot_update_timer.start(get_setting("plotting","update_interval"))
         self.run_exp_tab.update_startstopclose_button()
 
     def error(self):
@@ -550,4 +551,4 @@ class Subjectbox(QtWidgets.QGroupBox):
                 self.stop_task()
                 self.error()
             if self.user_API:
-                self.user_API.update()
+                self.user_API.plot_update()
