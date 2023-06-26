@@ -308,12 +308,12 @@ class Event_button:
     def __init__(self, event_name, button_text):  # Should split into seperate init and provide info.
         self.event_name = eval(event_name)
         self.event_btn = QtWidgets.QPushButton(button_text)
-        self.event_btn.clicked.connect(self.generate)
+        self.event_btn.clicked.connect(self.trigger)
         self.event_btn.setAutoDefault(False)
 
-    def generate(self):
+    def trigger(self):
         if self.board.framework_running:  # Value returned later.
-            self.board.generate_event(self.event_name)
+            self.board.trigger_event(self.event_name)
 
     def setHint(self, hint):
         self.event_btn.setToolTip(hint)

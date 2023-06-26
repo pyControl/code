@@ -526,6 +526,6 @@ class Pycboard(Pyboard):
         else: # Get variable using REPL.
             return eval(self.eval(f'sm.get_variable({repr(v_name)})').decode())
 
-    def generate_event(self,event_name):
+    def trigger_event(self,event_name):
         if self.framework_running: # Set variable with serial command.
             self.send_serial_data('E', repr(event_name))

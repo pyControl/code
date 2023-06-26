@@ -105,7 +105,7 @@ class Variables_grid(QtWidgets.QWidget):
         control_row = 0
         for (v_name, v_value_str) in sorted(variables.items()):
             if v_name.startswith("btn_"):
-                Event_generator(v_value_str, self.grid_layout, control_row, self, board)
+                Event_trigger(v_value_str, self.grid_layout, control_row, self, board)
                 control_row += 1
         for v_name, v_value_str in sorted(variables.items()):
             if (
@@ -119,7 +119,7 @@ class Variables_grid(QtWidgets.QWidget):
                 control_row += 1
         self.setLayout(self.grid_layout)
 
-class Event_generator(QtWidgets.QWidget):
+class Event_trigger(QtWidgets.QWidget):
     def __init__(self, v_value_str, grid_layout, i, parent, board): # Should split into seperate init and provide info.
         super(QtWidgets.QWidget, self).__init__(parent)
         self.board = board
@@ -127,12 +127,12 @@ class Event_generator(QtWidgets.QWidget):
         self.event_btn = QtWidgets.QPushButton(f"'{self.event_name}' event")
         self.event_btn.setDefault(False)
         self.event_btn.setAutoDefault(False)
-        self.event_btn.clicked.connect(self.generate)
+        self.event_btn.clicked.connect(self.trigger)
         grid_layout.addWidget(self.event_btn, i, 1)
 
-    def generate(self):
+    def trigger(self):
         if self.board.framework_running: # Value returned later.
-            self.board.generate_event(self.event_name)
+            self.board.trigger_event(self.event_name)
 
 class Variable_setter(QtWidgets.QWidget):
     # For setting and getting a single variable.

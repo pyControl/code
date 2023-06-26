@@ -58,9 +58,9 @@ class Api:
                 f"Variable {v_name} not defined in task file {self.board.sm_info['name']} so cannot be set by API"
             )
 
-    def generate_event(self, event):
+    def trigger_event(self, event):
         if event in self.board.sm_info["events"].keys():
-            self.board.generate_event(event)
+            self.board.trigger_event(event)
         else:
             self.print_to_log(
                 f"Variable {event} not defined in task file {self.board.sm_info['name']} so cannot be set by API"
