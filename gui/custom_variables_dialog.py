@@ -1,6 +1,7 @@
 import os
 import json
 import re
+from copy import deepcopy
 from dataclasses import dataclass, asdict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from gui.settings import dirs, get_setting
@@ -356,6 +357,16 @@ class Custom_variables_dialog(QtWidgets.QDialog):
             self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+W"), self)
             self.close_shortcut.activated.connect(self.close)
             self.custom_gui = "json_gui"
+    
+    def updated_json_dict(self,json_dict):
+            for tab_name,tab in json_dict.items():
+                try:
+                    for control in tab.keys():
+                        if control.find("sep")>-1:
+                            json_dict[tab_name][control]["widget"] = "separator"
+                except AttributeError:
+                    pass
+            return json_dict
 
     def get_custom_gui_data(self, is_experiment):
         custom_variables_dict = None
@@ -363,6 +374,10 @@ class Custom_variables_dialog(QtWidgets.QDialog):
             json_file = os.path.join(dirs["config"], "user_variable_dialogs", f"{self.gui_name}.json")
             with open(json_file, "r") as j:
                 custom_variables_dict = json.loads(j.read())
+            # update json content if old version 
+            if deepcopy(custom_variables_dict) != self.updated_json_dict(custom_variables_dict):
+                with open(json_file, "w", encoding="utf-8") as updated_json:
+                    json.dump(custom_variables_dict, updated_json, indent=4)
         except FileNotFoundError:  # couldn't find the json data
             py_file = os.path.join(dirs["config"], "user_variable_dialogs", f"{self.gui_name}.py")
             if os.path.exists(py_file):

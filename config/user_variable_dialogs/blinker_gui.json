@@ -1,67 +1,67 @@
 {
     "blinker": {
         "blink_rate": {
-            "label": "\u23f1\ufe0fBlink rate",
             "widget": "slider",
+            "label": "\u23f1\ufe0fBlink rate",
+            "hint": "Rate which LED blinks",
             "min": 1,
             "max": 15,
             "step": 0.5,
-            "suffix": "Hz",
-            "hint": "Rate which LED blinks"
+            "suffix": "Hz"
         },
         "sep_0": {
+            "widget": "separator",
             "label": "",
-            "widget": "line edit",
+            "hint": "",
             "min": "",
             "max": "",
             "step": "",
-            "suffix": "",
-            "hint": ""
+            "suffix": ""
         },
         "green_enabled": {
-            "label": "\ud83d\udfe2Green active",
             "widget": "checkbox",
+            "label": "\ud83d\udfe2Green active",
+            "hint": "some",
             "min": "",
             "max": "",
             "step": "",
-            "suffix": "",
-            "hint": "some"
+            "suffix": ""
         },
         "green_count": {
-            "label": "\ud83d\udfe2Green count",
             "widget": "spinbox",
+            "label": "\ud83d\udfe2Green count",
+            "hint": "more",
             "min": 1,
             "max": 10,
             "step": 1,
-            "suffix": "blinks",
-            "hint": "more"
+            "suffix": "blinks"
         },
         "sep_1": {
+            "widget": "separator",
             "label": "",
-            "widget": "line edit",
+            "hint": "",
             "min": "",
             "max": "",
             "step": "",
-            "suffix": "",
-            "hint": ""
+            "suffix": ""
         },
         "red_enabled": {
-            "label": "\ud83d\udd34Red active",
             "widget": "checkbox",
+            "label": "\ud83d\udd34Red active",
+            "hint": "hints",
             "min": "",
             "max": "",
             "step": "",
-            "suffix": "",
-            "hint": "hints"
+            "suffix": ""
         },
         "red_count": {
-            "label": "\ud83d\udd34Red count",
             "widget": "spinbox",
+            "label": "\ud83d\udd34Red count",
+            "hint": "shown",
             "min": 1,
             "max": 10,
             "step": 1,
-            "suffix": "blinks",
-            "hint": "shown"
+            "suffix": "blinks"
         },
         "ordered_inputs": [
             "blink_rate",
