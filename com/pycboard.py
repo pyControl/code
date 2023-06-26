@@ -492,13 +492,11 @@ class Pycboard(Pyboard):
     # Getting and setting variables.
     # ------------------------------------------------------------------------------------
 
-    def send_serial_data(self, data, header, subheader=None):
+    def send_serial_data(self, command, data):
         encoded_data = data.encode()
-        if subheader:
-            encoded_data += subheader.encode()
         data_len = len(encoded_data).to_bytes(2, 'little')
         checksum = sum(encoded_data).to_bytes(2, 'little')
-        self.serial.write(header.encode()+ data_len + encoded_data + checksum)
+        self.serial.write(command.encode()+ data_len + encoded_data + checksum)
 
     def set_variable(self, v_name, v_value):
         '''Set the value of a state machine variable. If framework is not running
@@ -508,7 +506,7 @@ class Pycboard(Pyboard):
             raise PyboardError('Invalid variable name: {}'.format(v_name))
         v_str = repr(v_value)
         if self.framework_running: # Set variable with serial command.
-            self.send_serial_data(repr((v_name, v_str)),'V','s')
+            self.send_serial_data('Vs', repr((v_name, v_str)))
             return None
         else: # Set variable using REPL.  
             checksum = sum(v_str.encode())
@@ -524,10 +522,10 @@ class Pycboard(Pyboard):
         if v_name not in self.sm_info['variables']:
             raise PyboardError('Invalid variable name: {}'.format(v_name))
         if self.framework_running: # Get variable with serial command.
-            self.send_serial_data(v_name,'V','g')
+            self.send_serial_data('Vg', v_name)
         else: # Get variable using REPL.
             return eval(self.eval(f'sm.get_variable({repr(v_name)})').decode())
-    
-    def generate_event(self,event):
+
+    def generate_event(self,event_name):
         if self.framework_running: # Set variable with serial command.
-            self.send_serial_data(repr(event),'E')
+            self.send_serial_data('E', repr(event_name))

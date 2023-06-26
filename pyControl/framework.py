@@ -99,18 +99,18 @@ def receive_data():
         running = False
     elif new_byte == b'V': # Get/set variables command.
         # read in data
+        command_type = usb_serial.read(1)
         data_len = int.from_bytes(usb_serial.read(2), 'little')
         data = usb_serial.read(data_len)
         checksum = int.from_bytes(usb_serial.read(2), 'little')
         if  checksum != (sum(data) & 0xFFFF):
             return  # Bad checksum.
-
-        if data[-1:] == b's': # Set variable.
-            v_name, v_str = eval(data[:-1])
+        if command_type == b's': # Set variable.
+            v_name, v_str = eval(data)
             if sm.set_variable(v_name, v_str):
                 data_output_queue.put((current_time, varbl_typ, (v_name, v_str)))
-        elif data[-1:] == b'g': # Get variable.
-            v_name = data[:-1].decode()
+        elif command_type == b'g': # Get variable.
+            v_name = data.decode()
             v_str = sm.get_variable(v_name)
             data_output_queue.put((current_time, varbl_typ, (v_name, v_str)))
     elif new_byte == b'E': # Publish an event
