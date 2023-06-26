@@ -90,14 +90,6 @@ def output_data(event):
         checksum  = (sum(data_len + timestamp) + sum(data_bytes)).to_bytes(2, 'little')
         usb_serial.send(start_byte + data_len + timestamp + checksum + data_bytes)
 
-def read_data():
-    data_len = int.from_bytes(usb_serial.read(2), 'little')
-    data = usb_serial.read(data_len)
-    checksum = int.from_bytes(usb_serial.read(2), 'little')
-    if  checksum != (sum(data) & 0xFFFF):
-        return None 
-    else:
-        return data
 
 def recieve_data():
     # Read and process data from computer.
@@ -106,9 +98,13 @@ def recieve_data():
     if new_byte == b'\x03': # Serial command to stop run.
         running = False
     elif new_byte == b'V': # Get/set variables command.
-        data = read_data()
-        if data is None:
+        # read in data
+        data_len = int.from_bytes(usb_serial.read(2), 'little')
+        data = usb_serial.read(data_len)
+        checksum = int.from_bytes(usb_serial.read(2), 'little')
+        if  checksum != (sum(data) & 0xFFFF):
             return  # Bad checksum.
+
         if data[-1:] == b's': # Set variable.
             v_name, v_str = eval(data[:-1])
             if sm.set_variable(v_name, v_str):
@@ -118,9 +114,13 @@ def recieve_data():
             v_str = sm.get_variable(v_name)
             data_output_queue.put((current_time, varbl_typ, (v_name, v_str)))
     elif new_byte == b'E': # Publish an event
-        event_name = read_data()
-        if event_name is None:
+        # read in event name
+        data_len = int.from_bytes(usb_serial.read(2), 'little')
+        event_name = usb_serial.read(data_len)
+        checksum = int.from_bytes(usb_serial.read(2), 'little')
+        if  checksum != (sum(event_name) & 0xFFFF):
             return  # Bad checksum.
+
         event_queue.put((current_time, event_typ, sm.events[eval(event_name)]))
 
 def run():
