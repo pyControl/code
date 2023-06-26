@@ -15,7 +15,7 @@ initial_state = "LED_on"
 
 # variables
 v.LED_duration = 0.5
-v.api_class = 'Blinker' # Uncomment to use Blinker API example.
+# v.api_class = 'Blinker' # Uncomment to use Blinker API example.
 
 # Define behaviour.
 def LED_on(event):
