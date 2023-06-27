@@ -102,7 +102,7 @@ class Run_task_tab(QtWidgets.QWidget):
 
         self.task_groupbox = QtWidgets.QGroupBox("Task")
 
-        self.task_select = NestedMenu("select task",".py")
+        self.task_select = NestedMenu("example/custom_variables_dialog",".py")
         self.task_select.set_callback(self.task_changed)
         self.upload_button = QtWidgets.QPushButton("Upload")
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
@@ -334,7 +334,7 @@ class Run_task_tab(QtWidgets.QWidget):
             if self.variables_dialog:
                 self.variables_button.clicked.disconnect()
                 self.variables_dialog.deleteLater()
-            self.variables_dialog = Variables_dialog(self, self.board)
+            self.variables_dialog = Variables_dialog(self)
             self.using_json_gui = False
             if "custom_variables_dialog" in self.board.sm_info["variables"]:
                 custom_variables_name = eval(self.board.sm_info["variables"]["custom_variables_dialog"])

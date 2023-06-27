@@ -13,18 +13,18 @@
             "widget": "separator",
             "label": "",
             "hint": "",
-            "min": "",
-            "max": "",
-            "step": "",
+            "min": null,
+            "max": null,
+            "step": null,
             "suffix": ""
         },
         "green_enabled": {
             "widget": "checkbox",
             "label": "\ud83d\udfe2Green active",
             "hint": "some",
-            "min": "",
-            "max": "",
-            "step": "",
+            "min": null,
+            "max": null,
+            "step": null,
             "suffix": ""
         },
         "green_count": {
@@ -40,18 +40,18 @@
             "widget": "separator",
             "label": "",
             "hint": "",
-            "min": "",
-            "max": "",
-            "step": "",
+            "min": null,
+            "max": null,
+            "step": null,
             "suffix": ""
         },
         "red_enabled": {
             "widget": "checkbox",
             "label": "\ud83d\udd34Red active",
             "hint": "hints",
-            "min": "",
-            "max": "",
-            "step": "",
+            "min": null,
+            "max": null,
+            "step": null,
             "suffix": ""
         },
         "red_count": {
@@ -62,18 +62,6 @@
             "max": 10,
             "step": 1,
             "suffix": "blinks"
-        },
-        "ordered_inputs": [
-            "blink_rate",
-            "sep_0",
-            "green_enabled",
-            "green_count",
-            "sep_1",
-            "red_enabled",
-            "red_count"
-        ]
-    },
-    "ordered_tabs": [
-        "blinker"
-    ]
+        }
+    }
 }

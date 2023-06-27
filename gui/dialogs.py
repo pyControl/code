@@ -81,12 +81,12 @@ class Board_config_dialog(QtWidgets.QDialog):
 
 class Variables_dialog(QtWidgets.QDialog):
     # Dialog for setting and getting task variables.
-    def __init__(self, parent, board):
+    def __init__(self, parent):
         super(QtWidgets.QDialog, self).__init__(parent)
         self.setWindowTitle('Controls')
         self.scroll_area = QtWidgets.QScrollArea(parent=self)
         self.scroll_area.setWidgetResizable(True)
-        self.variables_grid = Variables_grid(self.scroll_area, board)
+        self.variables_grid = Variables_grid(self.scroll_area, parent.board)
         self.scroll_area.setWidget(self.variables_grid)
         self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.addWidget(self.scroll_area)
@@ -97,48 +97,70 @@ class Variables_dialog(QtWidgets.QDialog):
 
 class Variables_grid(QtWidgets.QWidget):
     # Grid of variables to set/get, displayed within scroll area of dialog.
-    def __init__(self, parent, board):
-        super(QtWidgets.QWidget, self).__init__(parent)
-        variables = board.sm_info['variables']
+    def __init__(self, parent_widget, board):
+        super(QtWidgets.QWidget, self).__init__(parent_widget)
         self.grid_layout = QtWidgets.QGridLayout()
-        # add event publishing buttons
+        self.board = board
+
         control_row = 0
-        for (v_name, v_value_str) in sorted(variables.items()):
-            if v_name.startswith("btn_"):
-                Event_trigger(v_value_str, self.grid_layout, control_row, self, board)
-                control_row += 1
+
+        # add a generic event triggering combo box
+        events = self.board.sm_info['events']
+        if control_row == 0 and events: 
+            Event_combo(events,control_row,self)
+            control_row += 1
+
+        variables = board.sm_info['variables']
         for v_name, v_value_str in sorted(variables.items()):
             if (
                 not v_name.endswith("___")
                 and v_name != "custom_variables_dialog"
                 and not v_name.startswith("hw_")
-                and not v_name.startswith("btn_")
                 and v_name != "api_class"
             ):
-                Variable_setter(v_name, v_value_str, self.grid_layout, control_row, self, board)
+                Variable_setter(v_name, v_value_str, control_row, self)
                 control_row += 1
         self.setLayout(self.grid_layout)
 
-class Event_trigger(QtWidgets.QWidget):
-    def __init__(self, v_value_str, grid_layout, i, parent, board): # Should split into seperate init and provide info.
-        super(QtWidgets.QWidget, self).__init__(parent)
-        self.board = board
+class Event_button(QtWidgets.QWidget):
+    def __init__(self, v_value_str, i, parent_grid): # Should split into seperate init and provide info.
+        super(QtWidgets.QWidget, self).__init__(parent_grid)
+        self.board = parent_grid.board
         self.event_name = eval(v_value_str)
-        self.event_btn = QtWidgets.QPushButton(f"'{self.event_name}' event")
-        self.event_btn.setDefault(False)
-        self.event_btn.setAutoDefault(False)
-        self.event_btn.clicked.connect(self.trigger)
-        grid_layout.addWidget(self.event_btn, i, 1)
+        self.Event_button = QtWidgets.QPushButton(f"Trigger \"{self.event_name}\" event")
+        self.Event_button.setDefault(False)
+        self.Event_button.setAutoDefault(False)
+        self.Event_button.clicked.connect(self.trigger)
+        parent_grid.grid_layout.addWidget(self.Event_button, i, 2, 1, 2)
 
     def trigger(self):
         if self.board.framework_running: # Value returned later.
             self.board.trigger_event(self.event_name)
 
+class Event_combo(QtWidgets.QWidget):
+    def __init__(self,events,  i, parent_grid): # Should split into seperate init and provide info.
+        super(QtWidgets.QWidget, self).__init__(parent_grid)
+        self.board = parent_grid.board
+        trigger_event_lbl = QtWidgets.QLabel("Trigger event:")
+        self.event_select_combo = QtWidgets.QComboBox()
+        self.event_select_combo.addItems(events)
+        trigger_event_button = QtWidgets.QPushButton("Trigger")
+        trigger_event_button.clicked.connect(self.trigger_event)
+        trigger_event_button.setDefault(False)
+        trigger_event_button.setAutoDefault(False)
+        parent_grid.grid_layout.addWidget(trigger_event_lbl, i, 1)
+        parent_grid.grid_layout.addWidget(self.event_select_combo, i, 2)
+        parent_grid.grid_layout.addWidget(trigger_event_button, i, 3)
+        
+    def trigger_event(self):
+        if self.board.framework_running: # Value returned later.
+            self.board.trigger_event(self.event_select_combo.currentText())
+
 class Variable_setter(QtWidgets.QWidget):
     # For setting and getting a single variable.
-    def __init__(self, v_name, v_value_str, grid_layout, i, parent, board): # Should split into seperate init and provide info.
-        super(QtWidgets.QWidget, self).__init__(parent)
-        self.board = board
+    def __init__(self, v_name, v_value_str, i, parent_grid): # Should split into seperate init and provide info.
+        super(QtWidgets.QWidget, self).__init__(parent_grid)
+        self.board = parent_grid.board
         self.v_name = v_name
         self.label = QtWidgets.QLabel(v_name)
         self.get_button = QtWidgets.QPushButton('Get value')
@@ -157,10 +179,10 @@ class Variable_setter(QtWidgets.QWidget):
         self.get_button.setAutoDefault(False)
         self.set_button.setDefault(False)
         self.set_button.setAutoDefault(False)
-        grid_layout.addWidget(self.label     , i, 1)
-        grid_layout.addWidget(self.value_str , i, 2)
-        grid_layout.addWidget(self.get_button, i, 3)
-        grid_layout.addWidget(self.set_button, i, 4)
+        parent_grid.grid_layout.addWidget(self.label     , i, 1)
+        parent_grid.grid_layout.addWidget(self.value_str , i, 2)
+        parent_grid.grid_layout.addWidget(self.get_button, i, 3)
+        parent_grid.grid_layout.addWidget(self.set_button, i, 4)
 
     def value_text_colour(self, color='gray'):
         self.value_str.setStyleSheet(f"color: {color};")

@@ -665,7 +665,6 @@ class VariablesTable(QtWidgets.QTableWidget):
                     if not v_name.endswith("___")
                     and v_name != "custom_variables_dialog"
                     and not v_name.startswith("hw_")
-                    and not v_name.startswith("btn_")
                     and v_name != "api_class"
                 ]
             )

@@ -454,7 +454,7 @@ class Subjectbox(QtWidgets.QGroupBox):
                 importlib.reload(py_gui_file)
                 self.variables_dialog = py_gui_file.Custom_variables_dialog(self, self.board)
         else: # Board uses standard variables dialog.
-            self.variables_dialog = Variables_dialog(self, self.board)
+            self.variables_dialog = Variables_dialog(self)
         self.variables_button.clicked.connect(self.variables_dialog.exec)
 
     def set_ready_to_start(self):
