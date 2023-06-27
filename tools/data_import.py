@@ -10,10 +10,7 @@ from datetime import datetime, date
 from collections import namedtuple
 
 Event = namedtuple('Event', ['time','name'])
-
-Variable = namedtuple('Variable', ['time', 'type', 'value'])
-
-Print = namedtuple('Print', ['time','value'])
+Print = namedtuple('Print', ['time','string'])
 
 #----------------------------------------------------------------------------------
 # Session class
@@ -26,8 +23,6 @@ class Session():
       - experiment_name
       - task_name
       - subject_ID
-          If argument int_subject_IDs is True, suject_ID is stored as an integer,
-          otherwise subject_ID is stored as a string.
       - datetime
           The date and time that the session started stored as a datetime object.
       - datetime_string
@@ -40,12 +35,16 @@ class Session():
           A dictionary with keys that are the names of the framework events and states and 
           corresponding values which are Numpy arrays of all the times (in milliseconds since the
            start of the framework run) at which each event/state entry occured.
-      - print_lines
-          A list of all the lines output by print statements during the framework run, each line starts 
-          with the time in milliseconds at which it was printed.
+      - prints
+          A list of named tuples for every user print statement output with fields 'time' and 'string'.
+      - variables_df
+        A Pandas dataframe containing the values of variables output by the task.  For .txt files
+        only variables output by the print_variables function are included. 
     '''
 
-    def __init__(self, file_path, int_subject_IDs=False):
+    def __init__(self, file_path, time_unit='second'):
+        
+        assert time_unit in ('second','ms'), 'time_unit must be "second" or "ms"'
 
         print('Importing data file: '+os.path.split(file_path)[1])
         self.file_name = os.path.split(file_path)[1]
@@ -62,8 +61,9 @@ class Session():
 
             self.experiment_name = next(line for line in info_lines if 'Experiment name' in line).split(' : ')[1]
             self.task_name       = next(line for line in info_lines if 'Task name'       in line).split(' : ')[1]
-            subject_ID_string    = next(line for line in info_lines if 'Subject ID'      in line).split(' : ')[1]
+            self.subject_ID      = next(line for line in info_lines if 'Subject ID'      in line).split(' : ')[1]
             datetime_string      = next(line for line in info_lines if 'Start date'      in line).split(' : ')[1]
+            self.time_unit = time_unit
 
             self.datetime = datetime.strptime(datetime_string, '%Y/%m/%d %H:%M:%S')
 
@@ -76,45 +76,62 @@ class Session():
 
             data_lines = [line[2:].split(' ') for line in all_lines if line[0]=='D']
 
-            self.events = [Event(int(dl[0]), ID2name[int(dl[1])]) for dl in data_lines]
+            self.events = [Event(int(dl[0]) if time_unit=='ms' else int(dl[0])/1000, 
+                                 ID2name[int(dl[1])]) for dl in data_lines]
 
             self.times = {event_name: np.array([ev.time for ev in self.events if ev.name == event_name])  
                           for event_name in ID2name.values()}
 
-            self.print_lines = [line[2:].split(' ', 1) for line in all_lines if line[0]=='P']
-            
+            print_lines = [line[2:].split(' ', 1) for line in all_lines if line[0]=='P']
+            var_dicts = []
+            var_times = []
             self.prints = []
-            self.variables = []
             
-            for print_line in self.print_lines:
-                try:
-                    value = json.loads(print_line[1])
-                    self.variables.append(Variable(time=int(print_line[0]),type='print',value=value))
-                except json.JSONDecodeError:
-                    self.prints.append(Print(time=int(print_line[0]),value=print_line[1]))
+            for print_line in print_lines:
+                print_time = int(print_line[0]) if time_unit=='ms' else int(print_line[0])/1000
+                try: # Output of print_variables function.
+                    var_dicts.append(json.loads(print_line[1]))
+                    var_times.append(print_time)
+                except json.JSONDecodeError: # Output of user print function. 
+                    self.prints.append(Print(print_time, print_line[1]))
                     
+            # Create variables dataframe.
+            
+            self.variables_df = pd.DataFrame(var_dicts)
+            columns = self.variables_df.columns
+            self.variables_df.columns = pd.MultiIndex.from_arrays([['values']*len(columns),columns])
+            self.variables_df.insert(0,'operation', ['print']*len(self.variables_df))
+            self.variables_df.insert(0,'time', var_times)
+            self.variables_df.reset_index()
+        
         elif os.path.splitext(file_path)[1] == '.tsv':
 
             # Load tsv file to pandas dataframe.
 
             df = pd.read_csv(file_path, delimiter='\t')
+            
+            if time_unit == 'ms':
+                df = df.loc[df['type'] != 'warning', :] # Warning rows have nan time so can't convert to int.
+                df['time'] = (df['time']*1000).astype(int)
 
             # Extract and store session information.
 
             self.experiment_name = df.loc[(df["type"]=="info") & (df["name"]=="experiment_name"), "value"].item()
             self.task_name       = df.loc[(df["type"]=="info") & (df["name"]=="task_name"      ), "value"].item()
-            subject_ID_string    = df.loc[(df["type"]=="info") & (df["name"]=="subject_id"     ), "value"].item()
+            self.subject_ID      = df.loc[(df["type"]=="info") & (df["name"]=="subject_id"     ), "value"].item()
             datetime_string      = df.loc[(df["type"]=="info") & (df["name"]=="start_time"     ), "value"].item()
 
             self.datetime = datetime.fromisoformat(datetime_string)
 
             # Extract and store session data.
 
-            self.events = [Event(int(row['time']*1000), row['name']) for i,row 
+            self.events = [Event(row['time'], row['name']) for i,row 
                            in df[df['type'].isin(['state', 'event'])].iterrows()]
 
             self.times = {event_name: np.array([ev.time for ev in self.events if ev.name == event_name])  
                           for event_name in df.loc[df['type'].isin(['state', 'event']), 'name'].unique()}
+            
+            self.prints = [Print(row.time, row.value) for row in df.loc[df.type=='print',:].itertuples()]
             
             # Create variables dataframe.
             
@@ -126,13 +143,6 @@ class Session():
             self.variables_df.insert(0,'time', df.loc[df['type']=='variable', 'time'].tolist())
             self.variables_df.reset_index()
 
-        # Common to both filetypes.
-
-        if int_subject_IDs: # Convert subject ID string to integer.
-            self.subject_ID = int(''.join([i for i in subject_ID_string if i.isdigit()]))
-        else:
-            self.subject_ID = subject_ID_string
-
         self.datetime_string = self.datetime.strftime('%Y-%m-%d %H:%M:%S')
 
 
@@ -141,14 +151,14 @@ class Session():
 #----------------------------------------------------------------------------------
 
 class Experiment():
-    def __init__(self, folder_path, int_subject_IDs=True):
+    def __init__(self, folder_path, time_unit='second'):
         '''
         Import all sessions from specified folder to create experiment object.  Only sessions in the 
         specified folder (not in subfolders) will be imported.
         Arguments:
         folder_path: Path of data folder.
-        int_subject_IDs:  If True subject IDs are converted to integers, e.g. m012 is converted to 12.
         '''
+        assert time_unit in ('second','ms'), 'time_unit must be "second" or "ms"'
 
         self.folder_name = os.path.split(folder_path)[1]
         self.path = folder_path
@@ -160,18 +170,19 @@ class Experiment():
             with open(os.path.join(self.path, 'sessions.pkl'),'rb') as sessions_file:
                 self.sessions = pickle.load(sessions_file)
             print('Saved sessions loaded from: sessions.pkl')
+            assert self.sessions[0].time_unit == time_unit, 'time_unit of saved sessions does not match time_unit argument.'
         except IOError:
             pass
 
         old_files = [session.file_name for session in self.sessions]
         files = os.listdir(self.path)
-        new_files = [f for f in files if f[-4:] == '.txt' and f not in old_files]
+        new_files = [f for f in files if f[-4:] in ('.txt', '.tsv') and f not in old_files]
 
         if len(new_files) > 0:
             print('Loading new data files..')
             for file_name in new_files:
                 try:
-                    self.sessions.append(Session(os.path.join(self.path, file_name), int_subject_IDs))
+                    self.sessions.append(Session(os.path.join(self.path, file_name), time_unit))
                 except Exception as error_message:
                     print('Unable to import file: ' + file_name)
                     print(error_message)
@@ -275,7 +286,7 @@ def _toDate(d): # Convert input to datetime.date object.
 # Session Dataframe
 #----------------------------------------------------------------------------------
 
-def session_dataframe(file_path, paired_events={}, pair_end_suffix=None):
+def session_dataframe(file_path, paired_events={}, pair_end_suffix=None, time_unit='second'):
     '''Generate a pandas dataframe from a pyControl data file (.txt or .tsv)
     containing the sessions data.  The data frame has columns:
     type : Whether the row contains session 'info', a 'state' entry, 
@@ -306,6 +317,7 @@ def session_dataframe(file_path, paired_events={}, pair_end_suffix=None):
     -------
     df : session dataframe
     '''
+    assert time_unit in ('second','ms'), 'time_unit must be "second" or "ms"'
 
     # Load data from file.
 
@@ -335,20 +347,20 @@ def session_dataframe(file_path, paired_events={}, pair_end_suffix=None):
                                    'value' : value})
             elif line[0] == 'D': # Data line.
                 timestamp, ID = [int(i) for i in line.split(' ')[1:]]
-                line_dicts.append({'time' : timestamp/1000,
+                line_dicts.append({'time' : timestamp if time_unit == 'ms' else timestamp/1000,
                                    'type' : 'state' if ID in state_IDs.values() else 'event',
                                    'name' : ID2name[ID]})
             elif line[0] == 'P': # Print line.
                 time_str, print_str =  line[2:].split(' ',1)
-                try:
+                timestamp = int(time_str)
+                try: # print_variables output.
                     value_dict = json.loads(print_str)
-                    line_dicts.append({'time'  : int(time_str)/1000,
+                    line_dicts.append({'time'  : timestamp if time_unit == 'ms' else timestamp/1000,
                                        'type'  : 'variable',
                                        'name'  : 'print',
                                        'value' : value_dict})
-                
-                except json.JSONDecodeError:
-                    line_dicts.append({'time'  : int(time_str)/1000,
+                except json.JSONDecodeError: # User print string.
+                    line_dicts.append({'time'  : timestamp if time_unit == 'ms' else timestamp/1000,
                                        'type'  : 'print',
                                        'value' : print_str})     
             
@@ -357,6 +369,11 @@ def session_dataframe(file_path, paired_events={}, pair_end_suffix=None):
     elif os.path.splitext(file_path)[1] == '.tsv': # Load data from .tsv file.
 
             df = pd.read_csv(file_path, delimiter='\t')
+
+            if time_unit == 'ms':
+                df = df.loc[df['type'] != 'warning', :] # Warning rows have nan time so can't convert to int.
+                df['time'] = (df['time']*1000).astype(int)
+
             # Convert variables row value fields to dicts from json strings.
             df.loc[df['type']=='variable', 'value'] = df.loc[df['type']=='variable', 'value'].apply(json.loads)
     
@@ -401,7 +418,8 @@ def session_dataframe(file_path, paired_events={}, pair_end_suffix=None):
 # Experiment dataframe
 #----------------------------------------------------------------------------------
 
-def experiment_dataframe(folder_path, paired_events={}, pair_end_suffix=None):
+def experiment_dataframe(folder_path, paired_events={}, pair_end_suffix=None,
+                         time_unit='second'):
     '''Generate a pandas dataframe from a pyControl experiment comprising 
     many session data files in a folder.  The experiment dataframe has the 
     same columns as the session dataframe ('type', 'name', 'time', 'duration',
@@ -432,12 +450,13 @@ def experiment_dataframe(folder_path, paired_events={}, pair_end_suffix=None):
     -------
     df : session dataframe
     '''
-    session_filenames = [f for f in os.listdir(folder_path) if f[-4:] == '.txt']
+    assert time_unit in ('second','ms'), 'time_unit must be "second" or "ms"'
+    session_filenames = [f for f in os.listdir(folder_path) if f[-4:] in ('.txt', '.tsv')]
     session_dataframes = []
     for session_filename in session_filenames:
         # Make session dataframe.
         session_df = session_dataframe(os.path.join(folder_path,session_filename),
-            paired_events=paired_events, pair_end_suffix=pair_end_suffix)
+            paired_events=paired_events, pair_end_suffix=pair_end_suffix, time_unit=time_unit)
         # Convert info rows to columns.
         info_rows = session_df[session_df['type']=='info']
         session_df = session_df[session_df['type']!='info']
@@ -445,6 +464,7 @@ def experiment_dataframe(folder_path, paired_events={}, pair_end_suffix=None):
             session_df[name] = value
         session_dataframes.append(session_df)
     experiment_df = pd.concat(session_dataframes, axis=0)
+    experiment_df.reset_index(drop=True, inplace=True)
     return experiment_df
 
 #----------------------------------------------------------------------------------

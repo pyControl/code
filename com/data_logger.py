@@ -35,10 +35,10 @@ class Data_logger():
         self.write_info_line('experiment_name', self.experiment_name)
         self.write_info_line('task_name', self.sm_info['name'])
         self.write_info_line('task_file_hash', self.sm_info['task_hash'])
-        self.write_info_line('setup_ID', self.setup_ID)
+        self.write_info_line('setup_id', self.setup_ID)
         self.write_info_line('framework_version', self.sm_info['framework_version'])
         self.write_info_line('micropython_version', self.sm_info['micropython_version'])
-        self.write_info_line('subject_ID', self.subject_ID)
+        self.write_info_line('subject_id', self.subject_ID)
         self.write_info_line('start_time', datetime.utcnow().isoformat(timespec='milliseconds'))
         self.analog_writers = {ID: 
             Analog_writer(ai['name'], ai['fs'], ai['dtype'], self.file_path)
@@ -129,7 +129,7 @@ class Analog_writer():
         ses_path_stem, file_ext = os.path.splitext(session_filepath)
         self.path_stem = ses_path_stem + f'_{self.name}'
         self.t_tempfile_path = self.path_stem + '.time.temp'
-        self.d_tempfile_path = self.path_stem + f'.data.1{self.data_type}.temp'
+        self.d_tempfile_path = self.path_stem + f'.data-1{self.data_type}.temp'
         self.time_tempfile  = open(self.t_tempfile_path, 'wb')
         self.data_tempfile = open(self.d_tempfile_path, 'wb')
         self.next_chunk_start_time = 0
