@@ -1,5 +1,5 @@
 # A simple state machine which turns the blue LED on the pyboard on for 1
-# second when the usr pushbutton on the pyboard or 
+# second when the usr pushbutton on the pyboard or
 # the button in the Controls GUI is pressed three times.
 # Does not require any hardware except a micropython board.
 

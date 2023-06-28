@@ -8,18 +8,20 @@ from gui.utility import variable_constants
 # Board_config_dialog -------------------------------------------------
 
 flashdrive_message = (
-    'It is recommended to disable the pyboard filesystem from acting as a '
-    'USB flash drive before loading the framework, as this helps prevent the '
-    'filesystem getting corrupted. Do you want to disable the flashdrive?')
+    "It is recommended to disable the pyboard filesystem from acting as a "
+    "USB flash drive before loading the framework, as this helps prevent the "
+    "filesystem getting corrupted. Do you want to disable the flashdrive?"
+)
+
 
 class Board_config_dialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super(QtWidgets.QDialog, self).__init__(parent)
-        self.setWindowTitle('Configure pyboard')
+        self.setWindowTitle("Configure pyboard")
         # Create widgets.
-        self.load_fw_button = QtWidgets.QPushButton('Load framework')
-        self.load_hw_button = QtWidgets.QPushButton('Load hardware definition')
-        self.DFU_button = QtWidgets.QPushButton('Device Firmware Update (DFU) mode')
+        self.load_fw_button = QtWidgets.QPushButton("Load framework")
+        self.load_hw_button = QtWidgets.QPushButton("Load hardware definition")
+        self.DFU_button = QtWidgets.QPushButton("Device Firmware Update (DFU) mode")
         self.flashdrive_button = QtWidgets.QPushButton()
         # Layout.
         self.vertical_layout = QtWidgets.QVBoxLayout()
@@ -36,10 +38,9 @@ class Board_config_dialog(QtWidgets.QDialog):
 
     def exec(self, board):
         self.board = board
-        self.flashdrive_enabled = 'MSC' in self.board.status['usb_mode']
-        self.flashdrive_button.setText('{} USB flash drive'
-            .format('Disable' if self.flashdrive_enabled else 'Enable'))
-        self.disconnect = False # Indicates whether board was disconnected by dialog.
+        self.flashdrive_enabled = "MSC" in self.board.status["usb_mode"]
+        self.flashdrive_button.setText("{} USB flash drive".format("Disable" if self.flashdrive_enabled else "Enable"))
+        self.disconnect = False  # Indicates whether board was disconnected by dialog.
         return QtWidgets.QDialog.exec(self)
 
     def load_framework(self):
@@ -58,8 +59,9 @@ class Board_config_dialog(QtWidgets.QDialog):
         self.board.load_framework()
 
     def load_hardware_definition(self):
-        hwd_path = QtWidgets.QFileDialog.getOpenFileName(self, 
-            'Select hardware definition:', dirs['hardware_definitions'], filter='*.py')[0]
+        hwd_path = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Select hardware definition:", dirs["hardware_definitions"], filter="*.py"
+        )[0]
         if hwd_path:
             self.accept()
             self.board.load_hardware_definition(hwd_path)
@@ -77,13 +79,15 @@ class Board_config_dialog(QtWidgets.QDialog):
             self.board.enable_mass_storage()
         self.disconnect = True
 
+
 # Variables_dialog ---------------------------------------------------------------------
+
 
 class Variables_dialog(QtWidgets.QDialog):
     # Dialog for setting and getting task variables.
     def __init__(self, parent):
         super(QtWidgets.QDialog, self).__init__(parent)
-        self.setWindowTitle('Controls')
+        self.setWindowTitle("Controls")
         self.scroll_area = QtWidgets.QScrollArea(parent=self)
         self.scroll_area.setWidgetResizable(True)
         self.variables_grid = Variables_grid(self.scroll_area, parent.board)
@@ -92,8 +96,9 @@ class Variables_dialog(QtWidgets.QDialog):
         self.layout.addWidget(self.scroll_area)
         self.setLayout(self.layout)
 
-        self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+W'), self)
+        self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+W"), self)
         self.close_shortcut.activated.connect(self.close)
+
 
 class Variables_grid(QtWidgets.QWidget):
     # Grid of variables to set/get, displayed within scroll area of dialog.
@@ -105,12 +110,12 @@ class Variables_grid(QtWidgets.QWidget):
         control_row = 0
 
         # add a generic event triggering combo box
-        events = self.board.sm_info['events']
-        if control_row == 0 and events: 
-            Event_combo(events,control_row,self)
+        events = self.board.sm_info["events"]
+        if control_row == 0 and events:
+            Event_combo(events, control_row, self)
             control_row += 1
 
-        variables = board.sm_info['variables']
+        variables = board.sm_info["variables"]
         for v_name, v_value_str in sorted(variables.items()):
             if (
                 not v_name.endswith("___")
@@ -122,23 +127,25 @@ class Variables_grid(QtWidgets.QWidget):
                 control_row += 1
         self.setLayout(self.grid_layout)
 
+
 class Event_button(QtWidgets.QWidget):
-    def __init__(self, v_value_str, i, parent_grid): # Should split into seperate init and provide info.
+    def __init__(self, v_value_str, i, parent_grid):  # Should split into seperate init and provide info.
         super(QtWidgets.QWidget, self).__init__(parent_grid)
         self.board = parent_grid.board
         self.event_name = eval(v_value_str)
-        self.Event_button = QtWidgets.QPushButton(f"Trigger \"{self.event_name}\" event")
+        self.Event_button = QtWidgets.QPushButton(f'Trigger "{self.event_name}" event')
         self.Event_button.setDefault(False)
         self.Event_button.setAutoDefault(False)
         self.Event_button.clicked.connect(self.trigger)
         parent_grid.grid_layout.addWidget(self.Event_button, i, 2, 1, 2)
 
     def trigger(self):
-        if self.board.framework_running: # Value returned later.
+        if self.board.framework_running:  # Value returned later.
             self.board.trigger_event(self.event_name)
 
+
 class Event_combo(QtWidgets.QWidget):
-    def __init__(self,events,  i, parent_grid): # Should split into seperate init and provide info.
+    def __init__(self, events, i, parent_grid):  # Should split into seperate init and provide info.
         super(QtWidgets.QWidget, self).__init__(parent_grid)
         self.board = parent_grid.board
         trigger_event_lbl = QtWidgets.QLabel("Trigger event:")
@@ -151,49 +158,50 @@ class Event_combo(QtWidgets.QWidget):
         parent_grid.grid_layout.addWidget(trigger_event_lbl, i, 1)
         parent_grid.grid_layout.addWidget(self.event_select_combo, i, 2)
         parent_grid.grid_layout.addWidget(trigger_event_button, i, 3)
-        
+
     def trigger_event(self):
-        if self.board.framework_running: # Value returned later.
+        if self.board.framework_running:  # Value returned later.
             self.board.trigger_event(self.event_select_combo.currentText())
+
 
 class Variable_setter(QtWidgets.QWidget):
     # For setting and getting a single variable.
-    def __init__(self, v_name, v_value_str, i, parent_grid): # Should split into seperate init and provide info.
+    def __init__(self, v_name, v_value_str, i, parent_grid):  # Should split into seperate init and provide info.
         super(QtWidgets.QWidget, self).__init__(parent_grid)
         self.board = parent_grid.board
         self.v_name = v_name
         self.label = QtWidgets.QLabel(v_name)
-        self.get_button = QtWidgets.QPushButton('Get value')
-        self.set_button = QtWidgets.QPushButton('Set value')
+        self.get_button = QtWidgets.QPushButton("Get value")
+        self.set_button = QtWidgets.QPushButton("Set value")
         self.value_str = QtWidgets.QLineEdit(v_value_str)
-        if v_value_str[0] == '<': # Variable is a complex object that cannot be modifed.
-            self.value_str.setText('<complex object>')
+        if v_value_str[0] == "<":  # Variable is a complex object that cannot be modifed.
+            self.value_str.setText("<complex object>")
             self.set_button.setEnabled(False)
             self.get_button.setEnabled(False)
-        self.value_text_colour('gray')
+        self.value_text_colour("gray")
         self.get_button.clicked.connect(self.get)
         self.set_button.clicked.connect(self.set)
-        self.value_str.textChanged.connect(lambda x: self.value_text_colour('black'))
+        self.value_str.textChanged.connect(lambda x: self.value_text_colour("black"))
         self.value_str.returnPressed.connect(self.set)
         self.get_button.setDefault(False)
         self.get_button.setAutoDefault(False)
         self.set_button.setDefault(False)
         self.set_button.setAutoDefault(False)
-        parent_grid.grid_layout.addWidget(self.label     , i, 1)
-        parent_grid.grid_layout.addWidget(self.value_str , i, 2)
+        parent_grid.grid_layout.addWidget(self.label, i, 1)
+        parent_grid.grid_layout.addWidget(self.value_str, i, 2)
         parent_grid.grid_layout.addWidget(self.get_button, i, 3)
         parent_grid.grid_layout.addWidget(self.set_button, i, 4)
 
-    def value_text_colour(self, color='gray'):
+    def value_text_colour(self, color="gray"):
         self.value_str.setStyleSheet(f"color: {color};")
 
     def get(self):
-        if self.board.framework_running: # Value returned later.
+        if self.board.framework_running:  # Value returned later.
             self.board.get_variable(self.v_name)
-            self.value_str.setText('getting..')
+            self.value_str.setText("getting..")
             QtCore.QTimer.singleShot(200, self.reload)
-        else: # Value returned immediately.
-            self.value_text_colour('black')
+        else:  # Value returned immediately.
+            self.value_text_colour("black")
             self.value_str.setText(repr(self.board.get_variable(self.v_name)))
             QtCore.QTimer.singleShot(1000, self.value_text_colour)
 
@@ -201,42 +209,45 @@ class Variable_setter(QtWidgets.QWidget):
         try:
             v_value = eval(self.value_str.text(), variable_constants)
         except Exception:
-            self.value_str.setText('Invalid value')
+            self.value_str.setText("Invalid value")
             return
-        if self.board.framework_running: # Value returned later if set OK.
+        if self.board.framework_running:  # Value returned later if set OK.
             self.board.set_variable(self.v_name, v_value)
-            self.value_str.setText('setting..')
+            self.value_str.setText("setting..")
             QtCore.QTimer.singleShot(200, self.reload)
-        else: # Set OK returned immediately.
+        else:  # Set OK returned immediately.
             if self.board.set_variable(self.v_name, v_value):
-                self.value_text_colour('gray')
+                self.value_text_colour("gray")
             else:
-                self.value_str.setText('Set failed')
+                self.value_str.setText("Set failed")
 
     def reload(self):
-        '''Reload value from sm_info.  sm_info is updated when variables are output
-        during framework run due to get/set.'''
-        self.value_text_colour('black')
-        self.value_str.setText(repr(self.board.sm_info['variables'][self.v_name]))
+        """Reload value from sm_info.  sm_info is updated when variables are output
+        during framework run due to get/set."""
+        self.value_text_colour("black")
+        self.value_str.setText(repr(self.board.sm_info["variables"][self.v_name]))
         QtCore.QTimer.singleShot(1000, self.value_text_colour)
+
 
 # Summary variables dialog -----------------------------------------------------------
 
+
 class Summary_variables_dialog(QtWidgets.QDialog):
-    '''Dialog for displaying summary variables from an experiment as a table.
+    """Dialog for displaying summary variables from an experiment as a table.
     The table is copied to the clipboard as a string that can be pasted into a
-    spreadsheet.'''
+    spreadsheet."""
+
     def __init__(self, parent, sv_dict):
         super(QtWidgets.QDialog, self).__init__(parent)
-        self.setWindowTitle('Summary variables')
+        self.setWindowTitle("Summary variables")
 
         subjects = list(sv_dict.keys())
-        v_names  = sorted(sv_dict[subjects[0]].keys())
+        v_names = sorted(sv_dict[subjects[0]].keys())
 
-        self.label = QtWidgets.QLabel('Summary variables copied to clipboard.')
+        self.label = QtWidgets.QLabel("Summary variables copied to clipboard.")
         self.label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
-        self.table = QtWidgets.QTableWidget(len(subjects), len(v_names),  parent=self)
+        self.table = QtWidgets.QTableWidget(len(subjects), len(v_names), parent=self)
         self.table.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setHorizontalHeaderLabels(v_names)
@@ -246,13 +257,13 @@ class Summary_variables_dialog(QtWidgets.QDialog):
         self.Vlayout.addWidget(self.label)
         self.Vlayout.addWidget(self.table)
 
-        clip_string = 'Subject\t' + '\t'.join(v_names)
+        clip_string = "Subject\t" + "\t".join(v_names)
 
         for s, subject in enumerate(subjects):
-            clip_string += '\n' + subject
+            clip_string += "\n" + subject
             for v, v_name in enumerate(v_names):
                 v_value_str = repr(sv_dict[subject][v_name])
-                clip_string += '\t' + v_value_str
+                clip_string += "\t" + v_value_str
                 item = QtWidgets.QTableWidgetItem()
                 item.setText(v_value_str)
                 self.table.setItem(s, v, item)
@@ -262,7 +273,9 @@ class Summary_variables_dialog(QtWidgets.QDialog):
         clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setText(clip_string)
 
+
 # Invalid experiment dialog. ---------------------------------------------------------
+
 
 def invalid_run_experiment_dialog(parent, message):
     QtWidgets.QMessageBox.warning(
@@ -281,9 +294,11 @@ def invalid_save_experiment_dialog(parent, message):
         QtWidgets.QMessageBox.StandardButton.Ok,
     )
 
+
 # Unrun subjects warning     ---------------------------------------------------------
 
-def unrun_subjects_dialog(parent,message):
+
+def unrun_subjects_dialog(parent, message):
     reply = QtWidgets.QMessageBox.warning(
         parent,
         "Unrun Subjects",
@@ -295,38 +310,40 @@ def unrun_subjects_dialog(parent,message):
     else:
         return False
 
+
 # Keyboard shortcuts dialog. ---------------------------------------------------------
 
+
 class Keyboard_shortcuts_dialog(QtWidgets.QDialog):
-    '''Dialog for displaying information about keyboard shortcuts.'''
+    """Dialog for displaying information about keyboard shortcuts."""
+
     def __init__(self, parent):
         super(QtWidgets.QDialog, self).__init__(parent)
-        self.setWindowTitle('Shortcuts')
+        self.setWindowTitle("Shortcuts")
 
         self.Vlayout = QtWidgets.QVBoxLayout(self)
 
-        label = QtWidgets.QLabel('<center><b>Keyboard Shortcuts</b></center<br></br>')
-        label.setFont(QtGui.QFont('Helvetica', 12))
+        label = QtWidgets.QLabel("<center><b>Keyboard Shortcuts</b></center<br></br>")
+        label.setFont(QtGui.QFont("Helvetica", 12))
         self.Vlayout.addWidget(label)
 
         label_strings = [
-            '<b><u>Global:</u></b>',
+            "<b><u>Global:</u></b>",
             '<b style="color:#0220e0;">Ctrl + t</b> : Open tasks folder',
             '<b style="color:#0220e0;">Ctrl + d</b> : Open data folder',
             '<b style="color:#0220e0;">Ctrl + e</b> : Open error log',
             '<b style="color:#0220e0;">Ctrl + ,</b> : Open settings',
-
-            '<br></br><b><u>Run task tab:</u></b>',
+            "<br></br><b><u>Run task tab:</u></b>",
             '<b style="color:#0220e0;">    t    </b> : Select task',
             '<b style="color:#0220e0;">    u    </b> : Upload/reset task',
             '<b style="color:#0220e0;">spacebar </b> : Start/stop task',
-
-            '<br></br><b><u>Experiments tab:</u></b>',
-            '<b style="color:#0220e0;">Ctrl + s</b> : Save experiment ']
+            "<br></br><b><u>Experiments tab:</u></b>",
+            '<b style="color:#0220e0;">Ctrl + s</b> : Save experiment ',
+        ]
 
         for ls in label_strings:
             label = QtWidgets.QLabel(ls)
-            label.setFont(QtGui.QFont('Helvetica', 10))
+            label.setFont(QtGui.QFont("Helvetica", 10))
             self.Vlayout.addWidget(label)
 
         self.setFixedSize(self.sizeHint())
@@ -358,7 +375,6 @@ class Settings_dialog(QtWidgets.QDialog):
         self.save_settings_btn.setIcon(QtGui.QIcon("gui/icons/save.svg"))
         self.save_settings_btn.clicked.connect(self.saveChanges)
 
-
         # Instantiate setters
         self.tasks_setter = Path_setter(self, "Tasks", ("folders", "tasks"))
         self.data_setter = Path_setter(self, "Data", ("folders", "data"))
@@ -370,9 +386,15 @@ class Settings_dialog(QtWidgets.QDialog):
         plotting_box = QtWidgets.QGroupBox("Plotting")
         plotting_layout = QtWidgets.QGridLayout()
         self.update_interval = Spin_setter(self, "Update interval", ("plotting", "update_interval"), " ms")
-        self.event_history_len = Spin_setter( self, "Event history length*", ("plotting", "event_history_len"), " events")
-        self.state_history_len = Spin_setter( self, "State history length*", ("plotting", "state_history_len"), " states")
-        self.analog_history_dur = Spin_setter( self, "Analog history duration*", ("plotting", "analog_history_dur"), " s")
+        self.event_history_len = Spin_setter(
+            self, "Event history length*", ("plotting", "event_history_len"), " events"
+        )
+        self.state_history_len = Spin_setter(
+            self, "State history length*", ("plotting", "state_history_len"), " states"
+        )
+        self.analog_history_dur = Spin_setter(
+            self, "Analog history duration*", ("plotting", "analog_history_dur"), " s"
+        )
 
         self.plotting_spins = [
             self.update_interval,
@@ -616,10 +638,10 @@ class Error_log_dialog(QtWidgets.QDialog):
         clear_log_btn = QtWidgets.QPushButton("Clear log")
         clear_log_btn.clicked.connect(self.clear_log)
 
-        log_layout.addWidget(self.log_viewer,0,0,1,3)
-        log_layout.addWidget(clear_log_btn,1,1)
-        log_layout.setColumnStretch(0,1)
-        log_layout.setColumnStretch(2,1)
+        log_layout.addWidget(self.log_viewer, 0, 0, 1, 3)
+        log_layout.addWidget(clear_log_btn, 1, 1)
+        log_layout.setColumnStretch(0, 1)
+        log_layout.setColumnStretch(2, 1)
 
         self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+W"), self)
         self.close_shortcut.activated.connect(self.close)
@@ -637,5 +659,5 @@ class Error_log_dialog(QtWidgets.QDialog):
         if reply == QtWidgets.QMessageBox.StandardButton.Yes:
             self.log_viewer.clear()
             logging.shutdown()
-            os.remove(r'ErrorLog.txt')
+            os.remove(r"ErrorLog.txt")
             self.close()

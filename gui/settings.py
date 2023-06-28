@@ -10,7 +10,7 @@ dirs = {
     "devices": os.path.join(top_dir, "devices"),
     "gui": os.path.join(top_dir, "gui"),
     "experiments": os.path.join(top_dir, "experiments"),
-    "hardware_definitions": os.path.join(top_dir, "hardware_definitions")
+    "hardware_definitions": os.path.join(top_dir, "hardware_definitions"),
 }
 
 default_user_settings = {
@@ -37,12 +37,12 @@ def get_setting(setting_type, setting_name):
     the default_user_settings dictionary
     """
     json_path = os.path.join(dirs["config"], "user_settings.json")
-    if os.path.exists(json_path): # user has a user_settings.json
+    if os.path.exists(json_path):  # user has a user_settings.json
         with open(json_path, "r", encoding="utf-8") as f:
             custom_settings = json.loads(f.read())
         if setting_name in custom_settings[setting_type]:
             return custom_settings[setting_type][setting_name]
         else:
             return default_user_settings[setting_type][setting_name]
-    else: # use defaults
+    else:  # use defaults
         return default_user_settings[setting_type][setting_name]

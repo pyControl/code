@@ -6,32 +6,32 @@ from gui.utility import TableCheckbox, parallel_call
 from gui.hardware_variables_dialog import Hardware_variables_editor
 from com.pycboard import Pycboard, PyboardError
 
+
 class Setups_tab(QtWidgets.QWidget):
-    '''The setups tab is used to name and configure setups, where one setup is one
-    pyboard and connected hardware.'''
+    """The setups tab is used to name and configure setups, where one setup is one
+    pyboard and connected hardware."""
 
     def __init__(self, parent=None):
         super(QtWidgets.QWidget, self).__init__(parent)
 
         # Variables
         self.GUI_main = self.parent()
-        self.setups = {} # Dictionary {serial_port:Setup}
+        self.setups = {}  # Dictionary {serial_port:Setup}
         self.setup_names = []
         self.available_setups_changed = False
 
-
         # rename old file from setup_names.json to setups.json
         # and change format so that names are a key within a serial port dictionary
-        setup_names = Path(dirs['config'] , 'setup_names.json')
+        setup_names = Path(dirs["config"], "setup_names.json")
         try:
-            new_path = Path(dirs['config'] , 'setups.json')
+            new_path = Path(dirs["config"], "setups.json")
             setup_names.rename(new_path)
-            with open(new_path, 'r',encoding="utf-8") as names_json:
+            with open(new_path, "r", encoding="utf-8") as names_json:
                 names_dict = json.loads(names_json.read())
                 new_format = {}
-                for k,v in names_dict.items():
-                    new_format[k] = {"name":v,"variables":{}}
-                with open(new_path, 'w', encoding="utf-8") as f:
+                for k, v in names_dict.items():
+                    new_format[k] = {"name": v, "variables": {}}
+                with open(new_path, "w", encoding="utf-8") as f:
                     f.write(json.dumps(new_format, sort_keys=True, indent=4))
         except FileNotFoundError:
             pass
@@ -67,7 +67,7 @@ class Setups_tab(QtWidgets.QWidget):
         load_hw_button.clicked.connect(self.load_hardware_definition)
         enable_flashdrive_button.clicked.connect(self.enable_flashdrive)
         disable_flashdrive_button.clicked.connect(self.disable_flashdrive)
-        self.variables_btn = QtWidgets.QPushButton('Variables')
+        self.variables_btn = QtWidgets.QPushButton("Variables")
         self.variables_btn.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
         self.variables_btn.clicked.connect(self.edit_hardware_vars)
 
@@ -76,12 +76,12 @@ class Setups_tab(QtWidgets.QWidget):
         self.dfu_btn.clicked.connect(self.DFU_mode)
 
         config_layout = QtWidgets.QGridLayout()
-        config_layout.addWidget(load_fw_button,0,0)
-        config_layout.addWidget(load_hw_button,1,0)
-        config_layout.addWidget(self.variables_btn,0,1)
-        config_layout.addWidget(self.dfu_btn,1,1)
-        config_layout.addWidget(enable_flashdrive_button,0,2)
-        config_layout.addWidget(disable_flashdrive_button,1,2)
+        config_layout.addWidget(load_fw_button, 0, 0)
+        config_layout.addWidget(load_hw_button, 1, 0)
+        config_layout.addWidget(self.variables_btn, 0, 1)
+        config_layout.addWidget(self.dfu_btn, 1, 1)
+        config_layout.addWidget(enable_flashdrive_button, 0, 2)
+        config_layout.addWidget(disable_flashdrive_button, 1, 2)
         self.configure_group.setLayout(config_layout)
         self.configure_group.setEnabled(False)
 
@@ -103,25 +103,23 @@ class Setups_tab(QtWidgets.QWidget):
 
         # # Main layout.
         self.setups_layout = QtWidgets.QGridLayout()
-        self.setups_layout.addWidget(self.setup_groupbox,0,0)
-        self.setups_layout.addWidget(self.configure_group,1,0)
-        self.setups_layout.addWidget(self.log_textbox,2,0)
-        self.setups_layout.addWidget(self.clear_output_btn,3,0,QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.setups_layout.setRowStretch(0,1)
-        self.setups_layout.setRowStretch(2,1)
+        self.setups_layout.addWidget(self.setup_groupbox, 0, 0)
+        self.setups_layout.addWidget(self.configure_group, 1, 0)
+        self.setups_layout.addWidget(self.log_textbox, 2, 0)
+        self.setups_layout.addWidget(self.clear_output_btn, 3, 0, QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.setups_layout.setRowStretch(0, 1)
+        self.setups_layout.setRowStretch(2, 1)
         self.setLayout(self.setups_layout)
 
-
     def get_setups_from_json(self):
-        self.save_path = Path(dirs['config'] , 'setups.json')
+        self.save_path = Path(dirs["config"], "setups.json")
         if self.save_path.exists():
-            with open(self.save_path, 'r', encoding="utf-8") as f:
+            with open(self.save_path, "r", encoding="utf-8") as f:
                 setups_from_json = json.loads(f.read())
         else:
-            setups_from_json = {} # {setup.port:setup.name}
-        
-        return setups_from_json
+            setups_from_json = {}  # {setup.port:setup.name}
 
+        return setups_from_json
 
     def print_to_log(self, print_string, end="\n"):
         self.log_textbox.moveCursor(QtGui.QTextCursor.MoveOperation.End)
@@ -180,7 +178,7 @@ class Setups_tab(QtWidgets.QWidget):
             self.available_setups_changed = False
 
     def update_saved_setups(self, setup):
-        '''Update the save setup names when a setup name is edited.'''
+        """Update the save setup names when a setup name is edited."""
         if setup.name == setup.port:
             if setup.port not in self.saved_setups.keys():
                 return
@@ -198,23 +196,33 @@ class Setups_tab(QtWidgets.QWidget):
                 if "variables" not in self.saved_setups[setup.port].keys():
                     self.saved_setups[setup.port]["variables"] = {}
 
-        with open(self.save_path, 'w', encoding="utf-8") as f:
+        with open(self.save_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(self.saved_setups, sort_keys=True, indent=4))
 
     def get_port(self, setup_name):
-        '''Return a setups serial port given the setups name.'''
+        """Return a setups serial port given the setups name."""
         return next(setup.port for setup in self.setups.values() if setup.name == setup_name)
 
-    def get_selected_setups(self,has_name_filter=False):
-        '''Return sorted list of setups whose select checkboxes are ticked.'''
+    def get_selected_setups(self, has_name_filter=False):
+        """Return sorted list of setups whose select checkboxes are ticked."""
         if has_name_filter:
-            return sorted([setup for setup in self.setups.values() if setup.select_checkbox.isChecked() and setup.name!=setup.port and setup.name!="_hidden_"], key=lambda setup: setup.port)
+            return sorted(
+                [
+                    setup
+                    for setup in self.setups.values()
+                    if setup.select_checkbox.isChecked() and setup.name != setup.port and setup.name != "_hidden_"
+                ],
+                key=lambda setup: setup.port,
+            )
         else:
-            return sorted([setup for setup in self.setups.values() if setup.select_checkbox.isChecked()], key=lambda setup: setup.port)
+            return sorted(
+                [setup for setup in self.setups.values() if setup.select_checkbox.isChecked()],
+                key=lambda setup: setup.port,
+            )
 
     def disconnect(self):
-        '''Disconect from all pyboards, called on tab change.'''
-        parallel_call('disconnect', self.setups.values())
+        """Disconect from all pyboards, called on tab change."""
+        parallel_call("disconnect", self.setups.values())
 
     def edit_hardware_vars(self):
         hardware_var_editor = Hardware_variables_editor(self)
@@ -234,32 +242,32 @@ for example "v.hw_solenoid_dur = None"
         hardware_var_editor.exec()
 
     def load_framework(self):
-        self.print_to_log('Loading framework...\n')
-        parallel_call('load_framework', self.get_selected_setups())
+        self.print_to_log("Loading framework...\n")
+        parallel_call("load_framework", self.get_selected_setups())
 
     def enable_flashdrive(self):
-        self.print_to_log('Enabling flashdrive...\n')
-        parallel_call('enable_flashdrive', self.get_selected_setups())
+        self.print_to_log("Enabling flashdrive...\n")
+        parallel_call("enable_flashdrive", self.get_selected_setups())
 
     def disable_flashdrive(self):
-        self.print_to_log('Disabling flashdrive...\n')
-        parallel_call('disable_flashdrive', self.get_selected_setups())
+        self.print_to_log("Disabling flashdrive...\n")
+        parallel_call("disable_flashdrive", self.get_selected_setups())
 
     def DFU_mode(self):
-        self.print_to_log('Enabling DFU mode...\n')
-        parallel_call('DFU_mode', self.get_selected_setups())
+        self.print_to_log("Enabling DFU mode...\n")
+        parallel_call("DFU_mode", self.get_selected_setups())
 
     def load_hardware_definition(self):
-        self.hwd_path = QtWidgets.QFileDialog.getOpenFileName(self,
-            'Select hardware definition:', 
-            dirs['hardware_definitions'], filter='*.py')[0]
+        self.hwd_path = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Select hardware definition:", dirs["hardware_definitions"], filter="*.py"
+        )[0]
         if self.hwd_path:
-            self.print_to_log('Loading hardware definition...\n')
-            parallel_call('load_hardware_definition', self.get_selected_setups())
+            self.print_to_log("Loading hardware definition...\n")
+            parallel_call("load_hardware_definition", self.get_selected_setups())
 
     def refresh(self):
-        '''Called regularly when no task running to update tab with currently 
-        connected boards.'''
+        """Called regularly when no task running to update tab with currently
+        connected boards."""
         if self.GUI_main.available_ports_changed:
             # Add any newly connected setups.
             for serial_port in self.GUI_main.available_ports:
@@ -272,13 +280,15 @@ for example "v.hw_solenoid_dur = None"
             self.setups_table.sortItems(0)
         self.update_available_setups()
 
+
 # setup class --------------------------------------------------------------------
 
-class Setup():
-    '''Class representing one setup in the setups table.'''
+
+class Setup:
+    """Class representing one setup in the setups table."""
 
     def __init__(self, serial_port, setups_tab):
-        '''Setup is intilised when board is plugged into computer.'''
+        """Setup is intilised when board is plugged into computer."""
 
         try:
             self.name = setups_tab.saved_setups[serial_port]["name"]
@@ -322,50 +332,49 @@ class Setup():
         hardware_var_editor.exec()
 
     def name_changed(self):
-        '''If name entry in table is blank setup name is set to serial port.'''
+        """If name entry in table is blank setup name is set to serial port."""
         name = str(self.name_edit.text())
         self.name = name if name else self.port
         self.setups_tab.update_available_setups()
         self.setups_tab.update_saved_setups(self)
 
-        if name=="":
+        if name == "":
             self.name_edit.setStyleSheet("color: red;")
         elif name == "_hidden_":
             self.name_edit.setStyleSheet("color: grey;")
         else:
             self.name_edit.setStyleSheet("color: black;")
 
-
     def print(self, print_string, end="\n"):
-        ''' Print a string to the log prepended with the setup name.'''
+        """Print a string to the log prepended with the setup name."""
         if self.delay_printing:
             self.print_queue.append((print_string, end))
             return
-        self.setups_tab.print_to_log(f'\n{self.name}: ' + print_string)
+        self.setups_tab.print_to_log(f"\n{self.name}: " + print_string)
 
     def start_delayed_print(self):
-        '''Store print output to display later to avoid error
-        message when calling print from different thread.'''
+        """Store print output to display later to avoid error
+        message when calling print from different thread."""
         self.print_queue = []
         self.delay_printing = True
 
     def end_delayed_print(self):
-        '''Print output stored in print queue to log with setup
-        name and horisontal line above.'''
+        """Print output stored in print queue to log with setup
+        name and horisontal line above."""
         self.delay_printing = False
         if self.print_queue:
-            self.setups_tab.print_to_log(f'{self.name} ' +'-'*70)
+            self.setups_tab.print_to_log(f"{self.name} " + "-" * 70)
             for p in self.print_queue:
                 self.setups_tab.print_to_log(*p)
-            self.setups_tab.print_to_log('') # Add blank line.
+            self.setups_tab.print_to_log("")  # Add blank line.
 
     def connect(self):
-        '''Instantiate pyboard object, opening serial connection to board.'''
-        self.print('\nConnecting to board.')
+        """Instantiate pyboard object, opening serial connection to board."""
+        self.print("\nConnecting to board.")
         try:
             self.board = Pycboard(self.port, print_func=self.print)
         except PyboardError:
-            self.print('\nUnable to connect.')
+            self.print("\nUnable to connect.")
 
     def disconnect(self):
         if self.board:
@@ -373,19 +382,22 @@ class Setup():
             self.board = None
 
     def unplugged(self):
-        '''Called when a board is physically unplugged from computer. 
-        Closes serial connection and removes row from setups table.'''
-        if self.board: self.board.close()
+        """Called when a board is physically unplugged from computer.
+        Closes serial connection and removes row from setups table."""
+        if self.board:
+            self.board.close()
         self.setups_tab.setups_table.removeRow(self.port_item.row())
         del self.setups_tab.setups[self.port]
 
     def load_framework(self):
-        if not self.board: self.connect()
+        if not self.board:
+            self.connect()
         if self.board:
             self.board.load_framework()
 
     def load_hardware_definition(self):
-        if not self.board: self.connect()
+        if not self.board:
+            self.connect()
         if self.board:
             self.board.load_hardware_definition(self.setups_tab.hwd_path)
 
@@ -400,7 +412,8 @@ class Setup():
 
     def enable_flashdrive(self):
         self.select_checkbox.setChecked(False)
-        if not self.board: self.connect()
+        if not self.board:
+            self.connect()
         if self.board:
             self.board.enable_mass_storage()
             self.board.close()
@@ -408,7 +421,8 @@ class Setup():
 
     def disable_flashdrive(self):
         self.select_checkbox.setChecked(False)
-        if not self.board: self.connect()
+        if not self.board:
+            self.connect()
         if self.board:
             self.board.disable_mass_storage()
             self.board.close()

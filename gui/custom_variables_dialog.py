@@ -616,7 +616,7 @@ class Variables_dialog_editor(QtWidgets.QDialog):
             # determine which variables are already being used
             for row in range(table.n_variables):
                 assigned_var = table.cellWidget(row, Clm.CONTROL).currentText()
-                if assigned_var not in ("     select control      ","--- separator ---"):
+                if assigned_var not in ("     select control      ", "--- separator ---"):
                     fully_asigned_variables.append(assigned_var[4:])
             available_vars = sorted(list(self.variable_names - set(fully_asigned_variables)), key=str.lower)
             self.available_vars = ["[V] " + var for var in available_vars]

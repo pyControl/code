@@ -1,6 +1,7 @@
 import random
 from gui.api import Api
 
+
 # This class should be have the same name as the file and inherit the API class
 class Blinker(Api):
     # API for the Blinker class demonstrating setting variables functionality.

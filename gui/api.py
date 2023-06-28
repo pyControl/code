@@ -7,7 +7,7 @@ class Api:
     # ----------------------------------------------------------
 
     def __init__(self):
-        """User Api class is initialised when the task is uploaded to the board """
+        """User Api class is initialised when the task is uploaded to the board"""
         pass
 
     def run_start(self):
@@ -29,7 +29,7 @@ class Api:
         pass
 
     def plot_update(self):
-        """ Called whenever the plots are updated
+        """Called whenever the plots are updated
         The default plotting update interval is 10ms
         and can be adjusted in settings dialog
         """
