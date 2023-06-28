@@ -5,6 +5,7 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from gui.settings import dirs, get_setting
 from gui.utility import variable_constants, null_resize, cbox_set_item, cbox_update_options
 
+
 # input widgets ---------------------------------------------------------------
 class Spin_var:
     def __init__(self, init_var_dict, label, spin_min, spin_max, step, varname):
@@ -348,9 +349,7 @@ class Custom_variables_dialog(QtWidgets.QDialog):
                 self.parent.print_to_log(f"\nCould not find custom variable dialog data: {json_file}")
                 if not is_experiment:
                     # ask if they want to create a new custom gui
-                    not_found_dialog = Custom_variables_not_found_dialog(
-                        missing_file=self.gui_name, parent=self.parent
-                    )
+                    not_found_dialog = Custom_variables_not_found_dialog(missing_file=self.gui_name, parent=self.parent)
                     do_create_custom = not_found_dialog.exec()
                     if do_create_custom:
                         gui_created = self.open_gui_editor(self.gui_name, None)
@@ -372,7 +371,7 @@ class Custom_variables_dialog(QtWidgets.QDialog):
             return True
         return False
 
-    def process_data(self,new_data):
+    def process_data(self, new_data):
         pass
 
 
@@ -428,7 +427,9 @@ class Custom_variables_grid(QtWidgets.QWidget):
         leftover_layout = QtWidgets.QGridLayout()
         leftover_vars = sorted(list(set(variables) - set(used_vars)), key=str.lower)
         leftover_vars = [
-            v_name for v_name in leftover_vars if not v_name.endswith("___") and v_name != "custom_variables_dialog" and not v_name.startswith("hw_")
+            v_name
+            for v_name in leftover_vars
+            if not v_name.endswith("___") and v_name != "custom_variables_dialog" and not v_name.startswith("hw_")
         ]
         if len(leftover_vars) > 0:
             for row, var in enumerate(leftover_vars):
@@ -574,7 +575,7 @@ class Variables_dialog_editor(QtWidgets.QDialog):
         """Remove variables that are not defined in the new task."""
         pattern = "[\n\r]v\.(?P<vname>\w+)\s*\="
         try:
-            with open(os.path.join(get_setting("folders","tasks"), task + ".py"), "r", encoding="utf-8") as file:
+            with open(os.path.join(get_setting("folders", "tasks"), task + ".py"), "r", encoding="utf-8") as file:
                 file_content = file.read()
         except FileNotFoundError:
             return

@@ -4,6 +4,7 @@
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from gui.custom_variables_dialog import Slider_var, Spin_var
 
+
 # Custom Variable dialog
 class Custom_variables_dialog(QtWidgets.QDialog):
     # Dialog for setting and getting task variables.
@@ -47,8 +48,8 @@ class Variables_gui(QtWidgets.QWidget):
         self.min_btn = QtWidgets.QPushButton("min")
         self.mid_btn = QtWidgets.QPushButton("50%")
         self.max_btn = QtWidgets.QPushButton("max")
-        for col,btn in enumerate([self.min_btn,self.mid_btn,self.max_btn]):
-            layout.addWidget(btn, row,col, QtCore.Qt.AlignmentFlag.AlignCenter)
+        for col, btn in enumerate([self.min_btn, self.mid_btn, self.max_btn]):
+            layout.addWidget(btn, row, col, QtCore.Qt.AlignmentFlag.AlignCenter)
             btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
             btn.setMaximumWidth(70)
         row += 1

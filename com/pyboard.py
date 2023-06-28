@@ -23,12 +23,15 @@ import sys
 import time
 import serial
 
+
 def stdout_write_bytes(b):
     sys.stdout.buffer.write(b)
     sys.stdout.buffer.flush()
 
+
 class PyboardError(BaseException):
     pass
+
 
 class Pyboard:
     def __init__(self, serial_device, baudrate=115200):
@@ -59,37 +62,37 @@ class Pyboard:
         return data
 
     def enter_raw_repl(self):
-        self.serial.write(b'\r\x03\x03') # ctrl-C twice: interrupt any running program
+        self.serial.write(b"\r\x03\x03")  # ctrl-C twice: interrupt any running program
         # flush input (without relying on serial.flushInput())
         n = self.serial.in_waiting
         while n > 0:
             self.serial.read(n)
             n = self.serial.in_waiting
-        self.serial.write(b'\r\x01') # ctrl-A: enter raw REPL
-        data = self.read_until(1, b'to exit\r\n>')
-        if not data.endswith(b'raw REPL; CTRL-B to exit\r\n>'):
+        self.serial.write(b"\r\x01")  # ctrl-A: enter raw REPL
+        data = self.read_until(1, b"to exit\r\n>")
+        if not data.endswith(b"raw REPL; CTRL-B to exit\r\n>"):
             print(data)
-            raise PyboardError('could not enter raw repl')
-        self.serial.write(b'\x04') # ctrl-D: soft reset
-        data = self.read_until(1, b'to exit\r\n>')
-        if not data.endswith(b'raw REPL; CTRL-B to exit\r\n>'):
+            raise PyboardError("could not enter raw repl")
+        self.serial.write(b"\x04")  # ctrl-D: soft reset
+        data = self.read_until(1, b"to exit\r\n>")
+        if not data.endswith(b"raw REPL; CTRL-B to exit\r\n>"):
             print(data)
-            raise PyboardError('could not enter raw repl')
+            raise PyboardError("could not enter raw repl")
 
     def exit_raw_repl(self):
-        self.serial.write(b'\r\x02') # ctrl-B: enter friendly REPL
+        self.serial.write(b"\r\x02")  # ctrl-B: enter friendly REPL
 
     def follow(self, timeout, data_consumer=None):
         # wait for normal output
-        data = self.read_until(1, b'\x04', timeout=timeout, data_consumer=data_consumer)
-        if not data.endswith(b'\x04'):
-            raise PyboardError('timeout waiting for first EOF reception')
+        data = self.read_until(1, b"\x04", timeout=timeout, data_consumer=data_consumer)
+        if not data.endswith(b"\x04"):
+            raise PyboardError("timeout waiting for first EOF reception")
         data = data[:-1]
 
         # wait for error output
-        data_err = self.read_until(2, b'\x04>', timeout=timeout)
-        if not data_err.endswith(b'\x04>'):
-            raise PyboardError('timeout waiting for second EOF reception')
+        data_err = self.read_until(2, b"\x04>", timeout=timeout)
+        if not data_err.endswith(b"\x04>"):
+            raise PyboardError("timeout waiting for second EOF reception")
         data_err = data_err[:-2]
 
         # return normal and error output
@@ -99,44 +102,45 @@ class Pyboard:
         if isinstance(command, bytes):
             command_bytes = command
         else:
-            command_bytes = bytes(command, encoding='utf8')
+            command_bytes = bytes(command, encoding="utf8")
 
         # write command
         for i in range(0, len(command_bytes), 256):
-            self.serial.write(command_bytes[i:min(i + 256, len(command_bytes))])
+            self.serial.write(command_bytes[i : min(i + 256, len(command_bytes))])
             time.sleep(0.01)
-        self.serial.write(b'\x04')
+        self.serial.write(b"\x04")
 
         # check if we could exec command
         data = self.serial.read(2)
-        if data != b'OK':
-            raise PyboardError('could not exec command')
+        if data != b"OK":
+            raise PyboardError("could not exec command")
 
     def exec_raw(self, command, timeout=10, data_consumer=None):
-        self.exec_raw_no_follow(command);
+        self.exec_raw_no_follow(command)
         return self.follow(timeout, data_consumer)
 
     def eval(self, expression):
-        ret = self.exec('print({})'.format(expression))
+        ret = self.exec("print({})".format(expression))
         ret = ret.strip()
         return ret
 
     def exec(self, command):
         ret, ret_err = self.exec_raw(command)
         if ret_err:
-            raise PyboardError('exception', ret, ret_err)
+            raise PyboardError("exception", ret, ret_err)
         return ret
 
     def execfile(self, filename):
-        with open(filename, 'rb') as f:
+        with open(filename, "rb") as f:
             pyfile = f.read()
         return self.exec(pyfile)
 
     def get_time(self):
-        t = str(self.eval('pyb.RTC().datetime()'), encoding='utf8')[1:-1].split(', ')
+        t = str(self.eval("pyb.RTC().datetime()"), encoding="utf8")[1:-1].split(", ")
         return int(t[4]) * 3600 + int(t[5]) * 60 + int(t[6])
 
-def execfile(filename, device='/dev/ttyACM0'):
+
+def execfile(filename, device="/dev/ttyACM0"):
     pyb = Pyboard(device)
     pyb.enter_raw_repl()
     output = pyb.execfile(filename)

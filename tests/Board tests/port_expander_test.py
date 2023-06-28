@@ -1,10 +1,10 @@
-# Install the driver files for the Port Expander (see 
+# Install the driver files for the Port Expander (see
 # https://pycontrol.readthedocs.io/en/latest/user-guide/hardware/#more-devices).
-# Connect port expander board to port 3 of the breakout board 1.2, connect 
+# Connect port expander board to port 3 of the breakout board 1.2, connect
 # breakout board to the computer, plug in the 12V power supply. Connect a
 #  breakout tester 1.0 board to each RJ45 port on the port expander in turn.
 # LEDs +12V and +5V on the tester should be on continuously and LEDs
-# DIO-A, DIO-B, POW-A, POW-B should cycle on and off. 
+# DIO-A, DIO-B, POW-A, POW-B should cycle on and off.
 
 from pyControl.utility import *
 from devices import Breakout_1_2, Digital_output, Port_expander
@@ -52,49 +52,50 @@ POW_8B = Digital_output(port_exp.port_8.POW_B)
 
 # States and events.
 
-states = ['DIO_A',
-          'DIO_B',
-          'POW_A',
-          'POW_B']
+states = ["DIO_A", "DIO_B", "POW_A", "POW_B"]
 
 events = []
 
-initial_state = 'DIO_A'
-        
-# Define behaviour. 
+initial_state = "DIO_A"
+
+# Define behaviour.
+
 
 def DIO_A(event):
-    if event == 'entry':
-        timed_goto_state('DIO_B', 200*ms)
+    if event == "entry":
+        timed_goto_state("DIO_B", 200 * ms)
         for x in (DIO_1A, DIO_2A, DIO_3A, DIO_4A, DIO_5A, DIO_6A, DIO_7A, DIO_8A):
             x.on()
-    elif event == 'exit':
+    elif event == "exit":
         for x in (DIO_1A, DIO_2A, DIO_3A, DIO_4A, DIO_5A, DIO_6A, DIO_7A, DIO_8A):
             x.off()
+
 
 def DIO_B(event):
-    if event == 'entry':
-        timed_goto_state('POW_A', 200*ms)
+    if event == "entry":
+        timed_goto_state("POW_A", 200 * ms)
         for x in (DIO_1B, DIO_2B, DIO_3B, DIO_4B, DIO_5B, DIO_6B, DIO_7B, DIO_8B):
             x.on()
-    elif event == 'exit':
+    elif event == "exit":
         for x in (DIO_1B, DIO_2B, DIO_3B, DIO_4B, DIO_5B, DIO_6B, DIO_7B, DIO_8B):
             x.off()
+
 
 def POW_A(event):
-    if event == 'entry':
-        timed_goto_state('POW_B', 200*ms)
+    if event == "entry":
+        timed_goto_state("POW_B", 200 * ms)
         for x in (POW_1A, POW_2A, POW_3A, POW_4A, POW_5A, POW_6A, POW_7A, POW_8A):
             x.on()
-    elif event == 'exit':
+    elif event == "exit":
         for x in (POW_1A, POW_2A, POW_3A, POW_4A, POW_5A, POW_6A, POW_7A, POW_8A):
             x.off()
 
+
 def POW_B(event):
-    if event == 'entry':
-        timed_goto_state('DIO_A', 200*ms)
+    if event == "entry":
+        timed_goto_state("DIO_A", 200 * ms)
         for x in (POW_1B, POW_2B, POW_3B, POW_4B, POW_5B, POW_6B, POW_7B, POW_8B):
             x.on()
-    elif event == 'exit':
+    elif event == "exit":
         for x in (POW_1B, POW_2B, POW_3B, POW_4B, POW_5B, POW_6B, POW_7B, POW_8B):
             x.off()
