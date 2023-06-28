@@ -80,18 +80,18 @@ class Board_config_dialog(QtWidgets.QDialog):
         self.disconnect = True
 
 
-# Variables_dialog ---------------------------------------------------------------------
+# Controls_dialog ---------------------------------------------------------------------
 
 
-class Variables_dialog(QtWidgets.QDialog):
+class Controls_dialog(QtWidgets.QDialog):
     # Dialog for setting and getting task variables.
     def __init__(self, parent):
         super(QtWidgets.QDialog, self).__init__(parent)
         self.setWindowTitle("Controls")
         self.scroll_area = QtWidgets.QScrollArea(parent=self)
         self.scroll_area.setWidgetResizable(True)
-        self.variables_grid = Variables_grid(self.scroll_area, parent.board)
-        self.scroll_area.setWidget(self.variables_grid)
+        self.controls_grid = Variables_grid(self.scroll_area, parent.board)
+        self.scroll_area.setWidget(self.controls_grid)
         self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.addWidget(self.scroll_area)
         self.setLayout(self.layout)

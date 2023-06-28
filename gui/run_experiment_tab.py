@@ -12,9 +12,9 @@ from com.pycboard import Pycboard, PyboardError, Datatuple
 from com.data_logger import Data_logger
 from gui.settings import get_setting
 from gui.plotting import Experiment_plot
-from gui.dialogs import Variables_dialog, Summary_variables_dialog
+from gui.dialogs import Controls_dialog, Summary_variables_dialog
 from gui.utility import variable_constants, TaskInfo, parallel_call
-from gui.custom_variables_dialog import Custom_variables_dialog
+from gui.custom_controls_dialog import Custom_controls_dialog
 from gui.hardware_variables_dialog import set_hardware_variables
 
 
@@ -454,16 +454,16 @@ class Subjectbox(QtWidgets.QGroupBox):
         """Configure variables dialog and ready subjectbox to start experiment."""
         if "custom_variables_dialog" in self.board.sm_info["variables"]:  # Task uses custon variables dialog
             custom_variables_name = self.board.sm_info["variables"]["custom_variables_dialog"]
-            potential_dialog = Custom_variables_dialog(self, custom_variables_name, is_experiment=True)
+            potential_dialog = Custom_controls_dialog(self, custom_variables_name, is_experiment=True)
             if potential_dialog.custom_gui == "json_gui":
-                self.variables_dialog = potential_dialog
+                self.controls_dialog = potential_dialog
             elif potential_dialog.custom_gui == "pyfile_gui":
-                py_gui_file = importlib.import_module(f"config.user_variable_dialogs.{custom_variables_name}")
+                py_gui_file = importlib.import_module(f"config.user_controls_dialogs.{custom_variables_name}")
                 importlib.reload(py_gui_file)
-                self.variables_dialog = py_gui_file.Custom_variables_dialog(self, self.board)
+                self.controls_dialog = py_gui_file.Custom_controls_dialog(self, self.board)
         else:  # Board uses standard variables dialog.
-            self.variables_dialog = Variables_dialog(self)
-        self.variables_button.clicked.connect(self.variables_dialog.exec)
+            self.controls_dialog = Controls_dialog(self)
+        self.variables_button.clicked.connect(self.controls_dialog.exec)
 
     def set_ready_to_start(self):
         """Set GUI elements ready to start run."""

@@ -115,7 +115,7 @@ class Text_var:
         self.line_edit.setAlignment(center)
         self.line_edit.setMinimumWidth(text_width)
         self.line_edit.setMaximumWidth(text_width)
-        self.line_edit.setText(init_var_dict[self.varname])
+        self.line_edit.setText(str(init_var_dict[self.varname]))
         self.line_edit.textChanged.connect(lambda x: self.value_text_colour("black"))
         self.line_edit.returnPressed.connect(self.set)
         self.value_text_colour("gray")
@@ -327,7 +327,7 @@ class Event_button:
 
 
 # GUI created from dictionary describing custom widgets and layout ------------
-class Custom_variables_dialog(QtWidgets.QDialog):
+class Custom_controls_dialog(QtWidgets.QDialog):
     def __init__(self, parent_tab, gui_name, is_experiment=False):
         super(QtWidgets.QDialog, self).__init__(parent_tab)
         self.parent_tab = parent_tab
@@ -350,8 +350,8 @@ class Custom_variables_dialog(QtWidgets.QDialog):
                 self.edit_action.triggered.connect(self.open_gui_editor)
             self.scroll_area = QtWidgets.QScrollArea(parent=self)
             self.scroll_area.setWidgetResizable(True)
-            self.variables_grid = Custom_variables_grid(self)
-            self.scroll_area.setWidget(self.variables_grid)
+            self.controls_grid = Custom_controls_grid(self)
+            self.scroll_area.setWidget(self.controls_grid)
             self.layout.addWidget(self.scroll_area)
             self.layout.setContentsMargins(0, 0, 0, 0)
             self.setLayout(self.layout)
@@ -377,7 +377,7 @@ class Custom_variables_dialog(QtWidgets.QDialog):
     def get_custom_gui_data(self, is_experiment):
         custom_variables_dict = None
         try:  # Try to import and instantiate the user custom variable dialog
-            json_file = os.path.join(dirs["config"], "user_variable_dialogs", f"{self.gui_name}.json")
+            json_file = os.path.join(dirs["config"], "user_controls_dialogs", f"{self.gui_name}.json")
             with open(json_file, "r") as j:
                 custom_variables_dict = json.loads(j.read())
             # update json content if old version
@@ -385,7 +385,7 @@ class Custom_variables_dialog(QtWidgets.QDialog):
                 with open(json_file, "w", encoding="utf-8") as updated_json:
                     json.dump(custom_variables_dict, updated_json, indent=4)
         except FileNotFoundError:  # couldn't find the json data
-            py_file = os.path.join(dirs["config"], "user_variable_dialogs", f"{self.gui_name}.py")
+            py_file = os.path.join(dirs["config"], "user_controls_dialogs", f"{self.gui_name}.py")
             if os.path.exists(py_file):
                 self.custom_gui = "pyfile_gui"
             else:
@@ -404,11 +404,11 @@ class Custom_variables_dialog(QtWidgets.QDialog):
         return custom_variables_dict
 
     def open_gui_editor(self):
-        gui_editor = Variables_dialog_editor(self)
+        gui_editor = Controls_dialog_editor(self)
         was_saved = gui_editor.exec()
         if was_saved:
-            if self.parent_tab.variables_dialog:
-                self.parent_tab.variables_dialog.close()
+            if self.parent_tab.controls_dialog:
+                self.parent_tab.controls_dialog.close()
             self.parent_tab.task_changed()
             return True
         return False
@@ -428,7 +428,7 @@ class Control_specs:
     suffix: str = ""
 
 
-class Custom_variables_grid(QtWidgets.QWidget):
+class Custom_controls_grid(QtWidgets.QWidget):
     def __init__(self, parent_controls_dialog):
         super(QtWidgets.QWidget, self).__init__(parent_controls_dialog)
         grid_layout = QtWidgets.QGridLayout()
@@ -506,7 +506,7 @@ class Custom_variables_grid(QtWidgets.QWidget):
 # GUI editor dialog. ---------------------------------------------------------
 
 
-class Variables_dialog_editor(QtWidgets.QDialog):
+class Controls_dialog_editor(QtWidgets.QDialog):
     def __init__(self, parent_controls_dialog):
         super(QtWidgets.QDialog, self).__init__(parent_controls_dialog)
         self.parent_controls_dialog = parent_controls_dialog
@@ -598,10 +598,10 @@ class Variables_dialog_editor(QtWidgets.QDialog):
             else:  # there was an error
                 return
 
-        user_guis_folder = os.path.join(dirs["config"], "user_variable_dialogs")
+        user_guis_folder = os.path.join(dirs["config"], "user_controls_dialogs")
         try:
             os.mkdir(user_guis_folder)
-            print(f'"user_variable_dialogs" folder not found, therefore creating new directory: {user_guis_folder}')
+            print(f'"user_controls_dialogs" folder not found, therefore creating new directory: {user_guis_folder}')
         except FileExistsError:
             pass
         savename = os.path.join(user_guis_folder, f"{self.parent_controls_dialog.gui_name}.json")

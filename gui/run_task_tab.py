@@ -9,8 +9,8 @@ from com.pycboard import Pycboard, PyboardError, _djb2_file
 from com.data_logger import Data_logger
 
 from gui.settings import get_setting
-from gui.dialogs import Variables_dialog
-from gui.custom_variables_dialog import Custom_variables_dialog
+from gui.dialogs import Controls_dialog
+from gui.custom_controls_dialog import Custom_controls_dialog
 from gui.plotting import Task_plot
 from gui.utility import init_keyboard_shortcuts, NestedMenu, TaskInfo
 from gui.hardware_variables_dialog import set_hardware_variables, hw_vars_defined_in_setup
@@ -38,7 +38,7 @@ class Run_task_tab(QtWidgets.QWidget):
         self.user_API = None  # Overwritten by user API class.
         self.running = False
         self.subject_changed = False
-        self.variables_dialog = None
+        self.controls_dialog = None
 
         # GUI groupbox.
 
@@ -331,22 +331,22 @@ class Run_task_tab(QtWidgets.QWidget):
                     for v_name, v_value, pv_str in hw_vars_set:
                         self.print_to_log(v_name.ljust(name_len + 4) + v_value.ljust(value_len + 4) + pv_str)
             # Configure GUI ready to run.
-            if self.variables_dialog:
+            if self.controls_dialog:
                 self.variables_button.clicked.disconnect()
-                self.variables_dialog.deleteLater()
-            self.variables_dialog = Variables_dialog(self)
+                self.controls_dialog.deleteLater()
+            self.controls_dialog = Controls_dialog(self)
             self.using_json_gui = False
             if "custom_variables_dialog" in self.board.sm_info["variables"]:
                 custom_variables_name = self.board.sm_info["variables"]["custom_variables_dialog"]
-                potential_dialog = Custom_variables_dialog(self, custom_variables_name)
+                potential_dialog = Custom_controls_dialog(self, custom_variables_name)
                 if potential_dialog.custom_gui == "json_gui":
-                    self.variables_dialog = potential_dialog
+                    self.controls_dialog = potential_dialog
                     self.using_json_gui = True
                 elif potential_dialog.custom_gui == "pyfile_gui":
-                    py_gui_file = importlib.import_module(f"config.user_variable_dialogs.{custom_variables_name}")
+                    py_gui_file = importlib.import_module(f"config.user_controls_dialogs.{custom_variables_name}")
                     importlib.reload(py_gui_file)
-                    self.variables_dialog = py_gui_file.Custom_variables_dialog(self, self.board)
-            self.variables_button.clicked.connect(self.variables_dialog.exec)
+                    self.controls_dialog = py_gui_file.Custom_controls_dialog(self, self.board)
+            self.variables_button.clicked.connect(self.controls_dialog.exec)
             self.variables_button.setEnabled(True)
             self.task_plot.set_state_machine(self.board.sm_info)
             self.task_info.set_state_machine(self.board.sm_info)
@@ -430,7 +430,7 @@ class Run_task_tab(QtWidgets.QWidget):
         self.board_groupbox.setEnabled(False)
         self.stop_button.setEnabled(True)
         if self.using_json_gui:
-            self.variables_dialog.edit_action.setEnabled(False)
+            self.controls_dialog.edit_action.setEnabled(False)
         self.print_to_log(f"\nRun started at: {datetime.now().strftime('%Y/%m/%d %H:%M:%S')}\n")
         self.plot_update_timer.start(get_setting("plotting", "update_interval"))
         self.GUI_main.refresh_timer.stop()
@@ -461,7 +461,7 @@ class Run_task_tab(QtWidgets.QWidget):
         self.upload_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         if self.using_json_gui:
-            self.variables_dialog.edit_action.setEnabled(True)
+            self.controls_dialog.edit_action.setEnabled(True)
         self.status_text.setText("Uploaded : " + self.task)
         self.GUI_main.tab_widget.setTabEnabled(1, True)  # Enable setups tab.
         self.GUI_main.tab_widget.setTabEnabled(2, True)  # Enable setups tab.
