@@ -104,12 +104,12 @@ def off():
 
 
 def get_analog_inputs():
-    # Print dict of analog inputs {name: {'ID': ID, 'Fs':sampling rate}}
+    # Print dict of analog input info.
     print(
         {
-            io.name: {"ID": io.ID, "Fs": io.sampling_rate, "plot": io.plot}
-            for io in IO_dict.values()
-            if isinstance(io, Analog_channel)
+            ai.ID: {"name": ai.name, "fs": ai.sampling_rate, "dtype": ai.data_type, "plot": ai.plot}
+            for ai in IO_dict.values()
+            if isinstance(ai, Analog_channel)
         }
     )
 
@@ -260,10 +260,12 @@ class Analog_input(IO_object):
         assign_ID(self)
 
     def _run_start(self):
+        # Start sampling timer, initialise threshold, aquire first sample.
         self.timer.init(freq=self.Analog_channel.sampling_rate)
         self.timer.callback(self._timer_ISR)
         if self.threshold:
             self.threshold.run_start(self.read_sample())
+        self._timer_ISR(0)
 
     def _run_stop(self):
         self.timer.deinit()
@@ -285,15 +287,15 @@ class Analog_input(IO_object):
 
 class Analog_channel(IO_object):
     # Buffers analog data and streams it to computer in chunks.
-    # Serial data format for sending data to computer: '\x07A c i r l t k D' where:
-    # \x07A Message start byte and A character indicating start of analog data chunk (2 bytes)
-    # c data array typecode (1 byte)
-    # i ID of analog input  (2 byte)
-    # r sampling rate (Hz)  (2 bytes)
-    # l length of data array in bytes (2 bytes)
-    # t timestamp of chunk start (ms)(4 bytes)
-    # k checksum (2 bytes)
-    # D data array bytes (variable)
+    # Data format for sending to computer:
+    #     \x07 Message start byte (1 bytes)
+    #     'A' character indicating analog data chunk (1 byte)
+    #     data typecode (1 byte)
+    #     ID of analog input (2 byte)
+    #     length of data array in bytes (2 bytes)
+    #     timestamp of chunk start (ms) (4 bytes)
+    #     checksum (2 bytes)
+    #     data array bytes (variable)
 
     def __init__(self, name, sampling_rate, data_type="l", plot=True):
         assert data_type in ("b", "B", "h", "H", "l", "L"), "Invalid data_type."
@@ -310,14 +312,7 @@ class Analog_channel(IO_object):
         self.buffers = (array(data_type, [0] * self.buffer_size), array(data_type, [0] * self.buffer_size))
         self.buffers_mv = (memoryview(self.buffers[0]), memoryview(self.buffers[1]))
         self.buffer_start_times = array("i", [0, 0])
-        self.data_header = array(
-            "B",
-            b"\x07A"
-            + data_type.encode()
-            + self.ID.to_bytes(2, "little")
-            + sampling_rate.to_bytes(2, "little")
-            + b"\x00" * 8,
-        )
+        self.data_header = array("B", b"\x07A" + data_type.encode() + self.ID.to_bytes(2, "little") + b"\x00" * 8)
         self.write_buffer = 0  # Buffer to write new data to.
         self.write_index = 0  # Buffer index to write new data to.
 
@@ -349,11 +344,11 @@ class Analog_channel(IO_object):
             buffer_n = 1 - self.write_buffer
             n_samples = self.buffer_size
         n_bytes = self.bytes_per_sample * n_samples
-        self.data_header[7:9] = n_bytes.to_bytes(2, "little")
-        self.data_header[9:13] = self.buffer_start_times[buffer_n].to_bytes(4, "little")
+        self.data_header[5:7] = n_bytes.to_bytes(2, "little")
+        self.data_header[7:11] = self.buffer_start_times[buffer_n].to_bytes(4, "little")
         checksum = sum(self.buffers_mv[buffer_n][:n_samples] if run_stop else self.buffers[buffer_n])
-        checksum += sum(self.data_header[2:13])
-        self.data_header[13:15] = checksum.to_bytes(2, "little")
+        checksum += sum(self.data_header[2:11])
+        self.data_header[11:13] = checksum.to_bytes(2, "little")
         fw.usb_serial.write(self.data_header)
         if run_stop:
             fw.usb_serial.send(self.buffers_mv[buffer_n][:n_samples])

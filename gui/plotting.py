@@ -128,15 +128,14 @@ class States_plot:
 
     def process_data(self, new_data):
         """Store new data from board"""
-        new_states = [nd for nd in new_data if nd[0] == "D" and nd[2] in self.state_IDs]
+        new_states = [nd for nd in new_data if nd.type == "D" and nd.ID in self.state_IDs]
         if new_states:
             n_new = len(new_states)
             self.data = np.roll(self.data, -2 * n_new, axis=0)
-            for i, ns in enumerate(new_states):  # Update data array.
-                timestamp, ID = ns[1:]
+            for i, nd in enumerate(new_states):  # Update data array.
                 j = 2 * (-n_new + i)  # Index of state entry in self.data
-                self.data[j - 1 :, 0] = timestamp
-                self.data[j:, 1] = ID
+                self.data[j - 1 :, 0] = nd.time
+                self.data[j:, 1] = nd.ID
 
     def update(self, run_time):
         """Update plots."""
@@ -185,14 +184,13 @@ class Events_plot:
         """Store new data from board."""
         if not self.event_IDs:
             return  # State machine can have no events.
-        new_events = [nd for nd in new_data if nd[0] == "D" and nd[2] in self.event_IDs]
+        new_events = [nd for nd in new_data if nd.type == "D" and nd.ID in self.event_IDs]
         if new_events:
             n_new = len(new_events)
             self.data = np.roll(self.data, -n_new, axis=0)
-            for i, ne in enumerate(new_events):
-                timestamp, ID = ne[1:]
-                self.data[-n_new + i, 0] = timestamp / 1000
-                self.data[-n_new + i, 1] = ID
+            for i, nd in enumerate(new_events):
+                self.data[-n_new + i, 0] = nd.time / 1000
+                self.data[-n_new + i, 1] = nd.ID
 
     def update(self, run_time):
         """Update plots"""
@@ -225,8 +223,8 @@ class Analog_plot:
         self.axis.clear()
         self.legend = self.axis.addLegend(offset=(10, 10))
         self.plots = {
-            ai["ID"]: self.axis.plot(name=name, pen=pg.mkPen(pg.intColor(i, len(self.inputs))))
-            for i, (name, ai) in enumerate(sorted(self.inputs.items()))
+            ID: self.axis.plot(name=ai["name"], pen=pg.mkPen(pg.intColor(i, len(self.inputs))))
+            for i, (ID, ai) in enumerate(sorted(self.inputs.items()))
         }
         self.axis.getAxis("bottom").setLabel("Time (seconds)")
         max_len = max([len(n) for n in list(sm_info["states"]) + list(sm_info["events"])])
@@ -237,27 +235,26 @@ class Analog_plot:
             return  # State machine may not have analog inputs.
         for plot in self.plots.values():
             plot.clear()
-        self.data = {ai["ID"]: np.zeros([ai["Fs"] * self.data_dur, 2]) for ai in self.inputs.values()}
+        self.data = {ID: np.zeros([ai["fs"] * self.data_dur, 2]) for ID, ai in self.inputs.items()}
         self.updated_inputs = []
 
     def process_data(self, new_data):
         """Store new data from board."""
         if not self.inputs:
             return  # State machine may not have analog inputs.
-        new_analog = [nd for nd in new_data if nd[0] == "A"]
+        new_analog = [nd for nd in new_data if nd.type == "A"]
         for na in new_analog:
-            ID, sampling_rate, timestamp, data_array = na[1:]
-            new_len = len(data_array)
-            t = timestamp / 1000 + np.arange(new_len) / sampling_rate
-            self.data[ID] = np.roll(self.data[ID], -new_len, axis=0)
-            self.data[ID][-new_len:, :] = np.vstack([t, data_array]).T
+            if na.ID in self.plots.keys():
+                new_len = len(na.data)
+                t = na.time / 1000 + np.arange(new_len) / self.inputs[na.ID]["fs"]
+                self.data[na.ID] = np.roll(self.data[na.ID], -new_len, axis=0)
+                self.data[na.ID][-new_len:, :] = np.vstack([t, na.data]).T
 
     def update(self, run_time):
         """Update plots."""
         if not self.inputs:
             return  # State machine may not have analog inputs.
-        for ai in self.inputs.values():
-            ID = ai["ID"]
+        for ID in self.inputs.keys():
             self.plots[ID].setData(x=self.data[ID][:, 0] - run_time, y=self.data[ID][:, 1])
 
 
@@ -335,6 +332,7 @@ class Experiment_plot(QtWidgets.QMainWindow):
             subject_plot.setParent(None)
             subject_plot.deleteLater()
         self.subject_tabs.closeDetachedTabs()
+        self.subject_plots.clear()
         self.close()
 
     def update(self):

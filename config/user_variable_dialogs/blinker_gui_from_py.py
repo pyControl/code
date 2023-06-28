@@ -59,8 +59,8 @@ class Variables_gui(QtWidgets.QWidget):
         row += 1
 
         # radio buttons
-        red_is_enabled = eval(init_vars["red_enabled"])
-        green_is_enabled = eval(init_vars["green_enabled"])
+        red_is_enabled = init_vars["red_enabled"]
+        green_is_enabled = init_vars["green_enabled"]
         self.both_radio = QtWidgets.QRadioButton()
         self.both_lbl = QtWidgets.QLabel("🔴Both🟢")
         self.red_radio = QtWidgets.QRadioButton()

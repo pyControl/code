@@ -63,15 +63,16 @@ def print(print_string):
     fw.data_output_queue.put((fw.current_time, fw.print_typ, str(print_string)))
 
 
-def print_variables(variables="all"):
+def print_variables(variables="all", when="p"):
     # Print specified variables to data log as a json string.
     if variables == "all":
-        var_dict = {k: v for k, v in v.__dict__.items() if not hasattr(v, "__init__")}
+        var_dict = {k: var for k, var in v.__dict__.items() if not hasattr(var, "__init__")}
     elif sys.implementation.version >= (1, 12):
         var_dict = OrderedDict([(k, getattr(v, k)) for k in variables if not hasattr(getattr(v, k), "__init__")])
     else:  # old versions of ujson don't support OrdereDict.
         var_dict = {k: getattr(v, k) for k in variables if not hasattr(getattr(v, k), "__init__")}
-    print(ujson.dumps(var_dict))
+    fw.data_output_queue.put((fw.current_time, fw.varbl_typ, when, ujson.dumps(var_dict)))
+
 
 
 def warning(message):

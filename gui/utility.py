@@ -406,9 +406,9 @@ class TaskInfo:
         """Update the state, event and print line info."""
         try:
             new_state = next(
-                self.sm_info["ID2name"][nd[2]]
+                self.sm_info["ID2name"][nd.ID]
                 for nd in reversed(new_data)
-                if nd[0] == "D" and nd[2] in self.sm_info["states"].values()
+                if nd.type == "D" and nd.ID in self.sm_info["states"].values()
             )
             self.state_text.setText(new_state)
             self.state_text.home(False)
@@ -416,23 +416,23 @@ class TaskInfo:
             pass
         try:
             new_event = next(
-                self.sm_info["ID2name"][nd[2]]
+                self.sm_info["ID2name"][nd.ID]
                 for nd in reversed(new_data)
-                if nd[0] == "D" and nd[2] in self.sm_info["events"].values()
+                if nd.type == "D" and nd.ID in self.sm_info["events"].values()
             )
             self.event_text.setText(new_event)
             self.event_text.home(False)
         except StopIteration:
             pass
         try:
-            new_print = next(nd[-1] for nd in reversed(new_data) if nd[0] == "P")
+            new_print = next(nd.data for nd in reversed(new_data) if nd.type == "P" or nd.ID == "print")
             self.print_text.setText(new_print)
             self.print_text.setStyleSheet("color: black;")
             self.print_text.home(False)
         except StopIteration:
             pass
         try:
-            new_warning = next(nd[-1] for nd in reversed(new_data) if nd[0] == "!")
+            new_warning = next(nd.data for nd in reversed(new_data) if nd.type == "!")
             self.print_text.setText("! " + new_warning)
             self.print_text.setStyleSheet("color: orange;")
             self.print_text.home(False)

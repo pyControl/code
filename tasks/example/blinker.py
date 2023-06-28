@@ -6,31 +6,35 @@ from devices import *
 from pyb import LED
 
 # Define hardware (normally done in seperate hardware definition file).
-green_LED = LED(2)
+
+blue_LED = Digital_output("B4")
 
 # States and events.
+
 states = ["LED_on", "LED_off"]
+
 events = []
 initial_state = "LED_on"
 
-# variables
-v.LED_duration = 0.5
-# v.api_class = 'Blinker' # Uncomment to use Blinker API example.
+initial_state = "LED_off"
+
+# Define behaviour.
+
 
 
 # Define behaviour.
 def LED_on(event):
     if event == "entry":
-        timed_goto_state("LED_off", v.LED_duration * second)
-        green_LED.on()
+        timed_goto_state("LED_off", 0.5 * second)
+        blue_LED.on()
     elif event == "exit":
-        green_LED.off()
+        blue_LED.off()
 
 
 def LED_off(event):
     if event == "entry":
-        timed_goto_state("LED_on", v.LED_duration * second)
+        timed_goto_state("LED_on", 0.5 * second)
 
 
 def run_end():  # Turn off hardware at end of run.
-    green_LED.off()
+    blue_LED.off()

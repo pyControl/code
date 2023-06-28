@@ -1,7 +1,6 @@
-# Identical to the button example but using named imports rather
-# than the 'from module import *' syntax.  This way is more
-# 'Pythonic' but results somewhat more verbose task code.  You can
-# use whichever import style you prefer in your task code.
+# Identical to the button example but using named imports rather than the 'from module import *' syntax.
+#  This way is more 'Pythonic' but results in somewhat more verbose task code.  You can use whichever 
+# import style you prefer in your task code.
 
 import pyControl.utility as pc
 import devices as dv

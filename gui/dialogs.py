@@ -116,14 +116,14 @@ class Variables_grid(QtWidgets.QWidget):
             control_row += 1
 
         variables = board.sm_info["variables"]
-        for v_name, v_value_str in sorted(variables.items()):
+        for v_name, v_value in sorted(variables.items()):
             if (
                 not v_name.endswith("___")
                 and v_name != "custom_variables_dialog"
                 and not v_name.startswith("hw_")
                 and v_name != "api_class"
             ):
-                Variable_setter(v_name, v_value_str, control_row, self)
+                Variable_setter(v_name, v_value, control_row, self)
                 control_row += 1
         self.setLayout(self.grid_layout)
 
@@ -166,18 +166,14 @@ class Event_combo(QtWidgets.QWidget):
 
 class Variable_setter(QtWidgets.QWidget):
     # For setting and getting a single variable.
-    def __init__(self, v_name, v_value_str, i, parent_grid):  # Should split into seperate init and provide info.
+    def __init__(self, v_name, v_value, i, parent_grid):  # Should split into seperate init and provide info.
         super(QtWidgets.QWidget, self).__init__(parent_grid)
         self.board = parent_grid.board
         self.v_name = v_name
         self.label = QtWidgets.QLabel(v_name)
         self.get_button = QtWidgets.QPushButton("Get value")
         self.set_button = QtWidgets.QPushButton("Set value")
-        self.value_str = QtWidgets.QLineEdit(v_value_str)
-        if v_value_str[0] == "<":  # Variable is a complex object that cannot be modifed.
-            self.value_str.setText("<complex object>")
-            self.set_button.setEnabled(False)
-            self.get_button.setEnabled(False)
+        self.value_str = QtWidgets.QLineEdit(repr(v_value))
         self.value_text_colour("gray")
         self.get_button.clicked.connect(self.get)
         self.set_button.clicked.connect(self.set)
@@ -535,7 +531,7 @@ class Path_setter(QtWidgets.QHBoxLayout):
             self.show_edit()
 
     def show_edit(self):
-        if self.path_text.text() != self.path:
+        if self.get() != self.path:
             if self.edited is False:
                 self.edited = True
                 self.name_label.setStyleSheet("color:red;")
@@ -592,7 +588,7 @@ class Spin_setter:
         also keeps a running tally of how many settings have been edited
         and enables/disables the "Save settings" button accordingly
         """
-        if self.spn.value() != self.start_value:
+        if self.get() != self.start_value:
             if self.edited is False:
                 self.edited = True
                 self.label.setStyleSheet("color:red;")
