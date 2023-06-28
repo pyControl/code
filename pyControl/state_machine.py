@@ -86,21 +86,17 @@ def stop():
     if event_dispatch_dict['run_end']:
         event_dispatch_dict['run_end']()
 
-def set_variable(v_name, v_str, checksum=None):
-    # Set value of variable v.v_name to value eval(v_str).
-    if checksum:
-        str_sum = sum(v_str) if isinstance(v_str, bytes) else sum(v_str.encode())
-        if not str_sum == checksum:
-            return False # Bad checksum.
+def set_variable(v_name, v_value):
+    # Set value of variable v.v_name to v_value.
     try:
-        setattr(variables, v_name, eval(v_str))
+        setattr(variables, v_name, v_value)
         return True # Variable set OK.
     except Exception:
         return False # Bad variable name or invalid value string.
 
 def get_variable(v_name):
-    # Return string representing value of specified variable.
+    # Return the value of specified variable.
     try:
-        return repr(getattr(variables, v_name))
+        return getattr(variables, v_name)
     except Exception:
         return None # Bad variable name

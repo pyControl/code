@@ -8,7 +8,7 @@ from collections import OrderedDict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException
 
-from com.pycboard import Pycboard, PyboardError
+from com.pycboard import Pycboard, PyboardError, Datatuple
 from com.data_logger import Data_logger
 from gui.settings import get_setting
 from gui.plotting import Experiment_plot
@@ -195,12 +195,11 @@ class Run_experiment_tab(QtWidgets.QWidget):
             self.update_timer.stop()
             self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
             for box in self.subjectboxes:
-                # Stop running boards.
-                if box.board and box.board.framework_running:
-                    box.board.stop_framework()
-                    time.sleep(0.05)
-                    box.board.process_data()
-                    box.stop_task()
+                # Stop running boards and close serial connections.
+                if box.board: 
+                    if box.board.framework_running:
+                        box.stop_task()
+                    box.board.close()
             msg = QtWidgets.QMessageBox()
             msg.setWindowTitle('Error')
             msg.setText('An error occured while setting up experiment')
@@ -218,10 +217,6 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.GUI_main.tab_widget.setTabEnabled(2, True) # Enable setups tab.
         self.GUI_main.experiments_tab.setCurrentWidget(self.GUI_main.configure_experiment_tab)
         self.experiment_plot.close_experiment()
-        # Close boards.
-        for box in self.subjectboxes:
-            if box.board.data_logger: box.data_logger.close_files()
-            box.board.close()
         # Clear subjectboxes.
         while len(self.subjectboxes) > 0:
             box = self.subjectboxes.pop()
@@ -391,7 +386,7 @@ class Subjectbox(QtWidgets.QGroupBox):
                 subject_pv_dict = self.run_exp_tab.persistent_variables.get(self.subject,{})
                 for v in self.subject_variables:
                     if v['persistent'] and v['name'] in subject_pv_dict.keys(): # Use stored value.
-                        v_value =  subject_pv_dict[v['name']]
+                        v_value = subject_pv_dict[v['name']]
                         self.variables_set_pre_run.append(
                             (v['name'], str(v_value), '(persistent value)'))
                     else:
@@ -415,7 +410,7 @@ class Subjectbox(QtWidgets.QGroupBox):
     def make_variables_dialog(self):
         '''Configure variables dialog and ready subjectbox to start experiment. '''
         if 'custom_variables_dialog' in self.board.sm_info['variables']: # Task uses custon variables dialog
-            custom_variables_name = eval(self.board.sm_info['variables']['custom_variables_dialog'])
+            custom_variables_name = self.board.sm_info['variables']['custom_variables_dialog']
             potential_dialog = Custom_variables_dialog(self,custom_variables_name, is_experiment=True)
             if potential_dialog.custom_gui == "json_gui":
                 self.variables_dialog = potential_dialog
@@ -449,18 +444,12 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.run_exp_tab.experiment_plot.run_start(self.subject)
         self.start_time = datetime.now()
         ex = self.run_exp_tab.experiment
-        self.board.print('\nStarting experiment.\n')
+        self.print_to_log('\nStarting experiment.\n')
         self.data_logger.open_data_file(ex.data_dir, ex.name, self.setup_name, self.subject, datetime.now())
-        if self.subject_variables: # Write variables set pre run to data file.
-            for v_name, v_value, pv in self.variables_set_pre_run:
-                self.data_logger.data_file.write(f"V 0 {v_name} {v_value}\n")
-        self.data_logger.data_file.write('\n')
         self.board.start_framework()
-
         self.start_stop_button.setText('Stop')
         self.start_stop_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
         self.run_exp_tab.setups_started += 1
-
         self.run_exp_tab.GUI_main.refresh_timer.stop()
         self.run_exp_tab.update_timer.start(get_setting("plotting","update_interval"))
         self.run_exp_tab.update_startstopclose_button()
@@ -491,9 +480,9 @@ class Subjectbox(QtWidgets.QGroupBox):
         if summary_variables:
             self.subject_sumr_vars = {v['name']: 
                 self.board.get_variable(v['name']) for v in summary_variables}
-            for v_name, v_value in self.subject_sumr_vars.items():
-                self.data_logger.data_file.write(f"\nV -1 {v_name} {v_value}")
-                self.data_logger.data_file.flush()
+        # Close data files and disconnect from board.
+        self.data_logger.close_files()
+        self.board.close()
         # Update GUI elements.
         self.state = 'post_run'
         self.task_info.state_text.setText('Stopped')

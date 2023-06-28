@@ -1,7 +1,9 @@
 import pyb
+import ujson
 from . import timer
 from . import state_machine as sm
 from . import hardware as hw
+from . import utility as ut
 
 VERSION = '1.8'
 
@@ -15,8 +17,9 @@ state_typ = const(2) # State transition : (time, state_typ, state_ID)
 timer_typ = const(3) # User timer       : (time, timer_typ, event_ID)
 print_typ = const(4) # User print       : (time, print_typ, print_string)
 hardw_typ = const(5) # Harware callback : (time, hardw_typ, hardware_ID)
-varbl_typ = const(6) # Variable change  : (time, varbl_typ, (v_name, v_str)
+varbl_typ = const(6) # Variable change  : (time, varbl_typ, [s]et/[g]et/[p]rint/s[t]art/[e]nd byte, json_str)
 warng_typ = const(7) # Warning          : (time, warng_typ, print_string)
+stopf_typ = const(8) # Stop framework   : (time, stopf_type)
 
 # Event_queue -----------------------------------------------------------------
 
@@ -70,15 +73,20 @@ def _clock_tick(t):
 
 def output_data(event):
     # Output data to computer.
+    if not data_output:
+        return
     if event[1] in (event_typ, state_typ): # Event or state change.
         timestamp = event[0].to_bytes(4, 'little')
         ID        = event[2].to_bytes(2, 'little')
         checksum  = sum(timestamp + ID).to_bytes(2, 'little')
         usb_serial.send(b'\x07D' + timestamp + ID + checksum)
+    elif event[1] == stopf_typ: # Framework stop.
+        timestamp = event[0].to_bytes(4, 'little')
+        usb_serial.send(b'\x07S' + timestamp)
     else:
         if event[1] == varbl_typ: # Variable changed.
             start_byte = b'\x07V'
-            data_bytes = event[2][0].encode() + b' ' + event[2][1].encode()
+            data_bytes = (event[2] + event[3]).encode()
         else:
             if event[1] == print_typ: # User print string.
                 start_byte = b'\x07P'
@@ -102,31 +110,33 @@ def recieve_data():
         checksum = int.from_bytes(usb_serial.read(2), 'little')
         if not checksum == (sum(data) & 0xFFFF):
             return  # Bad checksum.
-        if data[-1:] == b's': # Set variable.
-            v_name, v_str = eval(data[:-1])
-            if sm.set_variable(v_name, v_str):
-                data_output_queue.put((current_time, varbl_typ, (v_name, v_str)))
-        elif data[-1:] == b'g': # Get variable.
-            v_name = data[:-1].decode()
-            v_str = sm.get_variable(v_name)
-            data_output_queue.put((current_time, varbl_typ, (v_name, v_str)))
+        data_str = data.decode()
+        if data_str[0] == 's': # Set variable.
+            v_name, v_value = eval(data_str[1:])
+            if sm.set_variable(v_name, v_value):
+                data_output_queue.put((current_time, varbl_typ, 's', ujson.dumps({v_name: v_value})))
+        elif data_str[0] == 'g': # Get variable.
+            v_name = data_str[1:]
+            v_value = sm.get_variable(v_name)
+            data_output_queue.put((current_time, varbl_typ, 'g', ujson.dumps({v_name: v_value})))
 
 def run():
     # Run framework for specified number of seconds.
     # Pre run
-    global current_time, start_time, running, data_output
+    global current_time, start_time, running
     timer.reset()
     event_queue.reset()
     data_output_queue.reset()
     if not hw.initialised: hw.initialise()
+    usb_serial.setinterrupt(-1) # Disable 'ctrl+c' on serial raising KeyboardInterrupt.
     current_time = 0
-    hw.run_start()
+    ut.print_variables(when='t')
     start_time = pyb.millis()
     clock.init(freq=1000)
-    clock.callback(_clock_tick)
-    usb_serial.setinterrupt(-1) # Disable 'ctrl+c' on serial raising KeyboardInterrupt.
-    running = True
+    clock.callback(_clock_tick) 
     sm.start()
+    hw.run_start()
+    running = True
     # Run
     while running:
         # Priority 1: Process hardware interrupts.
@@ -160,11 +170,10 @@ def run():
             hw.IO_dict[hw.stream_data_queue.get()].send_buffer()
         # Priority 7: Output framework data.
         elif data_output_queue.available:
-            event = data_output_queue.get()
-            if data_output:
-                output_data(event)
-
+            output_data(data_output_queue.get())
     # Post run
+    ut.print_variables(when='e')
+    data_output_queue.put((current_time, stopf_typ))
     usb_serial.setinterrupt(3) # Enable 'ctrl+c' on serial raising KeyboardInterrupt.
     clock.deinit()
     hw.run_stop()

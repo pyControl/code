@@ -335,7 +335,7 @@ class Run_task_tab(QtWidgets.QWidget):
             self.variables_dialog = Variables_dialog(self, self.board)
             self.using_json_gui = False
             if "custom_variables_dialog" in self.board.sm_info["variables"]:
-                custom_variables_name = eval(self.board.sm_info["variables"]["custom_variables_dialog"])
+                custom_variables_name = self.board.sm_info["variables"]["custom_variables_dialog"]
                 potential_dialog = Custom_variables_dialog(self, custom_variables_name)
                 if potential_dialog.custom_gui == "json_gui":
                     self.variables_dialog = potential_dialog
@@ -357,7 +357,6 @@ class Run_task_tab(QtWidgets.QWidget):
             self.uploaded = True
             self.upload_button.setText("Reset")
             self.upload_button.setIcon(QtGui.QIcon("gui/icons/refresh.svg"))
-
         except PyboardError:
             self.status_text.setText("Error setting up state machine.")
 
@@ -381,8 +380,8 @@ class Run_task_tab(QtWidgets.QWidget):
                 if reset_task == QtWidgets.QMessageBox.StandardButton.Yes:
                     self.setup_task()
                     return
-            subject_ID = str(self.subject_text.text())
-            setup_ID = str(self.board_select.currentText())
+            subject_ID = self.subject_text.text()
+            setup_ID =  self.board_select.currentText()
             self.data_logger.open_data_file(self.data_dir, "run_task", setup_ID, subject_ID)
             self.data_logger.copy_task_file(self.data_dir, self.GUI_main.task_directory, "run_task-task_files")
         self.fresh_task = False
