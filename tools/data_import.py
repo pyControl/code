@@ -140,9 +140,9 @@ class Session:
 
             # Create variables dataframe.
 
-            df.loc[df["type"] == "variable", "value"] = df.loc[df["type"] == "variable", "value"].apply(
-                json.loads
-            )  # Convert variables row value fields to dicts.
+            # Convert variables row value fields to dicts.
+            df.loc[df["type"] == "variable", "value"] = df.loc[df["type"] == "variable", "value"].apply(json.loads)
+
             self.variables_df = pd.DataFrame(df.loc[df["type"] == "variable", "value"].tolist())
             columns = self.variables_df.columns
             self.variables_df.columns = pd.MultiIndex.from_arrays([["values"] * len(columns), columns])

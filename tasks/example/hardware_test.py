@@ -5,17 +5,14 @@ from pyControl.utility import *
 import hardware_definition as hw
 
 # States and events.
-
 states = ["init_state", "left_active", "right_active", "left_release", "right_release"]
-
 events = ["left_poke", "right_poke", "center_poke", "center_poke_out"]
 
 initial_state = "init_state"
 
+
 # Run start and stop behaviour.
-
-
-def run_start():  #
+def run_start():
     hw.houselight.on()
 
 
@@ -24,8 +21,6 @@ def run_end():
 
 
 # State & event dependent behaviour.
-
-
 def init_state(event):
     # Select left or right poke.
     if event == "entry":

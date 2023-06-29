@@ -444,7 +444,8 @@ class Pycboard(Pyboard):
                     new_data.append(("!", "Unexpected input received from board: " + "".join(unexpected_input)))
                     unexpected_input = []
                 type_byte = self.serial.read(1)  # Message type identifier.
-                if type_byte == b"A":  # Analog data, 11 byte header + variable size content.
+                # Analog data, 11 byte header + variable size content.
+                if type_byte == b"A":
                     data_header = self.serial.read(11)
                     typecode = data_header[:1].decode()
                     if typecode not in ("b", "B", "h", "H", "l", "L"):
@@ -459,7 +460,8 @@ class Pycboard(Pyboard):
                         new_data.append(Datatuple(type="A", time=timestamp, ID=ID, data=data_array))
                     else:
                         new_data.append(Datatuple(type="!", data="bad data checksum, datatype: A"))
-                elif type_byte == b"D":  # Event or state entry, 8 byte data header only.
+                # Event or state entry, 8 byte data header only.
+                elif type_byte == b"D":
                     data_header = self.serial.read(8)
                     timestamp = int.from_bytes(data_header[:4], "little")
                     ID = int.from_bytes(data_header[4:6], "little")
@@ -468,14 +470,12 @@ class Pycboard(Pyboard):
                         new_data.append(Datatuple(type="D", time=timestamp, ID=ID))
                     else:
                         new_data.append(Datatuple(type="!", data="bad data checksum, datatype: D"))
-                elif type_byte == b"S":  # Framework stop
+                # Framework stop
+                elif type_byte == b"S":
                     timestamp = int.from_bytes(self.serial.read(4), "little")
                     new_data.append(Datatuple(type="S", time=timestamp))
-                elif type_byte in (
-                    b"P",
-                    b"V",
-                    b"!",
-                ):  # User print statement, set variable, or warning. 8 byte data header + variable size content.
+                # User print statement, set variable, or warning. 8 byte data header + variable size content.
+                elif type_byte in (b"P", b"V", b"!"):
                     data_type = type_byte.decode()
                     data_header = self.serial.read(8)
                     data_len = int.from_bytes(data_header[:2], "little")
@@ -517,7 +517,7 @@ class Pycboard(Pyboard):
     # ------------------------------------------------------------------------------------
 
     def send_serial_data(self, data, command, cmd_type=""):
-        encoded_data =  cmd_type.encode() + data.encode()
+        encoded_data = cmd_type.encode() + data.encode()
         data_len = len(encoded_data).to_bytes(2, "little")
         checksum = sum(encoded_data).to_bytes(2, "little")
         self.serial.write(command.encode() + data_len + encoded_data + checksum)
@@ -529,7 +529,7 @@ class Pycboard(Pyboard):
         if v_name not in self.sm_info["variables"]:
             raise PyboardError("Invalid variable name: {}".format(v_name))
         if self.framework_running:  # Set variable with serial command.
-            self.send_serial_data(repr((v_name, v_value)),"V","s")
+            self.send_serial_data(repr((v_name, v_value)), "V", "s")
             return None
         else:  # Set variable using REPL.
             set_OK = eval(self.eval(f"sm.set_variable({repr(v_name)}, {v_value})").decode())
@@ -544,7 +544,7 @@ class Pycboard(Pyboard):
         if v_name not in self.sm_info["variables"]:
             raise PyboardError("Invalid variable name: {}".format(v_name))
         if self.framework_running:  # Get variable with serial command.
-            self.send_serial_data(v_name,"V","g")
+            self.send_serial_data(v_name, "V", "g")
         else:  # Get variable using REPL.
             return eval(self.eval(f"sm.get_variable({repr(v_name)})").decode())
 
@@ -554,4 +554,4 @@ class Pycboard(Pyboard):
 
     def trigger_event(self, event_name):
         if self.framework_running:  # Set variable with serial command.
-            self.send_serial_data(event_name,"E")
+            self.send_serial_data(event_name, "E")

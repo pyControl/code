@@ -60,7 +60,10 @@ class Board_config_dialog(QtWidgets.QDialog):
 
     def load_hardware_definition(self):
         hwd_path = QtWidgets.QFileDialog.getOpenFileName(
-            self, "Select hardware definition:", dirs["hardware_definitions"], filter="*.py"
+            self,
+            "Select hardware definition:",
+            dirs["hardware_definitions"],
+            filter="*.py",
         )[0]
         if hwd_path:
             self.accept()
@@ -166,7 +169,7 @@ class Event_combo(QtWidgets.QWidget):
 
 class Variable_setter(QtWidgets.QWidget):
     # For setting and getting a single variable.
-    def __init__(self, v_name, v_value, i, parent_grid):  # Should split into seperate init and provide info.
+    def __init__(self, v_name, v_value, i, parent_grid):
         super(QtWidgets.QWidget, self).__init__(parent_grid)
         self.board = parent_grid.board
         self.v_name = v_name
@@ -381,15 +384,29 @@ class Settings_dialog(QtWidgets.QDialog):
 
         plotting_box = QtWidgets.QGroupBox("Plotting")
         plotting_layout = QtWidgets.QGridLayout()
-        self.update_interval = Spin_setter(self, "Update interval", ("plotting", "update_interval"), " ms")
+        self.update_interval = Spin_setter(
+            self,
+            "Update interval",
+            ("plotting", "update_interval"),
+            " ms",
+        )
         self.event_history_len = Spin_setter(
-            self, "Event history length*", ("plotting", "event_history_len"), " events"
+            self,
+            "Event history length*",
+            ("plotting", "event_history_len"),
+            " events",
         )
         self.state_history_len = Spin_setter(
-            self, "State history length*", ("plotting", "state_history_len"), " states"
+            self,
+            "State history length*",
+            ("plotting", "state_history_len"),
+            " states",
         )
         self.analog_history_dur = Spin_setter(
-            self, "Analog history duration*", ("plotting", "analog_history_dur"), " s"
+            self,
+            "Analog history duration*",
+            ("plotting", "analog_history_dur"),
+            " s",
         )
 
         self.plotting_spins = [

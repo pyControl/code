@@ -3,23 +3,15 @@
 
 from pyControl.utility import *
 from devices import *
-from pyb import LED
 
 # Define hardware (normally done in seperate hardware definition file).
-
 blue_LED = Digital_output("B4")
 
 # States and events.
-
 states = ["LED_on", "LED_off"]
-
 events = []
-initial_state = "LED_on"
 
 initial_state = "LED_off"
-
-# Define behaviour.
-
 
 
 # Define behaviour.

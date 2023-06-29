@@ -197,7 +197,9 @@ class Events_plot:
         if not self.event_IDs:
             return
         self.plot.setData(
-            x=self.data[:, 0] - run_time, y=self.data[:, 1], symbolBrush=[pg.intColor(ID) for ID in self.data[:, 1]]
+            x=self.data[:, 0] - run_time,
+            y=self.data[:, 1],
+            symbolBrush=[pg.intColor(ID) for ID in self.data[:, 1]],
         )
 
 
