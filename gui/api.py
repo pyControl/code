@@ -89,7 +89,7 @@ class Api:
         # each call to process_data
         self.event_tup = namedtuple("Event", "name time")
         self.state_tup = namedtuple("State", "name time")
-        self.print_tup = namedtuple("Print", "name time")
+        self.print_tup = namedtuple("Print", "data time")
         self.var_tup = namedtuple("Var", "name time")
         self.analog_tup = namedtuple("Analog", "name time data")
 
@@ -103,17 +103,17 @@ class Api:
         data = {"states": [], "events": [], "prints": [], "vars": [], "analog": []}
 
         for nd in new_data:
-            if nd[0] == "P":
-                data["prints"].append(self.print_tup(nd[2], nd[1]))
-            elif nd[0] == "V":
-                data["vars"].append(self.var_tup(nd[2], nd[1]))
-            elif nd[0] == "D":
-                name = self.ID2name[nd[2]]
+            if nd.type == "P":
+                data["prints"].append(self.print_tup(nd.data, nd.time))
+            elif nd.type == "V":
+                data["vars"].append(self.var_tup(nd.ID, nd.time))
+            elif nd.type == "D":
+                name = self.ID2name[nd.ID]
                 if name in self.board.sm_info["states"]:
-                    data["states"].append(self.state_tup(name, nd[1]))
+                    data["states"].append(self.state_tup(name, nd.time))
                 else:
-                    data["events"].append(self.event_tup(name, nd[1]))
-            elif nd[0] == "A":
-                data["analog"].append(self.analog_tup(self.ID2analog[nd[1]], nd[3], nd[4]))
+                    data["events"].append(self.event_tup(name, nd.time))
+            elif nd.type == "A":
+                data["analog"].append(self.analog_tup(self.ID2analog[nd.ID], nd.time, nd.data))
 
         self.process_data_user(data)

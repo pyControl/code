@@ -368,7 +368,7 @@ class Run_task_tab(QtWidgets.QWidget):
         self.data_logger.data_consumers = [self.task_plot, self.task_info]
         if "api_class" not in self.board.sm_info["variables"]:
             return  # Task does not use API.
-        API_name = eval(self.board.sm_info["variables"]["api_class"])
+        API_name = self.board.sm_info["variables"]["api_class"]
         # Try to import and instantiate the user API.
         try:
             user_module_name = f"config.user_classes.{API_name}"
