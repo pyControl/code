@@ -335,8 +335,8 @@ class Run_task_tab(QtWidgets.QWidget):
                 self.controls_dialog.deleteLater()
             self.controls_dialog = Controls_dialog(self)
             self.using_json_gui = False
-            if "custom_variables_dialog" in self.board.sm_info["variables"]:
-                custom_variables_name = self.board.sm_info["variables"]["custom_variables_dialog"]
+            if "custom_controls_dialog" in self.board.sm_info["variables"]:
+                custom_variables_name = self.board.sm_info["variables"]["custom_controls_dialog"]
                 potential_dialog = Custom_controls_dialog(self, custom_variables_name)
                 if potential_dialog.custom_gui == "json_gui":
                     self.controls_dialog = potential_dialog

@@ -485,7 +485,7 @@ class Custom_controls_grid(QtWidgets.QWidget):
             v_name
             for v_name in leftover_vars
             if not v_name.endswith("___")
-            and v_name != "custom_variables_dialog"
+            and v_name != "custom_controls_dialog"
             and not v_name.startswith("hw_")
             and v_name != "api_class"
         ]
@@ -643,13 +643,13 @@ class Controls_dialog_editor(QtWidgets.QDialog):
                 file_content = file.read()
         except FileNotFoundError:
             return
-        # get list of variables. ignore private variables and the custom_variables_dialog variable
+        # get list of variables. ignore private variables and the custom_controls_dialog variable
         self.variable_names = set(
             [
                 v_name
                 for v_name in re.findall(pattern, file_content)
                 if not v_name.endswith("___")
-                and v_name != "custom_variables_dialog"
+                and v_name != "custom_controls_dialog"
                 and not v_name.startswith("hw_")
                 and v_name != "api_class"
             ]

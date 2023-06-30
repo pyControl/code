@@ -122,7 +122,7 @@ class Variables_grid(QtWidgets.QWidget):
         for v_name, v_value in sorted(variables.items()):
             if (
                 not v_name.endswith("___")
-                and v_name != "custom_variables_dialog"
+                and v_name != "custom_controls_dialog"
                 and not v_name.startswith("hw_")
                 and v_name != "api_class"
             ):

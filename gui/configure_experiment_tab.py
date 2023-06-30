@@ -682,7 +682,7 @@ class VariablesTable(QtWidgets.QTableWidget):
                     v_name
                     for v_name in re.findall(pattern, file_content)
                     if not v_name.endswith("___")
-                    and v_name != "custom_variables_dialog"
+                    and v_name != "custom_controls_dialog"
                     and not v_name.startswith("hw_")
                     and v_name != "api_class"
                 ]

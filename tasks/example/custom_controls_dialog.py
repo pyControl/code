@@ -28,9 +28,9 @@ v.current_count___ = 0
 
 # Custom controls dialog declaration
 # Uncomment 1 of the 3 below. (files found in config/user_controls_dialogs/)
-v.custom_variables_dialog = "blinker_gui"  # example dialog 
-# v.custom_variables_dialog = 'blinker_gui_tabs' # example dialog with tabs 
-# v.custom_variables_dialog = 'blinker_gui_from_py' # advanced example dialog that is loaded from a .py file
+v.custom_controls_dialog = "blinker_gui"  # example dialog 
+# v.custom_controls_dialog = 'blinker_gui_tabs' # example dialog with tabs 
+# v.custom_controls_dialog = 'blinker_gui_from_py' # advanced example dialog that is loaded from a .py file
 
 
 # Define behaviour.
