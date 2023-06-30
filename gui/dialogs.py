@@ -93,7 +93,7 @@ class Controls_dialog(QtWidgets.QDialog):
         self.setWindowTitle("Controls")
         self.scroll_area = QtWidgets.QScrollArea(parent=self)
         self.scroll_area.setWidgetResizable(True)
-        self.controls_grid = Variables_grid(self.scroll_area, parent.board)
+        self.controls_grid = Controls_grid(self.scroll_area, parent.board)
         self.scroll_area.setWidget(self.controls_grid)
         self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.addWidget(self.scroll_area)
@@ -103,8 +103,8 @@ class Controls_dialog(QtWidgets.QDialog):
         self.close_shortcut.activated.connect(self.close)
 
 
-class Variables_grid(QtWidgets.QWidget):
-    # Grid of variables to set/get, displayed within scroll area of dialog.
+class Controls_grid(QtWidgets.QWidget):
+    # Grid of controls displayed within scroll area of dialog
     def __init__(self, parent_widget, board):
         super(QtWidgets.QWidget, self).__init__(parent_widget)
         self.grid_layout = QtWidgets.QGridLayout()
