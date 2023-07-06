@@ -74,6 +74,7 @@ def print_variables(variables="all", when="p"):
     fw.data_output_queue.put((fw.current_time, fw.varbl_typ, when, ujson.dumps(var_dict)))
 
 
+
 def warning(message):
     # Print a warning message to the log.
     fw.data_output_queue.put((fw.current_time, fw.warng_typ, message))

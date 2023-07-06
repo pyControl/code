@@ -5,20 +5,16 @@ from pyControl.utility import *
 from devices import *
 
 # Define hardware (normally done in seperate hardware definition file).
-
 blue_LED = Digital_output("B4")
 
 # States and events.
-
 states = ["LED_on", "LED_off"]
-
 events = []
 
 initial_state = "LED_off"
 
+
 # Define behaviour.
-
-
 def LED_on(event):
     if event == "entry":
         timed_goto_state("LED_off", 0.5 * second)

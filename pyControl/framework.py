@@ -105,7 +105,7 @@ def output_data(event):
         usb_serial.send(start_byte + data_len + timestamp + checksum + data_bytes)
 
 
-def recieve_data():
+def receive_data():
     # Read and process data from computer.
     global running
     new_byte = usb_serial.read(1)
@@ -115,7 +115,7 @@ def recieve_data():
         data_len = int.from_bytes(usb_serial.read(2), "little")
         data = usb_serial.read(data_len)
         checksum = int.from_bytes(usb_serial.read(2), "little")
-        if not checksum == (sum(data) & 0xFFFF):
+        if checksum != (sum(data) & 0xFFFF):
             return  # Bad checksum.
         data_str = data.decode()
         if data_str[0] == "s":  # Set variable.
@@ -126,6 +126,14 @@ def recieve_data():
             v_name = data_str[1:]
             v_value = sm.get_variable(v_name)
             data_output_queue.put((current_time, varbl_typ, "g", ujson.dumps({v_name: v_value})))
+    elif new_byte == b"E":  # Publish event command.
+        # read in event name
+        data_len = int.from_bytes(usb_serial.read(2), "little")
+        data = usb_serial.read(data_len)
+        checksum = int.from_bytes(usb_serial.read(2), "little")
+        if checksum != (sum(data) & 0xFFFF):
+            return  # Bad checksum.
+        event_queue.put((current_time, event_typ, sm.events[data.decode()]))
 
 
 def run():
@@ -173,7 +181,7 @@ def run():
                 sm.goto_state(event[2])
         # Priority 5: Check for serial input from computer.
         elif usb_serial.any():
-            recieve_data()
+            receive_data()
         # Priority 6: Stream analog data.
         elif hw.stream_data_queue.available:
             hw.IO_dict[hw.stream_data_queue.get()].send_buffer()

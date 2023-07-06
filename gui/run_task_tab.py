@@ -9,8 +9,8 @@ from com.pycboard import Pycboard, PyboardError, _djb2_file
 from com.data_logger import Data_logger
 
 from gui.settings import get_setting
-from gui.dialogs import Variables_dialog
-from gui.custom_variables_dialog import Custom_variables_dialog
+from gui.dialogs import Controls_dialog
+from gui.custom_controls_dialog import Custom_controls_dialog
 from gui.plotting import Task_plot
 from gui.utility import init_keyboard_shortcuts, NestedMenu, TaskInfo
 from gui.hardware_variables_dialog import set_hardware_variables, hw_vars_defined_in_setup
@@ -35,9 +35,10 @@ class Run_task_tab(QtWidgets.QWidget):
         self.connected = False  # Whether gui is connected to pyboard.
         self.uploaded = False  # Whether selected task file is on board.
         self.fresh_task = None  # Whether task has been run or variables edited.
+        self.user_API = None  # Overwritten by user API class.
         self.running = False
         self.subject_changed = False
-        self.variables_dialog = None
+        self.controls_dialog = None
 
         # GUI groupbox.
 
@@ -105,7 +106,7 @@ class Run_task_tab(QtWidgets.QWidget):
         self.task_select.set_callback(self.task_changed)
         self.upload_button = QtWidgets.QPushButton("Upload")
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
-        self.variables_button = QtWidgets.QPushButton("Variables")
+        self.variables_button = QtWidgets.QPushButton("Controls")
         self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
 
         taskgroup_layout = QtWidgets.QGridLayout()
@@ -174,8 +175,8 @@ class Run_task_tab(QtWidgets.QWidget):
         self.setLayout(self.run_layout)
 
         # Create timers
-        self.update_timer = QtCore.QTimer()  # Timer to regularly call update() during run.
-        self.update_timer.timeout.connect(self.update)
+        self.plot_update_timer = QtCore.QTimer()  # Timer to regularly call update() during run.
+        self.plot_update_timer.timeout.connect(self.plot_update)
 
         # Keyboard Shortcuts
 
@@ -229,9 +230,8 @@ class Run_task_tab(QtWidgets.QWidget):
             self.data_dir_text.setText(get_setting("folders", "data"))
         if self.task:
             try:
-                task_path = os.path.join(
-                    self.GUI_main.task_directory, self.task + ".py"
-                )  # gets called frequently, so not using get_setting()
+                # gets called frequently, so not using get_setting()
+                task_path = os.path.join( self.GUI_main.task_directory, self.task + ".py")  
                 if not self.task_hash == _djb2_file(task_path):  # Task file modified.
                     self.task_changed()
             except FileNotFoundError:
@@ -315,6 +315,7 @@ class Run_task_tab(QtWidgets.QWidget):
             self.variables_button.setEnabled(False)
             self.repaint()
             self.board.setup_state_machine(task, uploaded=self.uploaded)
+            self.initialise_API()
             self.task = task
             # Set values for any hardware variables.
             task_hw_vars = [task_var for task_var in self.board.sm_info["variables"] if task_var.startswith("hw_")]
@@ -329,22 +330,22 @@ class Run_task_tab(QtWidgets.QWidget):
                     for v_name, v_value, pv_str in hw_vars_set:
                         self.print_to_log(v_name.ljust(name_len + 4) + v_value.ljust(value_len + 4) + pv_str)
             # Configure GUI ready to run.
-            if self.variables_dialog:
+            if self.controls_dialog:
                 self.variables_button.clicked.disconnect()
-                self.variables_dialog.deleteLater()
-            self.variables_dialog = Variables_dialog(self, self.board)
+                self.controls_dialog.deleteLater()
+            self.controls_dialog = Controls_dialog(self)
             self.using_json_gui = False
-            if "custom_variables_dialog" in self.board.sm_info["variables"]:
-                custom_variables_name = self.board.sm_info["variables"]["custom_variables_dialog"]
-                potential_dialog = Custom_variables_dialog(self, custom_variables_name)
+            if "custom_controls_dialog" in self.board.sm_info["variables"]:
+                custom_variables_name = self.board.sm_info["variables"]["custom_controls_dialog"]
+                potential_dialog = Custom_controls_dialog(self, custom_variables_name)
                 if potential_dialog.custom_gui == "json_gui":
-                    self.variables_dialog = potential_dialog
+                    self.controls_dialog = potential_dialog
                     self.using_json_gui = True
                 elif potential_dialog.custom_gui == "pyfile_gui":
-                    py_gui_file = importlib.import_module(f"config.user_variable_dialogs.{custom_variables_name}")
+                    py_gui_file = importlib.import_module(f"config.user_controls_dialogs.{custom_variables_name}")
                     importlib.reload(py_gui_file)
-                    self.variables_dialog = py_gui_file.Custom_variables_dialog(self, self.board)
-            self.variables_button.clicked.connect(self.variables_dialog.exec)
+                    self.controls_dialog = py_gui_file.Custom_controls_dialog(self, self.board)
+            self.variables_button.clicked.connect(self.controls_dialog.exec)
             self.variables_button.setEnabled(True)
             self.task_plot.set_state_machine(self.board.sm_info)
             self.task_info.set_state_machine(self.board.sm_info)
@@ -359,6 +360,35 @@ class Run_task_tab(QtWidgets.QWidget):
             self.upload_button.setIcon(QtGui.QIcon("gui/icons/refresh.svg"))
         except PyboardError:
             self.status_text.setText("Error setting up state machine.")
+
+    def initialise_API(self):
+        # If task file specifies a user API attempt to initialise it.
+        self.user_API = None  # Remove previous API.
+        # Remove previous API from data consumers.
+        self.data_logger.data_consumers = [self.task_plot, self.task_info]
+        if "api_class" not in self.board.sm_info["variables"]:
+            return  # Task does not use API.
+        API_name = self.board.sm_info["variables"]["api_class"]
+        # Try to import and instantiate the user API.
+        try:
+            user_module_name = f"config.user_classes.{API_name}"
+            user_module = importlib.import_module(user_module_name)
+            importlib.reload(user_module)
+        except ModuleNotFoundError:
+            self.print_to_log(f"\nCould not find user API module: {user_module_name}")
+            return
+        if not hasattr(user_module, API_name):
+            self.print_to_log(f'\nCould not find user API class "{API_name}" in {user_module_name}')
+            return
+        try:
+            user_API_class = getattr(user_module, API_name)
+            self.user_API = user_API_class()
+            self.user_API.interface(self.board, self.print_to_log)
+            self.data_logger.data_consumers.append(self.user_API)
+            self.print_to_log(f"\nInitialised API: {API_name}")
+        except Exception as e:
+            self.print_to_log(f"Unable to intialise API: {API_name}\nTraceback: {e}")
+            raise (PyboardError)
 
     def select_data_dir(self):
         new_path = QtWidgets.QFileDialog.getExistingDirectory(
@@ -390,6 +420,8 @@ class Run_task_tab(QtWidgets.QWidget):
         self.running = True
         self.board.start_framework()
         self.task_plot.run_start(recording)
+        if self.user_API:
+            self.user_API.run_start()
         self.task_select.setEnabled(False)
         self.upload_button.setEnabled(False)
         self.file_groupbox.setEnabled(False)
@@ -397,9 +429,9 @@ class Run_task_tab(QtWidgets.QWidget):
         self.board_groupbox.setEnabled(False)
         self.stop_button.setEnabled(True)
         if self.using_json_gui:
-            self.variables_dialog.edit_action.setEnabled(False)
+            self.controls_dialog.edit_action.setEnabled(False)
         self.print_to_log(f"\nRun started at: {datetime.now().strftime('%Y/%m/%d %H:%M:%S')}\n")
-        self.update_timer.start(get_setting("plotting", "update_interval"))
+        self.plot_update_timer.start(get_setting("plotting", "update_interval"))
         self.GUI_main.refresh_timer.stop()
         self.status_text.setText("Running: " + self.task)
         self.GUI_main.tab_widget.setTabEnabled(1, False)  # Disable experiments tab.
@@ -407,7 +439,7 @@ class Run_task_tab(QtWidgets.QWidget):
 
     def stop_task(self, error=False, stopped_by_task=False):
         self.running = False
-        self.update_timer.stop()
+        self.plot_update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
         if not (error or stopped_by_task):
             self.board.stop_framework()
@@ -419,6 +451,8 @@ class Run_task_tab(QtWidgets.QWidget):
                 self.print_to_log("\nError while stopping framework run.")
         self.data_logger.close_files()
         self.task_plot.run_stop()
+        if self.user_API:
+            self.user_API.run_stop()
         self.board_groupbox.setEnabled(True)
         self.file_groupbox.setEnabled(True)
         self.start_button.setEnabled(True)
@@ -426,15 +460,16 @@ class Run_task_tab(QtWidgets.QWidget):
         self.upload_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         if self.using_json_gui:
-            self.variables_dialog.edit_action.setEnabled(True)
+            self.controls_dialog.edit_action.setEnabled(True)
         self.status_text.setText("Uploaded : " + self.task)
         self.GUI_main.tab_widget.setTabEnabled(1, True)  # Enable setups tab.
         self.GUI_main.tab_widget.setTabEnabled(2, True)  # Enable setups tab.
 
     # Timer updates
 
-    def update(self):
-        # Called regularly during run to process data from board and update plots.
+    def plot_update(self):
+        """Called every plotting update interval (default=10ms)
+        while experiment is running"""
         try:
             self.board.process_data()
             if not self.board.framework_running:
@@ -443,6 +478,8 @@ class Run_task_tab(QtWidgets.QWidget):
             self.print_to_log("\nError during framework run.")
             self.stop_task(error=True)
         self.task_plot.update()
+        if self.user_API:
+            self.user_API.plot_update()
 
     # Cleanup.
 

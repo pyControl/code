@@ -56,6 +56,7 @@ class Session:
 
             # Extract and store session information.
 
+            # Extract and store session data.
             info_lines = [line[2:] for line in all_lines if line[0] == "I"]
 
             self.experiment_name = next(line for line in info_lines if "Experiment name" in line).split(" : ")[1]
@@ -139,9 +140,9 @@ class Session:
 
             # Create variables dataframe.
 
-            df.loc[df["type"] == "variable", "value"] = df.loc[df["type"] == "variable", "value"].apply(
-                json.loads
-            )  # Convert variables row value fields to dicts.
+            # Convert variables row value fields to dicts.
+            df.loc[df["type"] == "variable", "value"] = df.loc[df["type"] == "variable", "value"].apply(json.loads)
+
             self.variables_df = pd.DataFrame(df.loc[df["type"] == "variable", "value"].tolist())
             columns = self.variables_df.columns
             self.variables_df.columns = pd.MultiIndex.from_arrays([["values"] * len(columns), columns])
@@ -185,7 +186,7 @@ class Experiment:
 
         old_files = [session.file_name for session in self.sessions]
         files = os.listdir(self.path)
-        new_files = [f for f in files if f[-4:] in (".txt", ".tsv") and f not in old_files]
+        new_files = [f for f in files if f.endswith((".txt", ".tsv")) and f not in old_files]
 
         if len(new_files) > 0:
             print("Loading new data files..")

@@ -562,9 +562,8 @@ class VariablesTable(QtWidgets.QTableWidget):
         self.n_variables = 0
         self.variable_names = []
         self.available_variables = []
-        self.assigned = {
-            v_name: [] for v_name in self.variable_names
-        }  # Which subjects have values assigned for each variable.
+        # Which subjects have values assigned for each variable.
+        self.assigned = { v_name: [] for v_name in self.variable_names }  
 
     def reset(self):
         """Clear all rows of table."""
@@ -683,8 +682,9 @@ class VariablesTable(QtWidgets.QTableWidget):
                     v_name
                     for v_name in re.findall(pattern, file_content)
                     if not v_name.endswith("___")
-                    and v_name != "custom_variables_dialog"
+                    and v_name != "custom_controls_dialog"
                     and not v_name.startswith("hw_")
+                    and v_name != "api_class"
                 ]
             )
         )

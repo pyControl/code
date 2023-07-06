@@ -72,14 +72,14 @@ class Rsync_aligner:
         intervals_B = np.diff(pulse_times_B) * units_B  # Inter-pulse intervals for sequence B
         intervals_B2 = intervals_B**2
         # Find alignments of chunks which minimise sum of squared errors.
-        chunk_starts_A = np.arange(
-            0, len(pulse_times_A) - chunk_size, chunk_size
-        )  # Start indices of each chunk of sequence A.
+        # Start indices of each chunk of sequence A.
+        chunk_starts_A = np.arange(0, len(pulse_times_A) - chunk_size, chunk_size)
+
         chunk_starts_B = np.zeros(chunk_starts_A.shape, int)  # Start indicies of corresponding chunks in B.
         chunk_min_mse = np.zeros(chunk_starts_A.shape)  # Mean squared error for each chunks best alignment.
-        chunk_2nd_mse = np.zeros(
-            chunk_starts_A.shape
-        )  # Mean sqared error for each chunks second best (i.e non matching) alignment.
+        # Mean sqared error for each chunks second best (i.e non matching) alignment.
+        chunk_2nd_mse = np.zeros(chunk_starts_A.shape)
+
         ones_chunk = np.ones(chunk_size)
         for i, csA in enumerate(chunk_starts_A):
             chunk_A = intervals_A[csA : csA + chunk_size]
@@ -118,9 +118,8 @@ class Rsync_aligner:
         self.units_B = units_B
         # Compute variables used for extrapolating beyond first/last matching pulse.
         diff_cor_times_B = np.diff(cor_times_B)
-        self.dAdB = np.sum(
-            np.diff(pulse_times_A)[~np.isnan(diff_cor_times_B)]
-        ) / np.sum(  # Empirical units_A/units_B from matched inter-pulse intervals.
+        # Empirical units_A/units_B from matched inter-pulse intervals.
+        self.dAdB = np.sum(np.diff(pulse_times_A)[~np.isnan(diff_cor_times_B)]) / np.sum(
             diff_cor_times_B[~np.isnan(diff_cor_times_B)]
         )
         matched_pulse_times_A = cor_times_A[~np.isnan(cor_times_A)]
@@ -130,14 +129,12 @@ class Rsync_aligner:
         self.first_matched_time_B = matched_pulse_times_B[0]
         self.last_matched_time_B = matched_pulse_times_B[-1]
         # Check quality of alignment.
-        separation_OK = np.abs(gmm.means_[0] - gmm.means_[1])[
-            0
-        ] > 3 * np.sum(  # Different in GMM means > 3 x sum of standard deviations.
-            np.sqrt(gmm.covariances_)
-        )
-        order_OK = (np.nanmin(np.diff(cor_times_A)) > 0) and (
-            np.nanmin(np.diff(cor_times_A)) > 0
-        )  # Corresponding times are monotonically increacing.
+        # Different in GMM means > 3 x sum of standard deviations.
+        separation_OK = np.abs(gmm.means_[0] - gmm.means_[1])[0] > 3 * np.sum(np.sqrt(gmm.covariances_))
+
+        # Corresponding times are monotonically increacing.
+        order_OK = (np.nanmin(np.diff(cor_times_A)) > 0) and (np.nanmin(np.diff(cor_times_A)) > 0)
+
         if not (separation_OK and order_OK):
             if raise_exception:
                 raise RsyncError("No match found between inter-pulse interval sequences.")
@@ -201,9 +198,15 @@ def simulate_pulses(n_pulse=1000, interval=[100, 1900], units_B=2, noise_SD=2, m
     pulse_times_B = units_B * (pulse_times_A + np.cumsum(np.random.normal(scale=noise_SD, size=n_pulse)))
     if missing_pulses:
         pulse_times_A = np.hstack(
-            [pulse_times_A[int(n_pulse * 0.05) : int(n_pulse * 0.21)], pulse_times_A[int(n_pulse * 0.33) :] + 2e5]
+            [
+                pulse_times_A[int(n_pulse * 0.05) : int(n_pulse * 0.21)],
+                pulse_times_A[int(n_pulse * 0.33) :] + 2e5,
+            ]
         )
         pulse_times_B = np.hstack(
-            [pulse_times_B[: int(n_pulse * 0.74)], pulse_times_B[int(n_pulse * 0.85) : int(n_pulse * 0.95)]]
+            [
+                pulse_times_B[: int(n_pulse * 0.74)],
+                pulse_times_B[int(n_pulse * 0.85) : int(n_pulse * 0.95)],
+            ]
         )
     return pulse_times_A, pulse_times_B

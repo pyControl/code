@@ -12,9 +12,9 @@ from com.pycboard import Pycboard, PyboardError, Datatuple
 from com.data_logger import Data_logger
 from gui.settings import get_setting
 from gui.plotting import Experiment_plot
-from gui.dialogs import Variables_dialog, Summary_variables_dialog
+from gui.dialogs import Controls_dialog, Summary_variables_dialog
 from gui.utility import variable_constants, TaskInfo, parallel_call
-from gui.custom_variables_dialog import Custom_variables_dialog
+from gui.custom_controls_dialog import Custom_controls_dialog
 from gui.hardware_variables_dialog import set_hardware_variables
 
 
@@ -59,8 +59,8 @@ class Run_experiment_tab(QtWidgets.QWidget):
 
         self.subjectboxes = []
 
-        self.update_timer = QtCore.QTimer()  # Timer to regularly call update() during run.
-        self.update_timer.timeout.connect(self.update)
+        self.plot_update_timer = QtCore.QTimer()  # Timer to regularly call update() during run.
+        self.plot_update_timer.timeout.connect(self.plot_update)
 
     # Main setup experiment function.
 
@@ -176,7 +176,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
     def stop_experiment(self):
         """Called when all setups have stopped running. Configure GUI update
         timers, store persistant variables and display summary variables."""
-        self.update_timer.stop()
+        self.plot_update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
         # Store persistent variables.
         if os.path.exists(self.pv_path):
@@ -203,7 +203,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         """Check if setup has failed on any subjectbox and if so abort experiment."""
         if any([box.setup_failed for box in self.subjectboxes]):
             # Setup has failed abort experiment setup.
-            self.update_timer.stop()
+            self.plot_update_timer.stop()
             self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
             for box in self.subjectboxes:
                 # Stop running boards and close serial connections.
@@ -251,8 +251,9 @@ class Run_experiment_tab(QtWidgets.QWidget):
             self.logs_visible = True
             self.logs_button.setText("Hide logs")
 
-    def update(self):
-        """Called regularly while experiment is running"""
+    def plot_update(self):
+        """Called every plotting update interval (default=10ms)
+        while experiment is running"""
         for box in self.subjectboxes:
             box.update()
         self.experiment_plot.update()
@@ -297,7 +298,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.time_text.setReadOnly(True)
         self.time_text.setFixedWidth(50)
         self.task_info = TaskInfo()
-        self.variables_button = QtWidgets.QPushButton("Variables")
+        self.variables_button = QtWidgets.QPushButton("Controls")
         self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
         self.variables_button.setEnabled(False)
         self.log_textbox = QtWidgets.QTextEdit()
@@ -380,6 +381,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         # Setup task state machine.
         try:
             self.board.setup_state_machine(self.run_exp_tab.experiment.task)
+            self.initialise_API()
         except PyboardError:
             self.setup_failed = True
             self.error()
@@ -420,20 +422,48 @@ class Subjectbox(QtWidgets.QGroupBox):
                 self.setup_failed = True
         return
 
+    def initialise_API(self):
+        # If task file specifies a user API attempt to initialise it.
+        self.user_API = None  # Remove previous API.
+        if "api_class" not in self.board.sm_info["variables"]:
+            return  # Task does not use API.
+        API_name = eval(self.board.sm_info["variables"]["api_class"])
+        # Try to import and instantiate the user API.
+        try:
+            user_module_name = f"config.user_classes.{API_name}"
+            user_module = importlib.import_module(user_module_name)
+            importlib.reload(user_module)
+        except ModuleNotFoundError:
+            self.print_to_log(f"\nCould not find user API module: {user_module_name}")
+            return
+        if not hasattr(user_module, API_name):
+            self.print_to_log(f'\nCould not find user API class "{API_name}" in {user_module_name}')
+            return
+        try:
+            user_API_class = getattr(user_module, API_name)
+            self.user_API = user_API_class()
+            self.user_API.interface(self.board, self.print_to_log)
+            self.data_logger.data_consumers.append(self.user_API)
+            1 / 0
+            self.print_to_log(f"\nInitialised API: {API_name}")
+        except Exception as e:
+            self.print_to_log(f"Unable to intialise API: {API_name}\nTraceback: {e}")
+            raise (PyboardError)
+
     def make_variables_dialog(self):
         """Configure variables dialog and ready subjectbox to start experiment."""
-        if "custom_variables_dialog" in self.board.sm_info["variables"]:  # Task uses custon variables dialog
-            custom_variables_name = self.board.sm_info["variables"]["custom_variables_dialog"]
-            potential_dialog = Custom_variables_dialog(self, custom_variables_name, is_experiment=True)
+        if "custom_controls_dialog" in self.board.sm_info["variables"]:  # Task uses custon variables dialog
+            custom_variables_name = self.board.sm_info["variables"]["custom_controls_dialog"]
+            potential_dialog = Custom_controls_dialog(self, custom_variables_name, is_experiment=True)
             if potential_dialog.custom_gui == "json_gui":
-                self.variables_dialog = potential_dialog
+                self.controls_dialog = potential_dialog
             elif potential_dialog.custom_gui == "pyfile_gui":
-                py_gui_file = importlib.import_module(f"config.user_variable_dialogs.{custom_variables_name}")
+                py_gui_file = importlib.import_module(f"config.user_controls_dialogs.{custom_variables_name}")
                 importlib.reload(py_gui_file)
-                self.variables_dialog = py_gui_file.Custom_variables_dialog(self, self.board)
+                self.controls_dialog = py_gui_file.Custom_controls_dialog(self, self.board)
         else:  # Board uses standard variables dialog.
-            self.variables_dialog = Variables_dialog(self, self.board)
-        self.variables_button.clicked.connect(self.variables_dialog.exec)
+            self.controls_dialog = Controls_dialog(self)
+        self.variables_button.clicked.connect(self.controls_dialog.exec)
 
     def set_ready_to_start(self):
         """Set GUI elements ready to start run."""
@@ -460,11 +490,13 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.print_to_log("\nStarting experiment.\n")
         self.data_logger.open_data_file(ex.data_dir, ex.name, self.setup_name, self.subject, datetime.now())
         self.board.start_framework()
+        if self.user_API:
+            self.user_API.run_start()
         self.start_stop_button.setText("Stop")
         self.start_stop_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
         self.run_exp_tab.setups_started += 1
         self.run_exp_tab.GUI_main.refresh_timer.stop()
-        self.run_exp_tab.update_timer.start(get_setting("plotting", "update_interval"))
+        self.run_exp_tab.plot_update_timer.start(get_setting("plotting", "update_interval"))
         self.run_exp_tab.update_startstopclose_button()
 
     def error(self):
@@ -481,6 +513,8 @@ class Subjectbox(QtWidgets.QGroupBox):
                 self.board.process_data()
             except PyboardError:
                 self.print_to_log("\nError while stopping framework run.")
+            if self.user_API:
+                self.user_API.run_stop()
         # Read persistant variables.
         subject_pvs = [v for v in self.subject_variables if v["persistent"]]
         if subject_pvs:
@@ -515,3 +549,5 @@ class Subjectbox(QtWidgets.QGroupBox):
             except PyboardError:
                 self.stop_task()
                 self.error()
+            if self.user_API:
+                self.user_API.plot_update()

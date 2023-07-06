@@ -1,0 +1,42 @@
+{
+    "\ud83d\udfe2green": {
+        "green_enabled": {
+            "widget": "checkbox",
+            "label": "enabled",
+            "hint": "green enabled hint",
+            "min": null,
+            "max": null,
+            "step": null,
+            "suffix": ""
+        },
+        "green_count": {
+            "widget": "spinbox",
+            "label": "count",
+            "hint": "green count hint",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "suffix": "blinks"
+        }
+    },
+    "\ud83d\udd34red": {
+        "red_enabled": {
+            "widget": "checkbox",
+            "label": "enabled",
+            "hint": "another hint",
+            "min": null,
+            "max": null,
+            "step": null,
+            "suffix": ""
+        },
+        "red_count": {
+            "widget": "spinbox",
+            "label": "count",
+            "hint": "see this when hovering",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "suffix": "blinks"
+        }
+    }
+}

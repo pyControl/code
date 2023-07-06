@@ -2,33 +2,33 @@
 # Complex custom dialogs can be directly coded using the PyQt framework
 
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from gui.custom_variables_dialog import Slider_var, Spin_var
+from gui.custom_controls_dialog import Slider_var, Spin_var
 
 
 # Custom Variable dialog
-class Custom_variables_dialog(QtWidgets.QDialog):
+class Custom_controls_dialog(QtWidgets.QDialog):
     # Dialog for setting and getting task variables.
     def __init__(self, parent, board):
         super(QtWidgets.QDialog, self).__init__(parent)
-        self.setWindowTitle("Blink Variable GUI")
+        self.setWindowTitle("Blink Controls GUI")
         self.layout = QtWidgets.QVBoxLayout(self)
-        self.variables_grid = Variables_grid(self, board)
-        self.layout.addWidget(self.variables_grid)
+        self.controls_grid = Controls_grid(self, board)
+        self.layout.addWidget(self.controls_grid)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
 
 
-class Variables_grid(QtWidgets.QWidget):
+class Controls_grid(QtWidgets.QWidget):
     def __init__(self, parent, board):
         super(QtWidgets.QWidget, self).__init__(parent)
         variables = board.sm_info["variables"]
         self.grid_layout = QtWidgets.QGridLayout()
         initial_variables_dict = {v_name: v_value_str for (v_name, v_value_str) in sorted(variables.items())}
-        self.variables_gui = Variables_gui(self, self.grid_layout, board, initial_variables_dict)
+        self.controls_gui = Controls_gui(self, self.grid_layout, board, initial_variables_dict)
         self.setLayout(self.grid_layout)
 
 
-class Variables_gui(QtWidgets.QWidget):
+class Controls_gui(QtWidgets.QWidget):
     def __init__(self, parent, grid_layout, board, init_vars):
         super(QtWidgets.QWidget, self).__init__(parent)
         self.board = board
@@ -106,14 +106,14 @@ class Variables_gui(QtWidgets.QWidget):
 
         # image
         self.picture = QtWidgets.QLabel()
-        image = QtGui.QPixmap("config/user_variable_dialogs/example_image.png")
+        image = QtGui.QPixmap("config/user_controls_dialogs/example_image.png")
         self.picture.setPixmap(image)
         layout.addWidget(self.picture, row, 0, 1, 4)
         row += 1
 
         # gif
         self.gif = QtWidgets.QLabel()
-        self.movie = QtGui.QMovie("config/user_variable_dialogs/example_movie.gif")
+        self.movie = QtGui.QMovie("config/user_controls_dialogs/example_movie.gif")
         self.gif.setMovie(self.movie)
         self.movie.start()
         layout.addWidget(self.gif, row, 0, 1, 4)
