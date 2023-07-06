@@ -231,7 +231,7 @@ class Run_task_tab(QtWidgets.QWidget):
         if self.task:
             try:
                 # gets called frequently, so not using get_setting()
-                task_path = os.path.join( self.GUI_main.task_directory, self.task + ".py")  
+                task_path = os.path.join(self.GUI_main.task_directory, self.task + ".py")
                 if not self.task_hash == _djb2_file(task_path):  # Task file modified.
                     self.task_changed()
             except FileNotFoundError:

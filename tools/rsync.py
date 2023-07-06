@@ -72,14 +72,12 @@ class Rsync_aligner:
         intervals_B = np.diff(pulse_times_B) * units_B  # Inter-pulse intervals for sequence B
         intervals_B2 = intervals_B**2
         # Find alignments of chunks which minimise sum of squared errors.
-        # Start indices of each chunk of sequence A.
-        chunk_starts_A = np.arange(0, len(pulse_times_A) - chunk_size, chunk_size)
-
+        chunk_starts_A = np.arange(
+            0, len(pulse_times_A) - chunk_size, chunk_size
+        )  # Start indices of each chunk of sequence A.
         chunk_starts_B = np.zeros(chunk_starts_A.shape, int)  # Start indicies of corresponding chunks in B.
         chunk_min_mse = np.zeros(chunk_starts_A.shape)  # Mean squared error for each chunks best alignment.
-        # Mean sqared error for each chunks second best (i.e non matching) alignment.
-        chunk_2nd_mse = np.zeros(chunk_starts_A.shape)
-
+        chunk_2nd_mse = np.zeros(chunk_starts_A.shape)  # Mean sqared error for each chunks 2nd best alignment.
         ones_chunk = np.ones(chunk_size)
         for i, csA in enumerate(chunk_starts_A):
             chunk_A = intervals_A[csA : csA + chunk_size]
@@ -92,9 +90,8 @@ class Rsync_aligner:
             sorted_chunk_min_mse = np.sort(mse)
             chunk_min_mse[i] = sorted_chunk_min_mse[0]
             chunk_2nd_mse[i] = sorted_chunk_min_mse[1]
-        # Assign chunks to matched and non-matched groups by fitting 2 component
-        # Gaussian mixture model to log mse distribition of best + second best
-        # alignments.
+        # Assign chunks to matched and non-matched groups by fitting 2 component Gaussian mixture model
+        # to log mse distribition of best + second best alignments.
         chunk_mse = np.hstack([chunk_min_mse, chunk_2nd_mse])
         chunk_mse[chunk_mse == 0] = np.min(chunk_mse[chunk_mse != 0])  # Replace zeros with smallest non zero value.
         log_mse = np.log(chunk_mse)
@@ -118,10 +115,9 @@ class Rsync_aligner:
         self.units_B = units_B
         # Compute variables used for extrapolating beyond first/last matching pulse.
         diff_cor_times_B = np.diff(cor_times_B)
-        # Empirical units_A/units_B from matched inter-pulse intervals.
         self.dAdB = np.sum(np.diff(pulse_times_A)[~np.isnan(diff_cor_times_B)]) / np.sum(
             diff_cor_times_B[~np.isnan(diff_cor_times_B)]
-        )
+        )  # Empirical units_A/units_B from matched inter-pulse intervals.
         matched_pulse_times_A = cor_times_A[~np.isnan(cor_times_A)]
         matched_pulse_times_B = cor_times_B[~np.isnan(cor_times_B)]
         self.first_matched_time_A = matched_pulse_times_A[0]
@@ -129,12 +125,12 @@ class Rsync_aligner:
         self.first_matched_time_B = matched_pulse_times_B[0]
         self.last_matched_time_B = matched_pulse_times_B[-1]
         # Check quality of alignment.
-        # Different in GMM means > 3 x sum of standard deviations.
-        separation_OK = np.abs(gmm.means_[0] - gmm.means_[1])[0] > 3 * np.sum(np.sqrt(gmm.covariances_))
-
-        # Corresponding times are monotonically increacing.
-        order_OK = (np.nanmin(np.diff(cor_times_A)) > 0) and (np.nanmin(np.diff(cor_times_A)) > 0)
-
+        separation_OK = np.abs(gmm.means_[0] - gmm.means_[1])[0] > 3 * np.sum(
+            np.sqrt(gmm.covariances_)
+        )  # Difference in GMM means > 3 x sum of standard deviations.
+        order_OK = (np.nanmin(np.diff(cor_times_A)) > 0) and (
+            np.nanmin(np.diff(cor_times_A)) > 0
+        )  # Corresponding times are monotonically increacing.
         if not (separation_OK and order_OK):
             if raise_exception:
                 raise RsyncError("No match found between inter-pulse interval sequences.")
