@@ -87,7 +87,8 @@ class Board_config_dialog(QtWidgets.QDialog):
 
 
 class Controls_dialog(QtWidgets.QDialog):
-    # Dialog for setting and getting task variables.
+    """Dialog for setting and getting task variables."""
+
     def __init__(self, parent):
         super(QtWidgets.QDialog, self).__init__(parent)
         self.setWindowTitle("Controls")
@@ -102,22 +103,40 @@ class Controls_dialog(QtWidgets.QDialog):
         self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+W"), self)
         self.close_shortcut.activated.connect(self.close)
 
+    def showEvent(self, event):
+        """Called when dialog is opened."""
+        super(Controls_dialog, self).showEvent(event)
+        if not self.controls_grid.board.framework_running:
+            self.controls_grid.trigger_event_button.setEnabled(False)
+        else:
+            self.controls_grid.trigger_event_button.setEnabled(True)
+
 
 class Controls_grid(QtWidgets.QWidget):
-    # Grid of controls displayed within scroll area of dialog
+    """Grid of controls displayed within scroll area of dialog"""
+
     def __init__(self, parent_widget, board):
         super(QtWidgets.QWidget, self).__init__(parent_widget)
-        self.grid_layout = QtWidgets.QGridLayout()
         self.board = board
 
+        # Events groupbox.
+        self.events_groupbox = QtWidgets.QGroupBox("Event trigger")
+        self.eventsbox_layout = QtWidgets.QHBoxLayout(self.events_groupbox)
+        self.trigger_event_lbl = QtWidgets.QLabel("Event:")
+        self.event_select_combo = QtWidgets.QComboBox()
+        self.event_select_combo.addItems(self.board.sm_info["events"])
+        self.trigger_event_button = QtWidgets.QPushButton("Trigger")
+        self.trigger_event_button.clicked.connect(self.trigger_event)
+        self.trigger_event_button.setDefault(False)
+        self.trigger_event_button.setAutoDefault(False)
+        self.eventsbox_layout.addWidget(self.trigger_event_lbl)
+        self.eventsbox_layout.addWidget(self.event_select_combo)
+        self.eventsbox_layout.addWidget(self.trigger_event_button)
+
+        # Variables groupbox.
+        self.variables_groupbox = QtWidgets.QGroupBox("Variables")
+        self.grid_layout = QtWidgets.QGridLayout(self.variables_groupbox)
         control_row = 0
-
-        # add a generic event triggering combo box
-        events = self.board.sm_info["events"]
-        if control_row == 0 and events:
-            Event_combo(events, control_row, self)
-            control_row += 1
-
         variables = board.sm_info["variables"]
         for v_name, v_value in sorted(variables.items()):
             if (
@@ -128,47 +147,21 @@ class Controls_grid(QtWidgets.QWidget):
             ):
                 Variable_setter(v_name, v_value, control_row, self)
                 control_row += 1
-        self.setLayout(self.grid_layout)
 
-
-class Event_button(QtWidgets.QWidget):
-    def __init__(self, v_value_str, i, parent_grid):  # Should split into seperate init and provide info.
-        super(QtWidgets.QWidget, self).__init__(parent_grid)
-        self.board = parent_grid.board
-        self.event_name = eval(v_value_str)
-        self.Event_button = QtWidgets.QPushButton(f'Trigger "{self.event_name}" event')
-        self.Event_button.setDefault(False)
-        self.Event_button.setAutoDefault(False)
-        self.Event_button.clicked.connect(self.trigger)
-        parent_grid.grid_layout.addWidget(self.Event_button, i, 2, 1, 2)
-
-    def trigger(self):
-        if self.board.framework_running:  # Value returned later.
-            self.board.trigger_event(self.event_name)
-
-
-class Event_combo(QtWidgets.QWidget):
-    def __init__(self, events, i, parent_grid):  # Should split into seperate init and provide info.
-        super(QtWidgets.QWidget, self).__init__(parent_grid)
-        self.board = parent_grid.board
-        trigger_event_lbl = QtWidgets.QLabel("Trigger event:")
-        self.event_select_combo = QtWidgets.QComboBox()
-        self.event_select_combo.addItems(events)
-        trigger_event_button = QtWidgets.QPushButton("Trigger")
-        trigger_event_button.clicked.connect(self.trigger_event)
-        trigger_event_button.setDefault(False)
-        trigger_event_button.setAutoDefault(False)
-        parent_grid.grid_layout.addWidget(trigger_event_lbl, i, 1)
-        parent_grid.grid_layout.addWidget(self.event_select_combo, i, 2)
-        parent_grid.grid_layout.addWidget(trigger_event_button, i, 3)
+        # Main layout.
+        self.vlayout = QtWidgets.QVBoxLayout(self)
+        self.vlayout.addWidget(self.events_groupbox)
+        self.vlayout.addWidget(self.variables_groupbox)
+        self.vlayout.addStretch()
 
     def trigger_event(self):
-        if self.board.framework_running:  # Value returned later.
+        if self.board.framework_running:
             self.board.trigger_event(self.event_select_combo.currentText())
 
 
 class Variable_setter(QtWidgets.QWidget):
-    # For setting and getting a single variable.
+    """For setting and getting a single variable."""
+
     def __init__(self, v_name, v_value, i, parent_grid):
         super(QtWidgets.QWidget, self).__init__(parent_grid)
         self.board = parent_grid.board
