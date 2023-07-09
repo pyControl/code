@@ -118,7 +118,6 @@ class Setups_tab(QtWidgets.QWidget):
                 setups_from_json = json.loads(f.read())
         else:
             setups_from_json = {}  # {setup.port:setup.name}
-
         return setups_from_json
 
     def print_to_log(self, print_string, end="\n"):
@@ -143,6 +142,7 @@ class Setups_tab(QtWidgets.QWidget):
         self.multi_config_enable()
 
     def multi_config_enable(self):
+        """Configure which GUI buttons are active as a function of the setups selected."""
         self.select_all_checkbox.blockSignals(True)
         num_checked = 0
         for setup in self.setups.values():
@@ -227,11 +227,11 @@ class Setups_tab(QtWidgets.QWidget):
     def edit_hardware_vars(self):
         hardware_var_editor = Hardware_variables_editor(self)
         if not hardware_var_editor.get_hw_vars_from_task_files():
-            warning_msg = """
-There were no hardware variables found in your task files. To use a hardware variable, add a variable beginning with "hw_" to a task file
-
-for example "v.hw_solenoid_dur = None"
-            """
+            warning_msg = (
+                "There were no hardware variables found in your task files. "
+                "To use a hardware variable, add a variable beginning with "
+                "'hw_' to a task file for example 'v.hw_solenoid_dur = None'."
+            )
             QtWidgets.QMessageBox.warning(
                 self,
                 "No hardware variables found",
@@ -277,7 +277,7 @@ for example "v.hw_solenoid_dur = None"
             for serial_port in list(self.setups.keys()):
                 if serial_port not in self.GUI_main.available_ports:
                     self.setups[serial_port].unplugged()
-            self.setups_table.sortItems(0)
+            self.setups_table.sortItems(1)
         self.update_available_setups()
 
 
