@@ -16,6 +16,6 @@ hardware_defintions : User hardware definition files
 tools               : Tools for importing and visualising pycontrol data
 pyControl_GUI.py    : Python script to launch the GUI
 
-Version: v1.8
+Version: v2.0rc1
 ---------------
 
