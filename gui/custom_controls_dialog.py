@@ -81,7 +81,7 @@ class Spin_var:
         """Reload value from sm_info.  sm_info is updated when variables are output
         during framework run due to get/set."""
         self.value_text_colour("black")
-        self.spn.setValue(self.board.sm_info["variables"][self.varname])
+        self.spn.setValue(self.board.sm_info.variables[self.varname])
         QtCore.QTimer.singleShot(1000, self.value_text_colour)
 
     def setVisible(self, makeVisible):
@@ -173,7 +173,7 @@ class Text_var:
         """Reload value from sm_info.  sm_info is updated when variables are output
         during framework run due to get/set."""
         self.value_text_colour("black")
-        self.line_edit.setText(str(self.board.sm_info["variables"][self.varname]))
+        self.line_edit.setText(str(self.board.sm_info.variables[self.varname]))
         QtCore.QTimer.singleShot(1000, self.value_text_colour)
 
     def setHint(self, hint):
@@ -432,7 +432,7 @@ class Custom_controls_grid(QtWidgets.QWidget):
     def __init__(self, parent_controls_dialog):
         super(QtWidgets.QWidget, self).__init__(parent_controls_dialog)
         grid_layout = QtWidgets.QGridLayout()
-        variables = parent_controls_dialog.parent_tab.board.sm_info["variables"]
+        variables = parent_controls_dialog.parent_tab.board.sm_info.variables
         init_vars = dict(sorted(variables.items()))
         variable_tabs = QtWidgets.QTabWidget()
         used_vars = []
@@ -512,7 +512,7 @@ class Controls_dialog_editor(QtWidgets.QDialog):
         self.parent_controls_dialog = parent_controls_dialog
         self.available_vars = []
         self.get_vars()
-        self.events = list(parent_controls_dialog.parent_tab.board.sm_info["events"].keys())
+        self.events = list(parent_controls_dialog.parent_tab.board.sm_info.events.keys())
         self.tables = {}
 
         self.setWindowTitle("Custom Controls Dialog Editor")

@@ -8,6 +8,7 @@ from array import array
 from collections import namedtuple
 from .pyboard import Pyboard, PyboardError
 from gui.settings import VERSION, dirs, get_setting
+from dataclasses import dataclass
 
 Datatuple = namedtuple("Datatuple", ["type", "time", "ID", "data"], defaults=[None] * 4)
 
@@ -51,6 +52,19 @@ def _receive_file(file_path, file_size):
             usb.write(b"NS")  # Out of space.
         else:
             usb.write(b"ER")
+
+
+@dataclass
+class State_machine_info:
+    name: str
+    task_hash: int
+    states: dict
+    events: dict
+    ID2name: dict
+    analog_inputs: dict
+    variables: dict
+    framework_version: str
+    micropython_version: float
 
 
 # ----------------------------------------------------------------------------------------
@@ -392,17 +406,17 @@ class Pycboard(Pyboard):
         # Get information about state machine.
         states = self.get_states()
         events = self.get_events()
-        self.sm_info = {
-            "name": sm_name,
-            "task_hash": _djb2_file(sm_path),
-            "states": states,  # {name:ID}
-            "events": events,  # {name:ID}
-            "ID2name": {ID: name for name, ID in {**states, **events}.items()},  # {ID:name}
-            "analog_inputs": self.get_analog_inputs(),  # {ID: {'name':, 'fs':, 'dtype': 'plot':}}
-            "variables": self.get_variables(),
-            "framework_version": self.framework_version,
-            "micropython_version": self.micropython_version,
-        }  # {name: repr(value)}
+        self.sm_info = State_machine_info(
+            name=sm_name,
+            task_hash=_djb2_file(sm_path),
+            states=states,  # {name:ID}
+            events=events,  # {name:ID}
+            ID2name={ID: name for name, ID in {**states, **events}.items()},  # {ID:name}
+            analog_inputs=self.get_analog_inputs(),  # {ID: {'name':, 'fs':, 'dtype': 'plot':}}
+            variables=self.get_variables(),
+            framework_version=self.framework_version,
+            micropython_version=self.micropython_version,
+        )
         if self.data_logger:
             self.data_logger.set_state_machine(self.sm_info)
 
@@ -494,7 +508,7 @@ class Pycboard(Pyboard):
                         op_ID = {"g": "get", "s": "set", "p": "print", "t": "run_start", "e": "run_end"}[data_str[0]]
                         var_json = data_str[1:]
                         var_dict = json.loads(var_json)
-                        self.sm_info["variables"].update(var_dict)
+                        self.sm_info.variables.update(var_dict)
                         new_data.append(Datatuple(type="V", time=timestamp, ID=op_ID, data=var_json))
                 else:
                     unexpected_input.append(type_byte.decode())
@@ -526,7 +540,7 @@ class Pycboard(Pyboard):
         """Set the value of a state machine variable. If framework is not running
         returns True if variable set OK, False if set failed.  Returns None framework
         running, but variable event is later output by board."""
-        if v_name not in self.sm_info["variables"]:
+        if v_name not in self.sm_info.variables:
             raise PyboardError("Invalid variable name: {}".format(v_name))
         if self.framework_running:  # Set variable with serial command.
             self.send_serial_data(repr((v_name, v_value)), "V", "s")
@@ -534,14 +548,14 @@ class Pycboard(Pyboard):
         else:  # Set variable using REPL.
             set_OK = eval(self.eval(f"sm.set_variable({repr(v_name)}, {v_value})").decode())
             if set_OK:
-                self.sm_info["variables"][v_name] = v_value
+                self.sm_info.variables[v_name] = v_value
             return set_OK
 
     def get_variable(self, v_name):
         """Get the value of a state machine variable. If framework not running returns
         variable value if got OK, None if get fails.  Returns None if framework
         running, but variable event is later output by board."""
-        if v_name not in self.sm_info["variables"]:
+        if v_name not in self.sm_info.variables:
             raise PyboardError("Invalid variable name: {}".format(v_name))
         if self.framework_running:  # Get variable with serial command.
             self.send_serial_data(v_name, "V", "g")

@@ -124,7 +124,7 @@ class Controls_grid(QtWidgets.QWidget):
         self.eventsbox_layout = QtWidgets.QHBoxLayout(self.events_groupbox)
         self.trigger_event_lbl = QtWidgets.QLabel("Event:")
         self.event_select_combo = QtWidgets.QComboBox()
-        self.event_select_combo.addItems(self.board.sm_info["events"])
+        self.event_select_combo.addItems(self.board.sm_info.events)
         self.trigger_event_button = QtWidgets.QPushButton("Trigger")
         self.trigger_event_button.clicked.connect(self.trigger_event)
         self.trigger_event_button.setDefault(False)
@@ -137,7 +137,7 @@ class Controls_grid(QtWidgets.QWidget):
         self.variables_groupbox = QtWidgets.QGroupBox("Variables")
         self.grid_layout = QtWidgets.QGridLayout(self.variables_groupbox)
         control_row = 0
-        variables = board.sm_info["variables"]
+        variables = board.sm_info.variables
         for v_name, v_value in sorted(variables.items()):
             if (
                 not v_name.endswith("___")
@@ -217,7 +217,7 @@ class Variable_setter(QtWidgets.QWidget):
         """Reload value from sm_info.  sm_info is updated when variables are output
         during framework run due to get/set."""
         self.value_text_colour("black")
-        self.value_str.setText(repr(self.board.sm_info["variables"][self.v_name]))
+        self.value_str.setText(repr(self.board.sm_info.variables[self.v_name]))
         QtCore.QTimer.singleShot(1000, self.value_text_colour)
 
 

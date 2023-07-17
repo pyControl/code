@@ -21,7 +21,7 @@ class Custom_controls_dialog(QtWidgets.QDialog):
 class Controls_grid(QtWidgets.QWidget):
     def __init__(self, parent, board):
         super(QtWidgets.QWidget, self).__init__(parent)
-        variables = board.sm_info["variables"]
+        variables = board.sm_info.variables
         self.grid_layout = QtWidgets.QGridLayout()
         initial_variables_dict = {v_name: v_value_str for (v_name, v_value_str) in sorted(variables.items())}
         self.controls_gui = Controls_gui(self, self.grid_layout, board, initial_variables_dict)

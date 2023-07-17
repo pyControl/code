@@ -390,7 +390,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.subject_variables = [
             v for v in self.run_exp_tab.experiment.variables if v["subject"] in ("all", self.subject)
         ]
-        task_hw_vars = [task_var for task_var in self.board.sm_info["variables"] if task_var.startswith("hw_")]
+        task_hw_vars = [task_var for task_var in self.board.sm_info.variables if task_var.startswith("hw_")]
         if self.subject_variables or task_hw_vars:
             self.print_to_log("\nSetting variables.\n")
             self.variables_set_pre_run = []
@@ -425,9 +425,9 @@ class Subjectbox(QtWidgets.QGroupBox):
     def initialise_API(self):
         # If task file specifies a user API attempt to initialise it.
         self.user_API = None  # Remove previous API.
-        if "api_class" not in self.board.sm_info["variables"]:
+        if "api_class" not in self.board.sm_info.variables:
             return  # Task does not use API.
-        API_name = eval(self.board.sm_info["variables"]["api_class"])
+        API_name = eval(self.board.sm_info.variables["api_class"])
         # Try to import and instantiate the user API.
         try:
             user_module_name = f"config.user_classes.{API_name}"
@@ -452,8 +452,8 @@ class Subjectbox(QtWidgets.QGroupBox):
 
     def make_variables_dialog(self):
         """Configure variables dialog and ready subjectbox to start experiment."""
-        if "custom_controls_dialog" in self.board.sm_info["variables"]:  # Task uses custon variables dialog
-            custom_variables_name = self.board.sm_info["variables"]["custom_controls_dialog"]
+        if "custom_controls_dialog" in self.board.sm_info.variables:  # Task uses custon variables dialog
+            custom_variables_name = self.board.sm_info.variables["custom_controls_dialog"]
             potential_dialog = Custom_controls_dialog(self, custom_variables_name, is_experiment=True)
             if potential_dialog.custom_gui == "json_gui":
                 self.controls_dialog = potential_dialog
