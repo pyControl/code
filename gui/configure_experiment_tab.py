@@ -101,9 +101,10 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         expbox_Vlayout.addWidget(QtWidgets.QLabel("<hr>"))
         expbox_Vlayout.addLayout(self.experiment_parameters_layout)
 
-        # Subjects Groupbox
-        self.subjects_groupbox = QtWidgets.QGroupBox("Subjects")
-        subjectsbox_layout = QtWidgets.QGridLayout(self.subjects_groupbox)
+        config_tabs = QtWidgets.QTabWidget()
+        # Subjects Tab
+        self.subjects_tab = QtWidgets.QWidget()
+        subjectsbox_layout = QtWidgets.QGridLayout(self.subjects_tab)
         self.subset_warning_checkbox = QtWidgets.QCheckBox("Warn me if any subjects will not be run")
         self.subset_warning_checkbox.setChecked(True)
         subjectsbox_layout.addWidget(self.subset_warning_checkbox, 0, 0)
@@ -111,12 +112,15 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         subjectsbox_layout.addWidget(self.subjects_table, 1, 0, 1, 2)
         subjectsbox_layout.setColumnStretch(1, 1)
 
-        # Variables Groupbox
-        self.variables_groupbox = QtWidgets.QGroupBox("Variables")
-        variablesbox_layout = QtWidgets.QHBoxLayout(self.variables_groupbox)
+        # Variables Tab
+        self.variables_tab = QtWidgets.QWidget()
+        variablesbox_layout = QtWidgets.QVBoxLayout(self.variables_tab)
         self.variables_table = VariablesTable(self)
         self.task_select.set_callback(self.variables_table.task_changed)
         variablesbox_layout.addWidget(self.variables_table)
+
+        config_tabs.addTab(self.subjects_tab, "Subjects")
+        config_tabs.addTab(self.variables_tab, "Variables")
 
         # Connect signals.
         self.data_dir_text.textEdited.connect(lambda: setattr(self, "custom_dir", True))
@@ -132,11 +136,10 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         init_keyboard_shortcuts(self, shortcut_dict)
 
         # # Main layout
-        self.configure_exp_layout = QtWidgets.QGridLayout()
-        self.configure_exp_layout.addWidget(self.experiment_groupbox, 0, 0)
-        self.configure_exp_layout.addWidget(self.subjects_groupbox, 1, 0)
-        self.configure_exp_layout.addWidget(self.variables_groupbox, 2, 0)
-        self.setLayout(self.configure_exp_layout)
+        configure_exp_layout = QtWidgets.QGridLayout()
+        configure_exp_layout.addWidget(self.experiment_groupbox, 0, 0)
+        configure_exp_layout.addWidget(config_tabs, 1, 0, 1, 2)
+        self.setLayout(configure_exp_layout)
 
         # Initialise variables.
         self.saved_exp_config = self.get_exp_config()
@@ -144,8 +147,8 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.experiment_enable(False)
 
     def experiment_enable(self, do_enable=True):
-        self.subjects_groupbox.setEnabled(do_enable)
-        self.variables_groupbox.setEnabled(do_enable)
+        self.subjects_tab.setEnabled(do_enable)
+        self.variables_tab.setEnabled(do_enable)
         self.experiment_parameters_layout.setEnabled(do_enable)
         self.run_button.setEnabled(do_enable)
         self.delete_button.setEnabled(do_enable)
@@ -426,8 +429,8 @@ class Configure_experiment_tab(QtWidgets.QWidget):
 class SubjectsTable(QtWidgets.QTableWidget):
     """Table for specifying the setups and subjects used in experiment."""
 
-    def __init__(self, parent=None):
-        super(QtWidgets.QTableWidget, self).__init__(1, 4, parent=parent)
+    def __init__(self, config_experiment_tab):
+        super(QtWidgets.QTableWidget, self).__init__(1, 4, parent=config_experiment_tab)
         self.setHorizontalHeaderLabels(["Run", "Setup", "Subject", ""])
         self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
@@ -441,6 +444,7 @@ class SubjectsTable(QtWidgets.QTableWidget):
         self.subjects = []
         self.num_subjects = 0
         self.add_subject()
+        self.config_experiment_tab = config_experiment_tab
 
     def reset(self):
         """Clear all rows of table."""
@@ -454,7 +458,7 @@ class SubjectsTable(QtWidgets.QTableWidget):
         """If cell in subject row is changed, update subjects list and variables table."""
         if column == 2:
             self.update_subjects()
-            self.parent().parent().variables_table.update_available()
+            self.config_experiment_tab.variables_table.update_available()
 
     def add_subject(self, setup=None, subject=None, do_run=None):
         """Add row to table allowing extra subject to be specified."""
@@ -494,7 +498,7 @@ class SubjectsTable(QtWidgets.QTableWidget):
         """Remove specified row from table"""
         if self.item(subject_n, 2):
             s_name = self.item(subject_n, 2).text()
-            self.parent().parent().variables_table.remove_subject(s_name)
+            self.config_experiment_tab.variables_table.remove_subject(s_name)
         self.removeRow(subject_n)
         self.num_subjects -= 1
         self.update_available_setups()
@@ -547,9 +551,9 @@ class SubjectsTable(QtWidgets.QTableWidget):
 class VariablesTable(QtWidgets.QTableWidget):
     """Class for specifying task variables that are set to non-default values."""
 
-    def __init__(self, parent=None):
-        super(QtWidgets.QTableWidget, self).__init__(1, 6, parent=parent)
-        self.subjects_table = self.parent().subjects_table
+    def __init__(self, config_experiment_tab):
+        super(QtWidgets.QTableWidget, self).__init__(1, 6, parent=config_experiment_tab)
+        self.subjects_table = config_experiment_tab.subjects_table
         self.setHorizontalHeaderLabels(["Variable", "Subject", "Value", "Persistent", "Summary", ""])
         self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.Stretch)
@@ -562,9 +566,8 @@ class VariablesTable(QtWidgets.QTableWidget):
         self.n_variables = 0
         self.variable_names = []
         self.available_variables = []
-        self.assigned = {
-            v_name: [] for v_name in self.variable_names
-        }  # Which subjects have values assigned for each variable.
+        # Which subjects have values assigned for each variable.
+        self.assigned = {v_name: [] for v_name in self.variable_names}
 
     def reset(self):
         """Clear all rows of table."""
