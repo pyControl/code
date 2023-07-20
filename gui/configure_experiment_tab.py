@@ -180,7 +180,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         if self.GUI_main.setups_tab.available_setups_changed:
             self.subjects_table.all_setups = set(self.GUI_main.setups_tab.setup_names)
             self.subjects_table.update_available_setups()
-        if self.saved_exp_config != self.get_exp_config():
+        if self.saved_exp_config != self.get_exp_config() and self.experiment_select.text() != "select experiment":
             self.save_button.setEnabled(True)
         else:
             self.save_button.setEnabled(False)
