@@ -560,7 +560,11 @@ class Pycboard(Pyboard):
         if self.framework_running:  # Get variable with serial command.
             self.send_serial_data(v_name, "V", "g")
         else:  # Get variable using REPL.
-            return eval(self.eval(f"sm.get_variable({repr(v_name)})").decode())
+            var_str = self.eval(f"sm.get_variable({repr(v_name)})").decode()
+            try:
+                return eval(var_str)
+            except NameError:  # Variable is a string.
+                return var_str
 
     def get_variables(self):
         """Return variables as a dictionary {v_name: v_value}"""
