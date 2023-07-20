@@ -40,18 +40,8 @@ class Run_task_tab(QtWidgets.QWidget):
         self.subject_changed = False
         self.controls_dialog = None
 
-        # GUI groupbox.
-
-        self.status_groupbox = QtWidgets.QGroupBox("Status")
-
-        self.status_text = QtWidgets.QLineEdit("Not connected")
-        self.status_text.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.status_text.setReadOnly(True)
-
-        guigroup_layout = QtWidgets.QHBoxLayout(self.status_groupbox)
-        guigroup_layout.addWidget(self.status_text)
-
-        # Board groupbox
+        pad = 3
+        # Setup groupbox
 
         self.board_groupbox = QtWidgets.QGroupBox("Setup")
 
@@ -64,10 +54,11 @@ class Run_task_tab(QtWidgets.QWidget):
         self.config_button = QtWidgets.QPushButton("Config")
         self.config_button.setIcon(QtGui.QIcon("gui/icons/settings.svg"))
 
-        boardgroup_layout = QtWidgets.QHBoxLayout(self.board_groupbox)
-        boardgroup_layout.addWidget(self.board_select)
-        boardgroup_layout.addWidget(self.connect_button)
-        boardgroup_layout.addWidget(self.config_button)
+        boardgroup_layout = QtWidgets.QGridLayout(self.board_groupbox)
+        boardgroup_layout.addWidget(self.board_select, 0, 0, 1, 2)
+        boardgroup_layout.addWidget(self.connect_button, 1, 0)
+        boardgroup_layout.addWidget(self.config_button, 1, 1)
+        boardgroup_layout.setContentsMargins(pad, pad, pad, pad)
 
         self.connect_button.clicked.connect(lambda: self.disconnect() if self.connected else self.connect())
         self.config_button.clicked.connect(self.open_config_dialog)
@@ -91,6 +82,7 @@ class Run_task_tab(QtWidgets.QWidget):
         filegroup_layout.addWidget(data_dir_button, 0, 2)
         filegroup_layout.addWidget(subject_label, 1, 0)
         filegroup_layout.addWidget(self.subject_text, 1, 1)
+        filegroup_layout.setContentsMargins(pad, pad, pad, pad)
         self.file_groupbox.setLayout(filegroup_layout)
 
         self.data_dir_text.textChanged.connect(self.test_data_path)
@@ -109,11 +101,11 @@ class Run_task_tab(QtWidgets.QWidget):
         self.variables_button = QtWidgets.QPushButton("Controls")
         self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
 
-        taskgroup_layout = QtWidgets.QGridLayout()
+        taskgroup_layout = QtWidgets.QGridLayout(self.task_groupbox)
         taskgroup_layout.addWidget(self.task_select, 0, 0, 1, 2)
         taskgroup_layout.addWidget(self.upload_button, 1, 0)
         taskgroup_layout.addWidget(self.variables_button, 1, 1)
-        self.task_groupbox.setLayout(taskgroup_layout)
+        taskgroup_layout.setContentsMargins(pad, pad, pad, pad)
 
         self.upload_button.clicked.connect(self.setup_task)
 
@@ -137,6 +129,7 @@ class Run_task_tab(QtWidgets.QWidget):
         sessiongroup_layout.addWidget(self.task_info.event_text, 1, 4)
         sessiongroup_layout.addWidget(self.start_button, 0, 0)
         sessiongroup_layout.addWidget(self.stop_button, 1, 0)
+        sessiongroup_layout.setContentsMargins(pad, pad, pad, pad)
         self.session_groupbox.setLayout(sessiongroup_layout)
 
         self.start_button.clicked.connect(self.start_task)
@@ -151,27 +144,22 @@ class Run_task_tab(QtWidgets.QWidget):
         self.task_plot = Task_plot()
         self.data_logger = Data_logger(print_func=self.print_to_log, data_consumers=[self.task_plot, self.task_info])
 
-        self.first_row = QtWidgets.QWidget()
-        first_hlayout = QtWidgets.QHBoxLayout(self.first_row)
-        first_hlayout.addWidget(self.status_groupbox)
-        first_hlayout.addWidget(self.board_groupbox)
-        first_hlayout.setContentsMargins(0, 0, 0, 0)
-
-        self.second_row = QtWidgets.QWidget()
-        second_hlayout = QtWidgets.QHBoxLayout(self.second_row)
-        second_hlayout.addWidget(self.task_groupbox)
-        second_hlayout.addWidget(self.file_groupbox)
-        second_hlayout.setContentsMargins(0, 0, 0, 0)
+        self.top_section = QtWidgets.QWidget()
+        top_layout = QtWidgets.QHBoxLayout(self.top_section)
+        top_layout.addWidget(self.board_groupbox)
+        top_layout.addWidget(self.task_groupbox)
+        top_layout.addWidget(self.file_groupbox)
+        top_layout.setContentsMargins(0, 0, 0, 0)
 
         # Main layout
         self.run_layout = QtWidgets.QGridLayout()
-        self.run_layout.addWidget(self.first_row, 0, 0, 1, 3)
-        self.run_layout.addWidget(self.second_row, 1, 0, 1, 3)
-        self.run_layout.addWidget(self.session_groupbox, 2, 0, 1, 3)
-        self.run_layout.addWidget(self.log_textbox, 3, 0, 1, 3)
-        self.run_layout.addWidget(self.task_plot, 4, 0, 1, 3)
-        self.run_layout.setRowStretch(3, 20)
-        self.run_layout.setRowStretch(4, 80)
+        self.run_layout.addWidget(self.top_section, 0, 0)
+        self.run_layout.addWidget(self.session_groupbox, 1, 0)
+        self.run_layout.addWidget(self.log_textbox, 2, 0)
+        self.run_layout.setRowStretch(2, 1)
+        self.run_layout.addWidget(self.task_plot, 3, 0)
+        self.run_layout.setRowStretch(3, 4)
+
         self.setLayout(self.run_layout)
 
         # Create timers
@@ -253,7 +241,6 @@ class Run_task_tab(QtWidgets.QWidget):
     def connect(self):
         # Connect to pyboard.
         try:
-            self.status_text.setText("Connecting...")
             self.board_select.setEnabled(False)
             self.variables_button.setEnabled(False)
             self.connect_button.setEnabled(False)
@@ -265,13 +252,11 @@ class Run_task_tab(QtWidgets.QWidget):
             self.connect_button.setEnabled(True)
             self.connect_button.setText("Disconnect")
             self.connect_button.setIcon(QtGui.QIcon("gui/icons/disconnect.svg"))
-            self.status_text.setText("Connected")
             if self.board.status["framework"]:
                 self.task_groupbox.setEnabled(True)
             else:
                 self.print_to_log("\nLoad pyControl framework using 'Config' button.")
         except (SerialException, PyboardError):
-            self.status_text.setText("Connection failed")
             self.print_to_log("Connection failed.")
             self.connect_button.setEnabled(True)
             self.board_select.setEnabled(True)
@@ -288,7 +273,6 @@ class Run_task_tab(QtWidgets.QWidget):
         self.board_select.setEnabled(True)
         self.connect_button.setText("Connect")
         self.connect_button.setIcon(QtGui.QIcon("gui/icons/connect.svg"))
-        self.status_text.setText("Not connected")
         self.task_changed()
         self.connected = False
 
@@ -306,10 +290,7 @@ class Run_task_tab(QtWidgets.QWidget):
         if task == "select task":
             return
         try:
-            if self.uploaded:
-                self.status_text.setText("Resetting task..")
-            else:
-                self.status_text.setText("Uploading..")
+            if not self.uploaded:
                 self.task_hash = _djb2_file(os.path.join(self.GUI_main.task_directory, task + ".py"))
             self.start_button.setEnabled(False)
             self.variables_button.setEnabled(False)
@@ -321,7 +302,6 @@ class Run_task_tab(QtWidgets.QWidget):
             task_hw_vars = [task_var for task_var in self.board.sm_info.variables if task_var.startswith("hw_")]
             if task_hw_vars:
                 if not hw_vars_defined_in_setup(self, self.board_select.currentText(), task, task_hw_vars):
-                    self.status_text.setText("Connected")
                     return
                 else:
                     hw_vars_set = set_hardware_variables(self, task_hw_vars)
@@ -353,13 +333,12 @@ class Run_task_tab(QtWidgets.QWidget):
             self.session_groupbox.setEnabled(True)
             self.start_button.setEnabled(True)
             self.stop_button.setEnabled(False)
-            self.status_text.setText("Uploaded : " + task)
             self.fresh_task = True
             self.uploaded = True
             self.upload_button.setText("Reset")
             self.upload_button.setIcon(QtGui.QIcon("gui/icons/refresh.svg"))
         except PyboardError:
-            self.status_text.setText("Error setting up state machine.")
+            self.print_to_log("Error setting up state machine.")
 
     def initialise_API(self):
         # If task file specifies a user API attempt to initialise it.
@@ -433,7 +412,6 @@ class Run_task_tab(QtWidgets.QWidget):
         self.print_to_log(f"\nRun started at: {datetime.now().strftime('%Y/%m/%d %H:%M:%S')}\n")
         self.plot_update_timer.start(get_setting("plotting", "update_interval"))
         self.GUI_main.refresh_timer.stop()
-        self.status_text.setText("Running: " + self.task)
         self.GUI_main.tab_widget.setTabEnabled(1, False)  # Disable experiments tab.
         self.GUI_main.tab_widget.setTabEnabled(2, False)  # Disable setups tab.
 
@@ -461,7 +439,6 @@ class Run_task_tab(QtWidgets.QWidget):
         self.stop_button.setEnabled(False)
         if self.using_json_gui:
             self.controls_dialog.edit_action.setEnabled(True)
-        self.status_text.setText("Uploaded : " + self.task)
         self.GUI_main.tab_widget.setTabEnabled(1, True)  # Enable setups tab.
         self.GUI_main.tab_widget.setTabEnabled(2, True)  # Enable setups tab.
 
