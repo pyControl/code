@@ -48,19 +48,19 @@ class Api:
             value to change variable to
         """
 
-        if v_name in self.board.sm_info["variables"].keys():
+        if v_name in self.board.sm_info.variables.keys():
             self.board.set_variable(v_name, v_value)
         else:
             self.print_to_log(
-                f"Variable {v_name} not defined in task file {self.board.sm_info['name']} so cannot be set by API"
+                f"Variable {v_name} not defined in task file {self.board.sm_info.name} so cannot be set by API"
             )
 
     def trigger_event(self, event):
-        if event in self.board.sm_info["events"].keys():
+        if event in self.board.sm_info.events.keys():
             self.board.trigger_event(event)
         else:
             self.print_to_log(
-                f"Variable {event} not defined in task file {self.board.sm_info['name']} so cannot be set by API"
+                f"Variable {event} not defined in task file {self.board.sm_info.name} so cannot be set by API"
             )
 
     # Note:  get_variable functionality not implemented because board.get_variable method
@@ -79,9 +79,9 @@ class Api:
         # Connect Api with pyboard and gui.
         self.board = board
         self.print_to_log = print_to_log
-        self.ID2name = self.board.sm_info["ID2name"]
+        self.ID2name = self.board.sm_info.ID2name
         self.ID2analog = {}  # Convert analog ID to name
-        for name, info in self.board.sm_info["analog_inputs"].items():
+        for name, info in self.board.sm_info.analog_inputs.items():
             self.ID2analog[info["ID"]] = name
 
         # Declare the named tuples for the user friendly data
@@ -109,7 +109,7 @@ class Api:
                 data["vars"].append(self.var_tup(nd.ID, nd.time))
             elif nd.type == "D":
                 name = self.ID2name[nd.ID]
-                if name in self.board.sm_info["states"]:
+                if name in self.board.sm_info.states:
                     data["states"].append(self.state_tup(name, nd.time))
                 else:
                     data["events"].append(self.event_tup(name, nd.time))

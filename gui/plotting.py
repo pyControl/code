@@ -110,13 +110,13 @@ class States_plot:
         self.axis.setLimits(xMax=0)
 
     def set_state_machine(self, sm_info):
-        self.state_IDs = list(sm_info["states"].values())
+        self.state_IDs = list(sm_info.states.values())
         self.axis.clear()
-        max_len = max([len(n) for n in list(sm_info["states"]) + list(sm_info["events"])])
-        self.axis.getAxis("right").setTicks([[(i, n) for (n, i) in sm_info["states"].items()]])
+        max_len = max([len(n) for n in list(sm_info.states) + list(sm_info.events)])
+        self.axis.getAxis("right").setTicks([[(i, n) for (n, i) in sm_info.states.items()]])
         self.axis.getAxis("right").setWidth(5 * max_len)
         self.axis.setYRange(min(self.state_IDs), max(self.state_IDs), padding=0.1)
-        self.n_colours = len(sm_info["states"]) + len(sm_info["events"])
+        self.n_colours = len(sm_info.states) + len(sm_info.events)
         self.plots = {
             ID: self.axis.plot(pen=pg.mkPen(pg.intColor(ID, self.n_colours), width=3)) for ID in self.state_IDs
         }
@@ -163,15 +163,15 @@ class Events_plot:
         self.data_len = data_len
 
     def set_state_machine(self, sm_info):
-        self.event_IDs = list(sm_info["events"].values())
+        self.event_IDs = list(sm_info.events.values())
         self.axis.clear()
         if not self.event_IDs:
             return  # State machine can have no events.
-        max_len = max([len(n) for n in list(sm_info["states"]) + list(sm_info["events"])])
-        self.axis.getAxis("right").setTicks([[(i, n) for (n, i) in sm_info["events"].items()]])
+        max_len = max([len(n) for n in list(sm_info.states) + list(sm_info.events)])
+        self.axis.getAxis("right").setTicks([[(i, n) for (n, i) in sm_info.events.items()]])
         self.axis.getAxis("right").setWidth(5 * max_len)
         self.axis.setYRange(min(self.event_IDs), max(self.event_IDs), padding=0.1)
-        self.n_colours = len(sm_info["states"]) + len(sm_info["events"])
+        self.n_colours = len(sm_info.states) + len(sm_info.events)
         self.plot = self.axis.plot(pen=None, symbol="o", symbolSize=6, symbolPen=None)
 
     def run_start(self):
@@ -219,7 +219,7 @@ class Analog_plot:
         self.inputs = {}
 
     def set_state_machine(self, sm_info):
-        self.inputs = {ID: ai for ID, ai in sm_info["analog_inputs"].items() if ai["plot"]}
+        self.inputs = {ID: ai for ID, ai in sm_info.analog_inputs.items() if ai["plot"]}
         if not self.inputs:
             return  # State machine may not have analog inputs.
         self.axis.clear()
@@ -229,7 +229,7 @@ class Analog_plot:
             for i, (ID, ai) in enumerate(sorted(self.inputs.items()))
         }
         self.axis.getAxis("bottom").setLabel("Time (seconds)")
-        max_len = max([len(n) for n in list(sm_info["states"]) + list(sm_info["events"])])
+        max_len = max([len(n) for n in list(sm_info.states) + list(sm_info.events)])
         self.axis.getAxis("right").setWidth(5 * max_len)
 
     def run_start(self):

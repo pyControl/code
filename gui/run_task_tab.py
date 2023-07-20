@@ -318,7 +318,7 @@ class Run_task_tab(QtWidgets.QWidget):
             self.initialise_API()
             self.task = task
             # Set values for any hardware variables.
-            task_hw_vars = [task_var for task_var in self.board.sm_info["variables"] if task_var.startswith("hw_")]
+            task_hw_vars = [task_var for task_var in self.board.sm_info.variables if task_var.startswith("hw_")]
             if task_hw_vars:
                 if not hw_vars_defined_in_setup(self, self.board_select.currentText(), task, task_hw_vars):
                     self.status_text.setText("Connected")
@@ -335,8 +335,8 @@ class Run_task_tab(QtWidgets.QWidget):
                 self.controls_dialog.deleteLater()
             self.controls_dialog = Controls_dialog(self)
             self.using_json_gui = False
-            if "custom_controls_dialog" in self.board.sm_info["variables"]:
-                custom_variables_name = self.board.sm_info["variables"]["custom_controls_dialog"]
+            if "custom_controls_dialog" in self.board.sm_info.variables:
+                custom_variables_name = self.board.sm_info.variables["custom_controls_dialog"]
                 potential_dialog = Custom_controls_dialog(self, custom_variables_name)
                 if potential_dialog.custom_gui == "json_gui":
                     self.controls_dialog = potential_dialog
@@ -366,9 +366,9 @@ class Run_task_tab(QtWidgets.QWidget):
         self.user_API = None  # Remove previous API.
         # Remove previous API from data consumers.
         self.data_logger.data_consumers = [self.task_plot, self.task_info]
-        if "api_class" not in self.board.sm_info["variables"]:
+        if "api_class" not in self.board.sm_info.variables:
             return  # Task does not use API.
-        API_name = self.board.sm_info["variables"]["api_class"]
+        API_name = self.board.sm_info.variables["api_class"]
         # Try to import and instantiate the user API.
         try:
             user_module_name = f"config.user_classes.{API_name}"

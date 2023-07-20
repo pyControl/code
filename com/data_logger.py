@@ -17,7 +17,7 @@ class Data_logger:
 
     def set_state_machine(self, sm_info):
         self.sm_info = sm_info
-        self.ID2name_fw = self.sm_info["ID2name"]  # Dict mapping framework IDs to names.
+        self.ID2name_fw = self.sm_info.ID2name  # Dict mapping framework IDs to names.
 
     def open_data_file(self, data_dir, experiment_name, setup_ID, subject_ID, datetime_now=None):
         """Open file tsv/txt file for event data and write header information.
@@ -36,16 +36,16 @@ class Data_logger:
             self.tsv_row_str(rtype="type", time="time", name="name", value="value")  # Write header with row names.
         )
         self.write_info_line("experiment_name", self.experiment_name)
-        self.write_info_line("task_name", self.sm_info["name"])
-        self.write_info_line("task_file_hash", self.sm_info["task_hash"])
+        self.write_info_line("task_name", self.sm_info.name)
+        self.write_info_line("task_file_hash", self.sm_info.task_hash)
         self.write_info_line("setup_id", self.setup_ID)
-        self.write_info_line("framework_version", self.sm_info["framework_version"])
-        self.write_info_line("micropython_version", self.sm_info["micropython_version"])
+        self.write_info_line("framework_version", self.sm_info.framework_version)
+        self.write_info_line("micropython_version", self.sm_info.micropython_version)
         self.write_info_line("subject_id", self.subject_ID)
         self.write_info_line("start_time", datetime.utcnow().isoformat(timespec="milliseconds"))
         self.analog_writers = {
             ID: Analog_writer(ai["name"], ai["fs"], ai["dtype"], self.file_path)
-            for ID, ai in self.sm_info["analog_inputs"].items()
+            for ID, ai in self.sm_info.analog_inputs.items()
         }
 
     def write_info_line(self, name, value, time=0):
@@ -61,8 +61,8 @@ class Data_logger:
         exp_tasks_dir = os.path.join(data_dir, dir_name)
         if not os.path.exists(exp_tasks_dir):
             os.mkdir(exp_tasks_dir)
-        task_file_path = os.path.join(tasks_dir, self.sm_info["name"] + ".py")
-        task_save_name = os.path.split(self.sm_info["name"])[1] + "_{}.py".format(self.sm_info["task_hash"])
+        task_file_path = os.path.join(tasks_dir, self.sm_info.name + ".py")
+        task_save_name = os.path.split(self.sm_info.name)[1] + "_{}.py".format(self.sm_info.task_hash)
         if not task_save_name in os.listdir(exp_tasks_dir):
             copyfile(task_file_path, os.path.join(exp_tasks_dir, task_save_name))
 
@@ -102,7 +102,7 @@ class Data_logger:
         data_string = ""
         for nd in new_data:
             if nd.type == "D":  # State entry or event.
-                if nd.ID in self.sm_info["states"].values():
+                if nd.ID in self.sm_info.states.values():
                     data_string += self.tsv_row_str("state", time=nd.time, name=self.ID2name_fw[nd.ID])
                 else:
                     data_string += self.tsv_row_str("event", time=nd.time, name=self.ID2name_fw[nd.ID])
