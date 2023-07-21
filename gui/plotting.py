@@ -46,7 +46,7 @@ class Task_plot(QtWidgets.QWidget):
 
     def set_state_machine(self, sm_info):
         # Initialise plots with state machine information.
-        self.axiswidth = 6.1 * max([len(n) for n in list(sm_info.states) + list(sm_info.events)])
+        self.axiswidth = 6 + 6 * max([len(n) for n in list(sm_info.states) + list(sm_info.events)])
         self.states_plot.set_state_machine(sm_info)
         self.events_plot.set_state_machine(sm_info)
         self.analog_plot.set_state_machine(sm_info)
@@ -120,9 +120,7 @@ class States_plot:
     def set_state_machine(self, sm_info):
         self.state_IDs = list(sm_info.states.values())
         self.axis.clear()
-        max_len = max([len(n) for n in list(sm_info.states) + list(sm_info.events)])
         self.axis.getAxis("right").setTicks([[(i, n) for (n, i) in sm_info.states.items()]])
-        self.axis.getAxis("right").setWidth(5 * max_len)
         self.axis.setYRange(min(self.state_IDs), max(self.state_IDs), padding=0.1)
         self.n_colours = len(sm_info.states) + len(sm_info.events)
         self.plots = {
@@ -176,16 +174,13 @@ class Events_plot:
     def set_state_machine(self, sm_info):
         self.event_IDs = list(sm_info.events.values())
         self.axis.clear()
-        if not self.event_IDs:
-            return  # State machine can have no events.
-        max_len = max([len(n) for n in list(sm_info.states) + list(sm_info.events)])
         self.axis.getAxis("right").setTicks([[(i, n) for (n, i) in sm_info.events.items()]])
-        self.axis.getAxis("right").setWidth(5 * max_len)
-        self.axis.setYRange(min(self.event_IDs), max(self.event_IDs), padding=0.1)
-        self.n_colours = len(sm_info.states) + len(sm_info.events)
-        self.plot = self.axis.plot(pen=None, symbol="o", symbolSize=6, symbolPen=None)
-        self.axis.getAxis("right").setWidth(self.task_plot.axiswidth)
         self.axis.getAxis("right").setStyle(hideOverlappingLabels=False)
+        self.axis.getAxis("right").setWidth(self.task_plot.axiswidth)
+        if self.event_IDs:  # Task has events.
+            self.axis.setYRange(min(self.event_IDs), max(self.event_IDs), padding=0.1)
+            self.n_colours = len(sm_info.states) + len(sm_info.events)
+            self.plot = self.axis.plot(pen=None, symbol="o", symbolSize=6, symbolPen=None)
 
     def run_start(self):
         if not self.event_IDs:

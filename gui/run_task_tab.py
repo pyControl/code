@@ -245,6 +245,7 @@ class Run_task_tab(QtWidgets.QWidget):
 
     def connect(self):
         # Connect to pyboard.
+        self.print_to_log(f"\nConnecting to board {self.board_select.currentText()}")
         try:
             self.board_select.setEnabled(False)
             self.variables_button.setEnabled(False)
@@ -270,6 +271,7 @@ class Run_task_tab(QtWidgets.QWidget):
         # Disconnect from pyboard.
         if self.board:
             self.board.close()
+            self.print_to_log("\nDisconnected from board.")
         self.board = None
         self.task_groupbox.setEnabled(False)
         self.file_groupbox.setEnabled(False)
