@@ -40,7 +40,8 @@ class Run_task_tab(QtWidgets.QWidget):
         self.subject_changed = False
         self.controls_dialog = None
 
-        pad = 3
+        pad = 3  # Spacing round GUI elements in groupboxes.
+
         # Setup groupbox
 
         self.board_groupbox = QtWidgets.QGroupBox("Setup")
@@ -151,14 +152,18 @@ class Run_task_tab(QtWidgets.QWidget):
         top_layout.addWidget(self.file_groupbox)
         top_layout.setContentsMargins(0, 0, 0, 0)
 
+        # Resizable log and plots layout.
+        self.vsplitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
+        self.vsplitter.addWidget(self.log_textbox)
+        self.vsplitter.addWidget(self.task_plot)
+        self.vsplitter.setSizes([1, 2])
+
         # Main layout
         self.run_layout = QtWidgets.QGridLayout()
         self.run_layout.addWidget(self.top_section, 0, 0)
         self.run_layout.addWidget(self.session_groupbox, 1, 0)
-        self.run_layout.addWidget(self.log_textbox, 2, 0)
+        self.run_layout.addWidget(self.vsplitter, 2, 0)
         self.run_layout.setRowStretch(2, 1)
-        self.run_layout.addWidget(self.task_plot, 3, 0)
-        self.run_layout.setRowStretch(3, 4)
 
         self.setLayout(self.run_layout)
 

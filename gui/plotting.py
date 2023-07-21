@@ -34,27 +34,34 @@ class Task_plot(QtWidgets.QWidget):
 
         # create layout
 
-        self.vertical_layout = QtWidgets.QGridLayout()
-        self.vertical_layout.addWidget(self.states_plot.axis, 0, 0, 1, 3)
-        self.vertical_layout.addWidget(self.events_plot.axis, 1, 0, 1, 3)
-        self.vertical_layout.addWidget(self.analog_plot.axis, 2, 0, 1, 3)
-        self.vertical_layout.addWidget(self.pause_button, 3, 0, 1, 3, QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.setLayout(self.vertical_layout)
+        self.layout = QtWidgets.QGridLayout()
+        self.layout.addWidget(self.states_plot.axis, 0, 0, 1, 3)
+        self.layout.addWidget(self.events_plot.axis, 1, 0, 1, 3)
+        self.layout.addWidget(self.analog_plot.axis, 2, 0, 1, 3)
+        self.layout.addWidget(self.pause_button, 3, 0, 1, 3, QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.setLayout(self.layout)
 
         self.pause_button.clicked.connect(self.update_pause_btn_text)
         self.update_pause_btn_text()
 
     def set_state_machine(self, sm_info):
         # Initialise plots with state machine information.
+        self.axiswidth = 6.1 * max([len(n) for n in list(sm_info.states) + list(sm_info.events)])
         self.states_plot.set_state_machine(sm_info)
         self.events_plot.set_state_machine(sm_info)
         self.analog_plot.set_state_machine(sm_info)
         if self.analog_plot.inputs:
             self.analog_plot.axis.setVisible(True)
             self.events_plot.axis.getAxis("bottom").setLabel("")
+            self.layout.setRowStretch(0, 1)
+            self.layout.setRowStretch(1, 1)
+            self.layout.setRowStretch(2, 1)
         else:
             self.analog_plot.axis.setVisible(False)
             self.events_plot.axis.getAxis("bottom").setLabel("Time (seconds)")
+            self.layout.setRowStretch(0, 1)
+            self.layout.setRowStretch(1, 1)
+            self.layout.setRowStretch(2, 0)
 
     def run_start(self, recording):
         self.pause_button.setChecked(False)
@@ -100,6 +107,7 @@ class Task_plot(QtWidgets.QWidget):
 
 class States_plot:
     def __init__(self, parent=None, data_len=100):
+        self.task_plot = parent
         self.data_len = data_len
         self.axis = pg.PlotWidget(title="States")
         self.axis.showAxis("right")
@@ -120,11 +128,13 @@ class States_plot:
         self.plots = {
             ID: self.axis.plot(pen=pg.mkPen(pg.intColor(ID, self.n_colours), width=3)) for ID in self.state_IDs
         }
+        self.axis.getAxis("right").setWidth(self.task_plot.axiswidth)
+        self.axis.getAxis("right").setStyle(hideOverlappingLabels=False)
 
     def run_start(self):
         self.data = np.zeros([self.data_len * 2, 2], int)
         for plot in self.plots.values():
-            plot.clear()
+            plot.setData(x=[], y=[])
 
     def process_data(self, new_data):
         """Store new data from board"""
@@ -152,6 +162,7 @@ class States_plot:
 
 class Events_plot:
     def __init__(self, parent=None, data_len=100):
+        self.task_plot = parent
         self.axis = pg.PlotWidget(title="Events")
         self.axis.showAxis("right")
         self.axis.hideAxis("left")
@@ -173,6 +184,8 @@ class Events_plot:
         self.axis.setYRange(min(self.event_IDs), max(self.event_IDs), padding=0.1)
         self.n_colours = len(sm_info.states) + len(sm_info.events)
         self.plot = self.axis.plot(pen=None, symbol="o", symbolSize=6, symbolPen=None)
+        self.axis.getAxis("right").setWidth(self.task_plot.axiswidth)
+        self.axis.getAxis("right").setStyle(hideOverlappingLabels=False)
 
     def run_start(self):
         if not self.event_IDs:
@@ -208,6 +221,7 @@ class Events_plot:
 
 class Analog_plot:
     def __init__(self, parent=None, data_dur=10):
+        self.task_plot = parent
         self.data_dur = data_dur
         self.axis = pg.PlotWidget(title="Analog")
         self.axis.showAxis("right")
@@ -229,8 +243,7 @@ class Analog_plot:
             for i, (ID, ai) in enumerate(sorted(self.inputs.items()))
         }
         self.axis.getAxis("bottom").setLabel("Time (seconds)")
-        max_len = max([len(n) for n in list(sm_info.states) + list(sm_info.events)])
-        self.axis.getAxis("right").setWidth(5 * max_len)
+        self.axis.getAxis("right").setWidth(self.task_plot.axiswidth)
 
     def run_start(self):
         if not self.inputs:
