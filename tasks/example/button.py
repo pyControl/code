@@ -6,20 +6,28 @@ from pyControl.utility import *
 from devices import *
 
 # Define hardware
+
 button = Digital_input("X17", rising_event="button_press", pull="up")  # pyboard usr button.
 LED = Digital_output("B4")
 
 # States and events.
-states = ["LED_on", "LED_off"]
+
+states = [
+    "LED_on",
+    "LED_off",
+]
+
 events = ["button_press"]
 
 initial_state = "LED_off"
 
 # Variables
+
 v.press_n = 0
 
-
 # State behaviour functions.
+
+
 def LED_off(event):
     if event == "button_press":
         v.press_n = v.press_n + 1

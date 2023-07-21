@@ -13,10 +13,13 @@ events = ["timer_done"]
 initial_state = "print_msg"
 
 # Hardware setup level variables
+
 v.hw_solenoid = None  # this value is just a placeholder and will be overwritten when the task is loaded
 
 
-# Define behaviour.
+# State behaviour functions
+
+
 def print_msg(event):
     if event == "entry":
         set_timer("timer_done", 1 * second, output_event=False)

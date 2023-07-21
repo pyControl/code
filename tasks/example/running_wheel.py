@@ -16,7 +16,7 @@ v.velocity_threshold = 100  # Minimum encoder velocity treated as running (encod
 
 board = Breakout_1_2()  # Breakout board.
 
-# Running wheel must be plugged into port 1 of breakout board.
+
 running_wheel = Rotary_encoder(
     name="running_wheel",
     sampling_rate=100,
@@ -24,15 +24,26 @@ running_wheel = Rotary_encoder(
     threshold=v.velocity_threshold,
     rising_event="started_running",
     falling_event="stopped_running",
-)
+)  # Running wheel must be plugged into port 1 of breakout board.
 
 solenoid = Digital_output(board.port_2.POW_A)  # Reward delivery solenoid.
 
 # States and events.
 
-states = ["trial_start", "running_for_reward", "reward", "inter_trial_interval"]
+states = [
+    "trial_start",
+    "running_for_reward",
+    "reward",
+    "inter_trial_interval",
+]
 
-events = ["started_running", "stopped_running", "run_timer", "stopped_timer", "reward_timer"]
+events = [
+    "started_running",
+    "stopped_running",
+    "run_timer",
+    "stopped_timer",
+    "reward_timer",
+]
 
 initial_state = "trial_start"
 

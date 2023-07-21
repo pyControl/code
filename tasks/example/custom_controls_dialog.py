@@ -12,12 +12,23 @@ red_LED = LED(1)
 green_LED = LED(2)
 
 # States and events.
-states = ["green_off", "green_on", "red_off", "red_on"]
-events = ["green_off_wait", "red_off_wait"]
+
+states = [
+    "green_off",
+    "green_on",
+    "red_off",
+    "red_on",
+]
+
+events = [
+    "green_off_wait",
+    "red_off_wait",
+]
 
 initial_state = "red_off"
 
 # Variables
+
 v.blink_rate = 5  # Hz
 v.green_enabled = True
 v.red_enabled = True
@@ -33,7 +44,9 @@ v.custom_controls_dialog = "blinker_gui"  # example dialog
 # v.custom_controls_dialog = 'blinker_gui_from_py' # advanced example dialog that is loaded from a .py file
 
 
-# Define behaviour.
+# State behaviour functions.
+
+
 def red_off(event):
     if event == "entry":
         if v.current_count___ < v.red_count:
@@ -96,6 +109,9 @@ def green_on(event):
             v.current_count___ = 0
     if event == "exit":
         green_LED.off()
+
+
+# Run end behaviour.
 
 
 def run_end():  # Turn off hardware at end of run.

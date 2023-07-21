@@ -5,29 +5,31 @@
 from pyControl.utility import *
 import hardware_definition as hw
 
-# -------------------------------------------------------------------------
 # States and events.
-# -------------------------------------------------------------------------
-states = ["wait_for_poke", "reward_available", "reward"]
-events = ["left_poke", "right_poke", "session_timer"]
+
+states = [
+    "wait_for_poke",
+    "reward_available",
+    "reward",
+]
+events = [
+    "left_poke",
+    "right_poke",
+    "session_timer",
+]
 
 initial_state = "wait_for_poke"
 
-# -------------------------------------------------------------------------
 # Variables.
-# -------------------------------------------------------------------------
 
 v.ratio = 5  # Average number of left pokes needed to make reward available.
 v.session_duration = 1 * hour
 v.reward_duration = 100 * ms
 v.rewards_obtained = 0
 
-# -------------------------------------------------------------------------
-# Define behaviour.
-# -------------------------------------------------------------------------
-
-
 # Run start and stop behaviour.
+
+
 def run_start():
     # Set session timer and turn on houslight.
     set_timer("session_timer", v.session_duration)
@@ -40,6 +42,8 @@ def run_end():
 
 
 # State behaviour functions.
+
+
 def wait_for_poke(event):
     # 'left_poke' event causes transition to state 'reward_available'
     # with probability 1/v.ratio.
@@ -67,6 +71,8 @@ def reward(event):
 
 
 # State independent behaviour.
+
+
 def all_states(event):
     # When 'session_timer' event occurs stop framework to end session.
     if event == "session_timer":

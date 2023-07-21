@@ -7,21 +7,27 @@
 from pyControl.utility import *
 import hardware_definition as hw
 
-# -------------------------------------------------------------------------
 # States and events.
-# -------------------------------------------------------------------------
 
-states = ["init_trial", "choice_state", "left_reward", "right_reward", "inter_trial_interval"]
+states = [
+    "init_trial",
+    "choice_state",
+    "left_reward",
+    "right_reward",
+    "inter_trial_interval",
+]
 
-events = ["left_poke", "center_poke", "right_poke", "session_timer"]
+events = [
+    "left_poke",
+    "center_poke",
+    "right_poke",
+    "session_timer",
+]
 
 initial_state = "init_trial"
 
-# -------------------------------------------------------------------------
-# Variables.
-# -------------------------------------------------------------------------
-
 # Parameters.
+
 v.session_duration = 1 * hour  # Session duration.
 v.reward_durations = [100, 100]  # Reward delivery duration (ms) [left, right].
 v.ITI_duration = 1 * second  # Inter trial interval duration.
@@ -32,6 +38,7 @@ v.good_prob = 0.8  # Reward probabilities on the good side.
 v.bad_prob = 0.2  # Reward probabilities on the bad side.
 
 # Variables.
+
 v.n_rewards = 0  # Number of rewards obtained.
 v.n_trials = 0  # Number of trials received.
 v.n_blocks = 0  # Number of reversals.
@@ -40,9 +47,8 @@ v.correct_mov_ave = exp_mov_ave(tau=v.tau, init_value=0.5)  # Moving average of 
 v.threshold_crossed = False  # Whether performance threshold has been crossed.
 v.trials_till_reversal = 0  # Used after threshold crossing to trigger reversal.
 
-# -------------------------------------------------------------------------
+
 # Non-state machine code.
-# -------------------------------------------------------------------------
 
 
 def get_trial_outcome(chosen_side):
@@ -79,10 +85,6 @@ def get_trial_outcome(chosen_side):
     print_variables(["n_trials", "n_rewards", "n_blocks", "good_side", "choice", "outcome", "ave_correct"])
     return v.outcome
 
-
-# -------------------------------------------------------------------------
-# State machine code.
-# -------------------------------------------------------------------------
 
 # Run start and stop behaviour.
 
