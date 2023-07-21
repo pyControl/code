@@ -132,6 +132,7 @@ class Controls_grid(QtWidgets.QWidget):
         self.eventsbox_layout.addWidget(self.trigger_event_lbl)
         self.eventsbox_layout.addWidget(self.event_select_combo)
         self.eventsbox_layout.addWidget(self.trigger_event_button)
+        self.eventsbox_layout.addStretch(1)
 
         # Variables groupbox.
         self.variables_groupbox = QtWidgets.QGroupBox("Variables")
