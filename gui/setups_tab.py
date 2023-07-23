@@ -222,7 +222,8 @@ class Setups_tab(QtWidgets.QWidget):
 
     def disconnect(self):
         """Disconect from all pyboards, called on tab change."""
-        parallel_call("disconnect", self.setups.values())
+        if self.setups.values():
+            parallel_call("disconnect", self.setups.values())
 
     def edit_hardware_vars(self):
         hardware_var_editor = Hardware_variables_editor(self)
