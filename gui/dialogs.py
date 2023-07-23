@@ -454,7 +454,10 @@ class Settings_dialog(QtWidgets.QDialog):
         self.save_shortcut.activated.connect(self.saveChanges)
 
     def reset(self):
-        """Resets values to whatever is saved in user_settings.json, or to default_user_settings if no user_settings.json exists"""
+        """
+        Resets values to whatever is saved in user_settings.json,
+        or to default_user_settings if no user_settings.json exists
+        """
         for variable in self.path_setters + self.plotting_spins + self.gui_spins:
             variable.reset()
         self.num_edited_setters = 0

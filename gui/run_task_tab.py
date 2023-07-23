@@ -172,10 +172,9 @@ class Run_task_tab(QtWidgets.QWidget):
         self.plot_update_timer.timeout.connect(self.plot_update)
 
         # Keyboard Shortcuts
-
         shortcut_dict = {
-            "t": lambda: self.task_select.showMenu(),
-            "u": lambda: self.setup_task(),
+            "t": self.task_select.showMenu,
+            "u": self.setup_task,
             "Space": (lambda: self.stop_task() if self.running else self.start_task() if self.uploaded else None),
         }
 

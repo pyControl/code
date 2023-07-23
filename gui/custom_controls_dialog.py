@@ -468,10 +468,12 @@ class Custom_controls_grid(QtWidgets.QWidget):
                         self.widget_dict[control_name].setHint(control.hint)
                         self.widget_dict[control_name].setBoard(parent_controls_dialog.parent_tab.board)
                         self.widget_dict[control_name].add_to_grid(layout, row)
-
                 except KeyError:
                     parent_controls_dialog.parent_tab.print_to_log(
-                        f'- Loading error: could not find "{control_name}" variable in the task file. The variable name has been changed or no longer exists.'
+                        (
+                            f'- Loading error: could not find "{control_name}" variable in the task file. '
+                            "The variable name has been changed or no longer exists."
+                        )
                     )
 
             layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
@@ -785,7 +787,7 @@ class Control_row:
         self.hint.setText(self.parent_table.cellWidget(row_index, Clm.HINT).text())
 
     def load_vals_from_spec(self, var_name, specs):
-        if var_name[:4] == "sep_":
+        if var_name.startswith("sep_"):
             self.variable_cbox.addItems(["--- separator ---"])
             cbox_set_item(self.variable_cbox, "--- separator ---")
             cbox_set_item(self.input_type_combo, "bob")

@@ -382,7 +382,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
             all_subjects = self.get_exp_config().subjects
             will_not_run = ""
             for subject in all_subjects.keys():
-                if all_subjects[subject]["run"] == False:
+                if all_subjects[subject]["run"] is False:
                     will_not_run += f"{subject}\n"
             if will_not_run != "":
                 okay = unrun_subjects_dialog(self.subjects_groupbox, will_not_run)
@@ -694,7 +694,7 @@ class VariablesTable(QtWidgets.QTableWidget):
         )
         # Remove variables that are not in new task.
         for i in reversed(range(self.n_variables)):
-            if not self.cellWidget(i, 0).currentText() in self.variable_names:
+            if self.cellWidget(i, 0).currentText() not in self.variable_names:
                 self.removeRow(i)
                 self.n_variables -= 1
         null_resize(self)
