@@ -8,7 +8,7 @@ from collections import OrderedDict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException
 
-from com.pycboard import Pycboard, PyboardError, Datatuple
+from com.pycboard import Pycboard, PyboardError
 from com.data_logger import Data_logger
 from gui.settings import get_setting
 from gui.plotting import Experiment_plot
@@ -427,7 +427,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.user_API = None  # Remove previous API.
         if "api_class" not in self.board.sm_info.variables:
             return  # Task does not use API.
-        API_name = eval(self.board.sm_info.variables["api_class"])
+        API_name = self.board.sm_info.variables["api_class"]
         # Try to import and instantiate the user API.
         try:
             user_module_name = f"config.user_classes.{API_name}"
@@ -444,7 +444,6 @@ class Subjectbox(QtWidgets.QGroupBox):
             self.user_API = user_API_class()
             self.user_API.interface(self.board, self.print_to_log)
             self.data_logger.data_consumers.append(self.user_API)
-            1 / 0
             self.print_to_log(f"\nInitialised API: {API_name}")
         except Exception as e:
             self.print_to_log(f"Unable to intialise API: {API_name}\nTraceback: {e}")
