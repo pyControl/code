@@ -75,7 +75,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.experiment_plot.setup_experiment(experiment)
         self.logs_visible = True
         self.logs_button.setText("Hide logs")
-        self.startstopclose_all_button.setText("Start All")
+        self.startstopclose_all_button.setText("Start all")
         self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
         self.startstopclose_all_button.setEnabled(False)
         # Setup controls box.
@@ -155,23 +155,23 @@ class Run_experiment_tab(QtWidgets.QWidget):
 
     def startstopclose_all(self):
         """Called when startstopclose_all_button is clicked."""
-        if self.startstopclose_all_button.text() == "Close Exp.":
+        if self.startstopclose_all_button.text() == "Close exp.":
             self.close_experiment()
-        elif self.startstopclose_all_button.text() == "Start All":
+        elif self.startstopclose_all_button.text() == "Start all":
             for box in self.subjectboxes:
                 if box.state == State.PRE_RUN:
                     box.start_task()
-        elif self.startstopclose_all_button.text() == "Stop All":
+        elif self.startstopclose_all_button.text() == "Stop all":
             parallel_call("stop_task", [box for box in self.subjectboxes if box.state == State.RUNNING])
 
     def update_startstopclose_button(self):
         """Called when a setup is started or stopped to update the
         startstopclose_all button."""
         if self.setups_finished == self.num_subjects:
-            self.startstopclose_all_button.setText("Close Exp.")
+            self.startstopclose_all_button.setText("Close exp.")
             self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/close.svg"))
         elif self.setups_started == self.num_subjects:
-            self.startstopclose_all_button.setText("Stop All")
+            self.startstopclose_all_button.setText("Stop all")
             self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
 
     def stop_experiment(self):
@@ -217,7 +217,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
             msg.setText("An error occured while setting up experiment")
             msg.setIcon(QtWidgets.QMessageBox.Icon.Warning)
             msg.exec()
-            self.startstopclose_all_button.setText("Close Exp.")
+            self.startstopclose_all_button.setText("Close exp.")
             self.startstopclose_all_button.setEnabled(True)
             return True
         else:
@@ -268,6 +268,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
 
 
 # -----------------------------------------------------------------------------
+
 
 class State(Enum):
     PRE_RUN = "Pre run"
