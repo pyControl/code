@@ -2,6 +2,7 @@ import os
 import time
 import json
 import importlib
+from enum import Enum
 from datetime import datetime
 from collections import OrderedDict
 
@@ -14,7 +15,7 @@ from gui.settings import get_setting
 from gui.plotting import Experiment_plot
 from gui.dialogs import Controls_dialog, Summary_variables_dialog
 from gui.utility import variable_constants, TaskInfo, parallel_call
-from gui.custom_controls_dialog import Custom_controls_dialog
+from gui.custom_controls_dialog import Custom_controls_dialog, Custom_gui
 from gui.hardware_variables_dialog import set_hardware_variables
 
 
@@ -158,10 +159,10 @@ class Run_experiment_tab(QtWidgets.QWidget):
             self.close_experiment()
         elif self.startstopclose_all_button.text() == "Start All":
             for box in self.subjectboxes:
-                if box.state == "pre_run":
+                if box.state == State.PRE_RUN:
                     box.start_task()
         elif self.startstopclose_all_button.text() == "Stop All":
-            parallel_call("stop_task", [box for box in self.subjectboxes if box.state == "running"])
+            parallel_call("stop_task", [box for box in self.subjectboxes if box.state == State.RUNNING])
 
     def update_startstopclose_button(self):
         """Called when a setup is started or stopped to update the
@@ -268,6 +269,11 @@ class Run_experiment_tab(QtWidgets.QWidget):
 
 # -----------------------------------------------------------------------------
 
+class State(Enum):
+    PRE_RUN = "Pre run"
+    RUNNING = "Running"
+    POST_RUN = "Post run"
+
 
 class Subjectbox(QtWidgets.QGroupBox):
     """Groupbox for displaying data from a single subject."""
@@ -278,7 +284,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.setup_name = setup_name
         self.GUI_main = self.parent().GUI_main
         self.run_exp_tab = self.parent()
-        self.state = "pre_run"
+        self.state = State.PRE_RUN
         self.setup_failed = False
         self.print_queue = []
         self.delay_printing = False
@@ -454,9 +460,9 @@ class Subjectbox(QtWidgets.QGroupBox):
         if "custom_controls_dialog" in self.board.sm_info.variables:  # Task uses custon variables dialog
             custom_variables_name = self.board.sm_info.variables["custom_controls_dialog"]
             potential_dialog = Custom_controls_dialog(self, custom_variables_name, is_experiment=True)
-            if potential_dialog.custom_gui == "json_gui":
+            if potential_dialog.custom_gui == Custom_gui.JSON:
                 self.controls_dialog = potential_dialog
-            elif potential_dialog.custom_gui == "pyfile_gui":
+            elif potential_dialog.custom_gui == Custom_gui.PYFILE:
                 py_gui_file = importlib.import_module(f"config.user_controls_dialogs.{custom_variables_name}")
                 importlib.reload(py_gui_file)
                 self.controls_dialog = py_gui_file.Custom_controls_dialog(self, self.board)
@@ -474,15 +480,15 @@ class Subjectbox(QtWidgets.QGroupBox):
     def start_stop_task(self):
         """Called when start/stop button on Subjectbox pressed or
         startstopclose_all button is pressed."""
-        if self.state == "pre_run":
+        if self.state == State.PRE_RUN:
             self.start_task()
-        elif self.state == "running":
+        elif self.state == State.RUNNING:
             self.stop_task()
 
     def start_task(self):
         """Start the task running on the Subjectbox's board."""
-        self.status_text.setText("Running")
-        self.state = "running"
+        self.status_text.setText(State.RUNNING.value)
+        self.state = State.RUNNING
         self.run_exp_tab.experiment_plot.run_start(self.subject)
         self.start_time = datetime.now()
         ex = self.run_exp_tab.experiment
@@ -527,7 +533,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.data_logger.close_files()
         self.board.close()
         # Update GUI elements.
-        self.state = "post_run"
+        self.state = State.POST_RUN
         self.task_info.state_text.setText("Stopped")
         self.task_info.state_text.setStyleSheet("color: grey;")
         self.status_text.setText("Stopped")
