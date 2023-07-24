@@ -60,7 +60,7 @@ class Api:
             self.board.trigger_event(event)
         else:
             self.print_to_log(
-                f"Variable {event} not defined in task file {self.board.sm_info.name} so cannot be set by API"
+                f"Event {event} not defined in task file {self.board.sm_info.name} so cannot be set by API"
             )
 
     # Note:  get_variable functionality not implemented because board.get_variable method
