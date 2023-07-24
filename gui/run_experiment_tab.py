@@ -2,7 +2,6 @@ import os
 import time
 import json
 import importlib
-from enum import Enum
 from datetime import datetime
 from collections import OrderedDict
 
@@ -159,10 +158,10 @@ class Run_experiment_tab(QtWidgets.QWidget):
             self.close_experiment()
         elif self.startstopclose_all_button.text() == "Start all":
             for box in self.subjectboxes:
-                if box.state == State.PRE_RUN:
+                if box.state == "pre_run":
                     box.start_task()
         elif self.startstopclose_all_button.text() == "Stop all":
-            parallel_call("stop_task", [box for box in self.subjectboxes if box.state == State.RUNNING])
+            parallel_call("stop_task", [box for box in self.subjectboxes if box.state == "running"])
 
     def update_startstopclose_button(self):
         """Called when a setup is started or stopped to update the
@@ -270,12 +269,6 @@ class Run_experiment_tab(QtWidgets.QWidget):
 # -----------------------------------------------------------------------------
 
 
-class State(Enum):
-    PRE_RUN = "Pre run"
-    RUNNING = "Running"
-    POST_RUN = "Post run"
-
-
 class Subjectbox(QtWidgets.QGroupBox):
     """Groupbox for displaying data from a single subject."""
 
@@ -285,7 +278,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.setup_name = setup_name
         self.GUI_main = self.parent().GUI_main
         self.run_exp_tab = self.parent()
-        self.state = State.PRE_RUN
+        self.state = "pre_run"
         self.setup_failed = False
         self.print_queue = []
         self.delay_printing = False
@@ -481,15 +474,15 @@ class Subjectbox(QtWidgets.QGroupBox):
     def start_stop_task(self):
         """Called when start/stop button on Subjectbox pressed or
         startstopclose_all button is pressed."""
-        if self.state == State.PRE_RUN:
+        if self.state == "pre_run":
             self.start_task()
-        elif self.state == State.RUNNING:
+        elif self.state == "running":
             self.stop_task()
 
     def start_task(self):
         """Start the task running on the Subjectbox's board."""
-        self.status_text.setText(State.RUNNING.value)
-        self.state = State.RUNNING
+        self.status_text.setText("Running")
+        self.state = "running"
         self.run_exp_tab.experiment_plot.run_start(self.subject)
         self.start_time = datetime.now()
         ex = self.run_exp_tab.experiment
@@ -534,7 +527,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.data_logger.close_files()
         self.board.close()
         # Update GUI elements.
-        self.state = State.POST_RUN
+        self.state = "post_run"
         self.task_info.state_text.setText("Stopped")
         self.task_info.state_text.setStyleSheet("color: grey;")
         self.status_text.setText("Stopped")
