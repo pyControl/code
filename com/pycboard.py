@@ -563,7 +563,7 @@ class Pycboard(Pyboard):
             var_str = self.eval(f"sm.get_variable({repr(v_name)})").decode()
             try:
                 return eval(var_str)
-            except NameError:  # Variable is a string.
+            except Exception:  # Variable is a string.
                 return var_str
 
     def get_variables(self):
