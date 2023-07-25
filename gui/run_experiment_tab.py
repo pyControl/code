@@ -8,13 +8,13 @@ from collections import OrderedDict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException
 
-from com.pycboard import Pycboard, PyboardError, Datatuple
+from com.pycboard import Pycboard, PyboardError
 from com.data_logger import Data_logger
 from gui.settings import get_setting
 from gui.plotting import Experiment_plot
 from gui.dialogs import Controls_dialog, Summary_variables_dialog
 from gui.utility import variable_constants, TaskInfo, parallel_call
-from gui.custom_controls_dialog import Custom_controls_dialog
+from gui.custom_controls_dialog import Custom_controls_dialog, Custom_gui
 from gui.hardware_variables_dialog import set_hardware_variables
 
 
@@ -74,7 +74,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.experiment_plot.setup_experiment(experiment)
         self.logs_visible = True
         self.logs_button.setText("Hide logs")
-        self.startstopclose_all_button.setText("Start All")
+        self.startstopclose_all_button.setText("Start all")
         self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
         self.startstopclose_all_button.setEnabled(False)
         # Setup controls box.
@@ -154,23 +154,23 @@ class Run_experiment_tab(QtWidgets.QWidget):
 
     def startstopclose_all(self):
         """Called when startstopclose_all_button is clicked."""
-        if self.startstopclose_all_button.text() == "Close Exp.":
+        if self.startstopclose_all_button.text() == "Close exp.":
             self.close_experiment()
-        elif self.startstopclose_all_button.text() == "Start All":
+        elif self.startstopclose_all_button.text() == "Start all":
             for box in self.subjectboxes:
                 if box.state == "pre_run":
                     box.start_task()
-        elif self.startstopclose_all_button.text() == "Stop All":
+        elif self.startstopclose_all_button.text() == "Stop all":
             parallel_call("stop_task", [box for box in self.subjectboxes if box.state == "running"])
 
     def update_startstopclose_button(self):
         """Called when a setup is started or stopped to update the
         startstopclose_all button."""
         if self.setups_finished == self.num_subjects:
-            self.startstopclose_all_button.setText("Close Exp.")
+            self.startstopclose_all_button.setText("Close exp.")
             self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/close.svg"))
         elif self.setups_started == self.num_subjects:
-            self.startstopclose_all_button.setText("Stop All")
+            self.startstopclose_all_button.setText("Stop all")
             self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
 
     def stop_experiment(self):
@@ -216,7 +216,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
             msg.setText("An error occured while setting up experiment")
             msg.setIcon(QtWidgets.QMessageBox.Icon.Warning)
             msg.exec()
-            self.startstopclose_all_button.setText("Close Exp.")
+            self.startstopclose_all_button.setText("Close exp.")
             self.startstopclose_all_button.setEnabled(True)
             return True
         else:
@@ -427,7 +427,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.user_API = None  # Remove previous API.
         if "api_class" not in self.board.sm_info.variables:
             return  # Task does not use API.
-        API_name = eval(self.board.sm_info.variables["api_class"])
+        API_name = self.board.sm_info.variables["api_class"]
         # Try to import and instantiate the user API.
         try:
             user_module_name = f"config.user_classes.{API_name}"
@@ -444,7 +444,6 @@ class Subjectbox(QtWidgets.QGroupBox):
             self.user_API = user_API_class()
             self.user_API.interface(self.board, self.print_to_log)
             self.data_logger.data_consumers.append(self.user_API)
-            1 / 0
             self.print_to_log(f"\nInitialised API: {API_name}")
         except Exception as e:
             self.print_to_log(f"Unable to intialise API: {API_name}\nTraceback: {e}")
@@ -455,9 +454,9 @@ class Subjectbox(QtWidgets.QGroupBox):
         if "custom_controls_dialog" in self.board.sm_info.variables:  # Task uses custon variables dialog
             custom_variables_name = self.board.sm_info.variables["custom_controls_dialog"]
             potential_dialog = Custom_controls_dialog(self, custom_variables_name, is_experiment=True)
-            if potential_dialog.custom_gui == "json_gui":
+            if potential_dialog.custom_gui == Custom_gui.JSON:
                 self.controls_dialog = potential_dialog
-            elif potential_dialog.custom_gui == "pyfile_gui":
+            elif potential_dialog.custom_gui == Custom_gui.PYFILE:
                 py_gui_file = importlib.import_module(f"config.user_controls_dialogs.{custom_variables_name}")
                 importlib.reload(py_gui_file)
                 self.controls_dialog = py_gui_file.Custom_controls_dialog(self, self.board)

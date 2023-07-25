@@ -39,6 +39,7 @@ class Task_plot(QtWidgets.QWidget):
         self.layout.addWidget(self.events_plot.axis, 1, 0, 1, 3)
         self.layout.addWidget(self.analog_plot.axis, 2, 0, 1, 3)
         self.layout.addWidget(self.pause_button, 3, 0, 1, 3, QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
 
         self.pause_button.clicked.connect(self.update_pause_btn_text)

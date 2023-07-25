@@ -153,7 +153,7 @@ class GUI_main(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.information(
                 self,
                 "No error log",
-                f"You have no errors",
+                "You have no errors",
                 QtWidgets.QMessageBox.StandardButton.Ok,
             )
 

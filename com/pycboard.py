@@ -369,7 +369,7 @@ class Pycboard(Pyboard):
         """Make dict mapping device class names to file in devices folder containing
         the class definition."""
         Pycboard.device_class2file = {}  # Dict {device_classname: device_filename}
-        all_device_files = [f for f in os.listdir(dirs["devices"]) if f[-3:] == ".py"]
+        all_device_files = [f for f in os.listdir(dirs["devices"]) if f.endswith(".py")]
         for device_file in all_device_files:
             with open(os.path.join(dirs["devices"], device_file), "r") as f:
                 file_content = f.read()
@@ -563,7 +563,7 @@ class Pycboard(Pyboard):
             var_str = self.eval(f"sm.get_variable({repr(v_name)})").decode()
             try:
                 return eval(var_str)
-            except NameError:  # Variable is a string.
+            except Exception:  # Variable is a string.
                 return var_str
 
     def get_variables(self):

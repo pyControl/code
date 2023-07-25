@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import logging
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
@@ -320,18 +321,23 @@ class Keyboard_shortcuts_dialog(QtWidgets.QDialog):
         label.setFont(QtGui.QFont("Helvetica", 12))
         self.Vlayout.addWidget(label)
 
+        if sys.platform == "darwin":  # shortcuts for mac
+            modifier_key = "Cmd"
+        else:
+            modifier_key = "Ctrl"
+
         label_strings = [
             "<b><u>Global:</u></b>",
-            '<b style="color:#0220e0;">Ctrl + t</b> : Open tasks folder',
-            '<b style="color:#0220e0;">Ctrl + d</b> : Open data folder',
-            '<b style="color:#0220e0;">Ctrl + e</b> : Open error log',
-            '<b style="color:#0220e0;">Ctrl + ,</b> : Open settings',
+            f'<b style="color:#0220e0;">{modifier_key} + t</b> : Open tasks folder',
+            f'<b style="color:#0220e0;">{modifier_key} + d</b> : Open data folder',
+            f'<b style="color:#0220e0;">{modifier_key} + e</b> : Open error log',
+            f'<b style="color:#0220e0;">{modifier_key} + ,</b> : Open settings',
             "<br></br><b><u>Run task tab:</u></b>",
             '<b style="color:#0220e0;">    t    </b> : Select task',
             '<b style="color:#0220e0;">    u    </b> : Upload/reset task',
             '<b style="color:#0220e0;">spacebar </b> : Start/stop task',
             "<br></br><b><u>Experiments tab:</u></b>",
-            '<b style="color:#0220e0;">Ctrl + s</b> : Save experiment ',
+            f'<b style="color:#0220e0;">{modifier_key} + s</b> : Save experiment ',
         ]
 
         for ls in label_strings:
@@ -454,7 +460,10 @@ class Settings_dialog(QtWidgets.QDialog):
         self.save_shortcut.activated.connect(self.saveChanges)
 
     def reset(self):
-        """Resets values to whatever is saved in user_settings.json, or to default_user_settings if no user_settings.json exists"""
+        """
+        Resets values to whatever is saved in user_settings.json,
+        or to default_user_settings if no user_settings.json exists
+        """
         for variable in self.path_setters + self.plotting_spins + self.gui_spins:
             variable.reset()
         self.num_edited_setters = 0

@@ -1,6 +1,7 @@
 import os
 import json
 import re
+from enum import Enum
 from typing import Union
 from copy import deepcopy
 from dataclasses import dataclass, asdict
@@ -326,6 +327,11 @@ class Event_button:
         grid.addWidget(self.event_btn, row, 1)
 
 
+class Custom_gui(Enum):
+    JSON = 1
+    PYFILE = 2
+
+
 # GUI created from dictionary describing custom widgets and layout ------------
 class Custom_controls_dialog(QtWidgets.QDialog):
     def __init__(self, parent_tab, gui_name, is_experiment=False):
@@ -358,9 +364,10 @@ class Custom_controls_dialog(QtWidgets.QDialog):
 
             self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+W"), self)
             self.close_shortcut.activated.connect(self.close)
-            self.custom_gui = "json_gui"
+            self.custom_gui = Custom_gui.JSON
 
     def updated_json_dict(self, json_dict):
+        """This will update old (pyControl < v2.0) custom variables json files to a new format"""
         if "ordered_tabs" in json_dict:
             del json_dict["ordered_tabs"]
         for tab_name, tab in json_dict.copy().items():
@@ -387,7 +394,7 @@ class Custom_controls_dialog(QtWidgets.QDialog):
         except FileNotFoundError:  # couldn't find the json data
             py_file = os.path.join(dirs["config"], "user_controls_dialogs", f"{self.gui_name}.py")
             if os.path.exists(py_file):
-                self.custom_gui = "pyfile_gui"
+                self.custom_gui = Custom_gui.PYFILE
             else:
                 self.parent_tab.print_to_log(f"\nCould not find custom variable dialog data: {json_file}")
                 if not is_experiment:
@@ -468,10 +475,12 @@ class Custom_controls_grid(QtWidgets.QWidget):
                         self.widget_dict[control_name].setHint(control.hint)
                         self.widget_dict[control_name].setBoard(parent_controls_dialog.parent_tab.board)
                         self.widget_dict[control_name].add_to_grid(layout, row)
-
                 except KeyError:
                     parent_controls_dialog.parent_tab.print_to_log(
-                        f'- Loading error: could not find "{control_name}" variable in the task file. The variable name has been changed or no longer exists.'
+                        (
+                            f'- Loading error: could not find "{control_name}" variable in the task file. '
+                            "The variable name has been changed or no longer exists."
+                        )
                     )
 
             layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
@@ -785,7 +794,7 @@ class Control_row:
         self.hint.setText(self.parent_table.cellWidget(row_index, Clm.HINT).text())
 
     def load_vals_from_spec(self, var_name, specs):
-        if var_name[:4] == "sep_":
+        if var_name.startswith("sep_"):
             self.variable_cbox.addItems(["--- separator ---"])
             cbox_set_item(self.variable_cbox, "--- separator ---")
             cbox_set_item(self.input_type_combo, "bob")

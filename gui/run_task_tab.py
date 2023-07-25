@@ -10,7 +10,7 @@ from com.data_logger import Data_logger
 
 from gui.settings import get_setting
 from gui.dialogs import Controls_dialog
-from gui.custom_controls_dialog import Custom_controls_dialog
+from gui.custom_controls_dialog import Custom_controls_dialog, Custom_gui
 from gui.plotting import Task_plot
 from gui.utility import init_keyboard_shortcuts, NestedMenu, TaskInfo
 from gui.hardware_variables_dialog import set_hardware_variables, hw_vars_defined_in_setup
@@ -172,10 +172,9 @@ class Run_task_tab(QtWidgets.QWidget):
         self.plot_update_timer.timeout.connect(self.plot_update)
 
         # Keyboard Shortcuts
-
         shortcut_dict = {
-            "t": lambda: self.task_select.showMenu(),
-            "u": lambda: self.setup_task(),
+            "t": self.task_select.showMenu,
+            "u": self.setup_task,
             "Space": (lambda: self.stop_task() if self.running else self.start_task() if self.uploaded else None),
         }
 
@@ -325,10 +324,10 @@ class Run_task_tab(QtWidgets.QWidget):
             if "custom_controls_dialog" in self.board.sm_info.variables:
                 custom_variables_name = self.board.sm_info.variables["custom_controls_dialog"]
                 potential_dialog = Custom_controls_dialog(self, custom_variables_name)
-                if potential_dialog.custom_gui == "json_gui":
+                if potential_dialog.custom_gui == Custom_gui.JSON:
                     self.controls_dialog = potential_dialog
                     self.using_json_gui = True
-                elif potential_dialog.custom_gui == "pyfile_gui":
+                elif potential_dialog.custom_gui == Custom_gui.PYFILE:
                     py_gui_file = importlib.import_module(f"config.user_controls_dialogs.{custom_variables_name}")
                     importlib.reload(py_gui_file)
                     self.controls_dialog = py_gui_file.Custom_controls_dialog(self, self.board)

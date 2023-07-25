@@ -55,7 +55,7 @@ def goto_state(next_state):
         next_state = ID2name[next_state]
     if transition_in_progress:
         raise fw.pyControlError("goto_state cannot not be called while processing 'entry' or 'exit' events.")
-    if not next_state in states.keys():
+    if next_state not in states.keys():
         raise fw.pyControlError("Invalid state name passed to goto_state: " + repr(next_state))
     transition_in_progress = True
     process_event("exit")

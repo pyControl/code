@@ -470,7 +470,7 @@ def experiment_dataframe(folder_path, paired_events={}, pair_end_suffix=None, ti
     df : session dataframe
     """
     assert time_unit in ("second", "ms"), 'time_unit must be "second" or "ms"'
-    session_filenames = [f for f in os.listdir(folder_path) if f[-4:] in (".txt", ".tsv")]
+    session_filenames = [f for f in os.listdir(folder_path) if f.endswith((".txt", ".tsv"))]
     session_dataframes = []
     for session_filename in session_filenames:
         # Make session dataframe.
