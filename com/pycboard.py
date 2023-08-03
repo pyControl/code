@@ -546,7 +546,7 @@ class Pycboard(Pyboard):
             self.send_serial_data(repr((v_name, v_value)), "V", "s")
             return None
         else:  # Set variable using REPL.
-            set_OK = eval(self.eval(f"sm.set_variable({repr(v_name)}, {v_value})").decode())
+            set_OK = eval(self.eval(f"sm.set_variable({repr(v_name)}, {repr(v_value)})").decode())
             if set_OK:
                 self.sm_info.variables[v_name] = v_value
             return set_OK
