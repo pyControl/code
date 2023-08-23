@@ -232,10 +232,11 @@ class Analog_plot():
         new_analog = [nd for nd in new_data if nd[0] == 'A']
         for na in new_analog:
             ID, sampling_rate, timestamp, data_array = na[1:]
-            new_len = len(data_array)
-            t = timestamp/1000 + np.arange(new_len)/sampling_rate
-            self.data[ID] = np.roll(self.data[ID], -new_len, axis=0)
-            self.data[ID][-new_len:,:] = np.vstack([t,data_array]).T
+            if ID in self.plots.keys():
+                new_len = len(data_array)
+                t = timestamp/1000 + np.arange(new_len)/sampling_rate
+                self.data[ID] = np.roll(self.data[ID], -new_len, axis=0)
+                self.data[ID][-new_len:,:] = np.vstack([t,data_array]).T
 
     def update(self, run_time):
         '''Update plots.'''
