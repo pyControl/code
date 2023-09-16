@@ -104,16 +104,16 @@ class Api:
 
         for nd in new_data:
             if nd.type == "P":
-                data["prints"].append(self.print_tup(nd.data, nd.time))
+                data["prints"].append(self.print_tup(nd.content, nd.time))
             elif nd.type == "V":
-                data["vars"].append(self.var_tup(nd.ID, nd.time))
+                data["vars"].append(self.var_tup(nd.subtype, nd.time))
             elif nd.type == "D":
-                name = self.ID2name[nd.ID]
+                name = self.ID2name[nd.content]
                 if name in self.board.sm_info.states:
                     data["states"].append(self.state_tup(name, nd.time))
                 else:
                     data["events"].append(self.event_tup(name, nd.time))
             elif nd.type == "A":
-                data["analog"].append(self.analog_tup(self.ID2analog[nd.ID], nd.time, nd.data))
+                data["analog"].append(self.analog_tup(self.ID2analog[nd.content[0]], nd.time, nd.content[1]))
 
         self.process_data_user(data)

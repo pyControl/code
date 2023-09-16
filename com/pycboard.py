@@ -10,7 +10,14 @@ from .pyboard import Pyboard, PyboardError
 from gui.settings import VERSION, dirs, get_setting
 from dataclasses import dataclass
 
-Datatuple = namedtuple("Datatuple", ["type", "time", "ID", "data"], defaults=[None] * 4)
+Datatuple = namedtuple("Datatuple", ["time", "type", "subtype", "content"], defaults=[None] * 4)
+var_subtypes = {
+    "g": "get",
+    "s": "set",
+    "p": "print",
+    "t": "run_start",
+    "e": "run_end",
+}
 
 # ----------------------------------------------------------------------------------------
 #  Helper functions.
@@ -463,7 +470,7 @@ class Pycboard(Pyboard):
                     data_header = self.serial.read(11)
                     typecode = data_header[:1].decode()
                     if typecode not in ("b", "B", "h", "H", "l", "L"):
-                        new_data.append(Datatuple(type="!", data="bad typecode A"))
+                        new_data.append(Datatuple(type="!", content="bad typecode A"))
                         continue
                     ID = int.from_bytes(data_header[1:3], "little")
                     data_len = int.from_bytes(data_header[3:5], "little")
@@ -471,9 +478,9 @@ class Pycboard(Pyboard):
                     checksum = int.from_bytes(data_header[9:11], "little")
                     data_array = array(typecode, self.serial.read(data_len))
                     if checksum == (sum(data_header[:-2]) + sum(data_array)) & 0xFFFF:  # Checksum OK.
-                        new_data.append(Datatuple(type="A", time=timestamp, ID=ID, data=data_array))
+                        new_data.append(Datatuple(type="A", time=timestamp, content=(ID, data_array)))
                     else:
-                        new_data.append(Datatuple(type="!", data="bad data checksum, datatype: A"))
+                        new_data.append(Datatuple(type="!", content="bad data checksum, datatype: A"))
                 # Event or state entry, 8 byte data header only.
                 elif type_byte == b"D":
                     data_header = self.serial.read(8)
@@ -481,9 +488,9 @@ class Pycboard(Pyboard):
                     ID = int.from_bytes(data_header[4:6], "little")
                     checksum = int.from_bytes(data_header[6:8], "little")
                     if checksum == sum(data_header[:-2]):  # Checksum OK.
-                        new_data.append(Datatuple(type="D", time=timestamp, ID=ID))
+                        new_data.append(Datatuple(time=timestamp, type="D", content=ID))
                     else:
-                        new_data.append(Datatuple(type="!", data="bad data checksum, datatype: D"))
+                        new_data.append(Datatuple(type="!", content="bad data checksum, datatype: D"))
                 # Framework stop
                 elif type_byte == b"S":
                     timestamp = int.from_bytes(self.serial.read(4), "little")
@@ -497,19 +504,19 @@ class Pycboard(Pyboard):
                     checksum = int.from_bytes(data_header[6:8], "little")
                     data_bytes = self.serial.read(data_len)
                     if not checksum == (sum(data_header[:-2]) + sum(data_bytes)) & 0xFFFF:  # Bad checksum.
-                        new_data.append(Datatuple(type="!", data="bad data checksum, datatype: " + data_type))
+                        new_data.append(Datatuple(type="!", content=f"bad data checksum, datatype: {data_type}"))
                         continue
                     data_str = data_bytes.decode()
                     if data_type == "!":
-                        new_data.append(Datatuple(type="!", data=data_str))
+                        new_data.append(Datatuple(type="!", content=data_str))
                     elif data_type == "P":  # User print.
-                        new_data.append(Datatuple(type=data_type, time=timestamp, data=data_str))
+                        new_data.append(Datatuple(time=timestamp, type=data_type, content=data_str))
                     elif data_type == "V":  # Store new variable value in sm_info
-                        op_ID = {"g": "get", "s": "set", "p": "print", "t": "run_start", "e": "run_end"}[data_str[0]]
+                        subtype = var_subtypes[data_str[0]]
                         var_json = data_str[1:]
                         var_dict = json.loads(var_json)
                         self.sm_info.variables.update(var_dict)
-                        new_data.append(Datatuple(type="V", time=timestamp, ID=op_ID, data=var_json))
+                        new_data.append(Datatuple(time=timestamp, type="V", subtype=subtype, content=var_json))
                 else:
                     unexpected_input.append(type_byte.decode())
             elif new_byte == b"\x04":  # End of framework run.
@@ -517,7 +524,7 @@ class Pycboard(Pyboard):
                 data_err = self.read_until(2, b"\x04>", timeout=10)
                 if len(data_err) > 2:  # Error during framework run.
                     error_message = data_err[:-3].decode()
-                    new_data.append(Datatuple(type="!!", data=error_message))
+                    new_data.append(Datatuple(type="!!", content=error_message))
                 break
             else:
                 unexpected_input.append(new_byte.decode())
