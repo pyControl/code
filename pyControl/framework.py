@@ -14,15 +14,26 @@ class pyControlError(BaseException):  # Exception for pyControl errors.
 
 # Constants used to indicate event types, corresponding event tuple indicated in comment.
 
-event_typ = const(1)  # External event   : (time, event_typ, event_ID)
+event_typ = const(1)  # External event   : (time, event_typ, [i]nput/[t]imer/[s]ync/[p]ublish/[u]ser/[a]pi, event_ID)
 state_typ = const(2)  # State transition : (time, state_typ, state_ID)
 timer_typ = const(3)  # User timer       : (time, timer_typ, event_ID)
 print_typ = const(4)  # User print       : (time, print_typ, print_string)
 hardw_typ = const(5)  # Harware callback : (time, hardw_typ, hardware_ID)
-varbl_typ = const(6)  # Variable change  : (time, varbl_typ, [s]et/[g]et/[p]rint/s[t]art/[e]nd byte, json_str)
+varbl_typ = const(6)  # Variable change  : (time, varbl_typ, [g]et/user_[s]et/[a]pi_set/[p]rint/s[t]art/[e]nd, json_str)
 warng_typ = const(7)  # Warning          : (time, warng_typ, print_string)
 stopf_typ = const(8)  # Stop framework   : (time, stopf_type)
 
+type_byte = (
+    None,
+    b"\x07E",  # event_typ
+    b"\x07S",  # state_typ
+    None,
+    b"\x07P",  # print_typ
+    None,
+    b"\x07V",  # varbl_typ
+    b"\x07!",  # warning_typ
+    b"\x07X",  # stop_typ
+)
 # Event_queue -----------------------------------------------------------------
 
 
@@ -81,28 +92,15 @@ def output_data(event):
     # Output data to computer.
     if not data_output:
         return
-    if event[1] in (event_typ, state_typ):  # Event or state change.
-        timestamp = event[0].to_bytes(4, "little")
-        ID = event[2].to_bytes(2, "little")
-        checksum = sum(timestamp + ID).to_bytes(2, "little")
-        usb_serial.send(b"\x07D" + timestamp + ID + checksum)
-    elif event[1] == stopf_typ:  # Framework stop.
-        timestamp = event[0].to_bytes(4, "little")
-        usb_serial.send(b"\x07S" + timestamp)
+    time, event_type, subtype, content = event
+    timestamp = time.to_bytes(4, "little")
+    if event_type == stopf_typ:  # Framework stop.
+        usb_serial.send(type_byte[event_type] + timestamp)
     else:
-        if event[1] == varbl_typ:  # Variable changed.
-            start_byte = b"\x07V"
-            data_bytes = (event[2] + event[3]).encode()
-        else:
-            if event[1] == print_typ:  # User print string.
-                start_byte = b"\x07P"
-            elif event[1] == warng_typ:  # Warning.
-                start_byte = b"\x07!"
-            data_bytes = event[2].encode()
+        data_bytes = (subtype + str(content)).encode()
         data_len = len(data_bytes).to_bytes(2, "little")
-        timestamp = event[0].to_bytes(4, "little")
-        checksum = (sum(data_len + timestamp) + sum(data_bytes)).to_bytes(2, "little")
-        usb_serial.send(start_byte + data_len + timestamp + checksum + data_bytes)
+        checksum = (sum(data_len + timestamp + data_bytes)).to_bytes(2, "little")
+        usb_serial.send(type_byte[event_type] + data_len + timestamp + checksum + data_bytes)
 
 
 def receive_data():
@@ -118,22 +116,27 @@ def receive_data():
         if checksum != (sum(data) & 0xFFFF):
             return  # Bad checksum.
         data_str = data.decode()
-        if data_str[0] == "s":  # Set variable.
+        if data_str[0] in ("s", "a"):  # Set variable.
             v_name, v_value = eval(data_str[1:])
             if sm.set_variable(v_name, v_value):
-                data_output_queue.put((current_time, varbl_typ, "s", ujson.dumps({v_name: v_value})))
+                data_output_queue.put((current_time, varbl_typ, data_str[0], ujson.dumps({v_name: v_value})))
         elif data_str[0] == "g":  # Get variable.
             v_name = data_str[1:]
             v_value = sm.get_variable(v_name)
             data_output_queue.put((current_time, varbl_typ, "g", ujson.dumps({v_name: v_value})))
-    elif new_byte == b"E":  # Publish event command.
-        # read in event name
+    elif new_byte in (b"E", b"P"):  # Publish event command.
         data_len = int.from_bytes(usb_serial.read(2), "little")
         data = usb_serial.read(data_len)
+        data_str = data.decode()
+        subtype = data_str[0]
+        content = data_str[1:]
         checksum = int.from_bytes(usb_serial.read(2), "little")
         if checksum != (sum(data) & 0xFFFF):
             return  # Bad checksum.
-        event_queue.put((current_time, event_typ, sm.events[data.decode()]))
+        if new_byte == b"E":
+            event_queue.put((current_time, event_typ, subtype, sm.events[content]))
+        else:
+            event_queue.put((current_time, print_typ, subtype, content))
 
 
 def run():
@@ -163,22 +166,23 @@ def run():
         elif event_queue.available:
             event = event_queue.get()
             data_output_queue.put(event)
-            sm.process_event(event[2])
+            sm.process_event(event[3])
         # Priority 3: Check for elapsed timers.
         elif check_timers:
             timer.check()
         # Priority 4: Process timer event.
         elif timer.elapsed:
             event = timer.get()
-            if event[1] == timer_typ:
-                sm.process_event(event[2])
-            elif event[1] == event_typ:
+            event_type, event_content = event[1], event[3]
+            if event_type == timer_typ:
+                sm.process_event(event_content)
+            elif event_type == event_typ:
+                sm.process_event(event_content)
                 data_output_queue.put(event)
-                sm.process_event(event[2])
-            elif event[1] == hardw_typ:
-                hw.IO_dict[event[2]]._timer_callback()
-            elif event[1] == state_typ:
-                sm.goto_state(event[2])
+            elif event_type == hardw_typ:
+                hw.IO_dict[event_content]._timer_callback()
+            elif event_type == state_typ:
+                sm.goto_state(event_content)
         # Priority 5: Check for serial input from computer.
         elif usb_serial.any():
             receive_data()
@@ -190,7 +194,7 @@ def run():
             output_data(data_output_queue.get())
     # Post run
     ut.print_variables(when="e")
-    data_output_queue.put((current_time, stopf_typ))
+    data_output_queue.put((current_time, stopf_typ, "", ""))
     usb_serial.setinterrupt(3)  # Enable 'ctrl+c' on serial raising KeyboardInterrupt.
     clock.deinit()
     hw.run_stop()

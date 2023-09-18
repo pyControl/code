@@ -19,9 +19,9 @@ def reset():
     elapsed = False
 
 
-def set(interval, event_type, event_data):
+def set(interval, event_type, subtype, event_data):
     # Set a timer to trigger specified event after 'interval' ms has elapsed.
-    active_timers.append((fw.current_time + int(interval), event_type, event_data))
+    active_timers.append((fw.current_time + int(interval), event_type, subtype, event_data))
     active_timers.sort(reverse=True)
 
 

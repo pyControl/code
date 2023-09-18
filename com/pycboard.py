@@ -13,10 +13,23 @@ from dataclasses import dataclass
 Datatuple = namedtuple("Datatuple", ["time", "type", "subtype", "content"], defaults=[None] * 4)
 var_subtypes = {
     "g": "get",
-    "s": "set",
+    "s": "user_set",
+    "a": "api_set",
     "p": "print",
     "t": "run_start",
     "e": "run_end",
+}
+event_subtypes = {
+    "i": "input",
+    "t": "timer",
+    "p": "publish",
+    "u": "user",
+    "a": "api",
+    "s": "sync",
+}
+print_subtypes = {
+    "t": "task",
+    "a": "api",
 }
 
 # ----------------------------------------------------------------------------------------
@@ -481,22 +494,12 @@ class Pycboard(Pyboard):
                         new_data.append(Datatuple(type="A", time=timestamp, content=(ID, data_array)))
                     else:
                         new_data.append(Datatuple(type="!", content="bad data checksum, datatype: A"))
-                # Event or state entry, 8 byte data header only.
-                elif type_byte == b"D":
-                    data_header = self.serial.read(8)
-                    timestamp = int.from_bytes(data_header[:4], "little")
-                    ID = int.from_bytes(data_header[4:6], "little")
-                    checksum = int.from_bytes(data_header[6:8], "little")
-                    if checksum == sum(data_header[:-2]):  # Checksum OK.
-                        new_data.append(Datatuple(time=timestamp, type="D", content=ID))
-                    else:
-                        new_data.append(Datatuple(type="!", content="bad data checksum, datatype: D"))
                 # Framework stop
-                elif type_byte == b"S":
+                elif type_byte == b"X":
                     timestamp = int.from_bytes(self.serial.read(4), "little")
-                    new_data.append(Datatuple(type="S", time=timestamp))
-                # User print statement, set variable, or warning. 8 byte data header + variable size content.
-                elif type_byte in (b"P", b"V", b"!"):
+                    new_data.append(Datatuple(type="X", time=timestamp))
+                # Print, variable, warning, event, or state. 8 byte data header + variable size content.
+                elif type_byte in (b"P", b"V", b"!", b"E", b"S"):
                     data_type = type_byte.decode()
                     data_header = self.serial.read(8)
                     data_len = int.from_bytes(data_header[:2], "little")
@@ -508,15 +511,29 @@ class Pycboard(Pyboard):
                         continue
                     data_str = data_bytes.decode()
                     if data_type == "!":
-                        new_data.append(Datatuple(type="!", content=data_str))
+                        new_data.append(Datatuple(type=data_type, content=data_str))
                     elif data_type == "P":  # User print.
-                        new_data.append(Datatuple(time=timestamp, type=data_type, content=data_str))
-                    elif data_type == "V":  # Store new variable value in sm_info
+                        new_data.append(
+                            Datatuple(
+                                time=timestamp,
+                                type=data_type,
+                                subtype=print_subtypes[data_str[0]],
+                                content=data_str[1:],
+                            )
+                        )
+                    elif data_type == "V":
                         subtype = var_subtypes[data_str[0]]
                         var_json = data_str[1:]
                         var_dict = json.loads(var_json)
                         self.sm_info.variables.update(var_dict)
-                        new_data.append(Datatuple(time=timestamp, type="V", subtype=subtype, content=var_json))
+                        new_data.append(Datatuple(time=timestamp, type=data_type, subtype=subtype, content=var_json))
+                    elif data_type == "E":
+                        subtype = event_subtypes[data_str[0]]
+                        ID = int(data_str[1:])
+                        new_data.append(Datatuple(time=timestamp, type=data_type, subtype=subtype, content=ID))
+                    elif data_type == "S":
+                        ID = int(data_str[0])
+                        new_data.append(Datatuple(time=timestamp, type=data_type, content=ID))
                 else:
                     unexpected_input.append(type_byte.decode())
             elif new_byte == b"\x04":  # End of framework run.
@@ -543,14 +560,14 @@ class Pycboard(Pyboard):
         checksum = sum(encoded_data).to_bytes(2, "little")
         self.serial.write(command.encode() + data_len + encoded_data + checksum)
 
-    def set_variable(self, v_name, v_value):
+    def set_variable(self, v_name, v_value, source="s"):
         """Set the value of a state machine variable. If framework is not running
         returns True if variable set OK, False if set failed.  Returns None framework
         running, but variable event is later output by board."""
         if v_name not in self.sm_info.variables:
             raise PyboardError("Invalid variable name: {}".format(v_name))
         if self.framework_running:  # Set variable with serial command.
-            self.send_serial_data(repr((v_name, v_value)), "V", "s")
+            self.send_serial_data(repr((v_name, v_value)), "V", source)
             return None
         else:  # Set variable using REPL.
             set_OK = eval(self.eval(f"sm.set_variable({repr(v_name)}, {repr(v_value)})").decode())
@@ -577,6 +594,10 @@ class Pycboard(Pyboard):
         """Return variables as a dictionary {v_name: v_value}"""
         return eval(self.eval("{k: v for k, v in sm.variables.__dict__.items() if not hasattr(v, '__init__')}"))
 
-    def trigger_event(self, event_name):
-        if self.framework_running:  # Set variable with serial command.
-            self.send_serial_data(event_name, "E")
+    def trigger_event(self, event_name, source="u"):
+        if self.framework_running:
+            self.send_serial_data(event_name, "E", source)
+
+    def print_msg(self, msg, source="u"):
+        if self.framework_running:
+            self.send_serial_data(msg, "P", source)

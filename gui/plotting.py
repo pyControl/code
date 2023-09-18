@@ -137,7 +137,7 @@ class States_plot:
 
     def process_data(self, new_data):
         """Store new data from board"""
-        new_states = [nd for nd in new_data if nd.type == "D" and nd.content in self.state_IDs]
+        new_states = [nd for nd in new_data if nd.type == "S"]
         if new_states:
             n_new = len(new_states)
             self.data = np.roll(self.data, -2 * n_new, axis=0)
@@ -193,7 +193,7 @@ class Events_plot:
         """Store new data from board."""
         if not self.event_IDs:
             return  # State machine can have no events.
-        new_events = [nd for nd in new_data if nd.type == "D" and nd.content in self.event_IDs]
+        new_events = [nd for nd in new_data if nd.type == "E"]
         if new_events:
             n_new = len(new_events)
             self.data = np.roll(self.data, -n_new, axis=0)

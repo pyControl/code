@@ -405,21 +405,13 @@ class TaskInfo:
     def process_data(self, new_data):
         """Update the state, event and print line info."""
         try:
-            new_state = next(
-                self.sm_info.ID2name[nd.content]
-                for nd in reversed(new_data)
-                if nd.type == "D" and nd.content in self.sm_info.states.values()
-            )
+            new_state = next(self.sm_info.ID2name[nd.content] for nd in reversed(new_data) if nd.type == "S")
             self.state_text.setText(new_state)
             self.state_text.home(False)
         except StopIteration:
             pass
         try:
-            new_event = next(
-                self.sm_info.ID2name[nd.content]
-                for nd in reversed(new_data)
-                if nd.type == "D" and nd.content in self.sm_info.events.values()
-            )
+            new_event = next(self.sm_info.ID2name[nd.content] for nd in reversed(new_data) if nd.type == "E")
             self.event_text.setText(new_event)
             self.event_text.home(False)
         except StopIteration:

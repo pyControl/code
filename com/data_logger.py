@@ -104,20 +104,21 @@ class Data_logger:
         if verbose=False state and event IDs are used."""
         data_string = ""
         for nd in new_data:
-            if nd.type == "D":  # State entry or event.
-                if nd.content in self.sm_info.states.values():
-                    data_string += self.tsv_row_str("state", time=nd.time, content=self.ID2name_fw[nd.content])
-                else:
-                    data_string += self.tsv_row_str("event", time=nd.time, content=self.ID2name_fw[nd.content])
+            if nd.type == "S":  # State entry.
+                data_string += self.tsv_row_str("state", time=nd.time, content=self.ID2name_fw[nd.content])
+            elif nd.type == "E":  # Event.
+                data_string += self.tsv_row_str(
+                    "event", time=nd.time, subtype=nd.subtype, content=self.ID2name_fw[nd.content]
+                )
             elif nd.type == "P":  # User print output.
-                data_string += self.tsv_row_str("print", time=nd.time, content=nd.content)
+                data_string += self.tsv_row_str("print", time=nd.time, subtype=nd.subtype, content=nd.content)
             elif nd.type == "V":  # Variable.
                 data_string += self.tsv_row_str("variable", time=nd.time, subtype=nd.subtype, content=nd.content)
             elif nd.type == "!":  # Warning
                 data_string += self.tsv_row_str("warning", content=nd.content)
             elif nd.type == "!!":  # Error
                 data_string += self.tsv_row_str("error", content=nd.content.replace("\n", "|").replace("\r", "|"))
-            elif nd.type == "S":  # Framework stop.
+            elif nd.type == "X":  # Framework stop.
                 self.end_datetime = datetime.utcnow()
                 self.end_timestamp = nd.time
         return data_string
