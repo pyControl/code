@@ -9,8 +9,8 @@ import numpy as np
 from datetime import datetime, date
 from collections import namedtuple
 
-Event = namedtuple("Event", ["time", "name"])
-Print = namedtuple("Print", ["time", "string"])
+Event = namedtuple("Event", ["time", "subtype", "name"])
+Print = namedtuple("Print", ["time", "subtype", "string"])
 
 # ----------------------------------------------------------------------------------
 # Session class
@@ -77,7 +77,8 @@ class Session:
             data_lines = [line[2:].split(" ") for line in all_lines if line[0] == "D"]
 
             self.events = [
-                Event(int(dl[0]) if time_unit == "ms" else int(dl[0]) / 1000, ID2name[int(dl[1])]) for dl in data_lines
+                Event(int(dl[0]) if time_unit == "ms" else int(dl[0]) / 1000, "", ID2name[int(dl[1])])
+                for dl in data_lines
             ]
 
             self.times = {
@@ -96,7 +97,7 @@ class Session:
                     var_dicts.append(json.loads(print_line[1]))
                     var_times.append(print_time)
                 except json.JSONDecodeError:  # Output of user print function.
-                    self.prints.append(Print(print_time, print_line[1]))
+                    self.prints.append(Print(print_time, "", print_line[1]))
 
             # Create variables dataframe.
 
@@ -118,35 +119,40 @@ class Session:
 
             # Extract and store session information.
 
-            self.experiment_name = df.loc[(df["type"] == "info") & (df["name"] == "experiment_name"), "value"].item()
-            self.task_name = df.loc[(df["type"] == "info") & (df["name"] == "task_name"), "value"].item()
-            self.subject_ID = df.loc[(df["type"] == "info") & (df["name"] == "subject_id"), "value"].item()
-            datetime_string = df.loc[(df["type"] == "info") & (df["name"] == "start_time"), "value"].item()
+            self.experiment_name = df.loc[
+                (df["type"] == "info") & (df["subtype"] == "experiment_name"), "content"
+            ].item()
+            self.task_name = df.loc[(df["type"] == "info") & (df["subtype"] == "task_name"), "content"].item()
+            self.subject_ID = df.loc[(df["type"] == "info") & (df["subtype"] == "subject_id"), "content"].item()
+            datetime_string = df.loc[(df["type"] == "info") & (df["subtype"] == "start_time"), "content"].item()
 
             self.datetime = datetime.fromisoformat(datetime_string)
 
             # Extract and store session data.
 
             self.events = [
-                Event(row["time"], row["name"]) for i, row in df[df["type"].isin(["state", "event"])].iterrows()
+                Event(row.time, row.subtype, row.content)
+                for row in df[df["type"].isin(["state", "event"])].itertuples()
             ]
 
             self.times = {
                 event_name: np.array([ev.time for ev in self.events if ev.name == event_name])
-                for event_name in df.loc[df["type"].isin(["state", "event"]), "name"].unique()
+                for event_name in df.loc[df["type"].isin(["state", "event"]), "content"].unique()
             }
 
-            self.prints = [Print(row.time, row.value) for row in df.loc[df.type == "print", :].itertuples()]
+            self.prints = [
+                Print(row.time, row.subtype, row.content) for row in df.loc[df.type == "print", :].itertuples()
+            ]
 
             # Create variables dataframe.
 
             # Convert variables row value fields to dicts.
-            df.loc[df["type"] == "variable", "value"] = df.loc[df["type"] == "variable", "value"].apply(json.loads)
+            df.loc[df["type"] == "variable", "content"] = df.loc[df["type"] == "variable", "content"].apply(json.loads)
 
-            self.variables_df = pd.DataFrame(df.loc[df["type"] == "variable", "value"].tolist())
+            self.variables_df = pd.DataFrame(df.loc[df["type"] == "variable", "content"].tolist())
             columns = self.variables_df.columns
             self.variables_df.columns = pd.MultiIndex.from_arrays([["values"] * len(columns), columns])
-            self.variables_df.insert(0, "operation", df.loc[df["type"] == "variable", "name"].tolist())
+            self.variables_df.insert(0, "operation", df.loc[df["type"] == "variable", "subtype"].tolist())
             self.variables_df.insert(0, "time", df.loc[df["type"] == "variable", "time"].tolist())
             self.variables_df.reset_index()
 
