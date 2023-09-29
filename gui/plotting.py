@@ -255,11 +255,12 @@ class Analog_plot:
             return  # State machine may not have analog inputs.
         new_analog = [nd for nd in new_data if nd.type == "A"]
         for na in new_analog:
-            if na.ID in self.plots.keys():
-                new_len = len(na.data)
-                t = na.time / 1000 + np.arange(new_len) / self.inputs[na.ID]["fs"]
-                self.data[na.ID] = np.roll(self.data[na.ID], -new_len, axis=0)
-                self.data[na.ID][-new_len:, :] = np.vstack([t, na.data]).T
+            ID, data = na.content
+            if ID in self.plots.keys():
+                new_len = len(data)
+                t = na.time / 1000 + np.arange(new_len) / self.inputs[ID]["fs"]
+                self.data[ID] = np.roll(self.data[ID], -new_len, axis=0)
+                self.data[ID][-new_len:, :] = np.vstack([t, data]).T
 
     def update(self, run_time):
         """Update plots."""
