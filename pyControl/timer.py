@@ -43,26 +43,26 @@ def get():
 def disarm(event_ID):
     # Remove all user timers with specified event_ID.
     global active_timers, paused_timers
-    active_timers = [t for t in active_timers if not (t[2] == event_ID and (t[1] in (fw.event_typ, fw.timer_typ)))]
-    paused_timers = [t for t in paused_timers if not t[2] == event_ID]
+    active_timers = [t for t in active_timers if not (t[3] == event_ID and (t[1] in (fw.event_typ, fw.timer_typ)))]
+    paused_timers = [t for t in paused_timers if not t[3] == event_ID]
 
 
 def pause(event_ID):
     # Pause all user timers with specified event_ID.
     global active_timers, paused_timers
     paused_timers += [
-        (t[0] - fw.current_time, t[1], t[2])
+        (t[0] - fw.current_time, t[1], t[2], t[3])
         for t in active_timers
-        if (t[2] == event_ID and (t[1] in (fw.event_typ, fw.timer_typ)))
+        if (t[3] == event_ID and (t[1] in (fw.event_typ, fw.timer_typ)))
     ]
-    active_timers = [t for t in active_timers if not (t[2] == event_ID and (t[1] in (fw.event_typ, fw.timer_typ)))]
+    active_timers = [t for t in active_timers if not (t[3] == event_ID and (t[1] in (fw.event_typ, fw.timer_typ)))]
 
 
 def unpause(event_ID):
     # Unpause user timers with specified event.
     global active_timers, paused_timers
-    active_timers += [(t[0] + fw.current_time, t[1], t[2]) for t in paused_timers if t[2] == event_ID]
-    paused_timers = [t for t in paused_timers if not t[2] == event_ID]
+    active_timers += [(t[0] + fw.current_time, t[1], t[2], t[3]) for t in paused_timers if t[3] == event_ID]
+    paused_timers = [t for t in paused_timers if not t[3] == event_ID]
     active_timers.sort(reverse=True)
 
 
@@ -70,7 +70,7 @@ def remaining(event_ID):
     # Return time until timer for specified event elapses, returns 0 if no timer set for event.
     try:
         return next(
-            t[0] - fw.current_time for t in reversed(active_timers) if (t[1] == fw.event_typ and t[2] == event_ID)
+            t[0] - fw.current_time for t in reversed(active_timers) if (t[1] == fw.event_typ and t[3] == event_ID)
         )
     except StopIteration:
         return 0

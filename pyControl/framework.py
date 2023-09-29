@@ -166,8 +166,8 @@ def run():
             if event_type == timer_typ:
                 sm.process_event(event_content)
             elif event_type == event_typ:
-                sm.process_event(event_content)
                 data_output_queue.put(event)
+                sm.process_event(event_content)
             elif event_type == hardw_typ:
                 hw.IO_dict[event_content]._timer_callback()
             elif event_type == state_typ:
