@@ -14,26 +14,15 @@ class pyControlError(BaseException):  # Exception for pyControl errors.
 
 # Constants used to indicate event types, corresponding event tuple indicated in comment.
 
-event_typ = const(1)  # External event   : (time, event_typ, [i]nput/[t]imer/[s]ync/[p]ublish/[u]ser/[a]pi, event_ID)
-state_typ = const(2)  # State transition : (time, state_typ, state_ID)
-timer_typ = const(3)  # User timer       : (time, timer_typ, event_ID)
-print_typ = const(4)  # User print       : (time, print_typ, print_string)
-hardw_typ = const(5)  # Harware callback : (time, hardw_typ, hardware_ID)
-varbl_typ = const(6)  # Variable change  : (time, varbl_typ, [g]et/user_[s]et/[a]pi_set/[p]rint/s[t]art/[e]nd, json_str)
-warng_typ = const(7)  # Warning          : (time, warng_typ, print_string)
-stopf_typ = const(8)  # Stop framework   : (time, stopf_type)
+event_typ = b"E"  # External event   : (time, event_typ, [i]nput/[t]imer/[s]ync/[p]ublish/[u]ser/[a]pi, event_ID)
+state_typ = b"S"  # State transition : (time, state_typ, state_ID)
+timer_typ = b"T"  # User timer       : (time, timer_typ, event_ID)
+print_typ = b"P"  # User print       : (time, print_typ, print_string)
+hardw_typ = b"H"  # Harware callback : (time, hardw_typ, hardware_ID)
+varbl_typ = b"V"  # Variable change  : (time, varbl_typ, [g]et/user_[s]et/[a]pi_set/[p]rint/s[t]art/[e]nd, json_str)
+warng_typ = b"!"  # Warning          : (time, warng_typ, print_string)
+stopf_typ = b"X"  # Stop framework   : (time, stopf_type)
 
-type_byte = (
-    None,
-    b"\x07E",  # event_typ
-    b"\x07S",  # state_typ
-    None,
-    b"\x07P",  # print_typ
-    None,
-    b"\x07V",  # varbl_typ
-    b"\x07!",  # warning_typ
-    b"\x07X",  # stop_typ
-)
 # Event_queue -----------------------------------------------------------------
 
 
@@ -95,12 +84,12 @@ def output_data(event):
     time, event_type, subtype, content = event
     timestamp = time.to_bytes(4, "little")
     if event_type == stopf_typ:  # Framework stop.
-        usb_serial.send(type_byte[event_type] + timestamp)
+        usb_serial.send(b"\x07" + event_type + timestamp)
     else:
         data_bytes = (subtype + str(content)).encode()
         data_len = len(data_bytes).to_bytes(2, "little")
         checksum = (sum(data_len + timestamp + data_bytes)).to_bytes(2, "little")
-        usb_serial.send(type_byte[event_type] + data_len + timestamp + checksum + data_bytes)
+        usb_serial.send(b"\x07" + event_type + data_len + timestamp + checksum + data_bytes)
 
 
 def receive_data():
