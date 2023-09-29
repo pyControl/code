@@ -1,5 +1,6 @@
 import pyb
 import ujson
+from ucollections import namedtuple
 from . import timer
 from . import state_machine as sm
 from . import hardware as hw
@@ -12,15 +13,17 @@ class pyControlError(BaseException):  # Exception for pyControl errors.
     pass
 
 
-# Constants used to indicate event types, corresponding event tuple indicated in comment.
+Datatuple = namedtuple("Datatuple", ["time", "type", "subtype", "content"])
+
+# Constants used to indicate data types, corresponding data tuple indicated in comment.
 
 event_typ = b"E"  # External event   : (time, event_typ, [i]nput/[t]imer/[s]ync/[p]ublish/[u]ser/[a]pi, event_ID)
-state_typ = b"S"  # State transition : (time, state_typ, state_ID)
-print_typ = b"P"  # User print       : (time, print_typ, print_string)
-hardw_typ = b"H"  # Harware callback : (time, hardw_typ, hardware_ID)
+state_typ = b"S"  # State transition : (time, state_typ, "", state_ID)
+print_typ = b"P"  # User print       : (time, print_typ, "", print_string)
+hardw_typ = b"H"  # Harware callback : (time, hardw_typ, "", hardware_ID)
 varbl_typ = b"V"  # Variable change  : (time, varbl_typ, [g]et/user_[s]et/[a]pi_set/[p]rint/s[t]art/[e]nd, json_str)
-warng_typ = b"!"  # Warning          : (time, warng_typ, print_string)
-stopf_typ = b"X"  # Stop framework   : (time, stopf_type)
+warng_typ = b"!"  # Warning          : (time, warng_typ, "", print_string)
+stopf_typ = b"X"  # Stop framework   : (time, stopf_typ, "", "")
 
 # Event_queue -----------------------------------------------------------------
 
@@ -80,15 +83,14 @@ def output_data(event):
     # Output data to computer.
     if not data_output:
         return
-    time, event_type, subtype, content = event
-    timestamp = time.to_bytes(4, "little")
-    if event_type == stopf_typ:  # Framework stop.
-        usb_serial.send(b"\x07" + event_type + timestamp)
+    timestamp = event.time.to_bytes(4, "little")
+    if event.type == stopf_typ:  # Framework stop.
+        usb_serial.send(b"\x07" + event.type + timestamp)
     else:
-        data_bytes = (subtype + str(content)).encode()
+        data_bytes = (event.subtype + str(event.content)).encode()
         data_len = len(data_bytes).to_bytes(2, "little")
         checksum = (sum(data_len + timestamp + data_bytes)).to_bytes(2, "little")
-        usb_serial.send(b"\x07" + event_type + data_len + timestamp + checksum + data_bytes)
+        usb_serial.send(b"\x07" + event.type + data_len + timestamp + checksum + data_bytes)
 
 
 def receive_data():
@@ -122,9 +124,9 @@ def receive_data():
         if checksum != (sum(data) & 0xFFFF):
             return  # Bad checksum.
         if new_byte == b"E":
-            event_queue.put((current_time, event_typ, subtype, sm.events[content]))
+            event_queue.put(Datatuple(current_time, event_typ, subtype, sm.events[content]))
         else:
-            event_queue.put((current_time, print_typ, subtype, content))
+            event_queue.put(Datatuple(current_time, print_typ, subtype, content))
 
 
 def run():
@@ -161,14 +163,13 @@ def run():
         # Priority 4: Process timer event.
         elif timer.elapsed:
             event = timer.get()
-            event_type, event_content = event[1], event[3]
-            if event_type == event_typ:
+            if event.type == event_typ:
                 data_output_queue.put(event)
-                sm.process_event(event_content)
-            elif event_type == hardw_typ:
-                hw.IO_dict[event_content]._timer_callback()
-            elif event_type == state_typ:
-                sm.goto_state(event_content)
+                sm.process_event(event.content)
+            elif event.type == hardw_typ:
+                hw.IO_dict[event.content]._timer_callback()
+            elif event.type == state_typ:
+                sm.goto_state(event.content)
         # Priority 5: Check for serial input from computer.
         elif usb_serial.any():
             receive_data()
@@ -180,7 +181,7 @@ def run():
             output_data(data_output_queue.get())
     # Post run
     ut.print_variables(when="e")
-    data_output_queue.put((current_time, stopf_typ, "", ""))
+    data_output_queue.put(Datatuple(current_time, stopf_typ, "", ""))
     usb_serial.setinterrupt(3)  # Enable 'ctrl+c' on serial raising KeyboardInterrupt.
     clock.deinit()
     hw.run_stop()

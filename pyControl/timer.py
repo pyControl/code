@@ -19,9 +19,9 @@ def reset():
     elapsed = False
 
 
-def set(interval, event_type, subtype, event_data):
+def set(interval, event_type, subtype, content):
     # Set a timer to trigger specified event after 'interval' ms has elapsed.
-    active_timers.append((fw.current_time + int(interval), event_type, subtype, event_data))
+    active_timers.append(fw.Datatuple(fw.current_time + int(interval), event_type, subtype, content))
     active_timers.sort(reverse=True)
 
 
@@ -43,26 +43,26 @@ def get():
 def disarm(event_ID):
     # Remove all user timers with specified event_ID.
     global active_timers, paused_timers
-    active_timers = [t for t in active_timers if not (t[3] == event_ID and t[1] == fw.event_typ)]
-    paused_timers = [t for t in paused_timers if not t[3] == event_ID]
+    active_timers = [t for t in active_timers if not (t.content == event_ID and t.type == fw.event_typ)]
+    paused_timers = [t for t in paused_timers if not t.content == event_ID]
 
 
 def pause(event_ID):
     # Pause all user timers with specified event_ID.
     global active_timers, paused_timers
     paused_timers += [
-        (t[0] - fw.current_time, t[1], t[2], t[3])
+        fw.Datatuple(t.time - fw.current_time, *t[1:])
         for t in active_timers
-        if (t[3] == event_ID and (t[1] == fw.event_typ))
+        if (t.content == event_ID and t.type == fw.event_typ)
     ]
-    active_timers = [t for t in active_timers if not (t[3] == event_ID and t[1] == fw.event_typ)]
+    active_timers = [t for t in active_timers if not (t.content == event_ID and t.type == fw.event_typ)]
 
 
 def unpause(event_ID):
     # Unpause user timers with specified event.
     global active_timers, paused_timers
-    active_timers += [(t[0] + fw.current_time, t[1], t[2], t[3]) for t in paused_timers if t[3] == event_ID]
-    paused_timers = [t for t in paused_timers if not t[3] == event_ID]
+    active_timers += [fw.Datatuple(t.time + fw.current_time, *t[1:]) for t in paused_timers if t.content == event_ID]
+    paused_timers = [t for t in paused_timers if not t.content == event_ID]
     active_timers.sort(reverse=True)
 
 
@@ -70,7 +70,9 @@ def remaining(event_ID):
     # Return time until timer for specified event elapses, returns 0 if no timer set for event.
     try:
         return next(
-            t[0] - fw.current_time for t in reversed(active_timers) if (t[1] == fw.event_typ and t[3] == event_ID)
+            t.time - fw.current_time
+            for t in reversed(active_timers)
+            if (t.type == fw.event_typ and t.content == event_ID)
         )
     except StopIteration:
         return 0
@@ -79,4 +81,4 @@ def remaining(event_ID):
 def disarm_type(event_type):
     # Disarm all active timers of a particular type.
     global active_timers
-    active_timers = [t for t in active_timers if not t[1] == event_type]
+    active_timers = [t for t in active_timers if not t.type == event_type]
