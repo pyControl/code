@@ -16,7 +16,6 @@ class pyControlError(BaseException):  # Exception for pyControl errors.
 
 event_typ = b"E"  # External event   : (time, event_typ, [i]nput/[t]imer/[s]ync/[p]ublish/[u]ser/[a]pi, event_ID)
 state_typ = b"S"  # State transition : (time, state_typ, state_ID)
-timer_typ = b"T"  # User timer       : (time, timer_typ, event_ID)
 print_typ = b"P"  # User print       : (time, print_typ, print_string)
 hardw_typ = b"H"  # Harware callback : (time, hardw_typ, hardware_ID)
 varbl_typ = b"V"  # Variable change  : (time, varbl_typ, [g]et/user_[s]et/[a]pi_set/[p]rint/s[t]art/[e]nd, json_str)
@@ -163,9 +162,7 @@ def run():
         elif timer.elapsed:
             event = timer.get()
             event_type, event_content = event[1], event[3]
-            if event_type == timer_typ:
-                sm.process_event(event_content)
-            elif event_type == event_typ:
+            if event_type == event_typ:
                 data_output_queue.put(event)
                 sm.process_event(event_content)
             elif event_type == hardw_typ:
