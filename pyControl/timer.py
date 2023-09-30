@@ -43,7 +43,7 @@ def get():
 def disarm(event_ID):
     # Remove all user timers with specified event_ID.
     global active_timers, paused_timers
-    active_timers = [t for t in active_timers if not (t.content == event_ID and t.type == fw.event_typ)]
+    active_timers = [t for t in active_timers if not (t.content == event_ID and t.type == fw.EVENT_TYP)]
     paused_timers = [t for t in paused_timers if not t.content == event_ID]
 
 
@@ -53,9 +53,9 @@ def pause(event_ID):
     paused_timers += [
         fw.Datatuple(t.time - fw.current_time, *t[1:])
         for t in active_timers
-        if (t.content == event_ID and t.type == fw.event_typ)
+        if (t.content == event_ID and t.type == fw.EVENT_TYP)
     ]
-    active_timers = [t for t in active_timers if not (t.content == event_ID and t.type == fw.event_typ)]
+    active_timers = [t for t in active_timers if not (t.content == event_ID and t.type == fw.EVENT_TYP)]
 
 
 def unpause(event_ID):
@@ -72,7 +72,7 @@ def remaining(event_ID):
         return next(
             t.time - fw.current_time
             for t in reversed(active_timers)
-            if (t.type == fw.event_typ and t.content == event_ID)
+            if (t.type == fw.EVENT_TYP and t.content == event_ID)
         )
     except StopIteration:
         return 0

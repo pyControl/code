@@ -20,12 +20,12 @@ def goto_state(next_state):
 def timed_goto_state(next_state, interval):
     # Transition to next_state after interval milliseconds. timed_goto_state()
     # is cancelled if goto_state() occurs before interval elapses.
-    timer.set(interval, fw.state_typ, "", sm.states[next_state])
+    timer.set(interval, fw.STATE_TYP, "", sm.states[next_state])
 
 
 def set_timer(event, interval, output_event=True):
     # Set a timer to return specified event after interval milliseconds.
-    timer.set(interval, fw.event_typ, "t", sm.events[event])
+    timer.set(interval, fw.EVENT_TYP, "t", sm.events[event])
 
 
 def disarm_timer(event):
@@ -37,7 +37,7 @@ def reset_timer(event, interval, output_event=True):
     # Disarm all timers due to return specified event and set new timer
     # to return specified event after interval milliseconds.
     timer.disarm(sm.events[event])
-    timer.set(interval, fw.event_typ, "t", sm.events[event])
+    timer.set(interval, fw.EVENT_TYP, "t", sm.events[event])
 
 
 def pause_timer(event):
@@ -58,7 +58,7 @@ def timer_remaining(event):
 def print(print_string):
     # Used to output data print_string with timestamp.  print_string is stored and only
     #  printed to serial line once higher priority tasks have all been processed.
-    fw.data_output_queue.put(fw.Datatuple(fw.current_time, fw.print_typ, "t", str(print_string)))
+    fw.data_output_queue.put(fw.Datatuple(fw.current_time, fw.PRINT_TYP, "t", str(print_string)))
 
 
 def print_variables(variables="all", when="p"):
@@ -69,17 +69,17 @@ def print_variables(variables="all", when="p"):
         var_dict = OrderedDict([(k, getattr(v, k)) for k in variables if not hasattr(getattr(v, k), "__init__")])
     else:  # old versions of ujson don't support OrdereDict.
         var_dict = {k: getattr(v, k) for k in variables if not hasattr(getattr(v, k), "__init__")}
-    fw.data_output_queue.put(fw.Datatuple(fw.current_time, fw.varbl_typ, when, ujson.dumps(var_dict)))
+    fw.data_output_queue.put(fw.Datatuple(fw.current_time, fw.VARBL_TYP, when, ujson.dumps(var_dict)))
 
 
 def warning(message):
     # Print a warning message to the log.
-    fw.data_output_queue.put(fw.Datatuple(fw.current_time, fw.warng_typ, "", message))
+    fw.data_output_queue.put(fw.Datatuple(fw.current_time, fw.WARNG_TYP, "", message))
 
 
 def publish_event(event):
     # Put event with specified name in the event queue.
-    fw.event_queue.put(fw.Datatuple(fw.current_time, fw.event_typ, "p", sm.events[event]))
+    fw.event_queue.put(fw.Datatuple(fw.current_time, fw.EVENT_TYP, "p", sm.events[event]))
 
 
 def stop_framework():
