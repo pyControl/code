@@ -2,6 +2,7 @@ import os
 import numpy as np
 from datetime import datetime
 from shutil import copyfile
+from com.pycboard import MsgType
 
 
 class Data_logger:
@@ -95,7 +96,7 @@ class Data_logger:
             self.data_file.write(data_string)
             self.data_file.flush()
         for nd in new_data:
-            if nd.type == "A":
+            if nd.type == MsgType.ANALG:
                 writer_id, data = nd.content
                 self.analog_writers[writer_id].save_analog_chunk(timestamp=nd.time, data_array=data)
 
@@ -104,21 +105,21 @@ class Data_logger:
         if verbose=False state and event IDs are used."""
         data_string = ""
         for nd in new_data:
-            if nd.type == "S":  # State entry.
+            if nd.type == MsgType.STATE:  # State entry.
                 data_string += self.tsv_row_str("state", time=nd.time, content=self.ID2name_fw[nd.content])
-            elif nd.type == "E":  # Event.
+            elif nd.type == MsgType.EVENT:  # Event.
                 data_string += self.tsv_row_str(
                     "event", time=nd.time, subtype=nd.subtype, content=self.ID2name_fw[nd.content]
                 )
-            elif nd.type == "P":  # User print output.
+            elif nd.type == MsgType.PRINT:  # User print output.
                 data_string += self.tsv_row_str("print", time=nd.time, subtype=nd.subtype, content=nd.content)
-            elif nd.type == "V":  # Variable.
+            elif nd.type == MsgType.VARBL:  # Variable.
                 data_string += self.tsv_row_str("variable", time=nd.time, subtype=nd.subtype, content=nd.content)
-            elif nd.type == "!":  # Warning
+            elif nd.type == MsgType.WARNG:  # Warning
                 data_string += self.tsv_row_str("warning", content=nd.content)
-            elif nd.type == "!!":  # Error
+            elif nd.type == MsgType.ERROR:  # Error
                 data_string += self.tsv_row_str("error", content=nd.content.replace("\n", "|").replace("\r", "|"))
-            elif nd.type == "X":  # Framework stop.
+            elif nd.type == MsgType.STOPF:  # Framework stop.
                 self.end_datetime = datetime.utcnow()
                 self.end_timestamp = nd.time
         return data_string

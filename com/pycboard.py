@@ -9,8 +9,31 @@ from collections import namedtuple
 from .pyboard import Pyboard, PyboardError
 from gui.settings import VERSION, dirs, get_setting
 from dataclasses import dataclass
+from enum import Enum
+
 
 Datatuple = namedtuple("Datatuple", ["time", "type", "subtype", "content"], defaults=[None] * 4)
+
+
+class MsgType(Enum):
+    EVENT = b"E"  # External event
+    STATE = b"S"  # State transition
+    PRINT = b"P"  # User print
+    HARDW = b"H"  # Hardware callback
+    VARBL = b"V"  # Variable change
+    WARNG = b"!"  # Warning
+    ERROR = b"!!"  # Error
+    STOPF = b"X"  # Stop framework
+    ANALG = b"A"  # Analog
+
+    @classmethod
+    def from_byte(cls, byte_value):
+        for member in cls:
+            if member.value == byte_value:
+                return member
+        return byte_value
+
+
 var_subtypes = {
     "g": "get",
     "s": "user_set",
@@ -475,11 +498,15 @@ class Pycboard(Pyboard):
             new_byte = self.serial.read(1)
             if new_byte == b"\x07":  # Start of pyControl message.
                 if unexpected_input:  # Output any unexpected characters recived prior to message start.
-                    new_data.append(("!", "Unexpected input received from board: " + "".join(unexpected_input)))
+                    new_data.append(
+                        Datatuple(
+                            type=MsgType.WARNG, content=f"Unexpected input received from board: {unexpected_input}"
+                        )
+                    )
                     unexpected_input = []
-                type_byte = self.serial.read(1)  # Message type identifier.
+                msg_type = MsgType.from_byte(self.serial.read(1))  # Message type identifier.
                 # Analog data, 11 byte header + variable size content.
-                if type_byte == b"A":
+                if msg_type == MsgType.ANALG:
                     data_header = self.serial.read(11)
                     typecode = data_header[:1].decode()
                     if typecode not in ("b", "B", "h", "H", "l", "L"):
@@ -491,57 +518,56 @@ class Pycboard(Pyboard):
                     checksum = int.from_bytes(data_header[9:11], "little")
                     data_array = array(typecode, self.serial.read(data_len))
                     if checksum == (sum(data_header[:-2]) + sum(data_array)) & 0xFFFF:  # Checksum OK.
-                        new_data.append(Datatuple(type="A", time=timestamp, content=(ID, data_array)))
+                        new_data.append(Datatuple(type=msg_type, time=timestamp, content=(ID, data_array)))
                     else:
-                        new_data.append(Datatuple(type="!", content="bad data checksum, datatype: A"))
+                        new_data.append(Datatuple(type=MsgType.WARNG, content="bad data checksum, datatype: A"))
                 # Framework stop
-                elif type_byte == b"X":
+                elif msg_type == MsgType.STOPF:
                     timestamp = int.from_bytes(self.serial.read(4), "little")
-                    new_data.append(Datatuple(type="X", time=timestamp))
+                    new_data.append(Datatuple(type=msg_type, time=timestamp))
                 # Print, variable, warning, event, or state. 8 byte data header + variable size content.
-                elif type_byte in (b"P", b"V", b"!", b"E", b"S"):
-                    data_type = type_byte.decode()
+                elif msg_type in (MsgType.PRINT, MsgType.VARBL, MsgType.WARNG, MsgType.EVENT, MsgType.STATE):
                     data_header = self.serial.read(8)
                     data_len = int.from_bytes(data_header[:2], "little")
                     timestamp = int.from_bytes(data_header[2:6], "little")
                     checksum = int.from_bytes(data_header[6:8], "little")
                     data_bytes = self.serial.read(data_len)
                     if not checksum == (sum(data_header[:-2]) + sum(data_bytes)) & 0xFFFF:  # Bad checksum.
-                        new_data.append(Datatuple(type="!", content=f"bad data checksum, datatype: {data_type}"))
+                        new_data.append(Datatuple(type=MsgType.WARNG, content=f"bad data checksum, datatype: {msg_type}"))
                         continue
                     data_str = data_bytes.decode()
-                    if data_type == "!":
-                        new_data.append(Datatuple(type=data_type, content=data_str))
-                    elif data_type == "P":  # User print.
+                    if msg_type == MsgType.WARNG:
+                        new_data.append(Datatuple(type=msg_type, content=data_str))
+                    elif msg_type == MsgType.PRINT:  # User print.
                         new_data.append(
                             Datatuple(
                                 time=timestamp,
-                                type=data_type,
+                                type=msg_type,
                                 subtype=print_subtypes[data_str[0]],
                                 content=data_str[1:],
                             )
                         )
-                    elif data_type == "V":
+                    elif msg_type == MsgType.VARBL:
                         subtype = var_subtypes[data_str[0]]
                         var_json = data_str[1:]
                         var_dict = json.loads(var_json)
                         self.sm_info.variables.update(var_dict)
-                        new_data.append(Datatuple(time=timestamp, type=data_type, subtype=subtype, content=var_json))
-                    elif data_type == "E":
+                        new_data.append(Datatuple(time=timestamp, type=msg_type, subtype=subtype, content=var_json))
+                    elif msg_type == MsgType.EVENT:
                         subtype = event_subtypes[data_str[0]]
                         ID = int(data_str[1:])
-                        new_data.append(Datatuple(time=timestamp, type=data_type, subtype=subtype, content=ID))
-                    elif data_type == "S":
+                        new_data.append(Datatuple(time=timestamp, type=msg_type, subtype=subtype, content=ID))
+                    elif msg_type == MsgType.STATE:
                         ID = int(data_str[0])
-                        new_data.append(Datatuple(time=timestamp, type=data_type, content=ID))
+                        new_data.append(Datatuple(time=timestamp, type=msg_type, content=ID))
                 else:
-                    unexpected_input.append(type_byte.decode())
+                    unexpected_input.append(msg_type.decode())
             elif new_byte == b"\x04":  # End of framework run.
                 self.framework_running = False
                 data_err = self.read_until(2, b"\x04>", timeout=10)
                 if len(data_err) > 2:  # Error during framework run.
                     error_message = data_err[:-3].decode()
-                    new_data.append(Datatuple(type="!!", content=error_message))
+                    new_data.append(Datatuple(type=MsgType.ERROR, content=error_message))
                 break
             else:
                 unexpected_input.append(new_byte.decode())
