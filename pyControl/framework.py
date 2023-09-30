@@ -156,7 +156,7 @@ def run():
         elif event_queue.available:
             event = event_queue.get()
             data_output_queue.put(event)
-            sm.process_event(event[3])
+            sm.process_event(event.content)
         # Priority 3: Check for elapsed timers.
         elif check_timers:
             timer.check()
