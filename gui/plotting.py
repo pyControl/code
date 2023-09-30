@@ -3,9 +3,9 @@ from datetime import timedelta
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
-
 from gui.settings import get_setting
 from gui.utility import detachableTabWidget
+from com.pycboard import MsgType
 
 # ----------------------------------------------------------------------------------------
 # Task_plot
@@ -137,7 +137,7 @@ class States_plot:
 
     def process_data(self, new_data):
         """Store new data from board"""
-        new_states = [nd for nd in new_data if nd.type == "S"]
+        new_states = [nd for nd in new_data if nd.type == MsgType.STATE]
         if new_states:
             n_new = len(new_states)
             self.data = np.roll(self.data, -2 * n_new, axis=0)
@@ -193,7 +193,7 @@ class Events_plot:
         """Store new data from board."""
         if not self.event_IDs:
             return  # State machine can have no events.
-        new_events = [nd for nd in new_data if nd.type == "E"]
+        new_events = [nd for nd in new_data if nd.type == MsgType.EVENT]
         if new_events:
             n_new = len(new_events)
             self.data = np.roll(self.data, -n_new, axis=0)
@@ -253,7 +253,7 @@ class Analog_plot:
         """Store new data from board."""
         if not self.inputs:
             return  # State machine may not have analog inputs.
-        new_analog = [nd for nd in new_data if nd.type == "A"]
+        new_analog = [nd for nd in new_data if nd.type == MsgType.ANALG]
         for na in new_analog:
             ID, data = na.content
             if ID in self.plots.keys():

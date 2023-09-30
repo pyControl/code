@@ -1,4 +1,5 @@
 from collections import namedtuple
+from com.pycboard import MsgType
 
 
 class Api:
@@ -106,17 +107,17 @@ class Api:
         data = {"states": [], "events": [], "prints": [], "vars": [], "analog": []}
 
         for nd in new_data:
-            if nd.type == "P":
+            if nd.type == MsgType.PRINT:
                 data["prints"].append(self.print_tup(nd.content, nd.time))
-            elif nd.type == "V":
+            elif nd.type == MsgType.VARBL:
                 data["vars"].append(self.var_tup(nd.subtype, nd.time))
-            elif nd.type == "S":
+            elif nd.type == MsgType.STATE:
                 name = self.ID2name[nd.content]
                 data["states"].append(self.state_tup(name, nd.time))
-            elif nd.type == "E":
+            elif nd.type == MsgType.EVENT:
                 name = self.ID2name[nd.content]
                 data["events"].append(self.event_tup(name, nd.time))
-            elif nd.type == "A":
+            elif nd.type == MsgType.ANALG:
                 data["analog"].append(self.analog_tup(self.ID2analog[nd.content[0]], nd.time, nd.content[1]))
 
         self.process_data_user(data)
