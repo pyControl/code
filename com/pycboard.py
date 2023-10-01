@@ -54,6 +54,7 @@ msg_subtypes = {
     MsgType.PRINT: {
         "t": "task",
         "a": "api",
+        "u": "user",
     },
 }
 
@@ -512,7 +513,8 @@ class Pycboard(Pyboard):
                 message = self.serial.read(message_len)
                 checksum = int.from_bytes(self.serial.read(2), "little")
                 if checksum == sum(message) & 0xFFFF:
-                    timestamp = int.from_bytes(message[:4], "little")
+                    self.last_received = time.time()
+                    self.timestamp = int.from_bytes(message[:4], "little")
                     msg_type = MsgType.from_byte(message[4:5])
                     subtype_byte = message[5:6]
                     msg_subtype = None if subtype_byte == b"_" else msg_subtypes[msg_type][subtype_byte.decode()]
@@ -524,7 +526,7 @@ class Pycboard(Pyboard):
                     elif msg_type == MsgType.VARBL:
                         content = content_bytes.decode()  # JSON string
                         self.sm_info.variables.update(json.loads(content))
-                    new_data.append(Datatuple(time=timestamp, type=msg_type, subtype=msg_subtype, content=content))
+                    new_data.append(Datatuple(time=self.timestamp, type=msg_type, subtype=msg_subtype, content=content))
                 else:  # Bad checksum
                     new_data.append(Datatuple(type=MsgType.WARNG, content="Bad data checksum."))
             elif new_byte == b"\x04":  # End of framework run.
@@ -591,4 +593,11 @@ class Pycboard(Pyboard):
 
     def print_msg(self, msg, source="u"):
         if self.framework_running:
-            self.send_serial_data(msg, "P", source)
+            seconds_elapsed = time.time() - self.last_received
+            print_timestamp = self.timestamp + round(1000 * (seconds_elapsed))
+            new_data = [
+                Datatuple(
+                    time=print_timestamp, type=MsgType.PRINT, subtype=msg_subtypes[MsgType.PRINT][source], content=msg
+                )
+            ]
+            self.data_logger.process_data(new_data)
