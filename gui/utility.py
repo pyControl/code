@@ -1,6 +1,7 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
+from com.pycboard import MsgType
 
 # --------------------------------------------------------------------------------
 # GUI utility functions, classes, variables.
@@ -405,26 +406,28 @@ class TaskInfo:
     def process_data(self, new_data):
         """Update the state, event and print line info."""
         try:
-            new_state = next(self.sm_info.ID2name[nd.content] for nd in reversed(new_data) if nd.type == "S")
+            new_state = next(self.sm_info.ID2name[nd.content] for nd in reversed(new_data) if nd.type == MsgType.STATE)
             self.state_text.setText(new_state)
             self.state_text.home(False)
         except StopIteration:
             pass
         try:
-            new_event = next(self.sm_info.ID2name[nd.content] for nd in reversed(new_data) if nd.type == "E")
+            new_event = next(self.sm_info.ID2name[nd.content] for nd in reversed(new_data) if nd.type == MsgType.EVENT)
             self.event_text.setText(new_event)
             self.event_text.home(False)
         except StopIteration:
             pass
         try:
-            new_print = next(nd.content for nd in reversed(new_data) if nd.type == "P" or nd.subtype == "print")
+            new_print = next(
+                nd.content for nd in reversed(new_data) if nd.type == MsgType.PRINT or nd.subtype == "print"
+            )
             self.print_text.setText(new_print)
             self.print_text.setStyleSheet("color: black;")
             self.print_text.home(False)
         except StopIteration:
             pass
         try:
-            new_warning = next(nd.content for nd in reversed(new_data) if nd.type == "!")
+            new_warning = next(nd.content for nd in reversed(new_data) if nd.type == MsgType.WARNG)
             self.print_text.setText("! " + new_warning)
             self.print_text.setStyleSheet("color: orange;")
             self.print_text.home(False)
