@@ -84,13 +84,12 @@ def output_data(event):
     if not data_output:
         return
     timestamp = event.time.to_bytes(4, "little")
-    if event.type == STOPF_TYP:  # Framework stop.
-        usb_serial.send(b"\x07" + event.type + timestamp)
-    else:
-        data_bytes = (event.subtype + str(event.content)).encode()
-        data_len = len(data_bytes).to_bytes(2, "little")
-        checksum = (sum(data_len + timestamp + data_bytes)).to_bytes(2, "little")
-        usb_serial.send(b"\x07" + event.type + data_len + timestamp + checksum + data_bytes)
+    subtype_byte = event.subtype.encode() if event.subtype else b"_"
+    content_bytes = str(event.content).encode() if event.content else b""
+    message = timestamp + event.type + subtype_byte + content_bytes
+    message_len = len(message).to_bytes(2, "little")
+    checksum = sum(message).to_bytes(2, "little")
+    usb_serial.send(b"\x07" + message_len + message + checksum)
 
 
 def receive_data():

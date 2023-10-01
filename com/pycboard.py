@@ -34,25 +34,27 @@ class MsgType(Enum):
         return byte_value
 
 
-var_subtypes = {
-    "g": "get",
-    "s": "user_set",
-    "a": "api_set",
-    "p": "print",
-    "t": "run_start",
-    "e": "run_end",
-}
-event_subtypes = {
-    "i": "input",
-    "t": "timer",
-    "p": "publish",
-    "u": "user",
-    "a": "api",
-    "s": "sync",
-}
-print_subtypes = {
-    "t": "task",
-    "a": "api",
+msg_subtypes = {
+    MsgType.VARBL: {
+        "g": "get",
+        "s": "user_set",
+        "a": "api_set",
+        "p": "print",
+        "t": "run_start",
+        "e": "run_end",
+    },
+    MsgType.EVENT: {
+        "i": "input",
+        "t": "timer",
+        "p": "publish",
+        "u": "user",
+        "a": "api",
+        "s": "sync",
+    },
+    MsgType.PRINT: {
+        "t": "task",
+        "a": "api",
+    },
 }
 
 # ----------------------------------------------------------------------------------------
@@ -500,68 +502,31 @@ class Pycboard(Pyboard):
                 if unexpected_input:  # Output any unexpected characters recived prior to message start.
                     new_data.append(
                         Datatuple(
-                            type=MsgType.WARNG, content=f"Unexpected input received from board: {unexpected_input}"
+                            type=MsgType.WARNG,
+                            content="Unexpected input received from board: " + "".join(unexpected_input),
                         )
                     )
                     unexpected_input = []
-                msg_type = MsgType.from_byte(self.serial.read(1))  # Message type identifier.
-                # Analog data, 11 byte header + variable size content.
-                if msg_type == MsgType.ANALG:
-                    data_header = self.serial.read(11)
-                    typecode = data_header[:1].decode()
-                    if typecode not in ("b", "B", "h", "H", "l", "L"):
-                        new_data.append(Datatuple(type="!", content="bad typecode A"))
-                        continue
-                    ID = int.from_bytes(data_header[1:3], "little")
-                    data_len = int.from_bytes(data_header[3:5], "little")
-                    timestamp = int.from_bytes(data_header[5:9], "little")
-                    checksum = int.from_bytes(data_header[9:11], "little")
-                    data_array = array(typecode, self.serial.read(data_len))
-                    if checksum == (sum(data_header[:-2]) + sum(data_array)) & 0xFFFF:  # Checksum OK.
-                        new_data.append(Datatuple(type=msg_type, time=timestamp, content=(ID, data_array)))
-                    else:
-                        new_data.append(Datatuple(type=MsgType.WARNG, content="bad data checksum, datatype: A"))
-                # Framework stop
-                elif msg_type == MsgType.STOPF:
-                    timestamp = int.from_bytes(self.serial.read(4), "little")
-                    new_data.append(Datatuple(type=msg_type, time=timestamp))
-                # Print, variable, warning, event, or state. 8 byte data header + variable size content.
-                elif msg_type in (MsgType.PRINT, MsgType.VARBL, MsgType.WARNG, MsgType.EVENT, MsgType.STATE):
-                    data_header = self.serial.read(8)
-                    data_len = int.from_bytes(data_header[:2], "little")
-                    timestamp = int.from_bytes(data_header[2:6], "little")
-                    checksum = int.from_bytes(data_header[6:8], "little")
-                    data_bytes = self.serial.read(data_len)
-                    if not checksum == (sum(data_header[:-2]) + sum(data_bytes)) & 0xFFFF:  # Bad checksum.
-                        new_data.append(Datatuple(type=MsgType.WARNG, content=f"bad data checksum, datatype: {msg_type}"))
-                        continue
-                    data_str = data_bytes.decode()
-                    if msg_type == MsgType.WARNG:
-                        new_data.append(Datatuple(type=msg_type, content=data_str))
-                    elif msg_type == MsgType.PRINT:  # User print.
-                        new_data.append(
-                            Datatuple(
-                                time=timestamp,
-                                type=msg_type,
-                                subtype=print_subtypes[data_str[0]],
-                                content=data_str[1:],
-                            )
-                        )
+                # Read message.
+                message_len = int.from_bytes(self.serial.read(2), "little")
+                message = self.serial.read(message_len)
+                checksum = int.from_bytes(self.serial.read(2), "little")
+                if checksum == sum(message) & 0xFFFF:
+                    timestamp = int.from_bytes(message[:4], "little")
+                    msg_type = MsgType.from_byte(message[4:5])
+                    subtype_byte = message[5:6]
+                    msg_subtype = None if subtype_byte == b"_" else msg_subtypes[msg_type][subtype_byte.decode()]
+                    content_bytes = message[6:]
+                    if msg_type in (MsgType.EVENT, MsgType.STATE):
+                        content = int(content_bytes.decode())  # Event/state ID.
+                    elif msg_type in (MsgType.PRINT, MsgType.WARNG):
+                        content = content_bytes.decode()  # Print or error string.
                     elif msg_type == MsgType.VARBL:
-                        subtype = var_subtypes[data_str[0]]
-                        var_json = data_str[1:]
-                        var_dict = json.loads(var_json)
-                        self.sm_info.variables.update(var_dict)
-                        new_data.append(Datatuple(time=timestamp, type=msg_type, subtype=subtype, content=var_json))
-                    elif msg_type == MsgType.EVENT:
-                        subtype = event_subtypes[data_str[0]]
-                        ID = int(data_str[1:])
-                        new_data.append(Datatuple(time=timestamp, type=msg_type, subtype=subtype, content=ID))
-                    elif msg_type == MsgType.STATE:
-                        ID = int(data_str[0])
-                        new_data.append(Datatuple(time=timestamp, type=msg_type, content=ID))
-                else:
-                    unexpected_input.append(msg_type.decode())
+                        content = content_bytes.decode()  # JSON string
+                        self.sm_info.variables.update(json.loads(content))
+                    new_data.append(Datatuple(time=timestamp, type=msg_type, subtype=msg_subtype, content=content))
+                else:  # Bad checksum
+                    new_data.append(Datatuple(type=MsgType.WARNG, content="Bad data checksum."))
             elif new_byte == b"\x04":  # End of framework run.
                 self.framework_running = False
                 data_err = self.read_until(2, b"\x04>", timeout=10)
