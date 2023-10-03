@@ -513,7 +513,7 @@ class Pycboard(Pyboard):
                 message = self.serial.read(message_len)
                 checksum = int.from_bytes(self.serial.read(2), "little")
                 if checksum == sum(message) & 0xFFFF:
-                    self.last_received = time.time()
+                    self.last_message_time = time.time()
                     self.timestamp = int.from_bytes(message[:4], "little")
                     msg_type = MsgType.from_byte(message[4:5])
                     subtype_byte = message[5:6]
@@ -593,11 +593,16 @@ class Pycboard(Pyboard):
 
     def print_msg(self, msg, source="u"):
         if self.framework_running:
-            seconds_elapsed = time.time() - self.last_received
-            print_timestamp = self.timestamp + round(1000 * (seconds_elapsed))
             new_data = [
                 Datatuple(
-                    time=print_timestamp, type=MsgType.PRINT, subtype=msg_subtypes[MsgType.PRINT][source], content=msg
+                    time=self.get_timestamp(),
+                    type=MsgType.PRINT,
+                    subtype=msg_subtypes[MsgType.PRINT][source],
+                    content=msg,
                 )
             ]
             self.data_logger.process_data(new_data)
+
+    def get_timestamp(self):
+        seconds_elapsed = time.time() - self.last_message_time
+        return self.timestamp + round(1000 * (seconds_elapsed))
