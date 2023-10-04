@@ -1,4 +1,5 @@
 from collections import namedtuple
+from com.pycboard import MsgType
 
 
 class Api:
@@ -49,7 +50,7 @@ class Api:
         """
 
         if v_name in self.board.sm_info.variables.keys():
-            self.board.set_variable(v_name, v_value)
+            self.board.set_variable(v_name, v_value, source="a")
         else:
             self.print_to_log(
                 f"Variable {v_name} not defined in task file {self.board.sm_info.name} so cannot be set by API"
@@ -57,11 +58,14 @@ class Api:
 
     def trigger_event(self, event):
         if event in self.board.sm_info.events.keys():
-            self.board.trigger_event(event)
+            self.board.trigger_event(event, "a")
         else:
             self.print_to_log(
                 f"Event {event} not defined in task file {self.board.sm_info.name} so cannot be set by API"
             )
+
+    def print_msg(self, msg):
+        self.board.print_msg(msg, "a")
 
     # Note:  get_variable functionality not implemented because board.get_variable method
     # does not return variable value when framework is running, just causes it to be output
@@ -103,17 +107,17 @@ class Api:
         data = {"states": [], "events": [], "prints": [], "vars": [], "analog": []}
 
         for nd in new_data:
-            if nd.type == "P":
-                data["prints"].append(self.print_tup(nd.data, nd.time))
-            elif nd.type == "V":
-                data["vars"].append(self.var_tup(nd.ID, nd.time))
-            elif nd.type == "D":
-                name = self.ID2name[nd.ID]
-                if name in self.board.sm_info.states:
-                    data["states"].append(self.state_tup(name, nd.time))
-                else:
-                    data["events"].append(self.event_tup(name, nd.time))
-            elif nd.type == "A":
-                data["analog"].append(self.analog_tup(self.ID2analog[nd.ID], nd.time, nd.data))
+            if nd.type == MsgType.PRINT:
+                data["prints"].append(self.print_tup(nd.content, nd.time))
+            elif nd.type == MsgType.VARBL:
+                data["vars"].append(self.var_tup(nd.subtype, nd.time))
+            elif nd.type == MsgType.STATE:
+                name = self.ID2name[nd.content]
+                data["states"].append(self.state_tup(name, nd.time))
+            elif nd.type == MsgType.EVENT:
+                name = self.ID2name[nd.content]
+                data["events"].append(self.event_tup(name, nd.time))
+            elif nd.type == MsgType.ANLOG:
+                data["analog"].append(self.analog_tup(self.ID2analog[nd.content[0]], nd.time, nd.content[1]))
 
         self.process_data_user(data)

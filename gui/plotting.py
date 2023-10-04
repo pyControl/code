@@ -3,9 +3,9 @@ from datetime import timedelta
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
-
 from gui.settings import get_setting
 from gui.utility import detachableTabWidget
+from com.pycboard import MsgType
 
 # ----------------------------------------------------------------------------------------
 # Task_plot
@@ -137,14 +137,14 @@ class States_plot:
 
     def process_data(self, new_data):
         """Store new data from board"""
-        new_states = [nd for nd in new_data if nd.type == "D" and nd.ID in self.state_IDs]
+        new_states = [nd for nd in new_data if nd.type == MsgType.STATE]
         if new_states:
             n_new = len(new_states)
             self.data = np.roll(self.data, -2 * n_new, axis=0)
             for i, nd in enumerate(new_states):  # Update data array.
                 j = 2 * (-n_new + i)  # Index of state entry in self.data
                 self.data[j - 1 :, 0] = nd.time
-                self.data[j:, 1] = nd.ID
+                self.data[j:, 1] = nd.content
 
     def update(self, run_time):
         """Update plots."""
@@ -193,13 +193,13 @@ class Events_plot:
         """Store new data from board."""
         if not self.event_IDs:
             return  # State machine can have no events.
-        new_events = [nd for nd in new_data if nd.type == "D" and nd.ID in self.event_IDs]
+        new_events = [nd for nd in new_data if nd.type == MsgType.EVENT]
         if new_events:
             n_new = len(new_events)
             self.data = np.roll(self.data, -n_new, axis=0)
             for i, nd in enumerate(new_events):
                 self.data[-n_new + i, 0] = nd.time / 1000
-                self.data[-n_new + i, 1] = nd.ID
+                self.data[-n_new + i, 1] = nd.content
 
     def update(self, run_time):
         """Update plots"""
@@ -253,13 +253,14 @@ class Analog_plot:
         """Store new data from board."""
         if not self.inputs:
             return  # State machine may not have analog inputs.
-        new_analog = [nd for nd in new_data if nd.type == "A"]
+        new_analog = [nd for nd in new_data if nd.type == MsgType.ANLOG]
         for na in new_analog:
-            if na.ID in self.plots.keys():
-                new_len = len(na.data)
-                t = na.time / 1000 + np.arange(new_len) / self.inputs[na.ID]["fs"]
-                self.data[na.ID] = np.roll(self.data[na.ID], -new_len, axis=0)
-                self.data[na.ID][-new_len:, :] = np.vstack([t, na.data]).T
+            ID, data = na.content
+            if ID in self.plots.keys():
+                new_len = len(data)
+                t = na.time / 1000 + np.arange(new_len) / self.inputs[ID]["fs"]
+                self.data[ID] = np.roll(self.data[ID], -new_len, axis=0)
+                self.data[ID][-new_len:, :] = np.vstack([t, data]).T
 
     def update(self, run_time):
         """Update plots."""

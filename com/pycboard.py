@@ -9,8 +9,54 @@ from collections import namedtuple
 from .pyboard import Pyboard, PyboardError
 from gui.settings import VERSION, dirs, get_setting
 from dataclasses import dataclass
+from enum import Enum
 
-Datatuple = namedtuple("Datatuple", ["type", "time", "ID", "data"], defaults=[None] * 4)
+
+Datatuple = namedtuple("Datatuple", ["time", "type", "subtype", "content"], defaults=[None] * 4)
+
+
+class MsgType(Enum):
+    EVENT = b"E"  # External event
+    STATE = b"S"  # State transition
+    PRINT = b"P"  # User print
+    HARDW = b"H"  # Hardware callback
+    VARBL = b"V"  # Variable change
+    WARNG = b"!"  # Warning
+    ERROR = b"!!"  # Error
+    STOPF = b"X"  # Stop framework
+    ANLOG = b"A"  # Analog
+
+    @classmethod
+    def from_byte(cls, byte_value):
+        for member in cls:
+            if member.value == byte_value:
+                return member
+        return byte_value
+
+
+msg_subtypes = {
+    MsgType.VARBL: {
+        "g": "get",
+        "s": "user_set",
+        "a": "api_set",
+        "p": "print",
+        "t": "run_start",
+        "e": "run_end",
+    },
+    MsgType.EVENT: {
+        "i": "input",
+        "t": "timer",
+        "p": "publish",
+        "u": "user",
+        "a": "api",
+        "s": "sync",
+    },
+    MsgType.PRINT: {
+        "t": "task",
+        "a": "api",
+        "u": "user",
+    },
+}
 
 # ----------------------------------------------------------------------------------------
 #  Helper functions.
@@ -454,70 +500,51 @@ class Pycboard(Pyboard):
         while self.serial.in_waiting > 0:
             new_byte = self.serial.read(1)
             if new_byte == b"\x07":  # Start of pyControl message.
-                if unexpected_input:  # Output any unexpected characters recived prior to message start.
-                    new_data.append(("!", "Unexpected input received from board: " + "".join(unexpected_input)))
+                # Output any unexpected characters recived prior to message start.
+                if unexpected_input:
+                    new_data.append(
+                        Datatuple(
+                            type=MsgType.WARNG,
+                            content="Unexpected input received from board: " + "".join(unexpected_input),
+                        )
+                    )
                     unexpected_input = []
-                type_byte = self.serial.read(1)  # Message type identifier.
-                # Analog data, 11 byte header + variable size content.
-                if type_byte == b"A":
-                    data_header = self.serial.read(11)
-                    typecode = data_header[:1].decode()
-                    if typecode not in ("b", "B", "h", "H", "l", "L"):
-                        new_data.append(Datatuple(type="!", data="bad typecode A"))
-                        continue
-                    ID = int.from_bytes(data_header[1:3], "little")
-                    data_len = int.from_bytes(data_header[3:5], "little")
-                    timestamp = int.from_bytes(data_header[5:9], "little")
-                    checksum = int.from_bytes(data_header[9:11], "little")
-                    data_array = array(typecode, self.serial.read(data_len))
-                    if checksum == (sum(data_header[:-2]) + sum(data_array)) & 0xFFFF:  # Checksum OK.
-                        new_data.append(Datatuple(type="A", time=timestamp, ID=ID, data=data_array))
-                    else:
-                        new_data.append(Datatuple(type="!", data="bad data checksum, datatype: A"))
-                # Event or state entry, 8 byte data header only.
-                elif type_byte == b"D":
-                    data_header = self.serial.read(8)
-                    timestamp = int.from_bytes(data_header[:4], "little")
-                    ID = int.from_bytes(data_header[4:6], "little")
-                    checksum = int.from_bytes(data_header[6:8], "little")
-                    if checksum == sum(data_header[:-2]):  # Checksum OK.
-                        new_data.append(Datatuple(type="D", time=timestamp, ID=ID))
-                    else:
-                        new_data.append(Datatuple(type="!", data="bad data checksum, datatype: D"))
-                # Framework stop
-                elif type_byte == b"S":
-                    timestamp = int.from_bytes(self.serial.read(4), "little")
-                    new_data.append(Datatuple(type="S", time=timestamp))
-                # User print statement, set variable, or warning. 8 byte data header + variable size content.
-                elif type_byte in (b"P", b"V", b"!"):
-                    data_type = type_byte.decode()
-                    data_header = self.serial.read(8)
-                    data_len = int.from_bytes(data_header[:2], "little")
-                    timestamp = int.from_bytes(data_header[2:6], "little")
-                    checksum = int.from_bytes(data_header[6:8], "little")
-                    data_bytes = self.serial.read(data_len)
-                    if not checksum == (sum(data_header[:-2]) + sum(data_bytes)) & 0xFFFF:  # Bad checksum.
-                        new_data.append(Datatuple(type="!", data="bad data checksum, datatype: " + data_type))
-                        continue
-                    data_str = data_bytes.decode()
-                    if data_type == "!":
-                        new_data.append(Datatuple(type="!", data=data_str))
-                    elif data_type == "P":  # User print.
-                        new_data.append(Datatuple(type=data_type, time=timestamp, data=data_str))
-                    elif data_type == "V":  # Store new variable value in sm_info
-                        op_ID = {"g": "get", "s": "set", "p": "print", "t": "run_start", "e": "run_end"}[data_str[0]]
-                        var_json = data_str[1:]
-                        var_dict = json.loads(var_json)
-                        self.sm_info.variables.update(var_dict)
-                        new_data.append(Datatuple(type="V", time=timestamp, ID=op_ID, data=var_json))
+                # Read message.
+                checksum = int.from_bytes(self.serial.read(2), "little")
+                message_len = int.from_bytes(self.serial.read(2), "little")
+                message = self.serial.read(message_len)
+                msg_type = MsgType.from_byte(message[4:5])
+                subtype_byte = message[5:6]
+                msg_subtype = None if subtype_byte == b"_" else msg_subtypes[msg_type][subtype_byte.decode()]
+                content_bytes = message[6:]
+                # Compute checksum
+                if msg_type == MsgType.ANLOG:  # Need to extract analog data to compute checksum.
+                    ID = int.from_bytes(content_bytes[:2], "little")
+                    data = array(self.sm_info.analog_inputs[ID]["dtype"], content_bytes[2:])
+                    content = (ID, data)
+                    message_sum = sum(message[:8]) + sum(data)
                 else:
-                    unexpected_input.append(type_byte.decode())
+                    message_sum = sum(message)
+                # Process message.
+                if checksum == message_sum & 0xFFFF:  # Checksum OK.
+                    self.last_message_time = time.time()
+                    self.timestamp = int.from_bytes(message[:4], "little")
+                    if msg_type in (MsgType.EVENT, MsgType.STATE):
+                        content = int(content_bytes.decode())  # Event/state ID.
+                    elif msg_type in (MsgType.PRINT, MsgType.WARNG):
+                        content = content_bytes.decode()  # Print or error string.
+                    elif msg_type == MsgType.VARBL:
+                        content = content_bytes.decode()  # JSON string
+                        self.sm_info.variables.update(json.loads(content))
+                    new_data.append(Datatuple(time=self.timestamp, type=msg_type, subtype=msg_subtype, content=content))
+                else:  # Bad checksum
+                    new_data.append(Datatuple(type=MsgType.WARNG, content="Bad data checksum."))
             elif new_byte == b"\x04":  # End of framework run.
                 self.framework_running = False
                 data_err = self.read_until(2, b"\x04>", timeout=10)
                 if len(data_err) > 2:  # Error during framework run.
                     error_message = data_err[:-3].decode()
-                    new_data.append(Datatuple(type="!!", data=error_message))
+                    new_data.append(Datatuple(type=MsgType.ERROR, content=error_message))
                 break
             else:
                 unexpected_input.append(new_byte.decode())
@@ -536,14 +563,14 @@ class Pycboard(Pyboard):
         checksum = sum(encoded_data).to_bytes(2, "little")
         self.serial.write(command.encode() + data_len + encoded_data + checksum)
 
-    def set_variable(self, v_name, v_value):
+    def set_variable(self, v_name, v_value, source="s"):
         """Set the value of a state machine variable. If framework is not running
         returns True if variable set OK, False if set failed.  Returns None framework
         running, but variable event is later output by board."""
         if v_name not in self.sm_info.variables:
             raise PyboardError("Invalid variable name: {}".format(v_name))
         if self.framework_running:  # Set variable with serial command.
-            self.send_serial_data(repr((v_name, v_value)), "V", "s")
+            self.send_serial_data(repr((v_name, v_value)), "V", source)
             return None
         else:  # Set variable using REPL.
             set_OK = eval(self.eval(f"sm.set_variable({repr(v_name)}, {repr(v_value)})").decode())
@@ -570,6 +597,22 @@ class Pycboard(Pyboard):
         """Return variables as a dictionary {v_name: v_value}"""
         return eval(self.eval("{k: v for k, v in sm.variables.__dict__.items() if not hasattr(v, '__init__')}"))
 
-    def trigger_event(self, event_name):
-        if self.framework_running:  # Set variable with serial command.
-            self.send_serial_data(event_name, "E")
+    def trigger_event(self, event_name, source="u"):
+        if self.framework_running:
+            self.send_serial_data(event_name, "E", source)
+
+    def print_msg(self, msg, source="u"):
+        if self.framework_running:
+            new_data = [
+                Datatuple(
+                    time=self.get_timestamp(),
+                    type=MsgType.PRINT,
+                    subtype=msg_subtypes[MsgType.PRINT][source],
+                    content=msg,
+                )
+            ]
+            self.data_logger.process_data(new_data)
+
+    def get_timestamp(self):
+        seconds_elapsed = time.time() - self.last_message_time
+        return self.timestamp + round(1000 * (seconds_elapsed))

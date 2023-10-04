@@ -2,6 +2,7 @@ import os
 import numpy as np
 from datetime import datetime
 from shutil import copyfile
+from com.pycboard import MsgType
 
 
 class Data_logger:
@@ -33,7 +34,9 @@ class Data_logger:
         self.file_path = os.path.join(self.data_dir, file_name)
         self.data_file = open(self.file_path, "w", newline="\n")
         self.data_file.write(
-            self.tsv_row_str(rtype="type", time="time", name="name", value="value")  # Write header with row names.
+            self.tsv_row_str(
+                time="time", rtype="type", subtype="subtype", content="content"
+            )  # Write header with row names.
         )
         self.write_info_line("experiment_name", self.experiment_name)
         self.write_info_line("task_name", self.sm_info.name)
@@ -48,12 +51,12 @@ class Data_logger:
             for ID, ai in self.sm_info.analog_inputs.items()
         }
 
-    def write_info_line(self, name, value, time=0):
-        self.data_file.write(self.tsv_row_str("info", time=time, name=name, value=value))
+    def write_info_line(self, subtype, content, time=0):
+        self.data_file.write(self.tsv_row_str("info", time=time, subtype=subtype, content=content))
 
-    def tsv_row_str(self, rtype, time="", name="", value=""):
+    def tsv_row_str(self, rtype, time="", subtype="", content=""):
         time_str = f"{time/1000:.3f}" if type(time) == int else time
-        return f"{time_str}\t{rtype}\t{name}\t{value}\n"
+        return f"{time_str}\t{rtype}\t{subtype}\t{content}\n"
 
     def copy_task_file(self, data_dir, tasks_dir, dir_name="task_files"):
         """If not already present, copy task file to data_dir/dir_name
@@ -93,28 +96,30 @@ class Data_logger:
             self.data_file.write(data_string)
             self.data_file.flush()
         for nd in new_data:
-            if nd.type == "A":
-                self.analog_writers[nd.ID].save_analog_chunk(timestamp=nd.time, data_array=nd.data)
+            if nd.type == MsgType.ANLOG:
+                writer_id, data = nd.content
+                self.analog_writers[writer_id].save_analog_chunk(timestamp=nd.time, data_array=data)
 
     def data_to_string(self, new_data):
         """Convert list of data tuples into a string.  If verbose=True state and event names are used,
         if verbose=False state and event IDs are used."""
         data_string = ""
         for nd in new_data:
-            if nd.type == "D":  # State entry or event.
-                if nd.ID in self.sm_info.states.values():
-                    data_string += self.tsv_row_str("state", time=nd.time, name=self.ID2name_fw[nd.ID])
-                else:
-                    data_string += self.tsv_row_str("event", time=nd.time, name=self.ID2name_fw[nd.ID])
-            elif nd.type == "P":  # User print output.
-                data_string += self.tsv_row_str("print", time=nd.time, value=nd.data)
-            elif nd.type == "V":  # Variable.
-                data_string += self.tsv_row_str("variable", time=nd.time, name=nd.ID, value=nd.data)
-            elif nd.type == "!":  # Warning
-                data_string += self.tsv_row_str("warning", value=nd.data)
-            elif nd.type == "!!":  # Error
-                data_string += self.tsv_row_str("error", value=nd.data.replace("\n", "|").replace("\r", "|"))
-            elif nd.type == "S":  # Framework stop.
+            if nd.type == MsgType.STATE:  # State entry.
+                data_string += self.tsv_row_str("state", time=nd.time, content=self.ID2name_fw[nd.content])
+            elif nd.type == MsgType.EVENT:  # Event.
+                data_string += self.tsv_row_str(
+                    "event", time=nd.time, subtype=nd.subtype, content=self.ID2name_fw[nd.content]
+                )
+            elif nd.type == MsgType.PRINT:  # User print output.
+                data_string += self.tsv_row_str("print", time=nd.time, subtype=nd.subtype, content=nd.content)
+            elif nd.type == MsgType.VARBL:  # Variable.
+                data_string += self.tsv_row_str("variable", time=nd.time, subtype=nd.subtype, content=nd.content)
+            elif nd.type == MsgType.WARNG:  # Warning
+                data_string += self.tsv_row_str("warning", content=nd.content)
+            elif nd.type == MsgType.ERROR:  # Error
+                data_string += self.tsv_row_str("error", content=nd.content.replace("\n", "|").replace("\r", "|"))
+            elif nd.type == MsgType.STOPF:  # Framework stop.
                 self.end_datetime = datetime.utcnow()
                 self.end_timestamp = nd.time
         return data_string
