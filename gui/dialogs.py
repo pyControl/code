@@ -109,8 +109,10 @@ class Controls_dialog(QtWidgets.QDialog):
         super(Controls_dialog, self).showEvent(event)
         if not self.controls_grid.board.framework_running:
             self.controls_grid.trigger_event_button.setEnabled(False)
+            self.controls_grid.note_button.setEnabled(False)
         else:
             self.controls_grid.trigger_event_button.setEnabled(True)
+            self.controls_grid.note_button.setEnabled(True)
 
 
 class Controls_grid(QtWidgets.QWidget):
@@ -135,6 +137,17 @@ class Controls_grid(QtWidgets.QWidget):
         self.eventsbox_layout.addWidget(self.trigger_event_button)
         self.eventsbox_layout.addStretch(1)
 
+        # Notes groupbox
+        self.notes_groupbox = QtWidgets.QGroupBox("Add note to log")
+        self.notesbox_layout = QtWidgets.QVBoxLayout(self.notes_groupbox)
+        self.notes_textbox = QtWidgets.QTextEdit()
+        self.notes_textbox.setFixedHeight(get_setting("GUI", "log_font_size") * 4)
+        self.notes_textbox.setFont(QtGui.QFont("Courier New", get_setting("GUI", "log_font_size")))
+        self.note_button = QtWidgets.QPushButton("Add note")
+        self.note_button.clicked.connect(self.add_note)
+        self.notesbox_layout.addWidget(self.notes_textbox)
+        self.notesbox_layout.addWidget(self.note_button)
+
         # Variables groupbox.
         self.variables_groupbox = QtWidgets.QGroupBox("Variables")
         self.grid_layout = QtWidgets.QGridLayout(self.variables_groupbox)
@@ -153,12 +166,18 @@ class Controls_grid(QtWidgets.QWidget):
         # Main layout.
         self.vlayout = QtWidgets.QVBoxLayout(self)
         self.vlayout.addWidget(self.events_groupbox)
+        self.vlayout.addWidget(self.notes_groupbox)
         self.vlayout.addWidget(self.variables_groupbox)
         self.vlayout.addStretch()
 
     def trigger_event(self):
         if self.board.framework_running:
             self.board.trigger_event(self.event_select_combo.currentText())
+
+    def add_note(self):
+        note_text = self.notes_textbox.toPlainText()
+        self.notes_textbox.clear()
+        self.board.print_msg(note_text, source="u")
 
 
 class Variable_setter(QtWidgets.QWidget):
