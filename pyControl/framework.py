@@ -1,5 +1,6 @@
 import pyb
 import ujson
+import math
 from ucollections import namedtuple
 from . import timer
 from . import state_machine as sm
@@ -94,12 +95,26 @@ def output_data(event):
 
 def receive_data():
     # Read and process data from computer.
-    global running
-    new_byte = usb_serial.read(1)
-    if new_byte == b"\x03":  # Serial command to stop run.
-        running = False
-    elif new_byte == VARBL_TYP:  # Get/set variables command.
-        data_len = int.from_bytes(usb_serial.read(2), "little")
+    global running, msg_type_being_read, data_len, wait_cycles
+
+    if not msg_type_being_read:
+        msg_type_being_read = usb_serial.read(1)
+        if msg_type_being_read == b"\x03":  # Serial command to stop run.
+            running = False
+            return
+        elif msg_type_being_read in (VARBL_TYP, EVENT_TYP, PRINT_TYP):  # get data length
+            data_len = int.from_bytes(usb_serial.read(2), "little")
+            if data_len > 20:  # give uart buffer more time to fill up if there is a lot of data to be read
+                wait_cycles = math.floor(data_len / 20)
+                return
+        else:  # we don't recognize the received command
+            return
+    else:
+        wait_cycles -= 1
+        if wait_cycles > 0:
+            return
+
+    if msg_type_being_read == VARBL_TYP:  # Get/set variables command.
         data = usb_serial.read(data_len)
         checksum = int.from_bytes(usb_serial.read(2), "little")
         if checksum != (sum(data) & 0xFFFF):
@@ -113,8 +128,8 @@ def receive_data():
             v_name = data_str[1:]
             v_value = sm.get_variable(v_name)
             data_output_queue.put(Datatuple(current_time, VARBL_TYP, "g", ujson.dumps({v_name: v_value})))
-    elif new_byte in (EVENT_TYP, PRINT_TYP):  # Publish event command.
-        data_len = int.from_bytes(usb_serial.read(2), "little")
+        msg_type_being_read = None
+    elif msg_type_being_read in (EVENT_TYP, PRINT_TYP):  # Publish event command.
         data = usb_serial.read(data_len)
         data_str = data.decode()
         subtype = data_str[0]
@@ -122,16 +137,17 @@ def receive_data():
         checksum = int.from_bytes(usb_serial.read(2), "little")
         if checksum != (sum(data) & 0xFFFF):
             return  # Bad checksum.
-        if new_byte == EVENT_TYP:
+        if msg_type_being_read == EVENT_TYP:
             event_queue.put(Datatuple(current_time, EVENT_TYP, subtype, sm.events[content]))
         else:
             event_queue.put(Datatuple(current_time, PRINT_TYP, subtype, content))
+        msg_type_being_read = None
 
 
 def run():
     # Run framework for specified number of seconds.
     # Pre run
-    global current_time, start_time, running
+    global current_time, start_time, running, msg_type_being_read
     timer.reset()
     event_queue.reset()
     data_output_queue.reset()
@@ -146,6 +162,7 @@ def run():
     sm.start()
     hw.run_start()
     running = True
+    msg_type_being_read = None
     # Run
     while running:
         # Priority 1: Process hardware interrupts.
