@@ -11,6 +11,9 @@ from gui.settings import VERSION, dirs, get_setting
 from dataclasses import dataclass
 from enum import Enum
 
+# ----------------------------------------------------------------------------------------
+#  Classes & variables used for processing messages from board.
+# ----------------------------------------------------------------------------------------
 
 Datatuple = namedtuple("Datatuple", ["time", "type", "subtype", "content"], defaults=[None] * 4)
 

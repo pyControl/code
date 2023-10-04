@@ -85,7 +85,7 @@ class Data_logger:
         if self.data_file:
             self.write_to_file(new_data)
         if self.print_func:
-            self.print_func(self.data_to_string(new_data).replace("\t\t", "\t"), end="")
+            self.print_func(self.data_to_string(new_data), end="")
         if self.data_consumers:
             for data_consumer in self.data_consumers:
                 data_consumer.process_data(new_data)
