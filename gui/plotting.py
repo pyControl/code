@@ -253,7 +253,7 @@ class Analog_plot:
         """Store new data from board."""
         if not self.inputs:
             return  # State machine may not have analog inputs.
-        new_analog = [nd for nd in new_data if nd.type == MsgType.ANALG]
+        new_analog = [nd for nd in new_data if nd.type == MsgType.ANLOG]
         for na in new_analog:
             ID, data = na.content
             if ID in self.plots.keys():

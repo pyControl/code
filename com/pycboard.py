@@ -24,7 +24,7 @@ class MsgType(Enum):
     WARNG = b"!"  # Warning
     ERROR = b"!!"  # Error
     STOPF = b"X"  # Stop framework
-    ANALG = b"A"  # Analog
+    ANLOG = b"A"  # Analog
 
     @classmethod
     def from_byte(cls, byte_value):
@@ -500,7 +500,8 @@ class Pycboard(Pyboard):
         while self.serial.in_waiting > 0:
             new_byte = self.serial.read(1)
             if new_byte == b"\x07":  # Start of pyControl message.
-                if unexpected_input:  # Output any unexpected characters recived prior to message start.
+                # Output any unexpected characters recived prior to message start.
+                if unexpected_input:
                     new_data.append(
                         Datatuple(
                             type=MsgType.WARNG,
@@ -509,16 +510,25 @@ class Pycboard(Pyboard):
                     )
                     unexpected_input = []
                 # Read message.
+                checksum = int.from_bytes(self.serial.read(2), "little")
                 message_len = int.from_bytes(self.serial.read(2), "little")
                 message = self.serial.read(message_len)
-                checksum = int.from_bytes(self.serial.read(2), "little")
-                if checksum == sum(message) & 0xFFFF:
+                msg_type = MsgType.from_byte(message[4:5])
+                subtype_byte = message[5:6]
+                msg_subtype = None if subtype_byte == b"_" else msg_subtypes[msg_type][subtype_byte.decode()]
+                content_bytes = message[6:]
+                # Compute checksum
+                if msg_type == MsgType.ANLOG:  # Need to extract analog data to compute checksum.
+                    ID = int.from_bytes(content_bytes[:2], "little")
+                    data = array(self.sm_info.analog_inputs[ID]["dtype"], content_bytes[2:])
+                    content = (ID, data)
+                    message_sum = sum(message[:8]) + sum(data)
+                else:
+                    message_sum = sum(message)
+                # Process message.
+                if checksum == message_sum & 0xFFFF:  # Checksum OK.
                     self.last_message_time = time.time()
                     self.timestamp = int.from_bytes(message[:4], "little")
-                    msg_type = MsgType.from_byte(message[4:5])
-                    subtype_byte = message[5:6]
-                    msg_subtype = None if subtype_byte == b"_" else msg_subtypes[msg_type][subtype_byte.decode()]
-                    content_bytes = message[6:]
                     if msg_type in (MsgType.EVENT, MsgType.STATE):
                         content = int(content_bytes.decode())  # Event/state ID.
                     elif msg_type in (MsgType.PRINT, MsgType.WARNG):

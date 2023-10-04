@@ -117,7 +117,7 @@ class Api:
             elif nd.type == MsgType.EVENT:
                 name = self.ID2name[nd.content]
                 data["events"].append(self.event_tup(name, nd.time))
-            elif nd.type == MsgType.ANALG:
+            elif nd.type == MsgType.ANLOG:
                 data["analog"].append(self.analog_tup(self.ID2analog[nd.content[0]], nd.time, nd.content[1]))
 
         self.process_data_user(data)

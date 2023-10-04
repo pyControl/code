@@ -276,14 +276,13 @@ class Analog_input(IO_object):
 
 class Analog_channel(IO_object):
     # Buffers analog data and streams it to computer in chunks.
-    # Data format for sending to computer:
+    # Data format is 13 byte header + data array:
     #     \x07 Message start byte (1 bytes)
-    #     'A' character indicating analog data chunk (1 byte)
-    #     data typecode (1 byte)
-    #     ID of analog input (2 byte)
-    #     length of data array in bytes (2 bytes)
+    #     message checksum (2 bytes)
+    #     message length (2 bytes)
     #     timestamp of chunk start (ms) (4 bytes)
-    #     checksum (2 bytes)
+    #     message type [A] and subtype [_] (2 byte)
+    #     ID of analog input (2 byte)
     #     data array bytes (variable)
 
     def __init__(self, name, sampling_rate, data_type="l", plot=True):
@@ -301,7 +300,7 @@ class Analog_channel(IO_object):
         self.buffers = (array(data_type, [0] * self.buffer_size), array(data_type, [0] * self.buffer_size))
         self.buffers_mv = (memoryview(self.buffers[0]), memoryview(self.buffers[1]))
         self.buffer_start_times = array("i", [0, 0])
-        self.data_header = array("B", b"\x07A" + data_type.encode() + self.ID.to_bytes(2, "little") + b"\x00" * 8)
+        self.data_header = array("B", b"\x07" + b"_" * 8 + b"A_" + self.ID.to_bytes(2, "little"))
         self.write_buffer = 0  # Buffer to write new data to.
         self.write_index = 0  # Buffer index to write new data to.
 
@@ -332,12 +331,12 @@ class Analog_channel(IO_object):
         else:  # Send the buffer not currently being written to.
             buffer_n = 1 - self.write_buffer
             n_samples = self.buffer_size
-        n_bytes = self.bytes_per_sample * n_samples
-        self.data_header[5:7] = n_bytes.to_bytes(2, "little")
-        self.data_header[7:11] = self.buffer_start_times[buffer_n].to_bytes(4, "little")
-        checksum = sum(self.buffers_mv[buffer_n][:n_samples] if run_stop else self.buffers[buffer_n])
-        checksum += sum(self.data_header[2:11])
-        self.data_header[11:13] = checksum.to_bytes(2, "little")
+        message_len = 8 + self.bytes_per_sample * n_samples
+        self.data_header[3:5] = message_len.to_bytes(2, "little")
+        self.data_header[5:9] = self.buffer_start_times[buffer_n].to_bytes(4, "little")
+        checksum = sum(self.data_header[5:])
+        checksum += sum(self.buffers_mv[buffer_n][:n_samples] if run_stop else self.buffers[buffer_n])
+        self.data_header[1:3] = checksum.to_bytes(2, "little")
         fw.usb_serial.write(self.data_header)
         if run_stop:
             fw.usb_serial.send(self.buffers_mv[buffer_n][:n_samples])

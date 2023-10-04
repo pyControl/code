@@ -96,7 +96,7 @@ class Data_logger:
             self.data_file.write(data_string)
             self.data_file.flush()
         for nd in new_data:
-            if nd.type == MsgType.ANALG:
+            if nd.type == MsgType.ANLOG:
                 writer_id, data = nd.content
                 self.analog_writers[writer_id].save_analog_chunk(timestamp=nd.time, data_array=data)
 
