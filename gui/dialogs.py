@@ -107,12 +107,15 @@ class Controls_dialog(QtWidgets.QDialog):
     def showEvent(self, event):
         """Called when dialog is opened."""
         super(Controls_dialog, self).showEvent(event)
-        if not self.controls_grid.board.framework_running:
-            self.controls_grid.trigger_event_button.setEnabled(False)
-            self.controls_grid.note_button.setEnabled(False)
-        else:
-            self.controls_grid.trigger_event_button.setEnabled(True)
-            self.controls_grid.note_button.setEnabled(True)
+        self.controls_grid.notes_groupbox.setEnabled(False)
+        self.controls_grid.events_groupbox.setEnabled(False)
+        self.controls_grid.variables_groupbox.setEnabled(False)
+        if self.controls_grid.board.framework_running:
+            self.controls_grid.notes_groupbox.setEnabled(True)
+            if self.controls_grid.board.sm_info.events:
+                self.controls_grid.events_groupbox.setEnabled(True)
+            if self.controls_grid.board.sm_info.variables:
+                self.controls_grid.variables_groupbox.setEnabled(True)
 
 
 class Controls_grid(QtWidgets.QWidget):
@@ -139,14 +142,16 @@ class Controls_grid(QtWidgets.QWidget):
 
         # Notes groupbox
         self.notes_groupbox = QtWidgets.QGroupBox("Add note to log")
-        self.notesbox_layout = QtWidgets.QVBoxLayout(self.notes_groupbox)
+        self.notesbox_layout = QtWidgets.QGridLayout(self.notes_groupbox)
         self.notes_textbox = QtWidgets.QTextEdit()
         self.notes_textbox.setFixedHeight(get_setting("GUI", "log_font_size") * 4)
         self.notes_textbox.setFont(QtGui.QFont("Courier New", get_setting("GUI", "log_font_size")))
         self.note_button = QtWidgets.QPushButton("Add note")
+        self.note_button.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         self.note_button.clicked.connect(self.add_note)
-        self.notesbox_layout.addWidget(self.notes_textbox)
-        self.notesbox_layout.addWidget(self.note_button)
+        self.notesbox_layout.addWidget(self.notes_textbox,0,0,1,2)
+        self.notesbox_layout.addWidget(self.note_button,1,1)
+        self.notesbox_layout.setColumnStretch(0,1)
 
         # Variables groupbox.
         self.variables_groupbox = QtWidgets.QGroupBox("Variables")
@@ -165,8 +170,8 @@ class Controls_grid(QtWidgets.QWidget):
 
         # Main layout.
         self.vlayout = QtWidgets.QVBoxLayout(self)
-        self.vlayout.addWidget(self.events_groupbox)
         self.vlayout.addWidget(self.notes_groupbox)
+        self.vlayout.addWidget(self.events_groupbox)
         self.vlayout.addWidget(self.variables_groupbox)
         self.vlayout.addStretch()
 
