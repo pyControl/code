@@ -113,7 +113,7 @@ def receive_data():
             v_name = data_str[1:]
             v_value = sm.get_variable(v_name)
             data_output_queue.put(Datatuple(current_time, VARBL_TYP, "g", ujson.dumps({v_name: v_value})))
-    elif new_byte in (EVENT_TYP, PRINT_TYP):  # Publish event command.
+    elif new_byte == EVENT_TYP:  # Trigger event command.
         data_len = int.from_bytes(usb_serial.read(2), "little")
         data = usb_serial.read(data_len)
         data_str = data.decode()
@@ -122,10 +122,7 @@ def receive_data():
         checksum = int.from_bytes(usb_serial.read(2), "little")
         if checksum != (sum(data) & 0xFFFF):
             return  # Bad checksum.
-        if new_byte == EVENT_TYP:
-            event_queue.put(Datatuple(current_time, EVENT_TYP, subtype, sm.events[content]))
-        else:
-            event_queue.put(Datatuple(current_time, PRINT_TYP, subtype, content))
+        event_queue.put(Datatuple(current_time, EVENT_TYP, subtype, sm.events[content]))
 
 
 def run():
