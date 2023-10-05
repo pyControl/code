@@ -100,7 +100,7 @@ def receive_data():
         running = False
     elif new_byte == VARBL_TYP:  # Get/set variables command.
         data_len = int.from_bytes(usb_serial.read(2), "little")
-        data = usb_serial.read(data_len)
+        data = usb_serial.recv(data_len)
         checksum = int.from_bytes(usb_serial.read(2), "little")
         if checksum != (sum(data) & 0xFFFF):
             return  # Bad checksum.
