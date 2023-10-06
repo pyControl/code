@@ -98,31 +98,28 @@ def receive_data():
     new_byte = usb_serial.read(1)
     if new_byte == b"\x03":  # Serial command to stop run.
         running = False
-    elif new_byte == VARBL_TYP:  # Get/set variables command.
+    elif new_byte in (VARBL_TYP, EVENT_TYP):
         data_len = int.from_bytes(usb_serial.read(2), "little")
         data_and_checksum = usb_serial.recv(data_len + 2, timeout=1)
         checksum = int.from_bytes(data_and_checksum[-2:], "little")
         if checksum != (sum(data_and_checksum[:-2]) & 0xFFFF):
-            return  # Bad checksum because data was corrupted in transit or timeout was reached while trying to receive.
+            return  # Bad checksum, data was corrupted or recieve timedout.
         data_str = data_and_checksum[:-2].decode()
-        if data_str[0] in ("s", "a"):  # Set variable.
-            v_name, v_value = eval(data_str[1:])
-            if sm.set_variable(v_name, v_value):
-                data_output_queue.put(Datatuple(current_time, VARBL_TYP, data_str[0], ujson.dumps({v_name: v_value})))
-        elif data_str[0] == "g":  # Get variable.
-            v_name = data_str[1:]
-            v_value = sm.get_variable(v_name)
-            data_output_queue.put(Datatuple(current_time, VARBL_TYP, "g", ujson.dumps({v_name: v_value})))
-    elif new_byte == EVENT_TYP:  # Trigger event command.
-        data_len = int.from_bytes(usb_serial.read(2), "little")
-        data_and_checksum = usb_serial.recv(data_len + 2, timeout=1)
-        checksum = int.from_bytes(data_and_checksum[-2:], "little")
-        if checksum != (sum(data_and_checksum[:-2]) & 0xFFFF):
-            return  # Bad checksum because data was corrupted in transit or timeout was reached while trying to receive.
-        data_str = data_and_checksum[:-2].decode()
-        subtype = data_str[0]
-        content = data_str[1:]
-        event_queue.put(Datatuple(current_time, EVENT_TYP, subtype, sm.events[content]))
+        if new_byte == VARBL_TYP:  # Get/set variables command.
+            if data_str[0] in ("s", "a"):  # Set variable.
+                v_name, v_value = eval(data_str[1:])
+                if sm.set_variable(v_name, v_value):
+                    data_output_queue.put(
+                        Datatuple(current_time, VARBL_TYP, data_str[0], ujson.dumps({v_name: v_value}))
+                    )
+            elif data_str[0] == "g":  # Get variable.
+                v_name = data_str[1:]
+                v_value = sm.get_variable(v_name)
+                data_output_queue.put(Datatuple(current_time, VARBL_TYP, "g", ujson.dumps({v_name: v_value})))
+        elif new_byte == EVENT_TYP:  # Trigger event command.
+            subtype = data_str[0]
+            event_ID = int(data_str[1:])
+            event_queue.put(Datatuple(current_time, EVENT_TYP, subtype, event_ID))
 
 
 def run():

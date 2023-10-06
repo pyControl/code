@@ -556,15 +556,40 @@ class Pycboard(Pyboard):
         if error_message:
             raise PyboardError(error_message)
 
-    # ------------------------------------------------------------------------------------
-    # Getting and setting variables.
-    # ------------------------------------------------------------------------------------
+    def trigger_event(self, event_name, source="u"):
+        """Trigger specified task event on the pyboard."""
+        if self.framework_running:
+            event_ID = str(self.sm_info.events[event_name])
+            self.send_serial_data(event_ID, "E", source)
+
+    def print_msg(self, msg, source="u"):
+        """Print a message to the log and data file."""
+        if self.framework_running:
+            new_data = [
+                Datatuple(
+                    time=self.get_timestamp(),
+                    type=MsgType.PRINT,
+                    subtype=msg_subtypes[MsgType.PRINT][source],
+                    content=msg,
+                )
+            ]
+            self.data_logger.process_data(new_data)
+
+    def get_timestamp(self):
+        """Get the current pyControl timestamp in ms since start of framework run."""
+        seconds_elapsed = time.time() - self.last_message_time
+        return self.timestamp + round(1000 * (seconds_elapsed))
 
     def send_serial_data(self, data, command, cmd_type=""):
+        """Send data to the pyboard while framework is running."""
         encoded_data = cmd_type.encode() + data.encode()
         data_len = len(encoded_data).to_bytes(2, "little")
         checksum = sum(encoded_data).to_bytes(2, "little")
         self.serial.write(command.encode() + data_len + encoded_data + checksum)
+
+    # ------------------------------------------------------------------------------------
+    # Getting and setting variables.
+    # ------------------------------------------------------------------------------------
 
     def set_variable(self, v_name, v_value, source="s"):
         """Set the value of a state machine variable. If framework is not running
@@ -599,23 +624,3 @@ class Pycboard(Pyboard):
     def get_variables(self):
         """Return variables as a dictionary {v_name: v_value}"""
         return eval(self.eval("{k: v for k, v in sm.variables.__dict__.items() if not hasattr(v, '__init__')}"))
-
-    def trigger_event(self, event_name, source="u"):
-        if self.framework_running:
-            self.send_serial_data(event_name, "E", source)
-
-    def print_msg(self, msg, source="u"):
-        if self.framework_running:
-            new_data = [
-                Datatuple(
-                    time=self.get_timestamp(),
-                    type=MsgType.PRINT,
-                    subtype=msg_subtypes[MsgType.PRINT][source],
-                    content=msg,
-                )
-            ]
-            self.data_logger.process_data(new_data)
-
-    def get_timestamp(self):
-        seconds_elapsed = time.time() - self.last_message_time
-        return self.timestamp + round(1000 * (seconds_elapsed))
