@@ -6,7 +6,6 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException, SerialTimeoutException
 
 from com.pycboard import Pycboard, PyboardError, _djb2_file
-from com.data_logger import Data_logger
 
 from gui.settings import get_setting
 from gui.dialogs import Controls_dialog
@@ -143,7 +142,6 @@ class Run_task_tab(QtWidgets.QWidget):
         self.log_textbox.setReadOnly(True)
 
         self.task_plot = Task_plot()
-        self.data_logger = Data_logger(print_func=self.print_to_log, data_consumers=[self.task_plot, self.task_info])
 
         self.top_section = QtWidgets.QWidget()
         top_layout = QtWidgets.QHBoxLayout(self.top_section)
@@ -251,7 +249,9 @@ class Run_task_tab(QtWidgets.QWidget):
             self.connect_button.setEnabled(False)
             self.repaint()
             self.serial_port = self.GUI_main.setups_tab.get_port(self.board_select.currentText())
-            self.board = Pycboard(self.serial_port, print_func=self.print_to_log, data_logger=self.data_logger)
+            self.board = Pycboard(
+                self.serial_port, print_func=self.print_to_log, data_consumers=[self.task_plot, self.task_info]
+            )
             self.connected = True
             self.config_button.setEnabled(True)
             self.connect_button.setEnabled(True)
@@ -350,7 +350,7 @@ class Run_task_tab(QtWidgets.QWidget):
         # If task file specifies a user API attempt to initialise it.
         self.user_API = None  # Remove previous API.
         # Remove previous API from data consumers.
-        self.data_logger.data_consumers = [self.task_plot, self.task_info]
+        self.board.data_logger.data_consumers = [self.task_plot, self.task_info]
         if "api_class" not in self.board.sm_info.variables:
             return  # Task does not use API.
         API_name = self.board.sm_info.variables["api_class"]
@@ -369,7 +369,7 @@ class Run_task_tab(QtWidgets.QWidget):
             user_API_class = getattr(user_module, API_name)
             self.user_API = user_API_class()
             self.user_API.interface(self.board, self.print_to_log)
-            self.data_logger.data_consumers.append(self.user_API)
+            self.board.data_logger.data_consumers.append(self.user_API)
             self.print_to_log(f"\nInitialised API: {API_name}")
         except Exception as e:
             self.print_to_log(f"Unable to intialise API: {API_name}\nTraceback: {e}")
@@ -399,8 +399,8 @@ class Run_task_tab(QtWidgets.QWidget):
                     return
             subject_ID = self.subject_text.text()
             setup_ID = self.board_select.currentText()
-            self.data_logger.open_data_file(self.data_dir, "run_task", setup_ID, subject_ID)
-            self.data_logger.copy_task_file(self.data_dir, self.GUI_main.task_directory, "run_task-task_files")
+            self.board.data_logger.open_data_file(self.data_dir, "run_task", setup_ID, subject_ID)
+            self.board.data_logger.copy_task_file(self.data_dir, self.GUI_main.task_directory, "run_task-task_files")
         self.fresh_task = False
         self.running = True
         self.board.start_framework()
@@ -433,7 +433,7 @@ class Run_task_tab(QtWidgets.QWidget):
                 self.print_to_log(f"\nRun stopped at: {datetime.now().strftime('%Y/%m/%d %H:%M:%S')}")
             except PyboardError:
                 self.print_to_log("\nError while stopping framework run.")
-        self.data_logger.close_files()
+        self.board.data_logger.close_files()
         self.task_plot.run_stop()
         if self.user_API:
             self.user_API.run_stop()

@@ -9,7 +9,6 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException
 
 from com.pycboard import Pycboard, PyboardError
-from com.data_logger import Data_logger
 from gui.settings import get_setting
 from gui.plotting import Experiment_plot
 from gui.dialogs import Controls_dialog, Summary_variables_dialog
@@ -140,7 +139,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         if self.setup_has_failed():
             return
         # Copy task file to experiments data folder.
-        self.subjectboxes[0].data_logger.copy_task_file(self.experiment.data_dir, get_setting("folders", "tasks"))
+        self.subjectboxes[0].board.data_logger.copy_task_file(self.experiment.data_dir, get_setting("folders", "tasks"))
         # Configure GUI ready to run.
         for box in self.subjectboxes:
             box.make_variables_dialog()  # Don't use parallel_call to avoid 'parent in a different thread error'.
@@ -350,11 +349,11 @@ class Subjectbox(QtWidgets.QGroupBox):
         """Connect to pyboard and instantiate Pycboard and Data_logger objects."""
         self.serial_port = self.GUI_main.setups_tab.get_port(self.setup_name)
         try:
-            self.data_logger = Data_logger(
+            self.board = Pycboard(
+                self.serial_port,
                 print_func=self.print_to_log,
                 data_consumers=[self.run_exp_tab.experiment_plot.subject_plots[self.subject], self.task_info],
             )
-            self.board = Pycboard(self.serial_port, print_func=self.print_to_log, data_logger=self.data_logger)
         except SerialException:
             self.print_to_log("\nConnection failed.")
             self.setup_failed = True
@@ -443,7 +442,7 @@ class Subjectbox(QtWidgets.QGroupBox):
             user_API_class = getattr(user_module, API_name)
             self.user_API = user_API_class()
             self.user_API.interface(self.board, self.print_to_log)
-            self.data_logger.data_consumers.append(self.user_API)
+            self.board.data_consumers.append(self.user_API)
             self.print_to_log(f"\nInitialised API: {API_name}")
         except Exception as e:
             self.print_to_log(f"Unable to intialise API: {API_name}\nTraceback: {e}")
@@ -487,7 +486,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.start_time = datetime.now()
         ex = self.run_exp_tab.experiment
         self.print_to_log("\nStarting experiment.\n")
-        self.data_logger.open_data_file(ex.data_dir, ex.name, self.setup_name, self.subject, datetime.now())
+        self.board.data_logger.open_data_file(ex.data_dir, ex.name, self.setup_name, self.subject, datetime.now())
         self.board.start_framework()
         if self.user_API:
             self.user_API.run_start()
@@ -524,7 +523,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         if summary_variables:
             self.subject_sumr_vars = {v["name"]: self.board.get_variable(v["name"]) for v in summary_variables}
         # Close data files and disconnect from board.
-        self.data_logger.close_files()
+        self.board.data_logger.close_files()
         self.board.close()
         # Update GUI elements.
         self.state = "post_run"

@@ -5,61 +5,11 @@ import json
 import inspect
 from serial import SerialException
 from array import array
-from collections import namedtuple
 from .pyboard import Pyboard, PyboardError
+from .data_logger import Data_logger
+from .message import MsgType, Datatuple
 from gui.settings import VERSION, dirs, get_setting
 from dataclasses import dataclass
-from enum import Enum
-
-# ----------------------------------------------------------------------------------------
-#  Classes & variables used for processing messages from board.
-# ----------------------------------------------------------------------------------------
-
-Datatuple = namedtuple("Datatuple", ["time", "type", "subtype", "content"], defaults=[None] * 4)
-
-
-class MsgType(Enum):
-    EVENT = b"E"  # External event
-    STATE = b"S"  # State transition
-    PRINT = b"P"  # User print
-    HARDW = b"H"  # Hardware callback
-    VARBL = b"V"  # Variable change
-    WARNG = b"!"  # Warning
-    ERROR = b"!!"  # Error
-    STOPF = b"X"  # Stop framework
-    ANLOG = b"A"  # Analog
-
-    @classmethod
-    def from_byte(cls, byte_value):
-        for member in cls:
-            if member.value == byte_value:
-                return member
-        return byte_value
-
-
-msg_subtypes = {
-    MsgType.VARBL: {
-        "g": "get",
-        "s": "user_set",
-        "a": "api_set",
-        "p": "print",
-        "t": "run_start",
-        "e": "run_end",
-    },
-    MsgType.EVENT: {
-        "i": "input",
-        "t": "timer",
-        "p": "publish",
-        "u": "user",
-        "a": "api",
-        "s": "sync",
-    },
-    MsgType.PRINT: {
-        "t": "task",
-        "a": "api",
-        "u": "user",
-    },
-}
 
 # ----------------------------------------------------------------------------------------
 #  Helper functions.
@@ -128,10 +78,11 @@ class Pycboard(Pyboard):
 
     device_class2file = {}  # Dict mapping device classes to file where they are defined {class_name: device_file}
 
-    def __init__(self, serial_port, baudrate=115200, verbose=True, print_func=print, data_logger=None):
+    def __init__(self, serial_port, baudrate=115200, verbose=True, print_func=print, data_consumers=None):
         self.serial_port = serial_port
         self.print = print_func  # Function used for print statements.
-        self.data_logger = data_logger  # Instance of Data_logger class for saving and printing data.
+        self.data_logger = Data_logger(print_func=print_func)
+        self.data_consumers = data_consumers
         self.status = {"serial": None, "framework": None, "usb_mode": None}
         self.device_files_on_pyboard = {}  # Dict {file_name:file_hash} of files in devices folder on pyboard.
         if not Pycboard.device_class2file:  # Scan devices folder to find files where device classes are defined.
@@ -468,6 +419,7 @@ class Pycboard(Pyboard):
         )
         if self.data_logger:
             self.data_logger.set_state_machine(self.sm_info)
+        self.timestamp = 0
 
     def get_states(self):
         """Return states as a dictionary {state_name: state_ID}"""
@@ -518,7 +470,7 @@ class Pycboard(Pyboard):
                 message = self.serial.read(message_len)
                 msg_type = MsgType.from_byte(message[4:5])
                 subtype_byte = message[5:6]
-                msg_subtype = None if subtype_byte == b"_" else msg_subtypes[msg_type][subtype_byte.decode()]
+                msg_subtype = msg_type.get_subtype(subtype_byte.decode())
                 content_bytes = message[6:]
                 # Compute checksum
                 if msg_type == MsgType.ANLOG:  # Need to extract analog data to compute checksum.
@@ -551,8 +503,12 @@ class Pycboard(Pyboard):
                 break
             else:
                 unexpected_input.append(new_byte.decode())
-        if new_data and self.data_logger:
+        if new_data:
             self.data_logger.process_data(new_data)
+            if self.data_consumers:
+                for data_consumer in self.data_consumers:
+                    data_consumer.process_data(new_data)
+
         if error_message:
             raise PyboardError(error_message)
 
@@ -569,7 +525,7 @@ class Pycboard(Pyboard):
                 Datatuple(
                     time=self.get_timestamp(),
                     type=MsgType.PRINT,
-                    subtype=msg_subtypes[MsgType.PRINT][source],
+                    subtype=MsgType.PRINT.get_subtype(source),
                     content=msg,
                 )
             ]
