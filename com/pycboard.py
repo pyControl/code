@@ -81,7 +81,7 @@ class Pycboard(Pyboard):
     def __init__(self, serial_port, baudrate=115200, verbose=True, print_func=print, data_consumers=None):
         self.serial_port = serial_port
         self.print = print_func  # Function used for print statements.
-        self.data_logger = Data_logger(print_func=print_func)
+        self.data_logger = Data_logger(board=self, print_func=print_func)
         self.data_consumers = data_consumers
         self.status = {"serial": None, "framework": None, "usb_mode": None}
         self.device_files_on_pyboard = {}  # Dict {file_name:file_hash} of files in devices folder on pyboard.
@@ -128,6 +128,7 @@ class Pycboard(Pyboard):
         self.framework_running = False
         error_message = None
         self.status["usb_mode"] = self.eval("pyb.usb_mode()").decode()
+        self.data_logger.reset()
         try:
             self.exec("from pyControl import *; import devices")
             self.status["framework"] = True  # Framework imported OK.
@@ -381,7 +382,7 @@ class Pycboard(Pyboard):
 
     def setup_state_machine(self, sm_name, sm_dir=None, uploaded=False):
         """Transfer state machine descriptor file sm_name.py from folder sm_dir
-        to board. Instantiate state machine object as state_machine on pyboard."""
+        to board and setup state machine on pyboard."""
         self.reset()
         if sm_dir is None:
             sm_dir = get_setting("folders", "tasks")
@@ -417,8 +418,7 @@ class Pycboard(Pyboard):
             framework_version=self.framework_version,
             micropython_version=self.micropython_version,
         )
-        if self.data_logger:
-            self.data_logger.set_state_machine(self.sm_info)
+        self.data_logger.reset()
         self.timestamp = 0
 
     def get_states(self):
@@ -508,7 +508,6 @@ class Pycboard(Pyboard):
             if self.data_consumers:
                 for data_consumer in self.data_consumers:
                     data_consumer.process_data(new_data)
-
         if error_message:
             raise PyboardError(error_message)
 
@@ -517,19 +516,6 @@ class Pycboard(Pyboard):
         if self.framework_running:
             event_ID = str(self.sm_info.events[event_name])
             self.send_serial_data(event_ID, "E", source)
-
-    def print_msg(self, msg, source="u"):
-        """Print a message to the log and data file."""
-        if self.framework_running:
-            new_data = [
-                Datatuple(
-                    time=self.get_timestamp(),
-                    type=MsgType.PRINT,
-                    subtype=MsgType.PRINT.get_subtype(source),
-                    content=msg,
-                )
-            ]
-            self.data_logger.process_data(new_data)
 
     def get_timestamp(self):
         """Get the current pyControl timestamp in ms since start of framework run."""

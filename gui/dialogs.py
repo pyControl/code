@@ -107,11 +107,9 @@ class Controls_dialog(QtWidgets.QDialog):
     def showEvent(self, event):
         """Called when dialog is opened."""
         super(Controls_dialog, self).showEvent(event)
-        self.controls_grid.notes_groupbox.setEnabled(False)
         self.controls_grid.events_groupbox.setEnabled(False)
         self.controls_grid.variables_groupbox.setEnabled(False)
         if self.controls_grid.board.framework_running:
-            self.controls_grid.notes_groupbox.setEnabled(True)
             if self.controls_grid.board.sm_info.events:
                 self.controls_grid.events_groupbox.setEnabled(True)
             if self.controls_grid.board.sm_info.variables:
@@ -149,9 +147,9 @@ class Controls_grid(QtWidgets.QWidget):
         self.note_button = QtWidgets.QPushButton("Add note")
         self.note_button.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         self.note_button.clicked.connect(self.add_note)
-        self.notesbox_layout.addWidget(self.notes_textbox,0,0,1,2)
-        self.notesbox_layout.addWidget(self.note_button,1,1)
-        self.notesbox_layout.setColumnStretch(0,1)
+        self.notesbox_layout.addWidget(self.notes_textbox, 0, 0, 1, 2)
+        self.notesbox_layout.addWidget(self.note_button, 1, 1)
+        self.notesbox_layout.setColumnStretch(0, 1)
 
         # Variables groupbox.
         self.variables_groupbox = QtWidgets.QGroupBox("Variables")
@@ -182,7 +180,7 @@ class Controls_grid(QtWidgets.QWidget):
     def add_note(self):
         note_text = self.notes_textbox.toPlainText()
         self.notes_textbox.clear()
-        self.board.print_msg(note_text, source="u")
+        self.board.data_logger.print_message(note_text, source="u")
 
 
 class Variable_setter(QtWidgets.QWidget):

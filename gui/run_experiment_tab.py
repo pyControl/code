@@ -16,6 +16,10 @@ from gui.utility import variable_constants, TaskInfo, parallel_call
 from gui.custom_controls_dialog import Custom_controls_dialog, Custom_gui
 from gui.hardware_variables_dialog import set_hardware_variables
 
+# ----------------------------------------------------------------------------------------
+#  Run_experiment_tab
+# ----------------------------------------------------------------------------------------
+
 
 class Run_experiment_tab(QtWidgets.QWidget):
     """The run experiment tab is responsible for setting up, running and stopping
@@ -265,7 +269,9 @@ class Run_experiment_tab(QtWidgets.QWidget):
             box.print_to_log(print_str)
 
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------
+#  Subjectbox
+# ----------------------------------------------------------------------------------------
 
 
 class Subjectbox(QtWidgets.QGroupBox):
@@ -297,9 +303,9 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.time_text.setReadOnly(True)
         self.time_text.setFixedWidth(50)
         self.task_info = TaskInfo()
-        self.variables_button = QtWidgets.QPushButton("Controls")
-        self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
-        self.variables_button.setEnabled(False)
+        self.controls_button = QtWidgets.QPushButton("Controls")
+        self.controls_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
+        self.controls_button.setEnabled(False)
         self.log_textbox = QtWidgets.QTextEdit()
         self.log_textbox.setMinimumHeight(180)
         self.log_textbox.setFont(QtGui.QFont("Courier New", get_setting("GUI", "log_font_size")))
@@ -308,7 +314,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.Vlayout = QtWidgets.QVBoxLayout(self)
         self.Hlayout1 = QtWidgets.QHBoxLayout()
         self.Hlayout1.addWidget(self.start_stop_button)
-        self.Hlayout1.addWidget(self.variables_button)
+        self.Hlayout1.addWidget(self.controls_button)
         self.Hlayout1.addWidget(self.status_label)
         self.Hlayout1.addWidget(self.status_text)
         self.Hlayout1.addWidget(self.time_label)
@@ -461,11 +467,11 @@ class Subjectbox(QtWidgets.QGroupBox):
                 self.controls_dialog = py_gui_file.Custom_controls_dialog(self, self.board)
         else:  # Board uses standard variables dialog.
             self.controls_dialog = Controls_dialog(self)
-        self.variables_button.clicked.connect(self.controls_dialog.exec)
+        self.controls_button.clicked.connect(self.controls_dialog.exec)
 
     def set_ready_to_start(self):
         """Set GUI elements ready to start run."""
-        self.variables_button.setEnabled(True)
+        self.controls_button.setEnabled(True)
         self.start_stop_button.setEnabled(True)
         self.task_info.set_state_machine(self.board.sm_info)
         self.status_text.setText("Ready")
@@ -533,7 +539,6 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.start_stop_button.setEnabled(False)
         self.run_exp_tab.experiment_plot.run_stop(self.subject)
         self.run_exp_tab.setups_finished += 1
-        self.variables_button.setEnabled(False)
         self.run_exp_tab.update_startstopclose_button()
 
     def update(self):

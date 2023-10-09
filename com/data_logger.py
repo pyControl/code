@@ -12,16 +12,16 @@ from .message import MsgType, Datatuple
 class Data_logger:
     """Class for logging data from a pyControl setup to disk"""
 
-    def __init__(self, sm_info=None, print_func=None):
-        self.data_file = None
-        self.analog_writers = {}
+    def __init__(self, board, print_func=None):
+        self.board = board
         self.print_func = print_func
-        if sm_info:
-            self.set_state_machine(sm_info)
+        self.reset()
 
-    def set_state_machine(self, sm_info):
-        self.sm_info = sm_info
-        self.ID2name_fw = self.sm_info.ID2name  # Dict mapping framework IDs to names.
+    def reset(self):
+        self.data_file = None
+        self.file_path = None
+        self.analog_writers = {}
+        self.pre_run_prints = []
 
     def open_data_file(self, data_dir, experiment_name, setup_ID, subject_ID, datetime_now=None):
         """Open file tsv/txt file for event data and write header information.
@@ -32,7 +32,7 @@ class Data_logger:
         self.setup_ID = setup_ID
         if datetime_now is None:
             datetime_now = datetime.now()
-        self.end_timestamp = -1
+        self.end_timestamp = None
         file_name = self.subject_ID + datetime_now.strftime("-%Y-%m-%d-%H%M%S") + ".tsv"
         self.file_path = os.path.join(self.data_dir, file_name)
         self.data_file = open(self.file_path, "w", newline="\n")
@@ -42,16 +42,18 @@ class Data_logger:
             )  # Write header with row names.
         )
         self.write_info_line("experiment_name", self.experiment_name)
-        self.write_info_line("task_name", self.sm_info.name)
-        self.write_info_line("task_file_hash", self.sm_info.task_hash)
+        self.write_info_line("task_name", self.board.sm_info.name)
+        self.write_info_line("task_file_hash", self.board.sm_info.task_hash)
         self.write_info_line("setup_id", self.setup_ID)
-        self.write_info_line("framework_version", self.sm_info.framework_version)
-        self.write_info_line("micropython_version", self.sm_info.micropython_version)
+        self.write_info_line("framework_version", self.board.sm_info.framework_version)
+        self.write_info_line("micropython_version", self.board.sm_info.micropython_version)
         self.write_info_line("subject_id", self.subject_ID)
         self.write_info_line("start_time", datetime.utcnow().isoformat(timespec="milliseconds"))
+        self.write_to_file(self.pre_run_prints)
+        self.pre_run_prints = []
         self.analog_writers = {
             ID: Analog_writer(ai["name"], ai["fs"], ai["dtype"], self.file_path)
-            for ID, ai in self.sm_info.analog_inputs.items()
+            for ID, ai in self.board.sm_info.analog_inputs.items()
         }
 
     def write_info_line(self, subtype, content, time=0):
@@ -67,8 +69,8 @@ class Data_logger:
         exp_tasks_dir = os.path.join(data_dir, dir_name)
         if not os.path.exists(exp_tasks_dir):
             os.mkdir(exp_tasks_dir)
-        task_file_path = os.path.join(tasks_dir, self.sm_info.name + ".py")
-        task_save_name = os.path.split(self.sm_info.name)[1] + "_{}.py".format(self.sm_info.task_hash)
+        task_file_path = os.path.join(tasks_dir, self.board.sm_info.name + ".py")
+        task_save_name = os.path.split(self.board.sm_info.name)[1] + "_{}.py".format(self.board.sm_info.task_hash)
         if task_save_name not in os.listdir(exp_tasks_dir):
             copyfile(task_file_path, os.path.join(exp_tasks_dir, task_save_name))
 
@@ -77,13 +79,12 @@ class Data_logger:
             self.write_info_line("end_time", self.end_datetime.isoformat(timespec="milliseconds"), self.end_timestamp)
             self.data_file.close()
             self.data_file = None
-            self.file_path = None
         for analog_writer in self.analog_writers.values():
             analog_writer.close_files()
         self.analog_writers = {}
 
     def process_data(self, new_data):
-        """If data _file is open new data is written to file.  If print_func is specified
+        """If data_file is open new data is written to file.  If print_func is specified
         human readable data strings are passed to it."""
         if self.data_file:
             self.write_to_file(new_data)
@@ -101,18 +102,19 @@ class Data_logger:
                 self.analog_writers[writer_id].save_analog_chunk(timestamp=nd.time, data_array=data)
 
     def data_to_string(self, new_data):
-        """Convert list of data tuples into a string.  If verbose=True state and event names are used,
-        if verbose=False state and event IDs are used."""
+        """Convert list of data tuples into a string."""
         data_string = ""
         for nd in new_data:
             if nd.type == MsgType.STATE:  # State entry.
-                data_string += self.tsv_row_str("state", time=nd.time, content=self.ID2name_fw[nd.content])
+                data_string += self.tsv_row_str("state", time=nd.time, content=self.board.sm_info.ID2name[nd.content])
             elif nd.type == MsgType.EVENT:  # Event.
                 data_string += self.tsv_row_str(
-                    "event", time=nd.time, subtype=nd.subtype, content=self.ID2name_fw[nd.content]
+                    "event", time=nd.time, subtype=nd.subtype, content=self.board.sm_info.ID2name[nd.content]
                 )
             elif nd.type == MsgType.PRINT:  # User print output.
-                data_string += self.tsv_row_str("print", time=nd.time, subtype=nd.subtype, content=nd.content)
+                data_string += self.tsv_row_str(
+                    "print", time=nd.time, subtype=nd.subtype, content=nd.content.replace("\n", "|").replace("\r", "|")
+                )
             elif nd.type == MsgType.VARBL:  # Variable.
                 data_string += self.tsv_row_str("variable", time=nd.time, subtype=nd.subtype, content=nd.content)
             elif nd.type == MsgType.WARNG:  # Warning
@@ -123,6 +125,27 @@ class Data_logger:
                 self.end_datetime = datetime.utcnow()
                 self.end_timestamp = nd.time
         return data_string
+
+    def print_message(self, msg, source="u"):
+        """Print a message to the log and data file. If called pre-run message is logged when
+        data file is opened, if called post run message is logged to previously open data file."""
+        new_data = [
+            Datatuple(
+                time=self.board.get_timestamp() if self.board.framework_running else self.board.timestamp,
+                type=MsgType.PRINT,
+                subtype=MsgType.PRINT.get_subtype(source),
+                content=msg,
+            )
+        ]
+        if self.board.framework_running:
+            self.process_data(new_data)
+        else:
+            self.print_func(self.data_to_string(new_data), end="")
+            if self.board.timestamp == 0:  # Pre-run, store note to log when file opened.
+                self.pre_run_prints += new_data
+            elif self.file_path:  # Post-run, log note to previous data file.
+                with open(self.file_path, "a") as data_file:
+                    data_file.write(self.data_to_string(new_data))
 
 
 # ----------------------------------------------------------------------------------------

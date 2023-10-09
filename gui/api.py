@@ -64,8 +64,8 @@ class Api:
                 f"Event {event} not defined in task file {self.board.sm_info.name} so cannot be set by API"
             )
 
-    def print_msg(self, msg):
-        self.board.print_msg(msg, "a")
+    def print_message(self, msg):
+        self.board.data_logger.print_message(msg, "a")
 
     # Note:  get_variable functionality not implemented because board.get_variable method
     # does not return variable value when framework is running, just causes it to be output

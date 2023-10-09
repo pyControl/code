@@ -36,7 +36,7 @@ class Example_user_class(Api):
         for msg in msgs_from_task:
             x, y, z = msg.split(",")
             total = int(x) + int(y) + int(z)
-            self.print_msg("{} and {} and {} total to {}".format(x, y, z, total))
+            self.print_message("{} and {} and {} total to {}".format(x, y, z, total))
 
     def run_start(self):
         self.print_to_log("\nMessage from config/user_classes/Example_user_class.py at the start of the run")

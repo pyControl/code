@@ -98,13 +98,13 @@ class Run_task_tab(QtWidgets.QWidget):
         self.task_select.set_callback(self.task_changed)
         self.upload_button = QtWidgets.QPushButton("Upload")
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
-        self.variables_button = QtWidgets.QPushButton("Controls")
-        self.variables_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
+        self.controls_button = QtWidgets.QPushButton("Controls")
+        self.controls_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
 
         taskgroup_layout = QtWidgets.QGridLayout(self.task_groupbox)
         taskgroup_layout.addWidget(self.task_select, 0, 0, 1, 2)
         taskgroup_layout.addWidget(self.upload_button, 1, 0)
-        taskgroup_layout.addWidget(self.variables_button, 1, 1)
+        taskgroup_layout.addWidget(self.controls_button, 1, 1)
         taskgroup_layout.setContentsMargins(pad, pad, pad, pad)
 
         self.upload_button.clicked.connect(self.setup_task)
@@ -245,7 +245,7 @@ class Run_task_tab(QtWidgets.QWidget):
         self.print_to_log(f"\nConnecting to board {self.board_select.currentText()}")
         try:
             self.board_select.setEnabled(False)
-            self.variables_button.setEnabled(False)
+            self.controls_button.setEnabled(False)
             self.connect_button.setEnabled(False)
             self.repaint()
             self.serial_port = self.GUI_main.setups_tab.get_port(self.board_select.currentText())
@@ -287,7 +287,7 @@ class Run_task_tab(QtWidgets.QWidget):
         self.upload_button.setText("Upload")
         self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
         self.start_button.setEnabled(False)
-        self.variables_button.setEnabled(False)
+        self.controls_button.setEnabled(False)
 
     def setup_task(self):
         """Upload task, set any hardware variables, ready gui to run task."""
@@ -299,7 +299,7 @@ class Run_task_tab(QtWidgets.QWidget):
             if not self.uploaded:
                 self.task_hash = _djb2_file(os.path.join(self.GUI_main.task_directory, task + ".py"))
             self.start_button.setEnabled(False)
-            self.variables_button.setEnabled(False)
+            self.controls_button.setEnabled(False)
             self.repaint()
             self.board.setup_state_machine(task, uploaded=self.uploaded)
             self.initialise_API()
@@ -317,7 +317,7 @@ class Run_task_tab(QtWidgets.QWidget):
                         self.print_to_log(v_name.ljust(name_len + 4) + v_value.ljust(value_len + 4) + pv_str)
             # Configure GUI ready to run.
             if self.controls_dialog:
-                self.variables_button.clicked.disconnect()
+                self.controls_button.clicked.disconnect()
                 self.controls_dialog.deleteLater()
             self.controls_dialog = Controls_dialog(self)
             self.using_json_gui = False
@@ -331,8 +331,8 @@ class Run_task_tab(QtWidgets.QWidget):
                     py_gui_file = importlib.import_module(f"config.user_controls_dialogs.{custom_variables_name}")
                     importlib.reload(py_gui_file)
                     self.controls_dialog = py_gui_file.Custom_controls_dialog(self, self.board)
-            self.variables_button.clicked.connect(self.controls_dialog.exec)
-            self.variables_button.setEnabled(True)
+            self.controls_button.clicked.connect(self.controls_dialog.exec)
+            self.controls_button.setEnabled(True)
             self.task_plot.set_state_machine(self.board.sm_info)
             self.task_info.set_state_machine(self.board.sm_info)
             self.file_groupbox.setEnabled(True)
