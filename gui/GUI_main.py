@@ -161,7 +161,7 @@ class GUI_main(QtWidgets.QMainWindow):
         """Return list of files within a parent directory and subdirectories in the format:
         subdir_1/subdir_2/filename"""
         nested_files = []
-        for dirpath, dirnames, filenames in os.walk(folder_to_walk):
+        for dirpath, _, filenames in os.walk(folder_to_walk):
             nested_files += [
                 os.path.join(dirpath, file).split(folder_to_walk)[1][1 : -len(file_extension)]
                 for file in filenames

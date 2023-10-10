@@ -328,10 +328,6 @@ class Setup:
         if self.signal_from_rowcheck:
             self.setups_tab.multi_config_enable()
 
-    def edit_variables(self):
-        hardware_var_editor = Hardware_variables_editor(self)
-        hardware_var_editor.exec()
-
     def name_changed(self):
         """If name entry in table is blank setup name is set to serial port."""
         name = str(self.name_edit.text())

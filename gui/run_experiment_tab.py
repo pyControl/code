@@ -104,7 +104,6 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.GUI_main.app.processEvents()
         # Setup boards.
         self.print_to_logs("Connecting to board.. ")
-        self.n_setups = len(self.subjects)
         parallel_call("connect_to_board", self.subjectboxes)
         if self.setup_has_failed():
             return

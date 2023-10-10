@@ -36,7 +36,6 @@ class Run_task_tab(QtWidgets.QWidget):
         self.fresh_task = None  # Whether task has been run or variables edited.
         self.user_API = None  # Overwritten by user API class.
         self.running = False
-        self.subject_changed = False
         self.controls_dialog = None
 
         pad = 3  # Spacing round GUI elements in groupboxes.
@@ -307,7 +306,7 @@ class Run_task_tab(QtWidgets.QWidget):
             # Set values for any hardware variables.
             task_hw_vars = [task_var for task_var in self.board.sm_info.variables if task_var.startswith("hw_")]
             if task_hw_vars:
-                if not hw_vars_defined_in_setup(self, self.board_select.currentText(), task, task_hw_vars):
+                if not hw_vars_defined_in_setup(self, self.board_select.currentText(), task_hw_vars):
                     return
                 else:
                     hw_vars_set = set_hardware_variables(self, task_hw_vars)
