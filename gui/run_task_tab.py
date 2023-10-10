@@ -369,7 +369,7 @@ class Run_task_tab(QtWidgets.QWidget):
             user_API_class = getattr(user_module, API_name)
             self.user_API = user_API_class()
             self.user_API.interface(self.board, self.print_to_log)
-            self.board.data_consumers.append(self.user_API)
+            self.board.data_consumers.insert(0, self.user_API)
             self.print_to_log(f"\nInitialised API: {API_name}")
         except Exception as e:
             self.print_to_log(f"Unable to intialise API: {API_name}\nTraceback: {e}")
