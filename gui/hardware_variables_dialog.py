@@ -161,7 +161,7 @@ def set_hardware_variables(parent, task_hw_vars):
     return hw_vars_set
 
 
-def hw_vars_defined_in_setup(parent, setup_name, task_name, task_hw_vars):
+def hw_vars_defined_in_setup(parent, setup_name, task_hw_vars):
     """Check if the setup has all of the task's hardware variables fully defined"""
     serial_port = parent.GUI_main.setups_tab.get_port(setup_name)
     saved_setups = parent.GUI_main.setups_tab.get_setups_from_json()

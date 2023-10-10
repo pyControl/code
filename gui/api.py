@@ -95,7 +95,7 @@ class Api:
         self.state_tup = namedtuple("State", "name time")
         self.print_tup = namedtuple("Print", "data time")
         self.var_tup = namedtuple("Var", "name time")
-        self.analog_tup = namedtuple("Analog", "name time data")
+        self.analog_tup = namedtuple("Analog", "name data time")
 
     def process_data(self, new_data):
         """Called directly by the gui every time there is new data.
@@ -118,6 +118,6 @@ class Api:
                 name = self.ID2name[nd.content]
                 data["events"].append(self.event_tup(name, nd.time))
             elif nd.type == MsgType.ANLOG:
-                data["analog"].append(self.analog_tup(self.ID2analog[nd.content[0]], nd.time, nd.content[1]))
+                data["analog"].append(self.analog_tup(self.ID2analog[nd.content[0]], nd.content[1], nd.time))
 
         self.process_data_user(data)

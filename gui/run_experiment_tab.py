@@ -104,7 +104,6 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.GUI_main.app.processEvents()
         # Setup boards.
         self.print_to_logs("Connecting to board.. ")
-        self.n_setups = len(self.subjects)
         parallel_call("connect_to_board", self.subjectboxes)
         if self.setup_has_failed():
             return
@@ -448,7 +447,7 @@ class Subjectbox(QtWidgets.QGroupBox):
             user_API_class = getattr(user_module, API_name)
             self.user_API = user_API_class()
             self.user_API.interface(self.board, self.print_to_log)
-            self.board.data_consumers.append(self.user_API)
+            self.board.data_consumers.insert(0, self.user_API)
             self.print_to_log(f"\nInitialised API: {API_name}")
         except Exception as e:
             self.print_to_log(f"Unable to intialise API: {API_name}\nTraceback: {e}")

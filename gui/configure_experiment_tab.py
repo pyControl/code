@@ -44,7 +44,6 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         # Variables
         self.GUI_main = self.parent()
         self.custom_dir = False  # True if data_dir field has been manually edited.
-        self.saved_exp_path = None  # Path of last saved/loaded experiment file.
         self.saved_exp_config = None  # Experiment object of last saved/loaded experiment.
 
         # Experiment Groupbox
@@ -210,7 +209,6 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.hardware_test_select.setText("no hardware test")
         self.subset_warning_checkbox.setChecked(True)
         self.saved_exp_config = self.get_exp_config()
-        self.saved_exp_path = None
 
     def create_new_experiment(self, from_existing=False):
         """Clear experiment configuration."""
@@ -283,7 +281,6 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         if not from_dialog:
             self.experiment_select.setText(experiment.name)
         self.saved_exp_config = experiment
-        self.saved_exp_path = exp_path
         self.save_button.setEnabled(False)
         return True
 
@@ -315,7 +312,6 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.data_dir_text.setText(experiment.data_dir)
         self.variables_table.set_from_list(experiment.variables)
         self.saved_exp_config = experiment
-        self.saved_exp_path = exp_path
         self.save_button.setEnabled(False)
         self.experiment_enable(True)
 
@@ -375,7 +371,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         task_hw_vars = get_task_hw_vars(task_file)
         if task_hw_vars:
             for setup_name in setups:
-                if not hw_vars_defined_in_setup(self, setup_name, experiment.task, task_hw_vars):
+                if not hw_vars_defined_in_setup(self, setup_name, task_hw_vars):
                     return
 
         if self.subset_warning_checkbox.isChecked():

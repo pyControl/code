@@ -20,6 +20,7 @@ class Data_logger:
     def reset(self):
         self.data_file = None
         self.file_path = None
+        self.subject_ID = None
         self.analog_writers = {}
         self.pre_run_prints = []
 
