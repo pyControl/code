@@ -12,11 +12,11 @@ settings = QtCore.QSettings("pyControl", "pyControl-app")
 def setup_user_dir(new_path):
     settings.setValue("user_directory_path", new_path)
     folders = os.listdir(new_path)
-    if len(folders) == 0:  # New user directory, fill with template
+    if len(folders) == 0:  # New user directory, fill with devices and examples
         for folder in ["api_classes", "controls_dialogs", "devices", "hardware_definitions", "tasks"]:
             shutil.copytree(
-                Path(ROOT, "user_template", folder), Path(new_path, folder)
-            )  # duplicate template folder at new destination
+                Path(ROOT, "user_assets", folder), Path(new_path, folder)
+            )  # duplicate assets at new destination
         Path(new_path, "data").mkdir()
         Path(new_path, "experiments").mkdir()
 

@@ -1,3 +1,0 @@
-# Ignore all contents of folder except .gitignore needed to ensure folder is version controlled.
-*
-!.gitignore
