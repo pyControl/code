@@ -1,4 +1,4 @@
-from pyControl.hardware import Port
+from pycontrol_mcu.hardware import Port
 
 
 class Breakout_1_2:

@@ -2,7 +2,7 @@
 # Connect a Poke to port 3 of the breakout board. When you break the IR beam of
 # the Poke the LED and solenoid will turn on.
 
-from pyControl.utility import *
+from pycontrol_mcu.utility import *
 from devices import Breakout_1_2, Poke
 
 # Define hardware

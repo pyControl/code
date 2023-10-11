@@ -1,4 +1,4 @@
-from pyControl.hardware import Digital_output
+from pycontrol_mcu.hardware import Digital_output
 
 
 class Solenoid_driver:

@@ -1,6 +1,6 @@
 from devices.poke import _Poke
 from devices.MCP import MCP23017, MCP23008
-from pyControl.hardware import Digital_output
+from pycontrol_mcu.hardware import Digital_output
 
 
 class Nine_poke:

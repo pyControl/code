@@ -1,4 +1,4 @@
-from pyControl.hardware import Port
+from pycontrol_mcu.hardware import Port
 from devices.MCP import MCP23017
 
 

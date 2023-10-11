@@ -1,7 +1,7 @@
 # A script for testing the hardware, optionally run by the cli.run_experiment() before running the experiment
 # so the user can check the hardware is all working as expected.
 
-from pyControl.utility import *
+from pycontrol_mcu.utility import *
 import hardware_definition as hw
 
 # States and events.

@@ -4,7 +4,7 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from gui.settings import dirs, get_setting
 from gui.utility import TableCheckbox, parallel_call
 from gui.hardware_variables_dialog import Hardware_variables_editor
-from com.pycboard import Pycboard, PyboardError
+from communication.pycboard import Pycboard, PyboardError
 
 
 class Setups_tab(QtWidgets.QWidget):

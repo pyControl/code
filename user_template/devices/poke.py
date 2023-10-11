@@ -1,4 +1,4 @@
-from pyControl.hardware import Digital_output, Digital_input
+from pycontrol_mcu.hardware import Digital_output, Digital_input
 
 
 class Poke:

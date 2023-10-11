@@ -8,7 +8,7 @@ from collections import OrderedDict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException
 
-from com.pycboard import Pycboard, PyboardError
+from communication.pycboard import Pycboard, PyboardError
 from gui.settings import get_setting
 from gui.plotting import Experiment_plot
 from gui.dialogs import Controls_dialog, Summary_variables_dialog

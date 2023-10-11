@@ -2,7 +2,7 @@
 # second when the usr pushbutton on the pyboard is pressed three times.
 # Does not require any hardware except a micropython board.
 
-from pyControl.utility import *
+from pycontrol_mcu.utility import *
 from devices import *
 
 # Define hardware

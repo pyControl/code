@@ -5,7 +5,7 @@ import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 from gui.settings import get_setting
 from gui.utility import detachableTabWidget
-from com.pycboard import MsgType
+from communication.pycboard import MsgType
 
 # ----------------------------------------------------------------------------------------
 # Task_plot

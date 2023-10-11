@@ -6,7 +6,7 @@
 # Poke in each port of the 5 poke in turn, the light on the poke will illuminate
 # after you poke it.
 
-from pyControl.utility import *
+from pycontrol_mcu.utility import *
 from devices import Breakout_1_2, Five_poke
 
 # Define hardware

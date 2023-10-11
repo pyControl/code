@@ -2,7 +2,7 @@
 # Connect an audio board to port 3 on the breakout board and plug a speaker into
 # the audio board.  The speaker should play white noise at different volumes.
 
-from pyControl.utility import *
+from pycontrol_mcu.utility import *
 from devices import Breakout_1_2, Audio_board
 
 board = Breakout_1_2()

@@ -5,7 +5,7 @@ from datetime import datetime
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException, SerialTimeoutException
 
-from com.pycboard import Pycboard, PyboardError, _djb2_file
+from communication.pycboard import Pycboard, PyboardError, _djb2_file
 
 from gui.settings import get_setting
 from gui.dialogs import Controls_dialog

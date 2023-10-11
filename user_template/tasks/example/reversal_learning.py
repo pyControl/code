@@ -4,7 +4,7 @@
 # reverse once a moving average of choices crosses a threshold fraction
 # correct, with a random delay between the treshold crossing and reversal.
 
-from pyControl.utility import *
+from pycontrol_mcu.utility import *
 import hardware_definition as hw
 
 # States and events.

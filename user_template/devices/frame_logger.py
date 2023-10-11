@@ -1,7 +1,7 @@
 import pyb
-import pyControl.framework as fw
-import pyControl.hardware as hw
-import pyControl.state_machine as sm
+import pycontrol_mcu.framework as fw
+import pycontrol_mcu.hardware as hw
+import pycontrol_mcu.state_machine as sm
 
 
 class Frame_logger(hw.IO_object):

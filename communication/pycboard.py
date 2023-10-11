@@ -130,7 +130,7 @@ class Pycboard(Pyboard):
         self.status["usb_mode"] = self.eval("pyb.usb_mode()").decode()
         self.data_logger.reset()
         try:
-            self.exec("from pyControl import *; import devices")
+            self.exec("from pycontrol_mcu import *; import devices")
             self.status["framework"] = True  # Framework imported OK.
             self.device_files_on_pyboard = self.get_folder_contents("devices", get_hash=True)
         except PyboardError as e:

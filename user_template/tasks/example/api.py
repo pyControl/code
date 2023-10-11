@@ -1,6 +1,6 @@
 # An example task that uses an API class to communicate with a python script running on the desktop computer.
 
-from pyControl.utility import *
+from pycontrol_mcu.utility import *
 from devices import *
 from pyb import LED
 

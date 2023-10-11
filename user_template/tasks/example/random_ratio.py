@@ -2,7 +2,7 @@
 # pokes the left poke, a reward becomes available with probability 1/ratio
 # at the right poke.
 
-from pyControl.utility import *
+from pycontrol_mcu.utility import *
 import hardware_definition as hw
 
 # States and events.
