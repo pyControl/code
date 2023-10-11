@@ -88,7 +88,7 @@ class Pycboard(Pyboard):
         if not Pycboard.device_class2file:  # Scan devices folder to find files where device classes are defined.
             self.make_device_class2file_map()
         try:
-            super().__init__(self.serial_port, baudrate=115200)
+            super().__init__(self.serial_port, baudrate=baudrate)
             self.status["serial"] = True
             self.reset()
             self.unique_ID = eval(self.eval("pyb.unique_id()").decode())
