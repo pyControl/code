@@ -8,7 +8,7 @@ from array import array
 from .pyboard import Pyboard, PyboardError
 from .data_logger import Data_logger
 from .message import MsgType, Datatuple
-from gui.settings import VERSION, dirs, get_setting
+from gui.settings import VERSION, ROOT, user_folder
 from dataclasses import dataclass
 
 # ----------------------------------------------------------------------------------------
@@ -302,8 +302,8 @@ class Pycboard(Pyboard):
         """Copy the pyControl framework folder to the board, reset the devices folder
         on pyboard by removing all devices files, and rebuild the device_class2file dict."""
         self.print("\nTransferring pyControl framework to pyboard.", end="")
-        self.transfer_folder(dirs["framework"], file_type="py", show_progress=True)
-        self.transfer_folder(dirs["devices"], files=["__init__.py"], remove_files=True, show_progress=True)
+        self.transfer_folder(os.path.join(ROOT, "pycontrol_mcu"), file_type="py", show_progress=True)
+        self.transfer_folder(user_folder("devices"), files=["__init__.py"], remove_files=True, show_progress=True)
         self.remove_file("hardware_definition.py")
         self.make_device_class2file_map()
         error_message = self.reset()
@@ -341,12 +341,14 @@ class Pycboard(Pyboard):
             if device_file not in self.device_files_on_pyboard.keys():
                 files_to_transfer.append(device_file)
             else:
-                file_hash = _djb2_file(os.path.join(dirs["devices"], device_file))
+                file_hash = _djb2_file(os.path.join(user_folder("devices"), device_file))
                 if file_hash != self.device_files_on_pyboard[device_file]:  # File has changed.
                     files_to_transfer.append(device_file)
         if files_to_transfer:
             self.print(f"\nTransfering device driver files {files_to_transfer} to pyboard", end="")
-            self.transfer_folder(dirs["devices"], files=files_to_transfer, remove_files=False, show_progress=True)
+            self.transfer_folder(
+                user_folder("devices"), files=files_to_transfer, remove_files=False, show_progress=True
+            )
             self.reset()
             self.print(" OK")
 
@@ -362,7 +364,7 @@ class Pycboard(Pyboard):
         ]
         # Add any device driver files containing classes used in device_files.
         for device_file in device_files.copy():
-            device_files += self._get_used_device_files(os.path.join(dirs["devices"], device_file))
+            device_files += self._get_used_device_files(os.path.join(user_folder("devices"), device_file))
         device_files = list(set(device_files))  # Remove duplicates.
         return device_files
 
@@ -370,9 +372,9 @@ class Pycboard(Pyboard):
         """Make dict mapping device class names to file in devices folder containing
         the class definition."""
         Pycboard.device_class2file = {}  # Dict {device_classname: device_filename}
-        all_device_files = [f for f in os.listdir(dirs["devices"]) if f.endswith(".py")]
+        all_device_files = [f for f in os.listdir(user_folder("devices")) if f.endswith(".py")]
         for device_file in all_device_files:
-            with open(os.path.join(dirs["devices"], device_file), "r") as f:
+            with open(os.path.join(user_folder("devices"), device_file), "r") as f:
                 file_content = f.read()
             pattern = "[\n\r]class\s*(?P<dcname>\w+)\s*"
             list(set([d_name for d_name in re.findall(pattern, file_content)]))
@@ -385,7 +387,7 @@ class Pycboard(Pyboard):
         to board and setup state machine on pyboard."""
         self.reset()
         if sm_dir is None:
-            sm_dir = get_setting("folders", "tasks")
+            sm_dir = user_folder("tasks")
         sm_path = os.path.join(sm_dir, sm_name + ".py")
         if uploaded:
             self.print("\nResetting task. ", end="")

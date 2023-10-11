@@ -5,7 +5,7 @@ from pathlib import Path
 from dataclasses import dataclass, asdict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
-from gui.settings import dirs, get_setting
+from gui.settings import get_setting, user_folder
 from gui.dialogs import invalid_run_experiment_dialog, invalid_save_experiment_dialog, unrun_subjects_dialog
 from gui.utility import (
     TableCheckbox,
@@ -170,11 +170,11 @@ class Configure_experiment_tab(QtWidgets.QWidget):
     def refresh(self):
         """Called periodically when not running to update available task, ports, experiments."""
         if self.GUI_main.available_tasks_changed:
-            self.task_select.update_menu(get_setting("folders", "tasks"))
-            self.hardware_test_select.update_menu(get_setting("folders", "tasks"))
+            self.task_select.update_menu(user_folder("tasks"))
+            self.hardware_test_select.update_menu(user_folder("tasks"))
             self.GUI_main.available_tasks_changed = False
         if self.GUI_main.available_experiments_changed:
-            self.experiment_select.update_menu(dirs["experiments"])
+            self.experiment_select.update_menu(user_folder("experiments"))
             self.GUI_main.available_experiments_changed = False
         if self.GUI_main.setups_tab.available_setups_changed:
             self.subjects_table.all_setups = set(self.GUI_main.setups_tab.setup_names)
@@ -212,20 +212,22 @@ class Configure_experiment_tab(QtWidgets.QWidget):
 
     def create_new_experiment(self, from_existing=False):
         """Clear experiment configuration."""
-        savefilename = QtWidgets.QFileDialog.getSaveFileName(self, "", dirs["experiments"], ("JSON files (*.json)"))[0]
+        savefilename = QtWidgets.QFileDialog.getSaveFileName(
+            self, "", user_folder("experiments"), ("JSON files (*.json)")
+        )[0]
         if savefilename != "":
             if not from_existing:
                 self.reset()
             new_path = Path(savefilename)
-            if str(new_path).find(dirs["experiments"]) < 0:
+            if str(new_path).find(user_folder("experiments")) < 0:
                 QtWidgets.QMessageBox.warning(
                     self,
                     "Unable to create experiment",
-                    "New experiment files must be inside the experiments folder",
+                    f'New experiment files must be inside the "{user_folder("experiments")}" folder',
                     QtWidgets.QMessageBox.StandardButton.Ok,
                 )
                 return
-            exp_name = str(new_path.parent / new_path.stem).split(dirs["experiments"])[1][1:]
+            exp_name = str(new_path.parent / new_path.stem).split(user_folder("experiments"))[1][1:]
             self.name_text = exp_name
             self.experiment_select.setText(exp_name)
             new_data_dir = Path(get_setting("folders", "data")) / exp_name
@@ -239,7 +241,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
 
     def delete_experiment(self):
         """Delete an experiment file after dialog to confirm deletion."""
-        exp_path = os.path.join(dirs["experiments"], self.name_text + ".json")
+        exp_path = os.path.join(user_folder("experiments"), self.name_text + ".json")
         if os.path.exists(exp_path):
             reply = QtWidgets.QMessageBox.question(
                 self,
@@ -275,7 +277,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         # saved in the experiments folder as .json file.
         experiment = self.get_exp_config()
         file_name = self.name_text + ".json"
-        exp_path = os.path.join(dirs["experiments"], file_name)
+        exp_path = os.path.join(user_folder("experiments"), file_name)
         with open(exp_path, "w", encoding="utf-8") as exp_file:
             exp_file.write(json.dumps(asdict(experiment), sort_keys=True, indent=4))
         if not from_dialog:
@@ -286,7 +288,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
 
     def load_experiment(self, experiment_name):
         """Load experiment  .json file and set fields of experiment tab."""
-        exp_path = os.path.join(dirs["experiments"], experiment_name + ".json")
+        exp_path = os.path.join(user_folder("experiments"), experiment_name + ".json")
         self.name_text = experiment_name
         with open(exp_path, "r", encoding="utf-8") as exp_file:
             exp_dict = json.loads(exp_file.read())
@@ -367,7 +369,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
                     invalid_run_experiment_dialog(self, f"Invalid value '{v['value']}' for variable '{v['name']}'.")
                     return
         # Validate hw_variables
-        task_file = Path(get_setting("folders", "tasks"), experiment.task + ".py")
+        task_file = Path(user_folder("tasks"), experiment.task + ".py")
         task_hw_vars = get_task_hw_vars(task_file)
         if task_hw_vars:
             for setup_name in setups:
@@ -395,7 +397,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
             return True
         if self.saved_exp_config == self.get_exp_config():
             return True  # Experiment has not been edited.
-        exp_path = os.path.join(dirs["experiments"], self.name_text + ".json")
+        exp_path = os.path.join(user_folder("experiments"), self.name_text + ".json")
         dialog_text = None
         if not os.path.exists(exp_path):
             dialog_text = "Experiment not saved, save experiment?"
@@ -672,7 +674,7 @@ class VariablesTable(QtWidgets.QTableWidget):
         """Remove variables that are not defined in the new task."""
         pattern = "[\n\r\.]v\.(?P<vname>\w+)\s*\="
         try:
-            with open(os.path.join(get_setting("folders", "tasks"), task + ".py"), "r", encoding="utf-8") as file:
+            with open(os.path.join(user_folder("tasks"), task + ".py"), "r", encoding="utf-8") as file:
                 file_content = file.read()
         except FileNotFoundError:
             return

@@ -8,15 +8,22 @@ from pathlib import Path
 from serial.tools import list_ports
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
-from gui.settings import VERSION, dirs, get_setting
+from gui.settings import VERSION, get_user_directory, setup_user_dir, get_setting, user_folder
 from gui.run_task_tab import Run_task_tab
-from gui.dialogs import Board_config_dialog, Keyboard_shortcuts_dialog, Settings_dialog, Error_log_dialog
+from gui.dialogs import (
+    Board_config_dialog,
+    Keyboard_shortcuts_dialog,
+    Settings_dialog,
+    Error_log_dialog,
+    User_directory_not_found,
+)
 from gui.configure_experiment_tab import Configure_experiment_tab
 from gui.run_experiment_tab import Run_experiment_tab
 from gui.setups_tab import Setups_tab
 
 if os.name == "nt":  # Needed on windows to get taskbar icon to display correctly.
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("pyControl")
+
 
 # --------------------------------------------------------------------------------
 # GUI_main
@@ -29,6 +36,25 @@ class GUI_main(QtWidgets.QMainWindow):
         self.setWindowTitle(f"pyControl v{VERSION}")
         self.setGeometry(10, 30, 700, 800)  # Left, top, width, height.
 
+        user_dir = get_user_directory()
+
+        # Find or create user directory if it is missing or doesn't exist
+        if user_dir == "" or not (Path(user_dir).exists() and Path(user_dir).is_dir()):
+            self.user_folder_set = False
+            will_select_a_folder = User_directory_not_found(search_location=user_dir, parent=self).exec()
+            if will_select_a_folder:
+                provided_user_dir = QtWidgets.QFileDialog.getExistingDirectory(
+                    self, "Select user folder", str(Path.home())
+                )
+                if provided_user_dir:
+                    setup_user_dir(provided_user_dir)
+                else:  # path was not selected
+                    return
+            else:  #
+                return
+
+        self.user_folder_set = True
+
         # Variables
         self.refresh_interval = 1000  # How often refresh method is called when not running (ms).
         self.available_tasks = None  # List of task file names in tasks folder.
@@ -37,7 +63,7 @@ class GUI_main(QtWidgets.QMainWindow):
         self.available_tasks_changed = False
         self.available_experiments_changed = False
         self.available_ports_changed = False
-        self.task_directory = get_setting("folders", "tasks")
+        self.task_directory = user_folder("tasks")
         self.data_dir_changed = False
         self.current_tab_ind = 0  # Which tab is currently selected.
         self.app = app
@@ -98,10 +124,10 @@ class GUI_main(QtWidgets.QMainWindow):
         ## --------Settings menu--------
         settings_menu = main_menu.addMenu("Settings")
         # Folder paths
-        settings_action = QtGui.QAction("&Edit settings", self)
-        settings_action.setShortcut("Ctrl+,")
-        settings_action.triggered.connect(self.settings_dialog.exec)
-        settings_menu.addAction(settings_action)
+        self.settings_action = QtGui.QAction("&Edit settings", self)
+        self.settings_action.setShortcut("Ctrl+,")
+        self.settings_action.triggered.connect(self.settings_dialog.exec)
+        settings_menu.addAction(self.settings_action)
         # ---------Help menu----------
         help_menu = main_menu.addMenu("Help")
         # Go to readthedocs
@@ -126,13 +152,14 @@ class GUI_main(QtWidgets.QMainWindow):
         help_menu.addAction(shortcuts_action)
 
         self.pcx2json()
+        self.add_missing_user_folders()
         self.show()
 
     def go_to_data(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(get_setting("folders", "data")))
 
     def go_to_tasks(self):
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(get_setting("folders", "tasks")))
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(user_folder("tasks")))
 
     def view_docs(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://pycontrol.readthedocs.io/en/latest/"))
@@ -171,9 +198,23 @@ class GUI_main(QtWidgets.QMainWindow):
 
     def pcx2json(self):
         """Converts legacy .pcx files to .json files"""
-        exp_dir = Path(dirs["experiments"])
+        exp_dir = Path(user_folder("experiments"))
         for f in exp_dir.glob("*.pcx"):
             f.rename(f.with_suffix(".json"))
+
+    def add_missing_user_folders(self):
+        required_folders = [
+            "api_classes",
+            "controls_dialogs",
+            "devices",
+            "experiments",
+            "hardware_definitions",
+            "tasks",
+        ]
+        for folder_name in required_folders:
+            expected_dir = Path(user_folder(folder_name))
+            if not (expected_dir.exists() and expected_dir.is_dir()):
+                expected_dir.mkdir()
 
     def refresh(self):
         """Called regularly when framework not running."""
@@ -186,7 +227,7 @@ class GUI_main(QtWidgets.QMainWindow):
         if self.available_tasks_changed:
             self.available_tasks = tasks
         # Scan experiments folder.
-        experiments = self.get_nested_file_list(dirs["experiments"], ".json")
+        experiments = self.get_nested_file_list(user_folder("experiments"), ".json")
         self.available_experiments_changed = experiments != self.available_experiments
         if self.available_experiments_changed:
             self.available_experiments = experiments
@@ -233,5 +274,6 @@ def launch_GUI():
     font.setPixelSize(get_setting("GUI", "ui_font_size"))
     app.setFont(font)
     gui_main = GUI_main(app)
-    sys.excepthook = gui_main.excepthook
-    sys.exit(app.exec())
+    if gui_main.user_folder_set:
+        sys.excepthook = gui_main.excepthook
+        sys.exit(app.exec())

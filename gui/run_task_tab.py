@@ -4,10 +4,8 @@ import importlib
 from datetime import datetime
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException, SerialTimeoutException
-
 from communication.pycboard import Pycboard, PyboardError, _djb2_file
-
-from gui.settings import get_setting
+from gui.settings import get_setting, user_folder
 from gui.dialogs import Controls_dialog
 from gui.custom_controls_dialog import Custom_controls_dialog, Custom_gui
 from gui.plotting import Task_plot
@@ -214,7 +212,7 @@ class Run_task_tab(QtWidgets.QWidget):
                 self.board_select.addItems(["No setups found"])
                 self.connect_button.setEnabled(False)
         if self.GUI_main.available_tasks_changed:
-            self.task_select.update_menu(get_setting("folders", "tasks"))
+            self.task_select.update_menu(user_folder("tasks"))
         if self.GUI_main.data_dir_changed and not self.custom_dir:
             self.data_dir_text.setText(get_setting("folders", "data"))
         if self.task:
@@ -327,7 +325,7 @@ class Run_task_tab(QtWidgets.QWidget):
                     self.controls_dialog = potential_dialog
                     self.using_json_gui = True
                 elif potential_dialog.custom_gui == Custom_gui.PYFILE:
-                    py_gui_file = importlib.import_module(f"config.user_controls_dialogs.{custom_variables_name}")
+                    py_gui_file = importlib.import_module(f"user.controls_dialogs.{custom_variables_name}")
                     importlib.reload(py_gui_file)
                     self.controls_dialog = py_gui_file.Custom_controls_dialog(self, self.board)
             self.controls_button.clicked.connect(self.controls_dialog.exec)
@@ -417,6 +415,7 @@ class Run_task_tab(QtWidgets.QWidget):
         self.print_to_log(f"\nRun started at: {datetime.now().strftime('%Y/%m/%d %H:%M:%S')}\n")
         self.plot_update_timer.start(get_setting("plotting", "update_interval"))
         self.GUI_main.refresh_timer.stop()
+        self.GUI_main.settings_action.setEnabled(False)  # settings shouldn't be opened when task is running
         self.GUI_main.tab_widget.setTabEnabled(1, False)  # Disable experiments tab.
         self.GUI_main.tab_widget.setTabEnabled(2, False)  # Disable setups tab.
 
@@ -444,6 +443,7 @@ class Run_task_tab(QtWidgets.QWidget):
         self.stop_button.setEnabled(False)
         if self.using_json_gui:
             self.controls_dialog.edit_action.setEnabled(True)
+        self.GUI_main.settings_action.setEnabled(True)  # settings shouldn't be opened when task is running
         self.GUI_main.tab_widget.setTabEnabled(1, True)  # Enable setups tab.
         self.GUI_main.tab_widget.setTabEnabled(2, True)  # Enable setups tab.
 

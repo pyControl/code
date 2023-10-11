@@ -4,6 +4,7 @@ import re
 import os
 from pathlib import Path
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
+from gui.settings import user_folder
 
 
 class Hardware_variables_editor(QtWidgets.QDialog):
@@ -55,7 +56,8 @@ class Hardware_variables_editor(QtWidgets.QDialog):
     def get_hw_vars_from_task_files(self):
         # scan all task files and gather any v.hw_ variables
         hw_vars_from_all_tasks = set()
-        for dirName, _, fileList in os.walk("tasks"):
+        tasks_folder = user_folder("tasks")
+        for dirName, _, fileList in os.walk(tasks_folder):
             # Loop through all the files in the current directory
             for file_name in fileList:
                 if file_name.endswith(".py"):

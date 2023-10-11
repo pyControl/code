@@ -2,8 +2,9 @@ import os
 import sys
 import json
 import logging
+from pathlib import Path
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from gui.settings import dirs, get_setting, default_user_settings
+from gui.settings import get_setting, user_folder, setup_user_dir, get_user_directory
 from gui.utility import variable_constants
 
 # Board_config_dialog -------------------------------------------------
@@ -63,7 +64,7 @@ class Board_config_dialog(QtWidgets.QDialog):
         hwd_path = QtWidgets.QFileDialog.getOpenFileName(
             self,
             "Select hardware definition:",
-            dirs["hardware_definitions"],
+            user_folder("hardware_definitions"),
             filter="*.py",
         )[0]
         if hwd_path:
@@ -378,12 +379,15 @@ class Settings_dialog(QtWidgets.QDialog):
 
     def __init__(self, parent):
         super(QtWidgets.QDialog, self).__init__(parent)
-        self.setWindowTitle("Settings")
+        self.setWindowTitle(f'Settings for user folder: "{get_user_directory()}"')
         self.num_edited_setters = 0
 
         settings_grid_layout = QtWidgets.QGridLayout(self)
         paths_box = QtWidgets.QGroupBox("Paths")
         paths_layout = QtWidgets.QVBoxLayout()
+
+        change_user_folder_btn = QtWidgets.QPushButton("Change user folder")
+        change_user_folder_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
 
         self.discard_changes_btn = QtWidgets.QPushButton("Discard changes")
         self.discard_changes_btn.setEnabled(False)
@@ -391,16 +395,14 @@ class Settings_dialog(QtWidgets.QDialog):
         self.discard_changes_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         self.discard_changes_btn.clicked.connect(self.reset)
 
-        self.save_settings_btn = QtWidgets.QPushButton("Save settings")
+        self.save_settings_btn = QtWidgets.QPushButton("Save settings and restart")
         self.save_settings_btn.setEnabled(False)
         self.save_settings_btn.setIcon(QtGui.QIcon("gui/icons/save.svg"))
         self.save_settings_btn.clicked.connect(self.saveChanges)
 
         # Instantiate setters
-        self.tasks_setter = Path_setter(self, "Tasks", ("folders", "tasks"))
         self.data_setter = Path_setter(self, "Data", ("folders", "data"))
-        self.path_setters = [self.tasks_setter, self.data_setter]
-        paths_layout.addLayout(self.tasks_setter)
+        self.path_setters = [self.data_setter]
         paths_layout.addLayout(self.data_setter)
         paths_box.setLayout(paths_layout)
 
@@ -414,19 +416,19 @@ class Settings_dialog(QtWidgets.QDialog):
         )
         self.event_history_len = Spin_setter(
             self,
-            "Event history length*",
+            "Event history length",
             ("plotting", "event_history_len"),
             " events",
         )
         self.state_history_len = Spin_setter(
             self,
-            "State history length*",
+            "State history length",
             ("plotting", "state_history_len"),
             " states",
         )
         self.analog_history_dur = Spin_setter(
             self,
-            "Analog history duration*",
+            "Analog history duration",
             ("plotting", "analog_history_dur"),
             " s",
         )
@@ -445,8 +447,8 @@ class Settings_dialog(QtWidgets.QDialog):
 
         gui_box = QtWidgets.QGroupBox("GUI")
         gui_layout = QtWidgets.QGridLayout()
-        self.ui_font_size = Spin_setter(self, "UI font size*", ("GUI", "ui_font_size"), " pt")
-        self.log_font_size = Spin_setter(self, "Log font size*", ("GUI", "log_font_size"), " pt")
+        self.ui_font_size = Spin_setter(self, "UI font size", ("GUI", "ui_font_size"), " pt")
+        self.log_font_size = Spin_setter(self, "Log font size", ("GUI", "log_font_size"), " pt")
 
         self.gui_spins = [self.ui_font_size, self.log_font_size]
         for i, variable in enumerate(self.gui_spins):
@@ -459,11 +461,8 @@ class Settings_dialog(QtWidgets.QDialog):
         self.fill_with_defaults_btn.clicked.connect(self.fill_with_defaults)
         self.fill_with_defaults_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
 
-        restart_app_label = QtWidgets.QLabel("*Requires pyControl restart")
-        restart_app_label.setStyleSheet("font-style:italic;")
-
         btns_layout = QtWidgets.QHBoxLayout()
-        btns_layout.addWidget(restart_app_label)
+        btns_layout.addWidget(change_user_folder_btn)
         btns_layout.addStretch(1)
         btns_layout.addWidget(self.fill_with_defaults_btn)
         btns_layout.addWidget(self.discard_changes_btn)
@@ -480,6 +479,7 @@ class Settings_dialog(QtWidgets.QDialog):
         self.close_shortcut.activated.connect(self.close)
         self.save_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
         self.save_shortcut.activated.connect(self.saveChanges)
+        change_user_folder_btn.clicked.connect(self.change_user_folder)
 
     def reset(self):
         """
@@ -504,7 +504,7 @@ class Settings_dialog(QtWidgets.QDialog):
             top_key, sub_key = variable.key
             user_setting_dict_new[top_key][sub_key] = variable.get()
         # Store newly edited paths.
-        json_path = os.path.join(dirs["config"], "user_settings.json")
+        json_path = os.path.join(get_user_directory(), "user_settings.json")
         if os.path.exists(json_path):
             with open(json_path, "r", encoding="utf-8") as f:
                 user_settings = json.loads(f.read())
@@ -514,9 +514,9 @@ class Settings_dialog(QtWidgets.QDialog):
         with open(json_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(user_settings, indent=4))
         self.parent().data_dir_changed = True
-        self.parent().task_directory = get_setting("folders", "tasks")
+        self.parent().task_directory = user_folder("tasks")
 
-        self.reset()
+        os.execl(sys.executable, sys.executable, *sys.argv)  # restart pyControl
 
     def showEvent(self, event):
         self.reset()
@@ -531,6 +531,12 @@ class Settings_dialog(QtWidgets.QDialog):
             )
             if reply == QtWidgets.QMessageBox.StandardButton.Cancel:
                 event.ignore()
+
+    def change_user_folder(self):
+        user_dir_path = QtWidgets.QFileDialog.getExistingDirectory(self, "Select user folder", str(Path.home()))
+        if user_dir_path:  # path was selected
+            setup_user_dir(user_dir_path)
+            os.execl(sys.executable, sys.executable, *sys.argv)  # restart pyControl
 
 
 class Path_setter(QtWidgets.QHBoxLayout):
@@ -650,7 +656,7 @@ class Spin_setter:
 
     def fill_with_default(self):
         top_key, sub_key = self.key
-        self.spn.setValue(default_user_settings[top_key][sub_key])
+        self.spn.setValue(get_setting(top_key, sub_key, want_default=True))
 
     def reset(self):
         self.start_value = get_setting(*self.key)
@@ -699,3 +705,21 @@ class Error_log_dialog(QtWidgets.QDialog):
             logging.shutdown()
             os.remove(r"ErrorLog.txt")
             self.close()
+
+
+class User_directory_not_found(QtWidgets.QDialog):
+    def __init__(self, search_location, parent):
+        super(QtWidgets.QDialog, self).__init__(parent)
+        self.setWindowTitle("User directory required")
+
+        message = ""
+        if search_location:
+            message = f"Could not find user directory at:<br><b>{search_location}</b><br><br>"
+        message += "Create a new folder or select an existing a folder"
+
+        ok_btn = QtWidgets.QPushButton("OK")
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(QtWidgets.QLabel(message))
+        layout.addWidget(ok_btn)
+
+        ok_btn.clicked.connect(self.accept)

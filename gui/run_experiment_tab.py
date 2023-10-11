@@ -9,7 +9,7 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException
 
 from communication.pycboard import Pycboard, PyboardError
-from gui.settings import get_setting
+from gui.settings import get_setting, user_folder
 from gui.plotting import Experiment_plot
 from gui.dialogs import Controls_dialog, Summary_variables_dialog
 from gui.utility import variable_constants, TaskInfo, parallel_call
@@ -71,6 +71,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         """Called when an experiment is loaded."""
         # Setup tabs.
         self.experiment = experiment
+        self.GUI_main.settings_action.setEnabled(False)  # settings shouldn't be opened when experiment is running
         self.GUI_main.tab_widget.setTabEnabled(0, False)  # Disable run task tab.
         self.GUI_main.tab_widget.setTabEnabled(2, False)  # Disable setups tab.
         self.GUI_main.experiments_tab.setCurrentWidget(self)
@@ -142,7 +143,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         if self.setup_has_failed():
             return
         # Copy task file to experiments data folder.
-        self.subjectboxes[0].board.data_logger.copy_task_file(self.experiment.data_dir, get_setting("folders", "tasks"))
+        self.subjectboxes[0].board.data_logger.copy_task_file(self.experiment.data_dir, user_folder("tasks"))
         # Configure GUI ready to run.
         for box in self.subjectboxes:
             box.make_variables_dialog()  # Don't use parallel_call to avoid 'parent in a different thread error'.
@@ -226,6 +227,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
 
     def close_experiment(self):
         """Close the Run_experiment_tab and return to Setup_experiment_tab."""
+        self.GUI_main.settings_action.setEnabled(True)
         self.GUI_main.tab_widget.setTabEnabled(0, True)  # Enable run task tab.
         self.GUI_main.tab_widget.setTabEnabled(2, True)  # Enable setups tab.
         self.GUI_main.experiments_tab.setCurrentWidget(self.GUI_main.configure_experiment_tab)

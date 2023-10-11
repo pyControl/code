@@ -1,12 +1,13 @@
 import os
 import json
 import re
+from pathlib import Path
 from enum import Enum
 from typing import Union
 from copy import deepcopy
 from dataclasses import dataclass, asdict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from gui.settings import dirs, get_setting
+from gui.settings import user_folder
 from gui.utility import variable_constants, null_resize, cbox_set_item, cbox_update_options
 
 
@@ -384,7 +385,7 @@ class Custom_controls_dialog(QtWidgets.QDialog):
     def get_custom_gui_data(self, is_experiment):
         custom_variables_dict = None
         try:  # Try to import and instantiate the user custom variable dialog
-            json_file = os.path.join(dirs["config"], "user_controls_dialogs", f"{self.gui_name}.json")
+            json_file = os.path.join(user_folder("controls_dialogs"), f"{self.gui_name}.json")
             with open(json_file, "r") as j:
                 custom_variables_dict = json.loads(j.read())
             # update json content if old version
@@ -392,7 +393,7 @@ class Custom_controls_dialog(QtWidgets.QDialog):
                 with open(json_file, "w", encoding="utf-8") as updated_json:
                     json.dump(custom_variables_dict, updated_json, indent=4)
         except FileNotFoundError:  # couldn't find the json data
-            py_file = os.path.join(dirs["config"], "user_controls_dialogs", f"{self.gui_name}.py")
+            py_file = os.path.join(user_folder("controls_dialogs"), f"{self.gui_name}.py")
             if os.path.exists(py_file):
                 self.custom_gui = Custom_gui.PYFILE
             else:
@@ -607,13 +608,7 @@ class Controls_dialog_editor(QtWidgets.QDialog):
             else:  # there was an error
                 return
 
-        user_guis_folder = os.path.join(dirs["config"], "user_controls_dialogs")
-        try:
-            os.mkdir(user_guis_folder)
-            print(f'"user_controls_dialogs" folder not found, therefore creating new directory: {user_guis_folder}')
-        except FileExistsError:
-            pass
-        savename = os.path.join(user_guis_folder, f"{self.parent_controls_dialog.gui_name}.json")
+        savename = os.path.join(user_folder("controls_dialogs"), f"{self.parent_controls_dialog.gui_name}.json")
         with open(savename, "w", encoding="utf-8") as generated_data_file:
             json.dump(gui_dict, generated_data_file, indent=4)
         self.accept()
@@ -648,7 +643,7 @@ class Controls_dialog_editor(QtWidgets.QDialog):
         task = self.parent_controls_dialog.parent_tab.task
         pattern = "[\n\r]v\.(?P<vname>\w+)\s*\="
         try:
-            with open(os.path.join(get_setting("folders", "tasks"), task + ".py"), "r", encoding="utf-8") as file:
+            with open(os.path.join(user_folder("tasks"), task + ".py"), "r", encoding="utf-8") as file:
                 file_content = file.read()
         except FileNotFoundError:
             return
