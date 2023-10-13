@@ -525,7 +525,9 @@ class Settings_dialog(QtWidgets.QDialog):
         self.parent().data_dir_changed = True
         self.parent().task_directory = user_folder("tasks")
 
-        os.execl(sys.executable, sys.executable, *sys.argv)  # restart pyControl
+        self.save_settings_btn.setEnabled(False)
+        QtCore.QCoreApplication.quit()
+        QtCore.QProcess.startDetached(sys.executable, sys.argv)
 
     def showEvent(self, event):
         self.reset()
