@@ -2,9 +2,8 @@ import os
 import sys
 import json
 import logging
-from pathlib import Path
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from gui.settings import get_setting, user_folder, setup_user_dir, get_user_directory
+from gui.settings import get_setting, user_folder, ROOT
 from gui.utility import variable_constants
 
 # Board_config_dialog -------------------------------------------------
@@ -379,15 +378,12 @@ class Settings_dialog(QtWidgets.QDialog):
 
     def __init__(self, parent):
         super(QtWidgets.QDialog, self).__init__(parent)
-        self.setWindowTitle(f'Settings for user folder: "{get_user_directory()}"')
+        self.setWindowTitle("Settings")
         self.num_edited_setters = 0
 
         settings_grid_layout = QtWidgets.QGridLayout(self)
-        paths_box = QtWidgets.QGroupBox("Paths")
-        paths_layout = QtWidgets.QVBoxLayout()
-
-        change_user_folder_btn = QtWidgets.QPushButton("Change user folder")
-        change_user_folder_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+        paths_box = QtWidgets.QGroupBox("Folder paths")
+        paths_layout = QtWidgets.QGridLayout()
 
         self.discard_changes_btn = QtWidgets.QPushButton("Discard changes")
         self.discard_changes_btn.setEnabled(False)
@@ -401,9 +397,24 @@ class Settings_dialog(QtWidgets.QDialog):
         self.save_settings_btn.clicked.connect(self.saveChanges)
 
         # Instantiate setters
+        self.api_classes_setter = Path_setter(self, "Api classes", ("folders", "api_classes"))
+        self.controls_dialogs_setter = Path_setter(self, "Controls dialogs", ("folders", "controls_dialogs"))
+        self.devices_setter = Path_setter(self, "Devices", ("folders", "devices"))
         self.data_setter = Path_setter(self, "Data", ("folders", "data"))
-        self.path_setters = [self.data_setter]
-        paths_layout.addLayout(self.data_setter)
+        self.experiments_setter = Path_setter(self, "Experiments", ("folders", "experiments"))
+        self.hardware_definition_setter = Path_setter(self, "Hardware definitions", ("folders", "hardware_definitions"))
+        self.task_settter = Path_setter(self, "Tasks", ("folders", "tasks"))
+        self.path_setters = [
+            self.api_classes_setter,
+            self.controls_dialogs_setter,
+            self.devices_setter,
+            self.data_setter,
+            self.experiments_setter,
+            self.hardware_definition_setter,
+            self.task_settter,
+        ]
+        for i, setter in enumerate(self.path_setters):
+            setter.add_to_grid(paths_layout, i)
         paths_box.setLayout(paths_layout)
 
         plotting_box = QtWidgets.QGroupBox("Plotting")
@@ -462,7 +473,6 @@ class Settings_dialog(QtWidgets.QDialog):
         self.fill_with_defaults_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
 
         btns_layout = QtWidgets.QHBoxLayout()
-        btns_layout.addWidget(change_user_folder_btn)
         btns_layout.addStretch(1)
         btns_layout.addWidget(self.fill_with_defaults_btn)
         btns_layout.addWidget(self.discard_changes_btn)
@@ -479,7 +489,6 @@ class Settings_dialog(QtWidgets.QDialog):
         self.close_shortcut.activated.connect(self.close)
         self.save_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
         self.save_shortcut.activated.connect(self.saveChanges)
-        change_user_folder_btn.clicked.connect(self.change_user_folder)
 
     def reset(self):
         """
@@ -504,7 +513,7 @@ class Settings_dialog(QtWidgets.QDialog):
             top_key, sub_key = variable.key
             user_setting_dict_new[top_key][sub_key] = variable.get()
         # Store newly edited paths.
-        json_path = os.path.join(get_user_directory(), "user_settings.json")
+        json_path = os.path.join(ROOT, "user_assets", "user_settings.json")
         if os.path.exists(json_path):
             with open(json_path, "r", encoding="utf-8") as f:
                 user_settings = json.loads(f.read())
@@ -532,12 +541,6 @@ class Settings_dialog(QtWidgets.QDialog):
             if reply == QtWidgets.QMessageBox.StandardButton.Cancel:
                 event.ignore()
 
-    def change_user_folder(self):
-        user_dir_path = QtWidgets.QFileDialog.getExistingDirectory(self, "Select user folder", str(Path.home()))
-        if user_dir_path:  # path was selected
-            setup_user_dir(user_dir_path)
-            os.execl(sys.executable, sys.executable, *sys.argv)  # restart pyControl
-
 
 class Path_setter(QtWidgets.QHBoxLayout):
     """Dialog for editing folder paths."""
@@ -552,7 +555,7 @@ class Path_setter(QtWidgets.QHBoxLayout):
         Vcenter = QtCore.Qt.AlignmentFlag.AlignVCenter
         right = QtCore.Qt.AlignmentFlag.AlignRight
         self.path = ""
-        self.name_label = QtWidgets.QLabel(label + " folder")
+        self.name_label = QtWidgets.QLabel(label)
         self.name_label.setAlignment(right | Vcenter)
         self.name_label.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         self.path_text = QtWidgets.QLineEdit()
@@ -568,6 +571,11 @@ class Path_setter(QtWidgets.QHBoxLayout):
         self.addWidget(self.path_text)
         self.addWidget(self.change_button)
         self.setContentsMargins(0, 0, 0, 0)
+
+    def add_to_grid(self, groupbox_grid, row):
+        groupbox_grid.addWidget(self.name_label, row, 0)
+        groupbox_grid.addWidget(self.path_text, row, 1)
+        groupbox_grid.addWidget(self.change_button, row, 2)
 
     def select_path(self):
         new_path = QtWidgets.QFileDialog.getExistingDirectory(
@@ -705,21 +713,3 @@ class Error_log_dialog(QtWidgets.QDialog):
             logging.shutdown()
             os.remove(r"ErrorLog.txt")
             self.close()
-
-
-class User_directory_not_found(QtWidgets.QDialog):
-    def __init__(self, search_location, parent):
-        super(QtWidgets.QDialog, self).__init__(parent)
-        self.setWindowTitle("User directory required")
-
-        message = ""
-        if search_location:
-            message = f"Could not find user directory at:<br><b>{search_location}</b><br><br>"
-        message += "Create a new folder or select an existing a folder"
-
-        ok_btn = QtWidgets.QPushButton("OK")
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(QtWidgets.QLabel(message))
-        layout.addWidget(ok_btn)
-
-        ok_btn.clicked.connect(self.accept)

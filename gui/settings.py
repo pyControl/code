@@ -1,28 +1,8 @@
 import os
 import json
-import shutil
-from pathlib import Path
-from pyqtgraph.Qt import QtCore
 
 VERSION = "2.0rc1"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Top level pyControl folder.
-settings = QtCore.QSettings("pyControl", "pyControl-app")
-
-
-def setup_user_dir(new_path):
-    settings.setValue("user_directory_path", new_path)
-    folders = os.listdir(new_path)
-    if len(folders) == 0:  # New user directory, fill with devices and examples
-        for folder in ["api_classes", "controls_dialogs", "devices", "hardware_definitions", "tasks"]:
-            shutil.copytree(
-                Path(ROOT, "user_assets", folder), Path(new_path, folder)
-            )  # duplicate assets at new destination
-        Path(new_path, "data").mkdir()
-        Path(new_path, "experiments").mkdir()
-
-
-def get_user_directory():
-    return settings.value("user_directory_path", None, type=str)
 
 
 def get_setting(setting_type, setting_name, want_default=False):
@@ -33,7 +13,13 @@ def get_setting(setting_type, setting_name, want_default=False):
 
     default_user_settings = {
         "folders": {
-            "data": os.path.join(get_user_directory(), "data"),
+            "api_classes": os.path.join(ROOT, "user_assets", "api_classes"),
+            "controls_dialogs": os.path.join(ROOT, "user_assets", "controls_dialogs"),
+            "devices": os.path.join(ROOT, "user_assets", "devices"),
+            "experiments": os.path.join(ROOT, "user_assets", "experiments"),
+            "data": os.path.join(ROOT, "user_assets", "data"),
+            "hardware_definitions": os.path.join(ROOT, "user_assets", "hardware_definitons"),
+            "tasks": os.path.join(ROOT, "user_assets", "tasks"),
         },
         "plotting": {
             "update_interval": 10,
@@ -47,7 +33,7 @@ def get_setting(setting_type, setting_name, want_default=False):
         },
     }
 
-    json_path = os.path.join(get_user_directory(), "user_settings.json")
+    json_path = os.path.join(ROOT, "user_assets", "user_settings.json")
     if os.path.exists(json_path) and not want_default:  # user has a user_settings.json
         with open(json_path, "r", encoding="utf-8") as f:
             custom_settings = json.loads(f.read())
@@ -60,4 +46,4 @@ def get_setting(setting_type, setting_name, want_default=False):
 
 
 def user_folder(folder_name):
-    return os.path.join(get_user_directory(), folder_name)
+    return get_setting("folders", folder_name)

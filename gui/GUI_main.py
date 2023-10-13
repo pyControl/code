@@ -8,14 +8,13 @@ from pathlib import Path
 from serial.tools import list_ports
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
-from gui.settings import VERSION, get_user_directory, setup_user_dir, get_setting, user_folder
+from gui.settings import VERSION, get_setting, user_folder
 from gui.run_task_tab import Run_task_tab
 from gui.dialogs import (
     Board_config_dialog,
     Keyboard_shortcuts_dialog,
     Settings_dialog,
     Error_log_dialog,
-    User_directory_not_found,
 )
 from gui.configure_experiment_tab import Configure_experiment_tab
 from gui.run_experiment_tab import Run_experiment_tab
@@ -35,25 +34,6 @@ class GUI_main(QtWidgets.QMainWindow):
         super().__init__()
         self.setWindowTitle(f"pyControl v{VERSION}")
         self.setGeometry(10, 30, 700, 800)  # Left, top, width, height.
-
-        user_dir = get_user_directory()
-
-        # Find or create user directory if it is missing or doesn't exist
-        if user_dir == "" or not (Path(user_dir).exists() and Path(user_dir).is_dir()):
-            self.user_folder_set = False
-            will_select_a_folder = User_directory_not_found(search_location=user_dir, parent=self).exec()
-            if will_select_a_folder:
-                provided_user_dir = QtWidgets.QFileDialog.getExistingDirectory(
-                    self, "Select user folder", str(Path.home())
-                )
-                if provided_user_dir:
-                    setup_user_dir(provided_user_dir)
-                else:  # path was not selected
-                    return
-            else:  #
-                return
-
-        self.user_folder_set = True
 
         # Variables
         self.refresh_interval = 1000  # How often refresh method is called when not running (ms).
@@ -152,7 +132,6 @@ class GUI_main(QtWidgets.QMainWindow):
         help_menu.addAction(shortcuts_action)
 
         self.pcx2json()
-        self.add_missing_user_folders()
         self.show()
 
     def go_to_data(self):
@@ -201,20 +180,6 @@ class GUI_main(QtWidgets.QMainWindow):
         exp_dir = Path(user_folder("experiments"))
         for f in exp_dir.glob("*.pcx"):
             f.rename(f.with_suffix(".json"))
-
-    def add_missing_user_folders(self):
-        required_folders = [
-            "api_classes",
-            "controls_dialogs",
-            "devices",
-            "experiments",
-            "hardware_definitions",
-            "tasks",
-        ]
-        for folder_name in required_folders:
-            expected_dir = Path(user_folder(folder_name))
-            if not (expected_dir.exists() and expected_dir.is_dir()):
-                expected_dir.mkdir()
 
     def refresh(self):
         """Called regularly when framework not running."""
@@ -274,6 +239,5 @@ def launch_GUI():
     font.setPixelSize(get_setting("GUI", "ui_font_size"))
     app.setFont(font)
     gui_main = GUI_main(app)
-    if gui_main.user_folder_set:
-        sys.excepthook = gui_main.excepthook
-        sys.exit(app.exec())
+    sys.excepthook = gui_main.excepthook
+    sys.exit(app.exec())
