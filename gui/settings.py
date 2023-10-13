@@ -15,9 +15,9 @@ def get_setting(setting_type, setting_name, want_default=False):
         "folders": {
             "api_classes": os.path.join(ROOT, "user", "api_classes"),
             "controls_dialogs": os.path.join(ROOT, "user", "controls_dialogs"),
+            "data": os.path.join(ROOT, "user", "data"),
             "devices": os.path.join(ROOT, "user", "devices"),
             "experiments": os.path.join(ROOT, "user", "experiments"),
-            "data": os.path.join(ROOT, "user", "data"),
             "hardware_definitions": os.path.join(ROOT, "user", "hardware_definitons"),
             "tasks": os.path.join(ROOT, "user", "tasks"),
         },

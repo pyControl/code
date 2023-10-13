@@ -399,16 +399,16 @@ class Settings_dialog(QtWidgets.QDialog):
         # Instantiate setters
         self.api_classes_setter = Path_setter(self, "Api classes", ("folders", "api_classes"))
         self.controls_dialogs_setter = Path_setter(self, "Controls dialogs", ("folders", "controls_dialogs"))
-        self.devices_setter = Path_setter(self, "Devices", ("folders", "devices"))
         self.data_setter = Path_setter(self, "Data", ("folders", "data"))
+        self.devices_setter = Path_setter(self, "Devices", ("folders", "devices"))
         self.experiments_setter = Path_setter(self, "Experiments", ("folders", "experiments"))
         self.hardware_definition_setter = Path_setter(self, "Hardware definitions", ("folders", "hardware_definitions"))
         self.task_settter = Path_setter(self, "Tasks", ("folders", "tasks"))
         self.path_setters = [
             self.api_classes_setter,
             self.controls_dialogs_setter,
-            self.devices_setter,
             self.data_setter,
+            self.devices_setter,
             self.experiments_setter,
             self.hardware_definition_setter,
             self.task_settter,
