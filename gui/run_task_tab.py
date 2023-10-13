@@ -353,7 +353,7 @@ class Run_task_tab(QtWidgets.QWidget):
         API_name = self.board.sm_info.variables["api_class"]
         # Try to import and instantiate the user API.
         try:
-            user_module_name = f"config.user_classes.{API_name}"
+            user_module_name = f"user.api_classes.{API_name}"
             user_module = importlib.import_module(user_module_name)
             importlib.reload(user_module)
         except ModuleNotFoundError:
