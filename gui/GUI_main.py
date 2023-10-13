@@ -10,12 +10,7 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 from gui.settings import VERSION, get_setting, user_folder
 from gui.run_task_tab import Run_task_tab
-from gui.dialogs import (
-    Board_config_dialog,
-    Keyboard_shortcuts_dialog,
-    Settings_dialog,
-    Error_log_dialog,
-)
+from gui.dialogs import Board_config_dialog, Keyboard_shortcuts_dialog, Settings_dialog, Error_log_dialog
 from gui.configure_experiment_tab import Configure_experiment_tab
 from gui.run_experiment_tab import Run_experiment_tab
 from gui.setups_tab import Setups_tab
