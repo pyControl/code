@@ -492,8 +492,8 @@ class Settings_dialog(QtWidgets.QDialog):
 
     def reset(self):
         """
-        Resets values to whatever is saved in user_settings.json,
-        or to default_user_settings if no user_settings.json exists
+        Resets values to whatever is saved in settings.json,
+        or to default_user_settings if no settings.json exists
         """
         for variable in self.path_setters + self.plotting_spins + self.gui_spins:
             variable.reset()
@@ -513,7 +513,7 @@ class Settings_dialog(QtWidgets.QDialog):
             top_key, sub_key = variable.key
             user_setting_dict_new[top_key][sub_key] = variable.get()
         # Store newly edited paths.
-        json_path = os.path.join(ROOT, "user_assets", "user_settings.json")
+        json_path = os.path.join(ROOT, "user", "settings.json")
         if os.path.exists(json_path):
             with open(json_path, "r", encoding="utf-8") as f:
                 user_settings = json.loads(f.read())

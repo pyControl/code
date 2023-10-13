@@ -185,7 +185,7 @@ class GUI_main(QtWidgets.QMainWindow):
         """Called regularly when framework not running."""
         # Scan task folder.
         # this function gets called every second. Normally we would use get_setting("folder","tasks")
-        # but there is no need to constantly be rereading the user_settings.json file that isn't changing
+        # but there is no need to constantly be rereading the settings.json file that isn't changing
         # so we use this self.task_directory variable that is only updated when a new user settting is saved
         tasks = self.get_nested_file_list(self.task_directory, ".py")
         self.available_tasks_changed = tasks != self.available_tasks

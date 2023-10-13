@@ -7,19 +7,19 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Top level 
 
 def get_setting(setting_type, setting_name, want_default=False):
     """
-    gets a user setting from user_settings.json or, if that doesn't exist,
+    gets a user setting from settings.json or, if that doesn't exist,
     the default_user_settings dictionary
     """
 
     default_user_settings = {
         "folders": {
-            "api_classes": os.path.join(ROOT, "user_assets", "api_classes"),
-            "controls_dialogs": os.path.join(ROOT, "user_assets", "controls_dialogs"),
-            "devices": os.path.join(ROOT, "user_assets", "devices"),
-            "experiments": os.path.join(ROOT, "user_assets", "experiments"),
-            "data": os.path.join(ROOT, "user_assets", "data"),
-            "hardware_definitions": os.path.join(ROOT, "user_assets", "hardware_definitons"),
-            "tasks": os.path.join(ROOT, "user_assets", "tasks"),
+            "api_classes": os.path.join(ROOT, "user", "api_classes"),
+            "controls_dialogs": os.path.join(ROOT, "user", "controls_dialogs"),
+            "devices": os.path.join(ROOT, "user", "devices"),
+            "experiments": os.path.join(ROOT, "user", "experiments"),
+            "data": os.path.join(ROOT, "user", "data"),
+            "hardware_definitions": os.path.join(ROOT, "user", "hardware_definitons"),
+            "tasks": os.path.join(ROOT, "user", "tasks"),
         },
         "plotting": {
             "update_interval": 10,
@@ -33,8 +33,8 @@ def get_setting(setting_type, setting_name, want_default=False):
         },
     }
 
-    json_path = os.path.join(ROOT, "user_assets", "user_settings.json")
-    if os.path.exists(json_path) and not want_default:  # user has a user_settings.json
+    json_path = os.path.join(ROOT, "user", "settings.json")
+    if os.path.exists(json_path) and not want_default:  # user has a settings.json
         with open(json_path, "r", encoding="utf-8") as f:
             custom_settings = json.loads(f.read())
         if setting_name in custom_settings[setting_type]:
