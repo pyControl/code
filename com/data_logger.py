@@ -120,11 +120,12 @@ class Data_logger:
                 data_string += self.tsv_row_str("variable", time=nd.time, subtype=nd.subtype, content=nd.content)
             elif nd.type == MsgType.WARNG:  # Warning
                 data_string += self.tsv_row_str("warning", content=nd.content)
-            elif nd.type == MsgType.ERROR:  # Error
-                data_string += self.tsv_row_str("error", content=nd.content.replace("\n", "|").replace("\r", "|"))
-            elif nd.type == MsgType.STOPF:  # Framework stop.
+            elif nd.type in (MsgType.ERROR, MsgType.STOPF):  # Error or stop framework.
                 self.end_datetime = datetime.utcnow()
                 self.end_timestamp = nd.time
+                if nd.type == MsgType.ERROR:
+                    content = nd.content.replace("\n", "|").replace("\r", "|")
+                    data_string += self.tsv_row_str("error", time=nd.time, content=content)
         return data_string
 
     def print_message(self, msg, source="u"):
