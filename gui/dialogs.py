@@ -107,13 +107,11 @@ class Controls_dialog(QtWidgets.QDialog):
     def showEvent(self, event):
         """Called when dialog is opened."""
         super(Controls_dialog, self).showEvent(event)
-        self.controls_grid.events_groupbox.setEnabled(False)
-        self.controls_grid.variables_groupbox.setEnabled(False)
-        if self.controls_grid.board.framework_running:
-            if self.controls_grid.board.sm_info.events:
-                self.controls_grid.events_groupbox.setEnabled(True)
-            if self.controls_grid.board.sm_info.variables:
-                self.controls_grid.variables_groupbox.setEnabled(True)
+        board = self.controls_grid.board
+        self.controls_grid.variables_groupbox.setEnabled(
+            bool(board.sm_info.variables) and (board.framework_running or (board.timestamp == 0))
+        )
+        self.controls_grid.events_groupbox.setEnabled(board.framework_running and bool(board.sm_info.events))
 
 
 class Controls_grid(QtWidgets.QWidget):

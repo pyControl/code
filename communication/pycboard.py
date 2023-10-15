@@ -461,6 +461,7 @@ class Pycboard(Pyboard):
                 if unexpected_input:
                     new_data.append(
                         Datatuple(
+                            time=self.get_timestamp(),
                             type=MsgType.WARNG,
                             content="Unexpected input received from board: " + "".join(unexpected_input),
                         )
@@ -495,13 +496,15 @@ class Pycboard(Pyboard):
                         self.sm_info.variables.update(json.loads(content))
                     new_data.append(Datatuple(time=self.timestamp, type=msg_type, subtype=msg_subtype, content=content))
                 else:  # Bad checksum
-                    new_data.append(Datatuple(type=MsgType.WARNG, content="Bad data checksum."))
+                    new_data.append(
+                        Datatuple(time=self.get_timestamp(), type=MsgType.WARNG, content="Bad data checksum.")
+                    )
             elif new_byte == b"\x04":  # End of framework run.
                 self.framework_running = False
                 data_err = self.read_until(2, b"\x04>", timeout=10)
                 if len(data_err) > 2:  # Error during framework run.
                     error_message = data_err[:-3].decode()
-                    new_data.append(Datatuple(type=MsgType.ERROR, content=error_message))
+                    new_data.append(Datatuple(time=self.get_timestamp(), type=MsgType.ERROR, content=error_message))
                 break
             else:
                 unexpected_input.append(new_byte.decode())
