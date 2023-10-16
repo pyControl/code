@@ -19,3 +19,5 @@ pyControl_GUI.py    : Python script to launch the GUI
 Version: v2.0rc1
 ---------------
 
+GUI requirements can be installed from source directory with:
+pip install -e .

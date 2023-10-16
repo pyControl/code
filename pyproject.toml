@@ -1,2 +1,8 @@
+[project]
+name = "pycontrol_dev" # this will not interfere with the relative import system of pycontrol
+version = "1.8.1"
+dependencies = ["numpy", "pyserial", "PyQt6", "pyqtgraph"]
 [tool.black]
 line-length = 120
+[tool.setuptools.packages.find]
+exclude = ["data", "experiments", "tests"]
