@@ -1,5 +1,5 @@
 [project]
-name = "pycontrol_dev" # this will not interfere with the relative import system of pycontrol
+name = "pyControl"
 version = "1.8.1"
 dependencies = ["numpy", "pyserial", "PyQt6", "pyqtgraph"]
 [tool.black]

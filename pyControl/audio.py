@@ -1,6 +1,6 @@
 import pyb
 import math
-from . import hardware as hw
+from pyControl import hardware as hw
 
 _sine_len = 100  # Number of points in sine wave.
 _sine_buf = bytearray([128 + int(127 * math.sin(2 * math.pi * i / _sine_len)) for i in range(_sine_len)])

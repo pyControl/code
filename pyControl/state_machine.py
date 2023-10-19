@@ -1,6 +1,6 @@
-from . import utility
-from . import timer
-from . import framework as fw
+from pyControl import utility
+from pyControl import timer
+from pyControl import framework as fw
 
 # State machine variables.
 

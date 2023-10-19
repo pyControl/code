@@ -6,9 +6,9 @@ import pyb
 import math
 import ujson
 from ucollections import OrderedDict
-from . import timer
-from . import framework as fw
-from . import state_machine as sm
+from pyControl import timer
+from pyControl import framework as fw
+from pyControl import state_machine as sm
 
 # State machine functions -----------------------------------------------------
 

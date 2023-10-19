@@ -2,7 +2,7 @@ import os
 import numpy as np
 from datetime import datetime
 from shutil import copyfile
-from .message import MsgType, Datatuple
+from com.message import MsgType, Datatuple
 
 # ----------------------------------------------------------------------------------------
 #  Data_logger

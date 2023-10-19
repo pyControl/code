@@ -5,9 +5,9 @@ import json
 import inspect
 from serial import SerialException
 from array import array
-from .pyboard import Pyboard, PyboardError
-from .data_logger import Data_logger
-from .message import MsgType, Datatuple
+from com.pyboard import Pyboard, PyboardError
+from com.data_logger import Data_logger
+from com.message import MsgType, Datatuple
 from gui.settings import VERSION, dirs, get_setting
 from dataclasses import dataclass
 

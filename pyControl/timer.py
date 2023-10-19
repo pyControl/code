@@ -1,4 +1,4 @@
-from . import framework as fw
+from pyControl import framework as fw
 
 # Timer variables
 

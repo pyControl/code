@@ -1,10 +1,10 @@
 import pyb
 import ujson
 from ucollections import namedtuple
-from . import timer
-from . import state_machine as sm
-from . import hardware as hw
-from . import utility as ut
+from pyControl import timer
+from pyControl import state_machine as sm
+from pyControl import hardware as hw
+from pyControl import utility as ut
 
 VERSION = "2.0rc1"
 

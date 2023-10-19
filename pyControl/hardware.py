@@ -1,9 +1,9 @@
 import pyb
 from array import array
-from . import timer
-from . import framework as fw
-from . import state_machine as sm
-from .utility import randint, warning
+from pyControl import timer
+from pyControl import framework as fw
+from pyControl import state_machine as sm
+from pyControl.utility import randint, warning
 
 # Ring buffer -----------------------------------------------------------------
 
