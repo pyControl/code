@@ -8,12 +8,18 @@ from pathlib import Path
 from serial.tools import list_ports
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
-from gui.settings import VERSION, get_setting, user_folder
-from gui.run_task_tab import Run_task_tab
-from gui.dialogs import Board_config_dialog, Keyboard_shortcuts_dialog, Settings_dialog, Error_log_dialog
-from gui.configure_experiment_tab import Configure_experiment_tab
-from gui.run_experiment_tab import Run_experiment_tab
-from gui.setups_tab import Setups_tab
+from pycontrol_behavior import get_icon, VERSION
+from pycontrol_behavior.gui.settings import get_setting, user_folder
+from pycontrol_behavior.gui.run_task_tab import Run_task_tab
+from pycontrol_behavior.gui.dialogs import (
+    Board_config_dialog,
+    Keyboard_shortcuts_dialog,
+    Settings_dialog,
+    Error_log_dialog,
+)
+from pycontrol_behavior.gui.configure_experiment_tab import Configure_experiment_tab
+from pycontrol_behavior.gui.run_experiment_tab import Run_experiment_tab
+from pycontrol_behavior.gui.setups_tab import Setups_tab
 
 if os.name == "nt":  # Needed on windows to get taskbar icon to display correctly.
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("pyControl")
@@ -108,22 +114,22 @@ class GUI_main(QtWidgets.QMainWindow):
         # Go to readthedocs
         documentation_action = QtGui.QAction("&Documentation", self)
         documentation_action.triggered.connect(self.view_docs)
-        documentation_action.setIcon(QtGui.QIcon("gui/icons/book.svg"))
+        documentation_action.setIcon(QtGui.QIcon(get_icon("book")))
         help_menu.addAction(documentation_action)
         # Go to Google forum
         forum_action = QtGui.QAction("&Help and Discussions", self)
         forum_action.triggered.connect(self.view_forum)
-        forum_action.setIcon(QtGui.QIcon("gui/icons/help.svg"))
+        forum_action.setIcon(QtGui.QIcon(get_icon("help")))
         help_menu.addAction(forum_action)
         # Go to GitHub Repository
         github_action = QtGui.QAction("&GitHub Repository", self)
         github_action.triggered.connect(self.view_github)
-        github_action.setIcon(QtGui.QIcon("gui/icons/github.svg"))  # https://simpleicons.org/?q=github
+        github_action.setIcon(QtGui.QIcon(get_icon("github")))  # https://simpleicons.org/?q=github
         help_menu.addAction(github_action)
         # Keyboard shortcuts dialog.
         shortcuts_action = QtGui.QAction("&Keyboard shortcuts", self)
         shortcuts_action.triggered.connect(self.shortcuts_dialog.show)
-        shortcuts_action.setIcon(QtGui.QIcon("gui/icons/keyboard.svg"))
+        shortcuts_action.setIcon(QtGui.QIcon(get_icon("keyboard")))
         help_menu.addAction(shortcuts_action)
 
         self.pcx2json()
@@ -229,7 +235,7 @@ def launch_GUI():
     """Launch the pyControl GUI."""
     app = QtWidgets.QApplication(sys.argv)
     app.setStyle("Fusion")
-    app.setWindowIcon(QtGui.QIcon("gui/icons/logo.svg"))
+    app.setWindowIcon(QtGui.QIcon(get_icon("logo")))
     font = QtGui.QFont()
     font.setPixelSize(get_setting("GUI", "ui_font_size"))
     app.setFont(font)

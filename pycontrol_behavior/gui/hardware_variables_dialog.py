@@ -4,7 +4,8 @@ import re
 import os
 from pathlib import Path
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from gui.settings import user_folder
+from pycontrol_behavior import get_icon
+from pycontrol_behavior.gui.settings import user_folder
 
 
 class Hardware_variables_editor(QtWidgets.QDialog):
@@ -28,7 +29,7 @@ class Hardware_variables_editor(QtWidgets.QDialog):
         hlayout_2 = QtWidgets.QHBoxLayout()
         self.save_button = QtWidgets.QPushButton("")
         self.save_button.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
-        self.save_button.setIcon(QtGui.QIcon("gui/icons/save.svg"))
+        self.save_button.setIcon(QtGui.QIcon(get_icon("save")))
         self.save_button.setEnabled(False)
         hlayout_2.addStretch(1)
         hlayout_2.addWidget(self.save_button)

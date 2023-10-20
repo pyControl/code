@@ -1,5 +1,5 @@
 from collections import namedtuple
-from communication.pycboard import MsgType
+from pycontrol_behavior.communication.pycboard import MsgType
 
 
 class Api:

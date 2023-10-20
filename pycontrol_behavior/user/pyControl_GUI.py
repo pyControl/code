@@ -15,9 +15,10 @@ try:
     import serial
     import pyqtgraph
 except Exception as e:
-    logging.error('  Unable to import dependencies:\n\n'+str(e)+'\n\n')
+    logging.error("  Unable to import dependencies:\n\n" + str(e) + "\n\n")
     sys.exit()
 
 # Launch the GUI.
-from gui.GUI_main import launch_GUI
+from pycontrol_behavior.gui.GUI_main import launch_GUI
+
 launch_GUI()

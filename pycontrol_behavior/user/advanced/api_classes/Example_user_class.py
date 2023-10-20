@@ -7,7 +7,7 @@
 
 
 import random
-from gui.api import Api
+from pycontrol_behavior.gui.api import Api
 
 
 # This class should be have the same name as the file and inherit the API class

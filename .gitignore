@@ -2,3 +2,5 @@ __pycache__/
 unversioned/
 setups.json
 ErrorLog.txt
+dist
+pycontrol_behavior.egg-info

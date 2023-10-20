@@ -5,9 +5,14 @@ from pathlib import Path
 from dataclasses import dataclass, asdict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
-from gui.settings import get_setting, user_folder
-from gui.dialogs import invalid_run_experiment_dialog, invalid_save_experiment_dialog, unrun_subjects_dialog
-from gui.utility import (
+from pycontrol_behavior import get_icon
+from pycontrol_behavior.gui.settings import get_setting, user_folder
+from pycontrol_behavior.gui.dialogs import (
+    invalid_run_experiment_dialog,
+    invalid_save_experiment_dialog,
+    unrun_subjects_dialog,
+)
+from pycontrol_behavior.gui.utility import (
     TableCheckbox,
     cbox_update_options,
     cbox_set_item,
@@ -16,7 +21,7 @@ from gui.utility import (
     init_keyboard_shortcuts,
     NestedMenu,
 )
-from gui.hardware_variables_dialog import get_task_hw_vars, hw_vars_defined_in_setup
+from pycontrol_behavior.gui.hardware_variables_dialog import get_task_hw_vars, hw_vars_defined_in_setup
 
 # --------------------------------------------------------------------------------
 # Experiments_tab
@@ -53,15 +58,15 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.experiment_select.set_callback(self.experiment_changed)
 
         self.run_button = QtWidgets.QPushButton("Run")
-        self.run_button.setIcon(QtGui.QIcon("gui/icons/run.svg"))
+        self.run_button.setIcon(QtGui.QIcon(get_icon("run")))
         new_button = QtWidgets.QPushButton("New")
-        new_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+        new_button.setIcon(QtGui.QIcon(get_icon("add")))
         self.delete_button = QtWidgets.QPushButton("Delete")
-        self.delete_button.setIcon(QtGui.QIcon("gui/icons/delete.svg"))
+        self.delete_button.setIcon(QtGui.QIcon(get_icon("delete")))
         self.save_as_button = QtWidgets.QPushButton("Save as")
-        self.save_as_button.setIcon(QtGui.QIcon("gui/icons/save_as.svg"))
+        self.save_as_button.setIcon(QtGui.QIcon(get_icon("save_as")))
         self.save_button = QtWidgets.QPushButton("Save")
-        self.save_button.setIcon(QtGui.QIcon("gui/icons/save.svg"))
+        self.save_button.setIcon(QtGui.QIcon(get_icon("save")))
         self.save_button.setEnabled(False)
         self.name_text = ""
 
@@ -83,7 +88,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         data_dir_label = QtWidgets.QLabel("Data directory")
         self.data_dir_text = QtWidgets.QLineEdit(get_setting("folders", "data"))
         data_dir_button = QtWidgets.QPushButton("")
-        data_dir_button.setIcon(QtGui.QIcon("gui/icons/folder.svg"))
+        data_dir_button.setIcon(QtGui.QIcon(get_icon("folder")))
         data_dir_button.setFixedWidth(30)
 
         self.experiment_parameters_layout = QtWidgets.QGridLayout()
@@ -466,11 +471,11 @@ class SubjectsTable(QtWidgets.QTableWidget):
             setup_cbox.setCurrentIndex(self.available_setups.index(self.unallocated_setups[0]))
         setup_cbox.activated.connect(self.update_available_setups)
         remove_button = QtWidgets.QPushButton("remove")
-        remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
+        remove_button.setIcon(QtGui.QIcon(get_icon("remove")))
         ind = QtCore.QPersistentModelIndex(self.model().index(self.num_subjects, 2))
         remove_button.clicked.connect(lambda: self.remove_subject(ind.row()))
         add_button = QtWidgets.QPushButton("   add   ")
-        add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+        add_button.setIcon(QtGui.QIcon(get_icon("add")))
         add_button.clicked.connect(self.add_subject)
         run_checkbox = TableCheckbox()
         if do_run is None:
@@ -558,7 +563,7 @@ class VariablesTable(QtWidgets.QTableWidget):
         self.horizontalHeader().setSectionResizeMode(5, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.verticalHeader().setVisible(False)
         add_button = QtWidgets.QPushButton("   add   ")
-        add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+        add_button.setIcon(QtGui.QIcon(get_icon("add")))
         add_button.clicked.connect(self.add_variable)
         self.setCellWidget(0, 5, add_button)
         self.n_variables = 0
@@ -585,9 +590,9 @@ class VariablesTable(QtWidgets.QTableWidget):
         remove_button = QtWidgets.QPushButton("remove")
         ind = QtCore.QPersistentModelIndex(self.model().index(self.n_variables, 2))
         remove_button.clicked.connect(lambda: self.remove_variable(ind.row()))
-        remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
+        remove_button.setIcon(QtGui.QIcon(get_icon("remove")))
         add_button = QtWidgets.QPushButton("   add   ")
-        add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+        add_button.setIcon(QtGui.QIcon(get_icon("add")))
         add_button.clicked.connect(self.add_variable)
         self.insertRow(self.n_variables + 1)
         self.setCellWidget(self.n_variables, 0, variable_cbox)

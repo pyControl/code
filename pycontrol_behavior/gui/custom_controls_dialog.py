@@ -6,8 +6,9 @@ from typing import Union
 from copy import deepcopy
 from dataclasses import dataclass, asdict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from gui.settings import user_folder
-from gui.utility import variable_constants, null_resize, cbox_set_item, cbox_update_options
+from pycontrol_behavior import get_icon
+from pycontrol_behavior.gui.settings import user_folder
+from pycontrol_behavior.gui.utility import variable_constants, null_resize, cbox_set_item, cbox_update_options
 
 
 # input widgets ---------------------------------------------------------------
@@ -349,7 +350,7 @@ class Custom_controls_dialog(QtWidgets.QDialog):
             toolBar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
             toolBar.setIconSize(QtCore.QSize(15, 15))
             self.layout.addWidget(toolBar)
-            self.edit_action = QtGui.QAction(QtGui.QIcon("gui/icons/edit.svg"), "&edit", self)
+            self.edit_action = QtGui.QAction(QtGui.QIcon(get_icon("edit")), "&edit", self)
             self.edit_action.setEnabled(True)
             if not is_experiment:
                 toolBar.addAction(self.edit_action)
@@ -528,12 +529,12 @@ class Controls_dialog_editor(QtWidgets.QDialog):
         # main widgets
         self.tabs = QtWidgets.QTabWidget()
         self.add_tab_btn = QtWidgets.QPushButton("add tab")
-        self.add_tab_btn.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+        self.add_tab_btn.setIcon(QtGui.QIcon(get_icon("add")))
         self.add_tab_btn.clicked.connect(self.add_tab)
         self.add_tab_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
 
         self.del_tab_btn = QtWidgets.QPushButton("remove tab")
-        self.del_tab_btn.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
+        self.del_tab_btn.setIcon(QtGui.QIcon(get_icon("remove")))
         self.del_tab_btn.clicked.connect(self.remove_tab)
         self.del_tab_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
 
@@ -546,18 +547,18 @@ class Controls_dialog_editor(QtWidgets.QDialog):
         self.tab_title_btn.clicked.connect(self.set_tab_title)
 
         self.tab_shift_left_btn = QtWidgets.QPushButton("shift tab")
-        self.tab_shift_left_btn.setIcon(QtGui.QIcon("gui/icons/left.svg"))
+        self.tab_shift_left_btn.setIcon(QtGui.QIcon(get_icon("left")))
         self.tab_shift_left_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         self.tab_shift_left_btn.clicked.connect(self.shift_tab_left)
 
         self.tab_shift_right_btn = QtWidgets.QPushButton("shift tab")
-        self.tab_shift_right_btn.setIcon(QtGui.QIcon("gui/icons/right.svg"))
+        self.tab_shift_right_btn.setIcon(QtGui.QIcon(get_icon("right")))
         self.tab_shift_right_btn.setLayoutDirection(QtCore.Qt.LayoutDirection.RightToLeft)
         self.tab_shift_right_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         self.tab_shift_right_btn.clicked.connect(self.shift_tab_right)
 
         self.save_gui_btn = QtWidgets.QPushButton("Save GUI")
-        self.save_gui_btn.setIcon(QtGui.QIcon("gui/icons/save.svg"))
+        self.save_gui_btn.setIcon(QtGui.QIcon(get_icon("save")))
         self.save_gui_btn.clicked.connect(self.save_gui_data)
         self.save_gui_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         if self.parent_controls_dialog.generator_data:
@@ -737,11 +738,11 @@ class Control_row:
         self.parent_table = parent_table
         # buttons
         self.up_button = QtWidgets.QPushButton("")
-        self.up_button.setIcon(QtGui.QIcon("gui/icons/up.svg"))
+        self.up_button.setIcon(QtGui.QIcon(get_icon("up")))
         self.down_button = QtWidgets.QPushButton("")
-        self.down_button.setIcon(QtGui.QIcon("gui/icons/down.svg"))
+        self.down_button.setIcon(QtGui.QIcon(get_icon("down")))
         self.remove_button = QtWidgets.QPushButton("remove")
-        self.remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
+        self.remove_button.setIcon(QtGui.QIcon(get_icon("remove")))
         # line edits
         self.display_name = QtWidgets.QLineEdit()
         self.spin_min = QtWidgets.QLineEdit()
@@ -840,7 +841,7 @@ class Variables_table(QtWidgets.QTableWidget):
                 self.add_row(control_name, control_specs)
             # after done loading control rows, insert another row with an "add" button
             add_button = QtWidgets.QPushButton("   add   ")
-            add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+            add_button.setIcon(QtGui.QIcon(get_icon("add")))
             add_button.clicked.connect(self.add_row)
             self.setCellWidget(self.n_variables, Clm.ADD, add_button)
         else:
@@ -860,7 +861,7 @@ class Variables_table(QtWidgets.QTableWidget):
         self.insertRow(self.n_variables + 1)
         if not varname:
             add_button = QtWidgets.QPushButton("   add   ")
-            add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+            add_button.setIcon(QtGui.QIcon(get_icon("add")))
             add_button.clicked.connect(self.add_row)
             self.setCellWidget(self.n_variables + 1, Clm.ADD, add_button)
 
