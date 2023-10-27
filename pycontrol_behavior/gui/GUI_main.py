@@ -3,6 +3,7 @@ import sys
 import ctypes
 import traceback
 import logging
+import platform
 
 from pathlib import Path
 from serial.tools import list_ports
@@ -21,7 +22,7 @@ from pycontrol_behavior.gui.configure_experiment_tab import Configure_experiment
 from pycontrol_behavior.gui.run_experiment_tab import Run_experiment_tab
 from pycontrol_behavior.gui.setups_tab import Setups_tab
 
-if os.name == "nt":  # Needed on windows to get taskbar icon to display correctly.
+if platform.system() == "Windows":
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("pyControl")
 
 

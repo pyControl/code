@@ -1,5 +1,6 @@
 # Check that depndencies are installed then launch the pyControl GUI.
 import os
+import platform
 import shutil
 import sys
 from pycontrol_behavior import ROOT
@@ -50,7 +51,10 @@ def setup_user_dir(new_path):
 
     # copy over pyw file
     gui_launch_file = "pyControl_GUI.py"
-    shutil.copy(Path(ROOT, "user", gui_launch_file), Path(new_path, gui_launch_file))
+    if platform.system() == "Windows":
+        shutil.copy(Path(ROOT, "user", gui_launch_file), Path(new_path, gui_launch_file+"w")) # make it a .pyw file
+    else:
+        shutil.copy(Path(ROOT, "user", gui_launch_file), Path(new_path, gui_launch_file))
 
 
 current_dir = os.getcwd()
