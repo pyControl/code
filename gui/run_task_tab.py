@@ -4,15 +4,13 @@ import importlib
 from datetime import datetime
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException, SerialTimeoutException
-
-from pycontrol_behavior import get_icon
-from pycontrol_behavior.communication.pycboard import Pycboard, PyboardError, _djb2_file
-from pycontrol_behavior.gui.settings import get_setting, user_folder
-from pycontrol_behavior.gui.dialogs import Controls_dialog
-from pycontrol_behavior.gui.custom_controls_dialog import Custom_controls_dialog, Custom_gui
-from pycontrol_behavior.gui.plotting import Task_plot
-from pycontrol_behavior.gui.utility import init_keyboard_shortcuts, NestedMenu, TaskInfo
-from pycontrol_behavior.gui.hardware_variables_dialog import set_hardware_variables, hw_vars_defined_in_setup
+from communication.pycboard import Pycboard, PyboardError, _djb2_file
+from gui.settings import get_setting, user_folder
+from gui.dialogs import Controls_dialog
+from gui.custom_controls_dialog import Custom_controls_dialog, Custom_gui
+from gui.plotting import Task_plot
+from gui.utility import init_keyboard_shortcuts, NestedMenu, TaskInfo
+from gui.hardware_variables_dialog import set_hardware_variables, hw_vars_defined_in_setup
 
 
 # Run_task_gui ------------------------------------------------------------------------
@@ -48,10 +46,10 @@ class Run_task_tab(QtWidgets.QWidget):
         self.board_select.addItems(["No setups found"])
         self.board_select.setSizeAdjustPolicy(QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.connect_button = QtWidgets.QPushButton("Connect")
-        self.connect_button.setIcon(QtGui.QIcon(get_icon("connect")))
+        self.connect_button.setIcon(QtGui.QIcon("gui/icons/connect.svg"))
         self.connect_button.setEnabled(False)
         self.config_button = QtWidgets.QPushButton("Config")
-        self.config_button.setIcon(QtGui.QIcon(get_icon("settings")))
+        self.config_button.setIcon(QtGui.QIcon("gui/icons/settings.svg"))
 
         boardgroup_layout = QtWidgets.QGridLayout(self.board_groupbox)
         boardgroup_layout.addWidget(self.board_select, 0, 0, 1, 2)
@@ -70,7 +68,7 @@ class Run_task_tab(QtWidgets.QWidget):
         data_dir_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
         self.data_dir_text = QtWidgets.QLineEdit(get_setting("folders", "data"))
         data_dir_button = QtWidgets.QPushButton()
-        data_dir_button.setIcon(QtGui.QIcon(get_icon("folder")))
+        data_dir_button.setIcon(QtGui.QIcon("gui/icons/folder.svg"))
         data_dir_button.setFixedWidth(30)
         subject_label = QtWidgets.QLabel("Subject ID:")
         self.subject_text = QtWidgets.QLineEdit()
@@ -96,9 +94,9 @@ class Run_task_tab(QtWidgets.QWidget):
         self.task_select = NestedMenu("select task", ".py")
         self.task_select.set_callback(self.task_changed)
         self.upload_button = QtWidgets.QPushButton("Upload")
-        self.upload_button.setIcon(QtGui.QIcon(get_icon("circle-arrow-up")))
+        self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
         self.controls_button = QtWidgets.QPushButton("Controls")
-        self.controls_button.setIcon(QtGui.QIcon(get_icon("filter")))
+        self.controls_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
 
         taskgroup_layout = QtWidgets.QGridLayout(self.task_groupbox)
         taskgroup_layout.addWidget(self.task_select, 0, 0, 1, 2)
@@ -113,9 +111,9 @@ class Run_task_tab(QtWidgets.QWidget):
         self.session_groupbox = QtWidgets.QGroupBox("Session")
 
         self.start_button = QtWidgets.QPushButton("Start")
-        self.start_button.setIcon(QtGui.QIcon(get_icon("play")))
+        self.start_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
         self.stop_button = QtWidgets.QPushButton("Stop")
-        self.stop_button.setIcon(QtGui.QIcon(get_icon("stop")))
+        self.stop_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
 
         self.task_info = TaskInfo()
 
@@ -195,11 +193,11 @@ class Run_task_tab(QtWidgets.QWidget):
         subject_ID = self.subject_text.text()
         if os.path.isdir(self.data_dir) and subject_ID:
             self.start_button.setText("Record")
-            self.start_button.setIcon(QtGui.QIcon(get_icon("record")))
+            self.start_button.setIcon(QtGui.QIcon("gui/icons/record.svg"))
             return True
         else:
             self.start_button.setText("Start")
-            self.start_button.setIcon(QtGui.QIcon(get_icon("play")))
+            self.start_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
             return False
 
     def refresh(self):
@@ -255,7 +253,7 @@ class Run_task_tab(QtWidgets.QWidget):
             self.config_button.setEnabled(True)
             self.connect_button.setEnabled(True)
             self.connect_button.setText("Disconnect")
-            self.connect_button.setIcon(QtGui.QIcon(get_icon("disconnect")))
+            self.connect_button.setIcon(QtGui.QIcon("gui/icons/disconnect.svg"))
             if self.board.status["framework"]:
                 self.task_groupbox.setEnabled(True)
             else:
@@ -277,14 +275,14 @@ class Run_task_tab(QtWidgets.QWidget):
         self.config_button.setEnabled(False)
         self.board_select.setEnabled(True)
         self.connect_button.setText("Connect")
-        self.connect_button.setIcon(QtGui.QIcon(get_icon("connect")))
+        self.connect_button.setIcon(QtGui.QIcon("gui/icons/connect.svg"))
         self.task_changed()
         self.connected = False
 
     def task_changed(self, *args):
         self.uploaded = False
         self.upload_button.setText("Upload")
-        self.upload_button.setIcon(QtGui.QIcon(get_icon("circle-arrow-up")))
+        self.upload_button.setIcon(QtGui.QIcon("gui/icons/circle-arrow-up.svg"))
         self.start_button.setEnabled(False)
         self.controls_button.setEnabled(False)
 
@@ -341,7 +339,7 @@ class Run_task_tab(QtWidgets.QWidget):
             self.fresh_task = True
             self.uploaded = True
             self.upload_button.setText("Reset")
-            self.upload_button.setIcon(QtGui.QIcon(get_icon("refresh")))
+            self.upload_button.setIcon(QtGui.QIcon("gui/icons/refresh.svg"))
         except PyboardError:
             self.print_to_log("Error setting up state machine.")
 

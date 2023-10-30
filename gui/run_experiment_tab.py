@@ -8,14 +8,13 @@ from collections import OrderedDict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException
 
-from pycontrol_behavior import get_icon
-from pycontrol_behavior.communication.pycboard import Pycboard, PyboardError
-from pycontrol_behavior.gui.settings import get_setting, user_folder
-from pycontrol_behavior.gui.plotting import Experiment_plot
-from pycontrol_behavior.gui.dialogs import Controls_dialog, Summary_variables_dialog
-from pycontrol_behavior.gui.utility import variable_constants, TaskInfo, parallel_call
-from pycontrol_behavior.gui.custom_controls_dialog import Custom_controls_dialog, Custom_gui
-from pycontrol_behavior.gui.hardware_variables_dialog import set_hardware_variables
+from communication.pycboard import Pycboard, PyboardError
+from gui.settings import get_setting, user_folder
+from gui.plotting import Experiment_plot
+from gui.dialogs import Controls_dialog, Summary_variables_dialog
+from gui.utility import variable_constants, TaskInfo, parallel_call
+from gui.custom_controls_dialog import Custom_controls_dialog, Custom_gui
+from gui.hardware_variables_dialog import set_hardware_variables
 
 # ----------------------------------------------------------------------------------------
 #  Run_experiment_tab
@@ -36,7 +35,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.name_text = QtWidgets.QLineEdit()
         self.name_text.setReadOnly(True)
         self.plots_button = QtWidgets.QPushButton("Show plots")
-        self.plots_button.setIcon(QtGui.QIcon(get_icon("bar-graph")))
+        self.plots_button.setIcon(QtGui.QIcon("gui/icons/bar-graph.svg"))
         self.plots_button.clicked.connect(self.experiment_plot.show)
         self.logs_button = QtWidgets.QPushButton("Hide logs")
         self.logs_button.clicked.connect(self.show_hide_logs)
@@ -80,7 +79,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.logs_visible = True
         self.logs_button.setText("Hide logs")
         self.startstopclose_all_button.setText("Start all")
-        self.startstopclose_all_button.setIcon(QtGui.QIcon(get_icon("play")))
+        self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
         self.startstopclose_all_button.setEnabled(False)
         # Setup controls box.
         self.name_text.setText(experiment.name)
@@ -172,10 +171,10 @@ class Run_experiment_tab(QtWidgets.QWidget):
         startstopclose_all button."""
         if self.setups_finished == self.num_subjects:
             self.startstopclose_all_button.setText("Close exp.")
-            self.startstopclose_all_button.setIcon(QtGui.QIcon(get_icon("close")))
+            self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/close.svg"))
         elif self.setups_started == self.num_subjects:
             self.startstopclose_all_button.setText("Stop all")
-            self.startstopclose_all_button.setIcon(QtGui.QIcon(get_icon("stop")))
+            self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
 
     def stop_experiment(self):
         """Called when all setups have stopped running. Configure GUI update
@@ -293,7 +292,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.subject_sumr_vars = {}
 
         self.start_stop_button = QtWidgets.QPushButton("Start")
-        self.start_stop_button.setIcon(QtGui.QIcon(get_icon("play")))
+        self.start_stop_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
         self.start_stop_button.setEnabled(False)
         self.start_stop_button.clicked.connect(self.start_stop_task)
         self.status_label = QtWidgets.QLabel("Status:")
@@ -306,7 +305,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.time_text.setFixedWidth(50)
         self.task_info = TaskInfo()
         self.controls_button = QtWidgets.QPushButton("Controls")
-        self.controls_button.setIcon(QtGui.QIcon(get_icon("filter")))
+        self.controls_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
         self.controls_button.setEnabled(False)
         self.log_textbox = QtWidgets.QTextEdit()
         self.log_textbox.setMinimumHeight(180)
@@ -499,7 +498,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         if self.user_API:
             self.user_API.run_start()
         self.start_stop_button.setText("Stop")
-        self.start_stop_button.setIcon(QtGui.QIcon(get_icon("stop")))
+        self.start_stop_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
         self.run_exp_tab.setups_started += 1
         self.run_exp_tab.GUI_main.refresh_timer.stop()
         self.run_exp_tab.plot_update_timer.start(get_setting("plotting", "update_interval"))

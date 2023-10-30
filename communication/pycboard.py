@@ -8,8 +8,7 @@ from array import array
 from .pyboard import Pyboard, PyboardError
 from .data_logger import Data_logger
 from .message import MsgType, Datatuple
-from pycontrol_behavior import ROOT, VERSION
-from pycontrol_behavior.gui.settings import user_folder
+from gui.settings import VERSION, ROOT, user_folder
 from dataclasses import dataclass
 
 # ----------------------------------------------------------------------------------------
