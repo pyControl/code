@@ -2,7 +2,6 @@ import os
 import json
 
 VERSION = "2.0rc1"
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Top level pyControl folder.
 
 
 def get_setting(setting_type, setting_name, want_default=False):
@@ -13,13 +12,13 @@ def get_setting(setting_type, setting_name, want_default=False):
 
     default_user_settings = {
         "folders": {
-            "api_classes": os.path.join(ROOT, "user", "api_classes"),
-            "controls_dialogs": os.path.join(ROOT, "user", "controls_dialogs"),
-            "data": os.path.join(ROOT, "user", "data"),
-            "devices": os.path.join(ROOT, "user", "devices"),
-            "experiments": os.path.join(ROOT, "user", "experiments"),
-            "hardware_definitions": os.path.join(ROOT, "user", "hardware_definitons"),
-            "tasks": os.path.join(ROOT, "user", "tasks"),
+            "api_classes": os.path.join(os.getcwd(), "advanced", "api_classes"),
+            "controls_dialogs": os.path.join(os.getcwd(), "advanced", "controls_dialogs"),
+            "devices": os.path.join(os.getcwd(), "advanced", "devices"),
+            "hardware_definitions": os.path.join(os.getcwd(), "advanced", "hardware_definitions"),
+            "data": os.path.join(os.getcwd(), "data"),
+            "experiments": os.path.join(os.getcwd(), "experiments"),
+            "tasks": os.path.join(os.getcwd(), "tasks"),
         },
         "plotting": {
             "update_interval": 10,
@@ -33,7 +32,7 @@ def get_setting(setting_type, setting_name, want_default=False):
         },
     }
 
-    json_path = os.path.join(ROOT, "user", "settings.json")
+    json_path = os.path.join("config", "settings.json")
     if os.path.exists(json_path) and not want_default:  # user has a settings.json
         with open(json_path, "r", encoding="utf-8") as f:
             custom_settings = json.loads(f.read())

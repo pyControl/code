@@ -8,7 +8,7 @@ from array import array
 from .pyboard import Pyboard, PyboardError
 from .data_logger import Data_logger
 from .message import MsgType, Datatuple
-from gui.settings import VERSION, ROOT, user_folder
+from source.gui.settings import VERSION, user_folder
 from dataclasses import dataclass
 
 # ----------------------------------------------------------------------------------------
@@ -302,7 +302,7 @@ class Pycboard(Pyboard):
         """Copy the pyControl framework folder to the board, reset the devices folder
         on pyboard by removing all devices files, and rebuild the device_class2file dict."""
         self.print("\nTransferring pyControl framework to pyboard.", end="")
-        self.transfer_folder(os.path.join(ROOT, "pycontrol_mcu"), file_type="py", show_progress=True)
+        self.transfer_folder(os.path.join("source", "pycontrol_mcu"), file_type="py", show_progress=True)
         self.transfer_folder(user_folder("devices"), files=["__init__.py"], remove_files=True, show_progress=True)
         self.remove_file("hardware_definition.py")
         self.make_device_class2file_map()

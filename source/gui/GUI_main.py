@@ -9,12 +9,12 @@ from pathlib import Path
 from serial.tools import list_ports
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
-from gui.settings import VERSION, get_setting, user_folder
-from gui.run_task_tab import Run_task_tab
-from gui.dialogs import Board_config_dialog, Keyboard_shortcuts_dialog, Settings_dialog, Error_log_dialog
-from gui.configure_experiment_tab import Configure_experiment_tab
-from gui.run_experiment_tab import Run_experiment_tab
-from gui.setups_tab import Setups_tab
+from source.gui.settings import VERSION, get_setting, user_folder
+from source.gui.run_task_tab import Run_task_tab
+from source.gui.dialogs import Board_config_dialog, Keyboard_shortcuts_dialog, Settings_dialog, Error_log_dialog
+from source.gui.configure_experiment_tab import Configure_experiment_tab
+from source.gui.run_experiment_tab import Run_experiment_tab
+from source.gui.setups_tab import Setups_tab
 
 if platform.system() == "Windows":
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("pyControl")
@@ -109,22 +109,22 @@ class GUI_main(QtWidgets.QMainWindow):
         # Go to readthedocs
         documentation_action = QtGui.QAction("&Documentation", self)
         documentation_action.triggered.connect(self.view_docs)
-        documentation_action.setIcon(QtGui.QIcon("gui/icons/book.svg"))
+        documentation_action.setIcon(QtGui.QIcon("source/gui/icons/book.svg"))
         help_menu.addAction(documentation_action)
         # Go to Google forum
         forum_action = QtGui.QAction("&Help and Discussions", self)
         forum_action.triggered.connect(self.view_forum)
-        forum_action.setIcon(QtGui.QIcon("gui/icons/help.svg"))
+        forum_action.setIcon(QtGui.QIcon("source/gui/icons/help.svg"))
         help_menu.addAction(forum_action)
         # Go to GitHub Repository
         github_action = QtGui.QAction("&GitHub Repository", self)
         github_action.triggered.connect(self.view_github)
-        github_action.setIcon(QtGui.QIcon("gui/icons/github.svg"))  # https://simpleicons.org/?q=github
+        github_action.setIcon(QtGui.QIcon("source/gui/icons/github.svg"))  # https://simpleicons.org/?q=github
         help_menu.addAction(github_action)
         # Keyboard shortcuts dialog.
         shortcuts_action = QtGui.QAction("&Keyboard shortcuts", self)
         shortcuts_action.triggered.connect(self.shortcuts_dialog.show)
-        shortcuts_action.setIcon(QtGui.QIcon("gui/icons/keyboard.svg"))
+        shortcuts_action.setIcon(QtGui.QIcon("source/gui/icons/keyboard.svg"))
         help_menu.addAction(shortcuts_action)
 
         self.pcx2json()
@@ -230,7 +230,7 @@ def launch_GUI():
     """Launch the pyControl GUI."""
     app = QtWidgets.QApplication(sys.argv)
     app.setStyle("Fusion")
-    app.setWindowIcon(QtGui.QIcon("gui/icons/logo.svg"))
+    app.setWindowIcon(QtGui.QIcon("source/gui/icons/logo.svg"))
     font = QtGui.QFont()
     font.setPixelSize(get_setting("GUI", "ui_font_size"))
     app.setFont(font)

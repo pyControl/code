@@ -3,8 +3,8 @@ import sys
 import json
 import logging
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from gui.settings import get_setting, user_folder, ROOT
-from gui.utility import variable_constants
+from source.gui.settings import get_setting, user_folder
+from source.gui.utility import variable_constants
 
 # Board_config_dialog -------------------------------------------------
 
@@ -385,13 +385,13 @@ class Settings_dialog(QtWidgets.QDialog):
 
         self.discard_changes_btn = QtWidgets.QPushButton("Discard changes")
         self.discard_changes_btn.setEnabled(False)
-        self.discard_changes_btn.setIcon(QtGui.QIcon("gui/icons/delete.svg"))
+        self.discard_changes_btn.setIcon(QtGui.QIcon("source/gui/icons/delete.svg"))
         self.discard_changes_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         self.discard_changes_btn.clicked.connect(self.reset)
 
         self.save_settings_btn = QtWidgets.QPushButton("Save settings and restart")
         self.save_settings_btn.setEnabled(False)
-        self.save_settings_btn.setIcon(QtGui.QIcon("gui/icons/save.svg"))
+        self.save_settings_btn.setIcon(QtGui.QIcon("source/gui/icons/save.svg"))
         self.save_settings_btn.clicked.connect(self.saveChanges)
 
         # Instantiate setters
@@ -511,7 +511,7 @@ class Settings_dialog(QtWidgets.QDialog):
             top_key, sub_key = variable.key
             user_setting_dict_new[top_key][sub_key] = variable.get()
         # Store newly edited paths.
-        json_path = os.path.join(ROOT, "user", "settings.json")
+        json_path = os.path.join("config", "settings.json")
         if os.path.exists(json_path):
             with open(json_path, "r", encoding="utf-8") as f:
                 user_settings = json.loads(f.read())

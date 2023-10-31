@@ -1,7 +1,7 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from communication.pycboard import MsgType
+from source.communication.pycboard import MsgType
 
 # --------------------------------------------------------------------------------
 # GUI utility functions, classes, variables.
