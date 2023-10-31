@@ -16,7 +16,7 @@ from source.gui.configure_experiment_tab import Configure_experiment_tab
 from source.gui.run_experiment_tab import Run_experiment_tab
 from source.gui.setups_tab import Setups_tab
 
-if platform.system() == "Windows":
+if platform.system() == "Windows":  # Needed on windows to get taskbar icon to display correctly.
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("pyControl")
 
 

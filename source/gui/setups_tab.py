@@ -22,9 +22,9 @@ class Setups_tab(QtWidgets.QWidget):
 
         # rename old file from setup_names.json to setups.json
         # and change format so that names are a key within a serial port dictionary
-        setup_names = Path("config","setup_names.json")
+        setup_names = Path("config", "setup_names.json")
         try:
-            new_path = Path("config","setups.json")
+            new_path = Path("config", "setups.json")
             setup_names.rename(new_path)
             with open(new_path, "r", encoding="utf-8") as names_json:
                 names_dict = json.loads(names_json.read())
@@ -112,7 +112,7 @@ class Setups_tab(QtWidgets.QWidget):
         self.setLayout(self.setups_layout)
 
     def get_setups_from_json(self):
-        self.save_path = Path("config","setups.json")
+        self.save_path = Path("config", "setups.json")
         if self.save_path.exists():
             with open(self.save_path, "r", encoding="utf-8") as f:
                 setups_from_json = json.loads(f.read())
