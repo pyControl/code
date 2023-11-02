@@ -1,3 +1,4 @@
+import json
 from collections import namedtuple
 from source.communication.pycboard import MsgType
 
@@ -110,7 +111,7 @@ class Api:
             if nd.type == MsgType.PRINT:
                 data["prints"].append(self.print_tup(nd.content, nd.time))
             elif nd.type == MsgType.VARBL:
-                var_change_dict = eval(nd.content)
+                var_change_dict = json.loads(nd.content)
                 name = list(var_change_dict.keys())[0]
                 value = list(var_change_dict.values())[0]
                 data["vars"].append(self.var_tup(name, value, nd.time))
