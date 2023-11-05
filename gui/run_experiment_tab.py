@@ -391,8 +391,16 @@ class Subjectbox(QtWidgets.QGroupBox):
             self.error()
             return
         # Set variables.
-        self.subject_variables = [
-            v for v in self.run_exp_tab.experiment.variables if v["subject"] in ("all", self.subject)
+        subject_variables = [
+            v for v in self.run_exp_tab.experiment.variables if v["subject"] in ("all", "all except", self.subject)
+        ]
+        self.subject_variables = [  # Remove variables with subject="all except" if value for subject is specified.
+            v
+            for v in subject_variables
+            if not (
+                (v["subject"] == "all except")
+                and [u for u in subject_variables if u["name"] == v["name"] and u["subject"] == self.subject]
+            )
         ]
         task_hw_vars = [task_var for task_var in self.board.sm_info.variables if task_var.startswith("hw_")]
         if self.subject_variables or task_hw_vars:
