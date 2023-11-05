@@ -7,7 +7,7 @@
 # When you make an electrical connection between LK2 and GND the houselight
 # connected to SOL-2 will turn on.
 
-from pycontrol_mcu.utility import *
+from pyControl.utility import *
 from devices import Breakout_1_2, Lickometer
 
 # Define hardware

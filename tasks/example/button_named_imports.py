@@ -2,7 +2,7 @@
 # This way is more 'Pythonic' but results in somewhat more verbose task code.  You can use whichever
 # import style you prefer in your task code.
 
-import pycontrol_mcu.utility as pc
+import pyControl.utility as pc
 import devices as dv
 
 # Define hardware

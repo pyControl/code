@@ -7,7 +7,7 @@
 # Put the folder in the SD card socket on the audio player. Run the task and the
 # wav file should play alternately from each speaker at two different volumes.
 
-from pycontrol_mcu.utility import *
+from pyControl.utility import *
 from devices import Breakout_1_2, Audio_player
 
 board = Breakout_1_2()

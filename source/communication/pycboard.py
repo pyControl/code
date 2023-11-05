@@ -130,7 +130,7 @@ class Pycboard(Pyboard):
         self.status["usb_mode"] = self.eval("pyb.usb_mode()").decode()
         self.data_logger.reset()
         try:
-            self.exec("from pycontrol_mcu import *; import devices")
+            self.exec("from pyControl import *; import devices")
             self.status["framework"] = True  # Framework imported OK.
             self.device_files_on_pyboard = self.get_folder_contents("devices", get_hash=True)
         except PyboardError as e:
@@ -302,7 +302,7 @@ class Pycboard(Pyboard):
         """Copy the pyControl framework folder to the board, reset the devices folder
         on pyboard by removing all devices files, and rebuild the device_class2file dict."""
         self.print("\nTransferring pyControl framework to pyboard.", end="")
-        self.transfer_folder(os.path.join("source", "pycontrol_mcu"), file_type="py", show_progress=True)
+        self.transfer_folder(os.path.join("source", "pyControl"), file_type="py", show_progress=True)
         self.transfer_folder(user_folder("devices"), files=["__init__.py"], remove_files=True, show_progress=True)
         self.remove_file("hardware_definition.py")
         self.make_device_class2file_map()

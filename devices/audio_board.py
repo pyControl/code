@@ -1,5 +1,5 @@
 import pyb
-from pycontrol_mcu.audio import Audio_output
+from pyControl.audio import Audio_output
 
 
 class Audio_board(Audio_output):

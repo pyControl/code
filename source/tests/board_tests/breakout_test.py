@@ -5,7 +5,7 @@
 # should also cycle on and off. Connect a tester board to each BNC socket on
 # the breakout in turn, the BNC LED should turn on and off.
 
-from pycontrol_mcu.utility import *
+from pyControl.utility import *
 from devices import Breakout_1_2, Digital_output
 
 # Hardware

@@ -2,7 +2,7 @@
 # and yellow LEDs should flash synchronously at 1Hz, red LED should not
 # illuminate.
 
-from pycontrol_mcu.utility import *
+from pyControl.utility import *
 from devices import *
 
 # Hardaware

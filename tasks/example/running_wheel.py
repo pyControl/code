@@ -2,7 +2,7 @@
 # running starts and stops. The subject must run for 10 seconds to trigger reward delivery,
 # then stop running for 5 seconds to initiate the next trial.
 
-from pycontrol_mcu.utility import *
+from pyControl.utility import *
 from devices import *
 
 # Variables.

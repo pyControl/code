@@ -4,7 +4,7 @@
 # selector switch and power knob on the LED driver to vary the LED power.
 # LED will be very bright at high powers so be careful not to look directly at it.
 
-from pycontrol_mcu.utility import *
+from pyControl.utility import *
 from devices import Breakout_1_2, LED_driver
 
 board = Breakout_1_2()

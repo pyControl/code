@@ -2,7 +2,7 @@
 # button is pressed and the green LED should be on when the voltage on pin
 # X1 is above ~1.5V.
 
-from pycontrol_mcu.utility import *
+from pyControl.utility import *
 from devices import *
 
 # Define hardware (normally done in seperate hardware definition file).

@@ -1,5 +1,5 @@
 import pyb
-from pycontrol_mcu.hardware import Analog_input
+from pyControl.hardware import Analog_input
 
 
 class Rotary_encoder(Analog_input):

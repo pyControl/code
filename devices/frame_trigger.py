@@ -1,6 +1,6 @@
 import pyb
-import pycontrol_mcu.hardware as hw
-import pycontrol_mcu.utility as ut
+import pyControl.hardware as hw
+import pyControl.utility as ut
 
 
 class Frame_trigger(hw.IO_object):

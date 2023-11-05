@@ -3,7 +3,7 @@
 # connect a stepper motor to it. The stepper motor will rotate forward and
 # backward.
 
-from pycontrol_mcu.utility import *
+from pyControl.utility import *
 from devices import Breakout_1_2, Stepper_motor
 
 board = Breakout_1_2()

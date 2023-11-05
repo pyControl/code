@@ -6,7 +6,7 @@
 # LEDs +12V and +5V on the tester should be on continuously and LEDs
 # DIO-A, DIO-B, POW-A, POW-B should cycle on and off.
 
-from pycontrol_mcu.utility import *
+from pyControl.utility import *
 from devices import Breakout_1_2, Digital_output, Port_expander
 
 # Hardware

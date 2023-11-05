@@ -1,7 +1,7 @@
 import pyb
-import pycontrol_mcu.hardware as hw
-from pycontrol_mcu.framework import pyControlError
-from pycontrol_mcu.utility import warning
+import pyControl.hardware as hw
+from pyControl.framework import pyControlError
+from pyControl.utility import warning
 
 
 class _MCP(hw.IO_object):

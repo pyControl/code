@@ -5,7 +5,7 @@
 # The frequency can be adjusted between 1 and 15 Hz, using the slider
 
 from pyb import LED
-from pycontrol_mcu.utility import *
+from pyControl.utility import *
 from devices import *
 
 red_LED = LED(1)

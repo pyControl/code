@@ -1,4 +1,4 @@
-from pycontrol_mcu.hardware import Digital_input, Digital_output
+from pyControl.hardware import Digital_input, Digital_output
 
 
 class Lickometer:

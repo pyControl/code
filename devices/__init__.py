@@ -1,5 +1,5 @@
 import os
-from pycontrol_mcu.hardware import Digital_input, Digital_output, Analog_input, Rsync, off
+from pyControl.hardware import Digital_input, Digital_output, Analog_input, Rsync, off
 
 _driver_files = [f.split(".")[0] for f in os.listdir("devices") if "init" not in f]
 

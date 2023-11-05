@@ -5,7 +5,7 @@
 
 # Does not require any hardware except a micropython board.
 
-from pycontrol_mcu.utility import *
+from pyControl.utility import *
 from devices import *
 
 # Define hardware (normally done in seperate hardware definition file).

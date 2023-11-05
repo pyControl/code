@@ -4,7 +4,7 @@
 # Hardware variables can be assigned values by going to the setups tab, selecting a named setup, and clicking the "variables" button to bring up the hardware variables dialog
 # A hardware variable must first be added to a task file before it will be available for editing in the hardware variables dialog
 
-from pycontrol_mcu.utility import *
+from pyControl.utility import *
 
 # States and events.
 states = ["print_msg"]
