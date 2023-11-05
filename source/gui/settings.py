@@ -12,10 +12,10 @@ def get_setting(setting_type, setting_name, want_default=False):
 
     default_user_settings = {
         "folders": {
-            "api_classes": os.path.join(os.getcwd(), "advanced", "api_classes"),
-            "controls_dialogs": os.path.join(os.getcwd(), "advanced", "controls_dialogs"),
-            "devices": os.path.join(os.getcwd(), "advanced", "devices"),
-            "hardware_definitions": os.path.join(os.getcwd(), "advanced", "hardware_definitions"),
+            "api_classes": os.path.join(os.getcwd(), "api_classes"),
+            "controls_dialogs": os.path.join(os.getcwd(), "controls_dialogs"),
+            "devices": os.path.join(os.getcwd(), "devices"),
+            "hardware_definitions": os.path.join(os.getcwd(), "hardware_definitions"),
             "data": os.path.join(os.getcwd(), "data"),
             "experiments": os.path.join(os.getcwd(), "experiments"),
             "tasks": os.path.join(os.getcwd(), "tasks"),

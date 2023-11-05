@@ -325,7 +325,7 @@ class Run_task_tab(QtWidgets.QWidget):
                     self.controls_dialog = potential_dialog
                     self.using_json_gui = True
                 elif potential_dialog.custom_gui == Custom_gui.PYFILE:
-                    py_gui_file = importlib.import_module(f"advanced.controls_dialogs.{custom_variables_name}")
+                    py_gui_file = importlib.import_module(f"controls_dialogs.{custom_variables_name}")
                     importlib.reload(py_gui_file)
                     self.controls_dialog = py_gui_file.Custom_controls_dialog(self, self.board)
             self.controls_button.clicked.connect(self.controls_dialog.exec)
@@ -353,7 +353,7 @@ class Run_task_tab(QtWidgets.QWidget):
         API_name = self.board.sm_info.variables["api_class"]
         # Try to import and instantiate the user API.
         try:
-            user_module_name = f"advanced.api_classes.{API_name}"
+            user_module_name = f"api_classes.{API_name}"
             user_module = importlib.import_module(user_module_name)
             importlib.reload(user_module)
         except ModuleNotFoundError:
