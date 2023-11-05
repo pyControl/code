@@ -635,13 +635,15 @@ class VariablesTable(QtWidgets.QTableWidget):
         for v in range(self.n_variables):
             v_name = self.cellWidget(v, 0).currentText()
             s_name = self.cellWidget(v, 1).currentText()
-            if s_name and s_name not in self.subjects_table.subjects + ["all"]:
-                cbox_set_item(self.cellWidget(v, 1), "", insert=True)
+            if s_name and s_name not in self.subjects_table.subjects + ["all", "all except"]:
+                cbox_set_item(self.cellWidget(v, 1), "", insert=True)  # Remove subjects no longer in experiment.
                 continue
             if v_name != "select variable" and s_name:
                 self.assigned[v_name].append(s_name)
         # Update the variables available:
-        fully_asigned_variables = [v_n for v_n in self.assigned.keys() if "all" in self.assigned[v_n]]
+        fully_asigned_variables = [
+            v_n for v_n in self.assigned.keys() if ({"all", "all except"} & set(self.assigned[v_n]))
+        ]
         if self.subjects_table.subjects:
             fully_asigned_variables += [
                 v_n for v_n in self.assigned.keys() if set(self.assigned[v_n]) == set(self.subjects_table.subjects)
@@ -658,6 +660,7 @@ class VariablesTable(QtWidgets.QTableWidget):
                     self.cellWidget(v, 1).addItems(["all"])
                     self.assigned[v_name] = ["all"]
                     self.available_variables.remove(v_name)
+                    s_name = "all"
                 cbox_update_options(self.cellWidget(v, 1), self.available_subjects(v_name, s_name))
 
     def available_subjects(self, v_name, s_name=None):
@@ -666,8 +669,12 @@ class VariablesTable(QtWidgets.QTableWidget):
         selected."""
         if (not self.assigned[v_name]) or self.assigned[v_name] == [s_name]:
             available_subjects = ["all"] + sorted(self.subjects_table.subjects)
+        elif s_name == "all":
+            sorted(self.subjects_table.subjects)
         else:
             available_subjects = sorted(list(set(self.subjects_table.subjects) - set(self.assigned[v_name])))
+            if len(available_subjects) + int(s_name in self.subjects_table.subjects) > 1:
+                available_subjects += ["all except"]
         return available_subjects
 
     def task_changed(self, task):
