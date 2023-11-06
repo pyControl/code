@@ -43,7 +43,7 @@ v.n_rewards = 0  # Number of rewards obtained.
 v.n_trials = 0  # Number of trials received.
 v.n_blocks = 0  # Number of reversals.
 v.good_side = choice(["left", "right"])  # Which side is currently good.
-v.correct_mov_ave = exp_mov_ave(tau=v.tau, init_value=0.5)  # Moving average of correct/incorrect choices
+v.correct_mov_ave = Exp_mov_ave(tau=v.tau, init_value=0.5)  # Moving average of correct/incorrect choices
 v.threshold_crossed = False  # Whether performance threshold has been crossed.
 v.trials_till_reversal = 0  # Used after threshold crossing to trigger reversal.
 

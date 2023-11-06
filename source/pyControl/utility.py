@@ -130,7 +130,7 @@ def gauss_rand(m, s):
     return m + s * (math.sqrt(-2.0 * math.log(random())) * math.cos(2 * math.pi * random()))
 
 
-class sample_without_replacement:
+class Sample_without_replacement:
     # Repeatedly sample elements from items list without replacement.
     def __init__(self, items):
         self._all_items = items
@@ -142,6 +142,8 @@ class sample_without_replacement:
         return self._next_items.pop()
 
 
+sample_without_replacement = Sample_without_replacement  # For backward compatibility.
+
 #  Math functions and classes -------------------------------------------------
 
 
@@ -150,7 +152,7 @@ def mean(x):
     return sum(x) / len(x)
 
 
-class exp_mov_ave:
+class Exp_mov_ave:
     # Exponential moving average class.
     def __init__(self, tau, init_value=0):
         self.tau = tau
@@ -169,6 +171,8 @@ class exp_mov_ave:
     def update(self, sample):
         self.value = (self.value * self._m) + (self._i * sample)
 
+
+exp_mov_ave = Exp_mov_ave  # For backward compatibility.
 
 # Units -----------------------------------------------------------------------
 
