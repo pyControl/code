@@ -8,13 +8,13 @@ from collections import OrderedDict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException
 
-from com.pycboard import Pycboard, PyboardError
-from gui.settings import get_setting
-from gui.plotting import Experiment_plot
-from gui.dialogs import Controls_dialog, Summary_variables_dialog
-from gui.utility import variable_constants, TaskInfo, parallel_call
-from gui.custom_controls_dialog import Custom_controls_dialog, Custom_gui
-from gui.hardware_variables_dialog import set_hardware_variables
+from source.communication.pycboard import Pycboard, PyboardError
+from source.gui.settings import get_setting, user_folder
+from source.gui.plotting import Experiment_plot
+from source.gui.dialogs import Controls_dialog, Summary_variables_dialog
+from source.gui.utility import variable_constants, TaskInfo, parallel_call
+from source.gui.custom_controls_dialog import Custom_controls_dialog, Custom_gui
+from source.gui.hardware_variables_dialog import set_hardware_variables
 
 # ----------------------------------------------------------------------------------------
 #  Run_experiment_tab
@@ -35,7 +35,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.name_text = QtWidgets.QLineEdit()
         self.name_text.setReadOnly(True)
         self.plots_button = QtWidgets.QPushButton("Show plots")
-        self.plots_button.setIcon(QtGui.QIcon("gui/icons/bar-graph.svg"))
+        self.plots_button.setIcon(QtGui.QIcon("source/gui/icons/bar-graph.svg"))
         self.plots_button.clicked.connect(self.experiment_plot.show)
         self.logs_button = QtWidgets.QPushButton("Hide logs")
         self.logs_button.clicked.connect(self.show_hide_logs)
@@ -71,6 +71,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         """Called when an experiment is loaded."""
         # Setup tabs.
         self.experiment = experiment
+        self.GUI_main.settings_action.setEnabled(False)  # settings shouldn't be opened when experiment is running
         self.GUI_main.tab_widget.setTabEnabled(0, False)  # Disable run task tab.
         self.GUI_main.tab_widget.setTabEnabled(2, False)  # Disable setups tab.
         self.GUI_main.experiments_tab.setCurrentWidget(self)
@@ -78,7 +79,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         self.logs_visible = True
         self.logs_button.setText("Hide logs")
         self.startstopclose_all_button.setText("Start all")
-        self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
+        self.startstopclose_all_button.setIcon(QtGui.QIcon("source/gui/icons/play.svg"))
         self.startstopclose_all_button.setEnabled(False)
         # Setup controls box.
         self.name_text.setText(experiment.name)
@@ -142,7 +143,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
         if self.setup_has_failed():
             return
         # Copy task file to experiments data folder.
-        self.subjectboxes[0].board.data_logger.copy_task_file(self.experiment.data_dir, get_setting("folders", "tasks"))
+        self.subjectboxes[0].board.data_logger.copy_task_file(self.experiment.data_dir, user_folder("tasks"))
         # Configure GUI ready to run.
         for box in self.subjectboxes:
             box.make_variables_dialog()  # Don't use parallel_call to avoid 'parent in a different thread error'.
@@ -170,10 +171,10 @@ class Run_experiment_tab(QtWidgets.QWidget):
         startstopclose_all button."""
         if self.setups_finished == self.num_subjects:
             self.startstopclose_all_button.setText("Close exp.")
-            self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/close.svg"))
+            self.startstopclose_all_button.setIcon(QtGui.QIcon("source/gui/icons/close.svg"))
         elif self.setups_started == self.num_subjects:
             self.startstopclose_all_button.setText("Stop all")
-            self.startstopclose_all_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
+            self.startstopclose_all_button.setIcon(QtGui.QIcon("source/gui/icons/stop.svg"))
 
     def stop_experiment(self):
         """Called when all setups have stopped running. Configure GUI update
@@ -226,6 +227,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
 
     def close_experiment(self):
         """Close the Run_experiment_tab and return to Setup_experiment_tab."""
+        self.GUI_main.settings_action.setEnabled(True)
         self.GUI_main.tab_widget.setTabEnabled(0, True)  # Enable run task tab.
         self.GUI_main.tab_widget.setTabEnabled(2, True)  # Enable setups tab.
         self.GUI_main.experiments_tab.setCurrentWidget(self.GUI_main.configure_experiment_tab)
@@ -290,7 +292,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.subject_sumr_vars = {}
 
         self.start_stop_button = QtWidgets.QPushButton("Start")
-        self.start_stop_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
+        self.start_stop_button.setIcon(QtGui.QIcon("source/gui/icons/play.svg"))
         self.start_stop_button.setEnabled(False)
         self.start_stop_button.clicked.connect(self.start_stop_task)
         self.status_label = QtWidgets.QLabel("Status:")
@@ -303,7 +305,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         self.time_text.setFixedWidth(50)
         self.task_info = TaskInfo()
         self.controls_button = QtWidgets.QPushButton("Controls")
-        self.controls_button.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
+        self.controls_button.setIcon(QtGui.QIcon("source/gui/icons/filter.svg"))
         self.controls_button.setEnabled(False)
         self.log_textbox = QtWidgets.QTextEdit()
         self.log_textbox.setMinimumHeight(180)
@@ -442,7 +444,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         API_name = self.board.sm_info.variables["api_class"]
         # Try to import and instantiate the user API.
         try:
-            user_module_name = f"config.user_classes.{API_name}"
+            user_module_name = f"api_classes.{API_name}"
             user_module = importlib.import_module(user_module_name)
             importlib.reload(user_module)
         except ModuleNotFoundError:
@@ -469,7 +471,7 @@ class Subjectbox(QtWidgets.QGroupBox):
             if potential_dialog.custom_gui == Custom_gui.JSON:
                 self.controls_dialog = potential_dialog
             elif potential_dialog.custom_gui == Custom_gui.PYFILE:
-                py_gui_file = importlib.import_module(f"config.user_controls_dialogs.{custom_variables_name}")
+                py_gui_file = importlib.import_module(f"controls_dialogs.{custom_variables_name}")
                 importlib.reload(py_gui_file)
                 self.controls_dialog = py_gui_file.Custom_controls_dialog(self, self.board)
         else:  # Board uses standard variables dialog.
@@ -504,7 +506,7 @@ class Subjectbox(QtWidgets.QGroupBox):
         if self.user_API:
             self.user_API.run_start()
         self.start_stop_button.setText("Stop")
-        self.start_stop_button.setIcon(QtGui.QIcon("gui/icons/stop.svg"))
+        self.start_stop_button.setIcon(QtGui.QIcon("source/gui/icons/stop.svg"))
         self.run_exp_tab.setups_started += 1
         self.run_exp_tab.GUI_main.refresh_timer.stop()
         self.run_exp_tab.plot_update_timer.start(get_setting("plotting", "update_interval"))

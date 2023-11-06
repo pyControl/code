@@ -3,8 +3,8 @@ import sys
 import json
 import logging
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from gui.settings import dirs, get_setting, default_user_settings
-from gui.utility import variable_constants
+from source.gui.settings import get_setting, user_folder
+from source.gui.utility import variable_constants
 
 # Board_config_dialog -------------------------------------------------
 
@@ -63,7 +63,7 @@ class Board_config_dialog(QtWidgets.QDialog):
         hwd_path = QtWidgets.QFileDialog.getOpenFileName(
             self,
             "Select hardware definition:",
-            dirs["hardware_definitions"],
+            user_folder("hardware_definitions"),
             filter="*.py",
         )[0]
         if hwd_path:
@@ -380,26 +380,39 @@ class Settings_dialog(QtWidgets.QDialog):
         self.num_edited_setters = 0
 
         settings_grid_layout = QtWidgets.QGridLayout(self)
-        paths_box = QtWidgets.QGroupBox("Paths")
-        paths_layout = QtWidgets.QVBoxLayout()
+        paths_box = QtWidgets.QGroupBox("Folder paths")
+        paths_layout = QtWidgets.QGridLayout()
 
         self.discard_changes_btn = QtWidgets.QPushButton("Discard changes")
         self.discard_changes_btn.setEnabled(False)
-        self.discard_changes_btn.setIcon(QtGui.QIcon("gui/icons/delete.svg"))
+        self.discard_changes_btn.setIcon(QtGui.QIcon("source/gui/icons/delete.svg"))
         self.discard_changes_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         self.discard_changes_btn.clicked.connect(self.reset)
 
-        self.save_settings_btn = QtWidgets.QPushButton("Save settings")
+        self.save_settings_btn = QtWidgets.QPushButton("Save settings and restart")
         self.save_settings_btn.setEnabled(False)
-        self.save_settings_btn.setIcon(QtGui.QIcon("gui/icons/save.svg"))
+        self.save_settings_btn.setIcon(QtGui.QIcon("source/gui/icons/save.svg"))
         self.save_settings_btn.clicked.connect(self.saveChanges)
 
         # Instantiate setters
-        self.tasks_setter = Path_setter(self, "Tasks", ("folders", "tasks"))
+        self.api_classes_setter = Path_setter(self, "Api classes", ("folders", "api_classes"))
+        self.controls_dialogs_setter = Path_setter(self, "Controls dialogs", ("folders", "controls_dialogs"))
         self.data_setter = Path_setter(self, "Data", ("folders", "data"))
-        self.path_setters = [self.tasks_setter, self.data_setter]
-        paths_layout.addLayout(self.tasks_setter)
-        paths_layout.addLayout(self.data_setter)
+        self.devices_setter = Path_setter(self, "Devices", ("folders", "devices"))
+        self.experiments_setter = Path_setter(self, "Experiments", ("folders", "experiments"))
+        self.hardware_definition_setter = Path_setter(self, "Hardware definitions", ("folders", "hardware_definitions"))
+        self.task_settter = Path_setter(self, "Tasks", ("folders", "tasks"))
+        self.path_setters = [
+            self.api_classes_setter,
+            self.controls_dialogs_setter,
+            self.data_setter,
+            self.devices_setter,
+            self.experiments_setter,
+            self.hardware_definition_setter,
+            self.task_settter,
+        ]
+        for i, setter in enumerate(self.path_setters):
+            setter.add_to_grid(paths_layout, i)
         paths_box.setLayout(paths_layout)
 
         plotting_box = QtWidgets.QGroupBox("Plotting")
@@ -412,19 +425,19 @@ class Settings_dialog(QtWidgets.QDialog):
         )
         self.event_history_len = Spin_setter(
             self,
-            "Event history length*",
+            "Event history length",
             ("plotting", "event_history_len"),
             " events",
         )
         self.state_history_len = Spin_setter(
             self,
-            "State history length*",
+            "State history length",
             ("plotting", "state_history_len"),
             " states",
         )
         self.analog_history_dur = Spin_setter(
             self,
-            "Analog history duration*",
+            "Analog history duration",
             ("plotting", "analog_history_dur"),
             " s",
         )
@@ -443,8 +456,8 @@ class Settings_dialog(QtWidgets.QDialog):
 
         gui_box = QtWidgets.QGroupBox("GUI")
         gui_layout = QtWidgets.QGridLayout()
-        self.ui_font_size = Spin_setter(self, "UI font size*", ("GUI", "ui_font_size"), " pt")
-        self.log_font_size = Spin_setter(self, "Log font size*", ("GUI", "log_font_size"), " pt")
+        self.ui_font_size = Spin_setter(self, "UI font size", ("GUI", "ui_font_size"), " pt")
+        self.log_font_size = Spin_setter(self, "Log font size", ("GUI", "log_font_size"), " pt")
 
         self.gui_spins = [self.ui_font_size, self.log_font_size]
         for i, variable in enumerate(self.gui_spins):
@@ -457,11 +470,7 @@ class Settings_dialog(QtWidgets.QDialog):
         self.fill_with_defaults_btn.clicked.connect(self.fill_with_defaults)
         self.fill_with_defaults_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
 
-        restart_app_label = QtWidgets.QLabel("*Requires pyControl restart")
-        restart_app_label.setStyleSheet("font-style:italic;")
-
         btns_layout = QtWidgets.QHBoxLayout()
-        btns_layout.addWidget(restart_app_label)
         btns_layout.addStretch(1)
         btns_layout.addWidget(self.fill_with_defaults_btn)
         btns_layout.addWidget(self.discard_changes_btn)
@@ -481,8 +490,8 @@ class Settings_dialog(QtWidgets.QDialog):
 
     def reset(self):
         """
-        Resets values to whatever is saved in user_settings.json,
-        or to default_user_settings if no user_settings.json exists
+        Resets values to whatever is saved in settings.json,
+        or to default_user_settings if no settings.json exists
         """
         for variable in self.path_setters + self.plotting_spins + self.gui_spins:
             variable.reset()
@@ -502,7 +511,7 @@ class Settings_dialog(QtWidgets.QDialog):
             top_key, sub_key = variable.key
             user_setting_dict_new[top_key][sub_key] = variable.get()
         # Store newly edited paths.
-        json_path = os.path.join(dirs["config"], "user_settings.json")
+        json_path = os.path.join("config", "settings.json")
         if os.path.exists(json_path):
             with open(json_path, "r", encoding="utf-8") as f:
                 user_settings = json.loads(f.read())
@@ -512,9 +521,11 @@ class Settings_dialog(QtWidgets.QDialog):
         with open(json_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(user_settings, indent=4))
         self.parent().data_dir_changed = True
-        self.parent().task_directory = get_setting("folders", "tasks")
+        self.parent().task_directory = user_folder("tasks")
 
-        self.reset()
+        self.save_settings_btn.setEnabled(False)
+        QtCore.QCoreApplication.quit()
+        QtCore.QProcess.startDetached(sys.executable, sys.argv)
 
     def showEvent(self, event):
         self.reset()
@@ -544,7 +555,7 @@ class Path_setter(QtWidgets.QHBoxLayout):
         Vcenter = QtCore.Qt.AlignmentFlag.AlignVCenter
         right = QtCore.Qt.AlignmentFlag.AlignRight
         self.path = ""
-        self.name_label = QtWidgets.QLabel(label + " folder")
+        self.name_label = QtWidgets.QLabel(label)
         self.name_label.setAlignment(right | Vcenter)
         self.name_label.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         self.path_text = QtWidgets.QLineEdit()
@@ -560,6 +571,11 @@ class Path_setter(QtWidgets.QHBoxLayout):
         self.addWidget(self.path_text)
         self.addWidget(self.change_button)
         self.setContentsMargins(0, 0, 0, 0)
+
+    def add_to_grid(self, groupbox_grid, row):
+        groupbox_grid.addWidget(self.name_label, row, 0)
+        groupbox_grid.addWidget(self.path_text, row, 1)
+        groupbox_grid.addWidget(self.change_button, row, 2)
 
     def select_path(self):
         new_path = QtWidgets.QFileDialog.getExistingDirectory(
@@ -648,7 +664,7 @@ class Spin_setter:
 
     def fill_with_default(self):
         top_key, sub_key = self.key
-        self.spn.setValue(default_user_settings[top_key][sub_key])
+        self.spn.setValue(get_setting(top_key, sub_key, want_default=True))
 
     def reset(self):
         self.start_value = get_setting(*self.key)

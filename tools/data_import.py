@@ -152,7 +152,7 @@ class Session:
             self.variables_df = pd.DataFrame(df.loc[df["type"] == "variable", "content"].tolist())
             columns = self.variables_df.columns
             self.variables_df.columns = pd.MultiIndex.from_arrays([["values"] * len(columns), columns])
-            self.variables_df.insert(0, "operation", df.loc[df["type"] == "variable", "subtype"].tolist())
+            self.variables_df.insert(0, "subtype", df.loc[df["type"] == "variable", "subtype"].tolist())
             self.variables_df.insert(0, "time", df.loc[df["type"] == "variable", "time"].tolist())
             self.variables_df.reset_index()
 

@@ -3,9 +3,9 @@ from datetime import timedelta
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
-from gui.settings import get_setting
-from gui.utility import detachableTabWidget
-from com.pycboard import MsgType
+from source.gui.settings import get_setting
+from source.gui.utility import detachableTabWidget
+from source.communication.pycboard import MsgType
 
 # ----------------------------------------------------------------------------------------
 # Task_plot
@@ -97,10 +97,10 @@ class Task_plot(QtWidgets.QWidget):
     def update_pause_btn_text(self):
         if self.pause_button.isChecked():
             self.pause_button.setText("Resume plotting")
-            self.pause_button.setIcon(QtGui.QIcon("gui/icons/play.svg"))
+            self.pause_button.setIcon(QtGui.QIcon("source/gui/icons/play.svg"))
         else:
             self.pause_button.setText("Pause plotting")
-            self.pause_button.setIcon(QtGui.QIcon("gui/icons/pause.svg"))
+            self.pause_button.setIcon(QtGui.QIcon("source/gui/icons/pause.svg"))
 
 
 # States_plot --------------------------------------------------------

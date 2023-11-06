@@ -6,8 +6,8 @@ from typing import Union
 from copy import deepcopy
 from dataclasses import dataclass, asdict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from gui.settings import dirs, get_setting
-from gui.utility import variable_constants, null_resize, cbox_set_item, cbox_update_options
+from source.gui.settings import user_folder
+from source.gui.utility import variable_constants, null_resize, cbox_set_item, cbox_update_options
 
 
 # input widgets ---------------------------------------------------------------
@@ -349,7 +349,7 @@ class Custom_controls_dialog(QtWidgets.QDialog):
             toolBar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
             toolBar.setIconSize(QtCore.QSize(15, 15))
             self.layout.addWidget(toolBar)
-            self.edit_action = QtGui.QAction(QtGui.QIcon("gui/icons/edit.svg"), "&edit", self)
+            self.edit_action = QtGui.QAction(QtGui.QIcon("source/gui/icons/edit.svg"), "&edit", self)
             self.edit_action.setEnabled(True)
             if not is_experiment:
                 toolBar.addAction(self.edit_action)
@@ -384,7 +384,7 @@ class Custom_controls_dialog(QtWidgets.QDialog):
     def get_custom_gui_data(self, is_experiment):
         custom_variables_dict = None
         try:  # Try to import and instantiate the user custom variable dialog
-            json_file = os.path.join(dirs["config"], "user_controls_dialogs", f"{self.gui_name}.json")
+            json_file = os.path.join(user_folder("controls_dialogs"), f"{self.gui_name}.json")
             with open(json_file, "r") as j:
                 custom_variables_dict = json.loads(j.read())
             # update json content if old version
@@ -392,7 +392,7 @@ class Custom_controls_dialog(QtWidgets.QDialog):
                 with open(json_file, "w", encoding="utf-8") as updated_json:
                     json.dump(custom_variables_dict, updated_json, indent=4)
         except FileNotFoundError:  # couldn't find the json data
-            py_file = os.path.join(dirs["config"], "user_controls_dialogs", f"{self.gui_name}.py")
+            py_file = os.path.join(user_folder("controls_dialogs"), f"{self.gui_name}.py")
             if os.path.exists(py_file):
                 self.custom_gui = Custom_gui.PYFILE
             else:
@@ -528,12 +528,12 @@ class Controls_dialog_editor(QtWidgets.QDialog):
         # main widgets
         self.tabs = QtWidgets.QTabWidget()
         self.add_tab_btn = QtWidgets.QPushButton("add tab")
-        self.add_tab_btn.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+        self.add_tab_btn.setIcon(QtGui.QIcon("source/gui/icons/add.svg"))
         self.add_tab_btn.clicked.connect(self.add_tab)
         self.add_tab_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
 
         self.del_tab_btn = QtWidgets.QPushButton("remove tab")
-        self.del_tab_btn.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
+        self.del_tab_btn.setIcon(QtGui.QIcon("source/gui/icons/remove.svg"))
         self.del_tab_btn.clicked.connect(self.remove_tab)
         self.del_tab_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
 
@@ -546,18 +546,18 @@ class Controls_dialog_editor(QtWidgets.QDialog):
         self.tab_title_btn.clicked.connect(self.set_tab_title)
 
         self.tab_shift_left_btn = QtWidgets.QPushButton("shift tab")
-        self.tab_shift_left_btn.setIcon(QtGui.QIcon("gui/icons/left.svg"))
+        self.tab_shift_left_btn.setIcon(QtGui.QIcon("source/gui/icons/left.svg"))
         self.tab_shift_left_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         self.tab_shift_left_btn.clicked.connect(self.shift_tab_left)
 
         self.tab_shift_right_btn = QtWidgets.QPushButton("shift tab")
-        self.tab_shift_right_btn.setIcon(QtGui.QIcon("gui/icons/right.svg"))
+        self.tab_shift_right_btn.setIcon(QtGui.QIcon("source/gui/icons/right.svg"))
         self.tab_shift_right_btn.setLayoutDirection(QtCore.Qt.LayoutDirection.RightToLeft)
         self.tab_shift_right_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         self.tab_shift_right_btn.clicked.connect(self.shift_tab_right)
 
         self.save_gui_btn = QtWidgets.QPushButton("Save GUI")
-        self.save_gui_btn.setIcon(QtGui.QIcon("gui/icons/save.svg"))
+        self.save_gui_btn.setIcon(QtGui.QIcon("source/gui/icons/save.svg"))
         self.save_gui_btn.clicked.connect(self.save_gui_data)
         self.save_gui_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         if self.parent_controls_dialog.generator_data:
@@ -607,13 +607,7 @@ class Controls_dialog_editor(QtWidgets.QDialog):
             else:  # there was an error
                 return
 
-        user_guis_folder = os.path.join(dirs["config"], "user_controls_dialogs")
-        try:
-            os.mkdir(user_guis_folder)
-            print(f'"user_controls_dialogs" folder not found, therefore creating new directory: {user_guis_folder}')
-        except FileExistsError:
-            pass
-        savename = os.path.join(user_guis_folder, f"{self.parent_controls_dialog.gui_name}.json")
+        savename = os.path.join(user_folder("controls_dialogs"), f"{self.parent_controls_dialog.gui_name}.json")
         with open(savename, "w", encoding="utf-8") as generated_data_file:
             json.dump(gui_dict, generated_data_file, indent=4)
         self.accept()
@@ -648,7 +642,7 @@ class Controls_dialog_editor(QtWidgets.QDialog):
         task = self.parent_controls_dialog.parent_tab.task
         pattern = "[\n\r]v\.(?P<vname>\w+)\s*\="
         try:
-            with open(os.path.join(get_setting("folders", "tasks"), task + ".py"), "r", encoding="utf-8") as file:
+            with open(os.path.join(user_folder("tasks"), task + ".py"), "r", encoding="utf-8") as file:
                 file_content = file.read()
         except FileNotFoundError:
             return
@@ -743,11 +737,11 @@ class Control_row:
         self.parent_table = parent_table
         # buttons
         self.up_button = QtWidgets.QPushButton("")
-        self.up_button.setIcon(QtGui.QIcon("gui/icons/up.svg"))
+        self.up_button.setIcon(QtGui.QIcon("source/gui/icons/up.svg"))
         self.down_button = QtWidgets.QPushButton("")
-        self.down_button.setIcon(QtGui.QIcon("gui/icons/down.svg"))
+        self.down_button.setIcon(QtGui.QIcon("source/gui/icons/down.svg"))
         self.remove_button = QtWidgets.QPushButton("remove")
-        self.remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
+        self.remove_button.setIcon(QtGui.QIcon("source/gui/icons/remove.svg"))
         # line edits
         self.display_name = QtWidgets.QLineEdit()
         self.spin_min = QtWidgets.QLineEdit()
@@ -846,7 +840,7 @@ class Variables_table(QtWidgets.QTableWidget):
                 self.add_row(control_name, control_specs)
             # after done loading control rows, insert another row with an "add" button
             add_button = QtWidgets.QPushButton("   add   ")
-            add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+            add_button.setIcon(QtGui.QIcon("source/gui/icons/add.svg"))
             add_button.clicked.connect(self.add_row)
             self.setCellWidget(self.n_variables, Clm.ADD, add_button)
         else:
@@ -866,7 +860,7 @@ class Variables_table(QtWidgets.QTableWidget):
         self.insertRow(self.n_variables + 1)
         if not varname:
             add_button = QtWidgets.QPushButton("   add   ")
-            add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+            add_button.setIcon(QtGui.QIcon("source/gui/icons/add.svg"))
             add_button.clicked.connect(self.add_row)
             self.setCellWidget(self.n_variables + 1, Clm.ADD, add_button)
 

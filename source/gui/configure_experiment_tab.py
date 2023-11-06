@@ -5,9 +5,9 @@ from pathlib import Path
 from dataclasses import dataclass, asdict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
-from gui.settings import dirs, get_setting
-from gui.dialogs import invalid_run_experiment_dialog, invalid_save_experiment_dialog, unrun_subjects_dialog
-from gui.utility import (
+from source.gui.settings import get_setting, user_folder
+from source.gui.dialogs import invalid_run_experiment_dialog, invalid_save_experiment_dialog, unrun_subjects_dialog
+from source.gui.utility import (
     TableCheckbox,
     cbox_update_options,
     cbox_set_item,
@@ -16,7 +16,7 @@ from gui.utility import (
     init_keyboard_shortcuts,
     NestedMenu,
 )
-from gui.hardware_variables_dialog import get_task_hw_vars, hw_vars_defined_in_setup
+from source.gui.hardware_variables_dialog import get_task_hw_vars, hw_vars_defined_in_setup
 
 # --------------------------------------------------------------------------------
 # Experiments_tab
@@ -53,15 +53,15 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         self.experiment_select.set_callback(self.experiment_changed)
 
         self.run_button = QtWidgets.QPushButton("Run")
-        self.run_button.setIcon(QtGui.QIcon("gui/icons/run.svg"))
+        self.run_button.setIcon(QtGui.QIcon("source/gui/icons/run.svg"))
         new_button = QtWidgets.QPushButton("New")
-        new_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+        new_button.setIcon(QtGui.QIcon("source/gui/icons/add.svg"))
         self.delete_button = QtWidgets.QPushButton("Delete")
-        self.delete_button.setIcon(QtGui.QIcon("gui/icons/delete.svg"))
+        self.delete_button.setIcon(QtGui.QIcon("source/gui/icons/delete.svg"))
         self.save_as_button = QtWidgets.QPushButton("Save as")
-        self.save_as_button.setIcon(QtGui.QIcon("gui/icons/save_as.svg"))
+        self.save_as_button.setIcon(QtGui.QIcon("source/gui/icons/save_as.svg"))
         self.save_button = QtWidgets.QPushButton("Save")
-        self.save_button.setIcon(QtGui.QIcon("gui/icons/save.svg"))
+        self.save_button.setIcon(QtGui.QIcon("source/gui/icons/save.svg"))
         self.save_button.setEnabled(False)
         self.name_text = ""
 
@@ -83,7 +83,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         data_dir_label = QtWidgets.QLabel("Data directory")
         self.data_dir_text = QtWidgets.QLineEdit(get_setting("folders", "data"))
         data_dir_button = QtWidgets.QPushButton("")
-        data_dir_button.setIcon(QtGui.QIcon("gui/icons/folder.svg"))
+        data_dir_button.setIcon(QtGui.QIcon("source/gui/icons/folder.svg"))
         data_dir_button.setFixedWidth(30)
 
         self.experiment_parameters_layout = QtWidgets.QGridLayout()
@@ -170,11 +170,11 @@ class Configure_experiment_tab(QtWidgets.QWidget):
     def refresh(self):
         """Called periodically when not running to update available task, ports, experiments."""
         if self.GUI_main.available_tasks_changed:
-            self.task_select.update_menu(get_setting("folders", "tasks"))
-            self.hardware_test_select.update_menu(get_setting("folders", "tasks"))
+            self.task_select.update_menu(user_folder("tasks"))
+            self.hardware_test_select.update_menu(user_folder("tasks"))
             self.GUI_main.available_tasks_changed = False
         if self.GUI_main.available_experiments_changed:
-            self.experiment_select.update_menu(dirs["experiments"])
+            self.experiment_select.update_menu(user_folder("experiments"))
             self.GUI_main.available_experiments_changed = False
         if self.GUI_main.setups_tab.available_setups_changed:
             self.subjects_table.all_setups = set(self.GUI_main.setups_tab.setup_names)
@@ -212,20 +212,22 @@ class Configure_experiment_tab(QtWidgets.QWidget):
 
     def create_new_experiment(self, from_existing=False):
         """Clear experiment configuration."""
-        savefilename = QtWidgets.QFileDialog.getSaveFileName(self, "", dirs["experiments"], ("JSON files (*.json)"))[0]
+        savefilename = QtWidgets.QFileDialog.getSaveFileName(
+            self, "", user_folder("experiments"), ("JSON files (*.json)")
+        )[0]
         if savefilename != "":
             if not from_existing:
                 self.reset()
             new_path = Path(savefilename)
-            if str(new_path).find(dirs["experiments"]) < 0:
+            if str(new_path).find(user_folder("experiments")) < 0:
                 QtWidgets.QMessageBox.warning(
                     self,
                     "Unable to create experiment",
-                    "New experiment files must be inside the experiments folder",
+                    f'New experiment files must be inside the "{user_folder("experiments")}" folder',
                     QtWidgets.QMessageBox.StandardButton.Ok,
                 )
                 return
-            exp_name = str(new_path.parent / new_path.stem).split(dirs["experiments"])[1][1:]
+            exp_name = str(new_path.parent / new_path.stem).split(user_folder("experiments"))[1][1:]
             self.name_text = exp_name
             self.experiment_select.setText(exp_name)
             new_data_dir = Path(get_setting("folders", "data")) / exp_name
@@ -239,7 +241,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
 
     def delete_experiment(self):
         """Delete an experiment file after dialog to confirm deletion."""
-        exp_path = os.path.join(dirs["experiments"], self.name_text + ".json")
+        exp_path = os.path.join(user_folder("experiments"), self.name_text + ".json")
         if os.path.exists(exp_path):
             reply = QtWidgets.QMessageBox.question(
                 self,
@@ -275,7 +277,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
         # saved in the experiments folder as .json file.
         experiment = self.get_exp_config()
         file_name = self.name_text + ".json"
-        exp_path = os.path.join(dirs["experiments"], file_name)
+        exp_path = os.path.join(user_folder("experiments"), file_name)
         with open(exp_path, "w", encoding="utf-8") as exp_file:
             exp_file.write(json.dumps(asdict(experiment), sort_keys=True, indent=4))
         if not from_dialog:
@@ -286,7 +288,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
 
     def load_experiment(self, experiment_name):
         """Load experiment  .json file and set fields of experiment tab."""
-        exp_path = os.path.join(dirs["experiments"], experiment_name + ".json")
+        exp_path = os.path.join(user_folder("experiments"), experiment_name + ".json")
         self.name_text = experiment_name
         with open(exp_path, "r", encoding="utf-8") as exp_file:
             exp_dict = json.loads(exp_file.read())
@@ -367,7 +369,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
                     invalid_run_experiment_dialog(self, f"Invalid value '{v['value']}' for variable '{v['name']}'.")
                     return
         # Validate hw_variables
-        task_file = Path(get_setting("folders", "tasks"), experiment.task + ".py")
+        task_file = Path(user_folder("tasks"), experiment.task + ".py")
         task_hw_vars = get_task_hw_vars(task_file)
         if task_hw_vars:
             for setup_name in setups:
@@ -395,7 +397,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
             return True
         if self.saved_exp_config == self.get_exp_config():
             return True  # Experiment has not been edited.
-        exp_path = os.path.join(dirs["experiments"], self.name_text + ".json")
+        exp_path = os.path.join(user_folder("experiments"), self.name_text + ".json")
         dialog_text = None
         if not os.path.exists(exp_path):
             dialog_text = "Experiment not saved, save experiment?"
@@ -464,11 +466,11 @@ class SubjectsTable(QtWidgets.QTableWidget):
             setup_cbox.setCurrentIndex(self.available_setups.index(self.unallocated_setups[0]))
         setup_cbox.activated.connect(self.update_available_setups)
         remove_button = QtWidgets.QPushButton("remove")
-        remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
+        remove_button.setIcon(QtGui.QIcon("source/gui/icons/remove.svg"))
         ind = QtCore.QPersistentModelIndex(self.model().index(self.num_subjects, 2))
         remove_button.clicked.connect(lambda: self.remove_subject(ind.row()))
         add_button = QtWidgets.QPushButton("   add   ")
-        add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+        add_button.setIcon(QtGui.QIcon("source/gui/icons/add.svg"))
         add_button.clicked.connect(self.add_subject)
         run_checkbox = TableCheckbox()
         if do_run is None:
@@ -556,7 +558,7 @@ class VariablesTable(QtWidgets.QTableWidget):
         self.horizontalHeader().setSectionResizeMode(5, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.verticalHeader().setVisible(False)
         add_button = QtWidgets.QPushButton("   add   ")
-        add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+        add_button.setIcon(QtGui.QIcon("source/gui/icons/add.svg"))
         add_button.clicked.connect(self.add_variable)
         self.setCellWidget(0, 5, add_button)
         self.n_variables = 0
@@ -583,9 +585,9 @@ class VariablesTable(QtWidgets.QTableWidget):
         remove_button = QtWidgets.QPushButton("remove")
         ind = QtCore.QPersistentModelIndex(self.model().index(self.n_variables, 2))
         remove_button.clicked.connect(lambda: self.remove_variable(ind.row()))
-        remove_button.setIcon(QtGui.QIcon("gui/icons/remove.svg"))
+        remove_button.setIcon(QtGui.QIcon("source/gui/icons/remove.svg"))
         add_button = QtWidgets.QPushButton("   add   ")
-        add_button.setIcon(QtGui.QIcon("gui/icons/add.svg"))
+        add_button.setIcon(QtGui.QIcon("source/gui/icons/add.svg"))
         add_button.clicked.connect(self.add_variable)
         self.insertRow(self.n_variables + 1)
         self.setCellWidget(self.n_variables, 0, variable_cbox)
@@ -679,7 +681,7 @@ class VariablesTable(QtWidgets.QTableWidget):
         """Remove variables that are not defined in the new task."""
         pattern = "[\n\r\.]v\.(?P<vname>\w+)\s*\="
         try:
-            with open(os.path.join(get_setting("folders", "tasks"), task + ".py"), "r", encoding="utf-8") as file:
+            with open(os.path.join(user_folder("tasks"), task + ".py"), "r", encoding="utf-8") as file:
                 file_content = file.read()
         except FileNotFoundError:
             return

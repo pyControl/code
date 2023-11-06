@@ -61,7 +61,7 @@ class Data_logger:
         self.data_file.write(self.tsv_row_str("info", time=time, subtype=subtype, content=content))
 
     def tsv_row_str(self, rtype, time="", subtype="", content=""):
-        time_str = f"{time/1000:.3f}" if type(time) == int else time
+        time_str = f"{time/1000:.3f}" if isinstance(time, int) else time
         return f"{time_str}\t{rtype}\t{subtype}\t{content}\n"
 
     def copy_task_file(self, data_dir, tasks_dir, dir_name="task_files"):

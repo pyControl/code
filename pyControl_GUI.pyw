@@ -19,5 +19,5 @@ except Exception as e:
     sys.exit()
 
 # Launch the GUI.
-from gui.GUI_main import launch_GUI
+from source.gui.GUI_main import launch_GUI
 launch_GUI()

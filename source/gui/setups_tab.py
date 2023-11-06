@@ -1,10 +1,10 @@
 import json
 from pathlib import Path
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from gui.settings import dirs, get_setting
-from gui.utility import TableCheckbox, parallel_call
-from gui.hardware_variables_dialog import Hardware_variables_editor
-from com.pycboard import Pycboard, PyboardError
+from source.gui.settings import get_setting, user_folder
+from source.gui.utility import TableCheckbox, parallel_call
+from source.gui.hardware_variables_dialog import Hardware_variables_editor
+from source.communication.pycboard import Pycboard, PyboardError
 
 
 class Setups_tab(QtWidgets.QWidget):
@@ -22,9 +22,9 @@ class Setups_tab(QtWidgets.QWidget):
 
         # rename old file from setup_names.json to setups.json
         # and change format so that names are a key within a serial port dictionary
-        setup_names = Path(dirs["config"], "setup_names.json")
+        setup_names = Path("config", "setup_names.json")
         try:
-            new_path = Path(dirs["config"], "setups.json")
+            new_path = Path("config", "setups.json")
             setup_names.rename(new_path)
             with open(new_path, "r", encoding="utf-8") as names_json:
                 names_dict = json.loads(names_json.read())
@@ -56,23 +56,23 @@ class Setups_tab(QtWidgets.QWidget):
         # Configuration buttons
         self.configure_group = QtWidgets.QGroupBox("Configure selected")
         load_fw_button = QtWidgets.QPushButton("Load framework")
-        load_fw_button.setIcon(QtGui.QIcon("gui/icons/upload.svg"))
+        load_fw_button.setIcon(QtGui.QIcon("source/gui/icons/upload.svg"))
         load_hw_button = QtWidgets.QPushButton("Load hardware definition")
-        load_hw_button.setIcon(QtGui.QIcon("gui/icons/upload.svg"))
+        load_hw_button.setIcon(QtGui.QIcon("source/gui/icons/upload.svg"))
         enable_flashdrive_button = QtWidgets.QPushButton("Enable flashdrive")
-        enable_flashdrive_button.setIcon(QtGui.QIcon("gui/icons/enable.svg"))
+        enable_flashdrive_button.setIcon(QtGui.QIcon("source/gui/icons/enable.svg"))
         disable_flashdrive_button = QtWidgets.QPushButton("Disable flashdrive")
-        disable_flashdrive_button.setIcon(QtGui.QIcon("gui/icons/disable.svg"))
+        disable_flashdrive_button.setIcon(QtGui.QIcon("source/gui/icons/disable.svg"))
         load_fw_button.clicked.connect(self.load_framework)
         load_hw_button.clicked.connect(self.load_hardware_definition)
         enable_flashdrive_button.clicked.connect(self.enable_flashdrive)
         disable_flashdrive_button.clicked.connect(self.disable_flashdrive)
         self.variables_btn = QtWidgets.QPushButton("Variables")
-        self.variables_btn.setIcon(QtGui.QIcon("gui/icons/filter.svg"))
+        self.variables_btn.setIcon(QtGui.QIcon("source/gui/icons/filter.svg"))
         self.variables_btn.clicked.connect(self.edit_hardware_vars)
 
         self.dfu_btn = QtWidgets.QPushButton("DFU mode")
-        self.dfu_btn.setIcon(QtGui.QIcon("gui/icons/wrench.svg"))
+        self.dfu_btn.setIcon(QtGui.QIcon("source/gui/icons/wrench.svg"))
         self.dfu_btn.clicked.connect(self.DFU_mode)
 
         config_layout = QtWidgets.QGridLayout()
@@ -112,7 +112,7 @@ class Setups_tab(QtWidgets.QWidget):
         self.setLayout(self.setups_layout)
 
     def get_setups_from_json(self):
-        self.save_path = Path(dirs["config"], "setups.json")
+        self.save_path = Path("config", "setups.json")
         if self.save_path.exists():
             with open(self.save_path, "r", encoding="utf-8") as f:
                 setups_from_json = json.loads(f.read())
@@ -260,7 +260,7 @@ class Setups_tab(QtWidgets.QWidget):
 
     def load_hardware_definition(self):
         self.hwd_path = QtWidgets.QFileDialog.getOpenFileName(
-            self, "Select hardware definition:", dirs["hardware_definitions"], filter="*.py"
+            self, "Select hardware definition:", user_folder("hardware_definitions"), filter="*.py"
         )[0]
         if self.hwd_path:
             self.print_to_log("Loading hardware definition...\n")

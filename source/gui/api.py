@@ -1,5 +1,6 @@
+import json
 from collections import namedtuple
-from com.pycboard import MsgType
+from source.communication.pycboard import MsgType
 
 
 class Api:
@@ -94,7 +95,7 @@ class Api:
         self.event_tup = namedtuple("Event", "name time")
         self.state_tup = namedtuple("State", "name time")
         self.print_tup = namedtuple("Print", "data time")
-        self.var_tup = namedtuple("Var", "name time")
+        self.var_tup = namedtuple("Var", "name value time")
         self.analog_tup = namedtuple("Analog", "name data time")
 
     def process_data(self, new_data):
@@ -110,7 +111,10 @@ class Api:
             if nd.type == MsgType.PRINT:
                 data["prints"].append(self.print_tup(nd.content, nd.time))
             elif nd.type == MsgType.VARBL:
-                data["vars"].append(self.var_tup(nd.subtype, nd.time))
+                var_change_dict = json.loads(nd.content)
+                name = list(var_change_dict.keys())[0]
+                value = list(var_change_dict.values())[0]
+                data["vars"].append(self.var_tup(name, value, nd.time))
             elif nd.type == MsgType.STATE:
                 name = self.ID2name[nd.content]
                 data["states"].append(self.state_tup(name, nd.time))
