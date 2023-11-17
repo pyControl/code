@@ -999,11 +999,11 @@ class Variables_table(QtWidgets.QTableWidget):
 class Custom_variables_not_found_dialog(QtWidgets.QDialog):
     def __init__(self, missing_file, parent):
         super(QtWidgets.QDialog, self).__init__(parent)
-        self.setWindowTitle("Custom variable dialog not found")
+        self.setWindowTitle("Custom controls dialog not found")
 
-        message = QtWidgets.QLabel(f'The custom variable dialog <b>"{missing_file}"</b> was not found.<br><br>')
-        continue_button = QtWidgets.QPushButton("Continue with standard variable dialog")
-        generate_button = QtWidgets.QPushButton("Create new custom variable dialog")
+        message = QtWidgets.QLabel(f'The custom controls dialog <b>"{missing_file}"</b> was not found.<br><br>')
+        continue_button = QtWidgets.QPushButton("Continue with\nstandard controls dialog")
+        generate_button = QtWidgets.QPushButton("Create new\ncustom controls dialog")
         continue_button.setDefault(True)
         continue_button.setFocus()
         layout = QtWidgets.QGridLayout(self)
