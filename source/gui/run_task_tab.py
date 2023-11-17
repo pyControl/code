@@ -48,17 +48,24 @@ class Run_task_tab(QtWidgets.QWidget):
         self.connect_button = QtWidgets.QPushButton("Connect")
         self.connect_button.setIcon(QtGui.QIcon("source/gui/icons/connect.svg"))
         self.connect_button.setEnabled(False)
-        self.config_button = QtWidgets.QPushButton("Config")
-        self.config_button.setIcon(QtGui.QIcon("source/gui/icons/settings.svg"))
+        self.config_dropdown = QtWidgets.QComboBox()
+        self.config_dropdown.addItem(QtGui.QIcon("source/gui/icons/settings.svg"), "Config")
+        self.config_dropdown.setFixedWidth(self.config_dropdown.minimumSizeHint().width())
+        self.config_dropdown.addItem(QtGui.QIcon("source/gui/icons/upload.svg"), "Load framework")
+        self.config_dropdown.addItem(QtGui.QIcon("source/gui/icons/upload.svg"), "Load hardware definition")
+        self.config_dropdown.addItem(QtGui.QIcon("source/gui/icons/wrench.svg"), "DFU mode")
+        self.config_dropdown.addItem(QtGui.QIcon("source/gui/icons/enable.svg"), "Enable flashdrive")
+        self.config_dropdown.addItem(QtGui.QIcon("source/gui/icons/disable.svg"), "Disable flashdrive")
+        self.config_dropdown.view().setRowHidden(0, True)
 
         boardgroup_layout = QtWidgets.QGridLayout(self.board_groupbox)
         boardgroup_layout.addWidget(self.board_select, 0, 0, 1, 2)
         boardgroup_layout.addWidget(self.connect_button, 1, 0)
-        boardgroup_layout.addWidget(self.config_button, 1, 1)
+        boardgroup_layout.addWidget(self.config_dropdown, 1, 1)
         boardgroup_layout.setContentsMargins(pad, pad, pad, pad)
 
         self.connect_button.clicked.connect(lambda: self.disconnect() if self.connected else self.connect())
-        self.config_button.clicked.connect(self.open_config_dialog)
+        self.config_dropdown.currentIndexChanged.connect(self.configure_board)
 
         # File groupbox
 
@@ -176,11 +183,9 @@ class Run_task_tab(QtWidgets.QWidget):
         init_keyboard_shortcuts(self, shortcut_dict)
 
         # Initial setup.
-
         self.disconnect()  # Set initial state as disconnected.
 
     # General methods
-
     def print_to_log(self, print_string, end="\n"):
         self.log_textbox.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         self.log_textbox.insertPlainText(print_string + end)
@@ -224,16 +229,61 @@ class Run_task_tab(QtWidgets.QWidget):
             except FileNotFoundError:
                 pass
 
-    def open_config_dialog(self):
-        """Open the config dialog and update GUI as required by chosen config."""
-        self.GUI_main.config_dialog.exec(self.board)
-        self.task_changed()
-        if self.GUI_main.config_dialog.disconnect:
-            time.sleep(0.5)
-            self.GUI_main.refresh()
-            self.disconnect()
-        if self.connected and self.board.status["framework"]:
-            self.task_groupbox.setEnabled(True)
+    def configure_board(self, index):
+        if index:
+            disconnect = False  # Indicates whether board was disconnected by dialog.
+            if index == 1:
+                self.config_dropdown.setCurrentIndex(0)
+                flashdrive_enabled = "MSC" in self.board.status["usb_mode"]
+                if flashdrive_enabled:
+                    flashdrive_message = (
+                        "It is recommended to disable the pyboard filesystem from acting as a "
+                        "USB flash drive before loading the framework, as this helps prevent the "
+                        "filesystem getting corrupted. Do you want to disable the flashdrive?"
+                    )
+                    reply = QtWidgets.QMessageBox.question(
+                        self,
+                        "Disable flashdrive",
+                        flashdrive_message,
+                        QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+                    )
+                    if reply == QtWidgets.QMessageBox.StandardButton.Yes:
+                        self.board.disable_mass_storage()
+                        disconnect = True
+                    else:
+                        self.board.load_framework()
+                else:
+                    self.board.load_framework()
+            elif index == 2:
+                self.config_dropdown.setCurrentIndex(0)
+                hwd_path = QtWidgets.QFileDialog.getOpenFileName(
+                    self,
+                    "Select hardware definition:",
+                    user_folder("hardware_definitions"),
+                    filter="*.py",
+                )[0]
+                if hwd_path:
+                    self.board.load_hardware_definition(hwd_path)
+            elif index == 3:
+                self.config_dropdown.setCurrentIndex(0)
+                self.board.DFU_mode()
+                self.disconnect = True
+            elif index == 4:
+                self.config_dropdown.setCurrentIndex(0)
+                self.board.enable_mass_storage()
+                disconnect = True
+            elif index == 5:
+                self.config_dropdown.setCurrentIndex(0)
+                self.board.disable_mass_storage()
+                disconnect = True
+
+            self.task_changed()
+            if disconnect:
+                time.sleep(0.5)
+                self.GUI_main.refresh()
+                self.disconnect()
+            if self.connected and self.board.status["framework"]:
+                self.task_groupbox.setEnabled(True)
 
     # Widget methods.
 
@@ -250,7 +300,14 @@ class Run_task_tab(QtWidgets.QWidget):
                 self.serial_port, print_func=self.print_to_log, data_consumers=[self.task_plot, self.task_info]
             )
             self.connected = True
-            self.config_button.setEnabled(True)
+            self.config_dropdown.setEnabled(True)
+            flashdrive_enabled = "MSC" in self.board.status["usb_mode"]
+            if flashdrive_enabled:
+                self.config_dropdown.view().setRowHidden(4, True)
+                self.config_dropdown.view().setRowHidden(5, False)
+            else:
+                self.config_dropdown.view().setRowHidden(4, False)
+                self.config_dropdown.view().setRowHidden(5, True)
             self.connect_button.setEnabled(True)
             self.connect_button.setText("Disconnect")
             self.connect_button.setIcon(QtGui.QIcon("source/gui/icons/disconnect.svg"))
@@ -272,7 +329,7 @@ class Run_task_tab(QtWidgets.QWidget):
         self.task_groupbox.setEnabled(False)
         self.file_groupbox.setEnabled(False)
         self.session_groupbox.setEnabled(False)
-        self.config_button.setEnabled(False)
+        self.config_dropdown.setEnabled(False)
         self.board_select.setEnabled(True)
         self.connect_button.setText("Connect")
         self.connect_button.setIcon(QtGui.QIcon("source/gui/icons/connect.svg"))
