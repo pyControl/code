@@ -11,7 +11,7 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 from source.gui.settings import VERSION, get_setting, user_folder
 from source.gui.run_task_tab import Run_task_tab
-from source.gui.dialogs import Board_config_dialog, Keyboard_shortcuts_dialog, Settings_dialog, Error_log_dialog
+from source.gui.dialogs import Keyboard_shortcuts_dialog, Settings_dialog, Error_log_dialog
 from source.gui.configure_experiment_tab import Configure_experiment_tab
 from source.gui.run_experiment_tab import Run_experiment_tab
 from source.gui.setups_tab import Setups_tab
@@ -45,7 +45,6 @@ class GUI_main(QtWidgets.QMainWindow):
         self.app = app
 
         # Dialogs.
-        self.config_dialog = Board_config_dialog(parent=self)
         self.shortcuts_dialog = Keyboard_shortcuts_dialog(parent=self)
         self.settings_dialog = Settings_dialog(parent=self)
         self.error_log_dialog = Error_log_dialog(parent=self)
