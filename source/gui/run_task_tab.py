@@ -1,6 +1,7 @@
 import os
 import time
 import importlib
+import json
 from datetime import datetime
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from serial import SerialException, SerialTimeoutException
@@ -183,7 +184,21 @@ class Run_task_tab(QtWidgets.QWidget):
 
     def print_to_log(self, print_string, end="\n"):
         self.log_textbox.moveCursor(QtGui.QTextCursor.MoveOperation.End)
-        self.log_textbox.insertPlainText(print_string + end)
+        run_start_str, run_end_str, found_str = "\trun_start\t", "\trun_end\t", False
+        if print_string.find(run_start_str) > -1:
+            found_str = run_start_str
+        elif print_string.find(run_end_str) > -1:
+            found_str = run_end_str
+        if found_str:
+            start, finish = print_string.split(found_str)
+            start_dict_string, *extra = finish.split("\n")
+            start_dict = json.loads(start_dict_string)
+            self.log_textbox.insertPlainText(start + found_str + "\n")
+            for var_item in start_dict.items():
+                self.log_textbox.insertPlainText(f"\t\t\t{var_item}\n")
+            self.log_textbox.insertPlainText("".join(extra) + "\n" + end)
+        else:
+            self.log_textbox.insertPlainText(print_string + end)
         self.log_textbox.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         self.GUI_main.app.processEvents()  # To update gui during long operations that print progress.
 
