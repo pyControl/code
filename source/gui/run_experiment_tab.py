@@ -348,7 +348,7 @@ class Subjectbox(QtWidgets.QGroupBox):
             start_dict = json.loads(start_dict_string)
             self.log_textbox.insertPlainText(start + found_str + "\n")
             for var_item in sorted(start_dict.items(), key=lambda x: x[0].lower()):
-                self.log_textbox.insertPlainText(f"\t\t\t{var_item}\n")
+                self.log_textbox.insertPlainText(f"\t\t\t\"{var_item[0]}\": {var_item[1]}\n")
             self.log_textbox.insertPlainText("".join(extra) + "\n" + end)
         else:
             self.log_textbox.insertPlainText(print_string + end)
