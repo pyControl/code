@@ -1,4 +1,5 @@
 import os
+import json
 import numpy as np
 from datetime import datetime
 from shutil import copyfile
@@ -90,10 +91,10 @@ class Data_logger:
         if self.data_file:
             self.write_to_file(new_data)
         if self.print_func:
-            self.print_func(self.data_to_string(new_data), end="")
+            self.print_func(self.data_to_string(new_data, "gui_log"), end="")
 
     def write_to_file(self, new_data):
-        data_string = self.data_to_string(new_data)
+        data_string = self.data_to_string(new_data, "tsvfile_log")
         if data_string:
             self.data_file.write(data_string)
             self.data_file.flush()
@@ -102,7 +103,7 @@ class Data_logger:
                 writer_id, data = nd.content
                 self.analog_writers[writer_id].save_analog_chunk(timestamp=nd.time, data_array=data)
 
-    def data_to_string(self, new_data):
+    def data_to_string(self, new_data, log_type):
         """Convert list of data tuples into a string."""
         data_string = ""
         for nd in new_data:
@@ -113,18 +114,36 @@ class Data_logger:
                     "event", time=nd.time, subtype=nd.subtype, content=self.board.sm_info.ID2name[nd.content]
                 )
             elif nd.type == MsgType.PRINT:  # User print output.
-                data_string += self.tsv_row_str(
-                    "print", time=nd.time, subtype=nd.subtype, content=nd.content.replace("\n", "|").replace("\r", "|")
-                )
+                content = nd.content
+                if log_type == "tsvfile_log":
+                    content = content.replace("\n", "|").replace("\r", "|")
+                elif log_type == "gui_log":
+                    content = content.replace("\n", "\n\t\t\t")
+                data_string += self.tsv_row_str("print", time=nd.time, subtype=nd.subtype, content=content)
             elif nd.type == MsgType.VARBL:  # Variable.
-                data_string += self.tsv_row_str("variable", time=nd.time, subtype=nd.subtype, content=nd.content)
+                content = nd.content
+                if log_type == "gui_log":
+                    if nd.subtype == "run_start" or nd.subtype == "run_end":
+                        formatted_string = ""
+                        start_dict = json.loads(content)
+                        for index, var_item in enumerate(sorted(start_dict.items(), key=lambda x: x[0].lower())):
+                            if index == 0:
+                                formatted_string += f'"{var_item[0]}": {var_item[1]}\n'
+                            else:
+                                formatted_string += f'\t\t\t"{var_item[0]}": {var_item[1]}\n'
+                        content = formatted_string[:-1]
+                data_string = self.tsv_row_str("variable", time=nd.time, subtype=nd.subtype, content=content)
             elif nd.type == MsgType.WARNG:  # Warning
                 data_string += self.tsv_row_str("warning", content=nd.content)
             elif nd.type in (MsgType.ERROR, MsgType.STOPF):  # Error or stop framework.
                 self.end_datetime = datetime.utcnow()
                 self.end_timestamp = nd.time
                 if nd.type == MsgType.ERROR:
-                    content = nd.content.replace("\n", "|").replace("\r", "|")
+                    content = nd.content
+                    if log_type == "tsvfile_log":
+                        content = content.replace("\n", "|").replace("\r", "|")
+                    elif log_type == "gui_log":
+                        content = content.replace("\n", "\n\t\t\t")
                     data_string += self.tsv_row_str("error", time=nd.time, content=content)
         return data_string
 
@@ -142,12 +161,12 @@ class Data_logger:
         if self.board.framework_running:
             self.process_data(new_data)
         else:
-            self.print_func(self.data_to_string(new_data), end="")
+            self.print_func(self.data_to_string(new_data, "gui_log"), end="")
             if self.board.timestamp == 0:  # Pre-run, store note to log when file opened.
                 self.pre_run_prints += new_data
             elif self.file_path:  # Post-run, log note to previous data file.
                 with open(self.file_path, "a") as data_file:
-                    data_file.write(self.data_to_string(new_data))
+                    data_file.write(self.data_to_string(new_data, "tsvfile_log"))
 
 
 # ----------------------------------------------------------------------------------------
