@@ -37,7 +37,7 @@ def reset_timer(event, interval, output_event=True):
     # Disarm all timers due to return specified event and set new timer
     # to return specified event after interval milliseconds.
     timer.disarm(sm.events[event])
-    timer.set(interval, fw.EVENT_TYP, "t", sm.events[event])
+    timer.set(interval, fw.EVENT_TYP, "t" if output_event else "", sm.events[event])
 
 
 def pause_timer(event):
