@@ -114,7 +114,7 @@ class Data_logger:
                 writer_id, data = nd.content
                 self.analog_writers[writer_id].save_analog_chunk(timestamp=nd.time, data_array=data)
 
-    def data_to_string(self, new_data, prettify=False):
+    def data_to_string(self, new_data, prettify=False, max_len=60):
         """Convert list of data tuples into a string."""
         data_string = ""
         for nd in new_data:
@@ -144,15 +144,12 @@ class Data_logger:
                 content = nd.content
                 if prettify:
                     time = ms_to_readable_time(time)
-                    if nd.subtype == "run_start" or nd.subtype == "run_end":
-                        formatted_string = ""
-                        run_variables_dict = json.loads(content)
-                        for index, var_item in enumerate(sorted(run_variables_dict.items(), key=lambda x: x[0].lower())):
-                            if index == 0:
-                                formatted_string += f'"{var_item[0]}": {var_item[1]}\n'
-                            else:
-                                formatted_string += f'\t\t\t"{var_item[0]}": {var_item[1]}\n'
-                        content = formatted_string[:-1]
+                    variables_dict = json.loads(content)
+                    if len(repr(variables_dict)) > max_len:  # Wrap variables across multiple lines.
+                        content = "{\n"
+                        for var_name, var_value in sorted(variables_dict.items(), key=lambda x: x[0].lower()):
+                            content += f'\t\t\t"{var_name}": {var_value}\n'
+                        content += "\t\t\t}"
                 data_string = self.tsv_row_str("variable", time=time, subtype=nd.subtype, content=content)
             elif nd.type == MsgType.WARNG:  # Warning
                 time = nd.time
