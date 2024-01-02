@@ -17,7 +17,7 @@ Datatuple = namedtuple("Datatuple", ["time", "type", "subtype", "content"])
 
 # Constants used to indicate data types, corresponding data tuple indicated in comment.
 
-EVENT_TYP = b"E"  # External event   : (time, EVENT_TYP, [i]nput/[t]imer/[s]ync/[p]ublish/[u]ser/[a]pi, event_ID)
+EVENT_TYP = b"E"  # Event            : (time, EVENT_TYP, [i]nput/[t]imer/[s]ync/[p]ublish/[u]ser/[a]pi, event_ID)
 STATE_TYP = b"S"  # State transition : (time, STATE_TYP, "", state_ID)
 PRINT_TYP = b"P"  # User print       : (time, PRINT_TYP, "", print_string)
 HARDW_TYP = b"H"  # Harware callback : (time, HARDW_TYP, "", hardware_ID)
@@ -157,7 +157,8 @@ def run():
         elif timer.elapsed:
             event = timer.get()
             if event.type == EVENT_TYP:
-                data_output_queue.put(event)
+                if event.subtype:
+                    data_output_queue.put(event)
                 sm.process_event(event.content)
             elif event.type == HARDW_TYP:
                 hw.IO_dict[event.content]._timer_callback()

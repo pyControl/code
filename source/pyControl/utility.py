@@ -25,7 +25,7 @@ def timed_goto_state(next_state, interval):
 
 def set_timer(event, interval, output_event=True):
     # Set a timer to return specified event after interval milliseconds.
-    timer.set(interval, fw.EVENT_TYP, "t", sm.events[event])
+    timer.set(interval, fw.EVENT_TYP, "t" if output_event else "", sm.events[event])
 
 
 def disarm_timer(event):
