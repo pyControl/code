@@ -383,7 +383,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
                 if all_subjects[subject]["run"] is False:
                     will_not_run += f"{subject}\n"
             if will_not_run != "":
-                okay = unrun_subjects_dialog(self.subjects_groupbox, will_not_run)
+                okay = unrun_subjects_dialog(self, will_not_run)
                 if not okay:
                     return
         if not self.save_changes_dialog():
