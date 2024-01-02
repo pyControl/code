@@ -178,7 +178,7 @@ class Run_experiment_tab(QtWidgets.QWidget):
 
     def stop_experiment(self):
         """Called when all setups have stopped running. Configure GUI update
-        timers, store persistant variables and display summary variables."""
+        timers, store persistent variables and display summary variables."""
         self.plot_update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
         # Store persistent variables.
@@ -416,7 +416,7 @@ class Subjectbox(QtWidgets.QGroupBox):
                 # persistent variables or value specified in variable table
                 subject_pv_dict = self.run_exp_tab.persistent_variables.get(self.subject, {})
                 for v in self.subject_variables:
-                    if v["persistent"] and v["name"] in subject_pv_dict.keys():  # Use stored value.
+                    if v["persistent"] and v["value"] == "" and v["name"] in subject_pv_dict.keys():  # Use stored value
                         v_value = subject_pv_dict[v["name"]]
                         self.variables_set_pre_run.append((v["name"], str(v_value), "(persistent value)"))
                     else:
@@ -528,7 +528,7 @@ class Subjectbox(QtWidgets.QGroupBox):
                 self.print_to_log("\nError while stopping framework run.")
             if self.user_API:
                 self.user_API.run_stop()
-        # Read persistant variables.
+        # Read persistent variables.
         subject_pvs = [v for v in self.subject_variables if v["persistent"]]
         if subject_pvs:
             self.print_to_log("\nReading persistent variables.")

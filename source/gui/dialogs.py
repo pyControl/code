@@ -248,6 +248,22 @@ def unrun_subjects_dialog(parent, message):
         return False
 
 
+# Persistent variabe value warning ------------------------------------------------------
+
+
+def persistent_value_dialog(parent, var_names):
+    reply = QtWidgets.QMessageBox.warning(
+        parent,
+        "Persistent variables value",
+        f"Values entered in variables table will take precedence over stored persistent values for variables:\n\n{var_names}",
+        (QtWidgets.QMessageBox.StandardButton.Ok | QtWidgets.QMessageBox.StandardButton.Cancel),
+    )
+    if reply == QtWidgets.QMessageBox.StandardButton.Ok:
+        return True
+    else:
+        return False
+
+
 # Keyboard shortcuts dialog. ---------------------------------------------------------
 
 

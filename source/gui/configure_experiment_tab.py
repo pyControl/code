@@ -6,7 +6,12 @@ from dataclasses import dataclass, asdict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 from source.gui.settings import get_setting, user_folder
-from source.gui.dialogs import invalid_run_experiment_dialog, invalid_save_experiment_dialog, unrun_subjects_dialog
+from source.gui.dialogs import (
+    invalid_run_experiment_dialog,
+    invalid_save_experiment_dialog,
+    unrun_subjects_dialog,
+    persistent_value_dialog,
+)
 from source.gui.utility import (
     TableCheckbox,
     cbox_update_options,
@@ -361,6 +366,7 @@ class Configure_experiment_tab(QtWidgets.QWidget):
                 invalid_run_experiment_dialog(self, f"Setup '{setup}' not available.")
                 return
         # Validate variables.
+        persistent_value_vars = []
         for v in experiment.variables:
             if v["value"]:
                 try:
@@ -368,6 +374,12 @@ class Configure_experiment_tab(QtWidgets.QWidget):
                 except:
                     invalid_run_experiment_dialog(self, f"Invalid value '{v['value']}' for variable '{v['name']}'.")
                     return
+            if v["persistent"] and v["value"]:
+                persistent_value_vars.append(v["name"])
+        if persistent_value_vars:
+            okay = persistent_value_dialog(self, persistent_value_vars)
+            if not okay:
+                return
         # Validate hw_variables
         task_file = Path(user_folder("tasks"), experiment.task + ".py")
         task_hw_vars = get_task_hw_vars(task_file)
