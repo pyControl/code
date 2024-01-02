@@ -526,7 +526,6 @@ class Subjectbox(QtWidgets.QGroupBox):
                 self.board.process_data()
             except PyboardError:
                 self.print_to_log("\nError while stopping framework run.")
-            self.log_textbox.moveCursor(QtGui.QTextCursor.MoveOperation.End)
             if self.user_API:
                 self.user_API.run_stop()
         # Read persistant variables.

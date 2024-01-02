@@ -189,6 +189,7 @@ class Run_task_tab(QtWidgets.QWidget):
     def print_to_log(self, print_string, end="\n"):
         self.log_textbox.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         self.log_textbox.insertPlainText(print_string + end)
+        self.log_textbox.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         self.GUI_main.app.processEvents()  # To update gui during long operations that print progress.
 
     def test_data_path(self):
@@ -487,7 +488,6 @@ class Run_task_tab(QtWidgets.QWidget):
                 self.print_to_log(f"\nRun stopped at: {datetime.now().strftime('%Y/%m/%d %H:%M:%S')}")
             except PyboardError:
                 self.print_to_log("\nError while stopping framework run.")
-            self.log_textbox.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         self.board.data_logger.close_files()
         self.task_plot.run_stop()
         if self.user_API:
