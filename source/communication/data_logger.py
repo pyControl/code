@@ -164,7 +164,7 @@ class Data_logger:
                     content = nd.content
                     if prettify:
                         time = ms_to_readable_time(time)
-                        content = content.replace("\n", "\n\t\t\t")
+                        content = f"\n\n{content}"
                     else:
                         content = content.replace("\n", "|").replace("\r", "|")
                     data_string += self.tsv_row_str("error", time=time, content=content)
