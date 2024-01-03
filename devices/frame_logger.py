@@ -46,4 +46,4 @@ class Frame_logger(hw.IO_object):
         hw.interrupt_queue.put(self.ID)
 
     def _process_interrupt(self):
-        fw.data_output_queue.put(fw.Datatuple(self.interrupt_timestamp, fw.EVENT_TYP, "i", self.rising_event_ID))
+        fw.data_output_queue.put(fw.Datatuple(self.interrupt_timestamp, fw.EVENT_TYP, "s", self.rising_event_ID))
