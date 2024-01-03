@@ -70,9 +70,9 @@ class Data_logger:
         }
 
     def write_info_line(self, subtype, content, time=0):
-        self.data_file.write(self.tsv_row_str("info", time=time, subtype=subtype, content=content))
+        self.data_file.write(self.tsv_row_str("info", time, subtype, content))
 
-    def tsv_row_str(self, rtype, time="", subtype="", content=""):
+    def tsv_row_str(self, rtype, time, subtype="", content=""):
         time_str = f"{time/1000:.3f}" if isinstance(time, int) else time
         return f"{time_str}\t{rtype}\t{subtype}\t{content}\n"
 
@@ -115,59 +115,43 @@ class Data_logger:
                 self.analog_writers[writer_id].save_analog_chunk(timestamp=nd.time, data_array=data)
 
     def data_to_string(self, new_data, prettify=False, max_len=60):
-        """Convert list of data tuples into a string."""
+        """Convert list of data tuples into a string.  If prettify is True the string is formatted
+        for the GUI data log, if False for the tsv data file."""
         data_string = ""
         for nd in new_data:
+            time = ms_to_readable_time(nd.time) if prettify else nd.time
             if nd.type == MsgType.STATE:  # State entry.
-                time = nd.time
-                if prettify:
-                    time = ms_to_readable_time(time)
-                data_string += self.tsv_row_str("state", time=time, content=self.board.sm_info.ID2name[nd.content])
+                data_string += self.tsv_row_str("state", time, content=self.board.sm_info.ID2name[nd.content])
             elif nd.type == MsgType.EVENT:  # Event.
-                time = nd.time
-                if prettify:
-                    time = ms_to_readable_time(time)
-                data_string += self.tsv_row_str(
-                    "event", time=time, subtype=nd.subtype, content=self.board.sm_info.ID2name[nd.content]
-                )
+                data_string += self.tsv_row_str("event", time, nd.subtype, self.board.sm_info.ID2name[nd.content])
             elif nd.type == MsgType.PRINT:  # User print output.
-                time = nd.time
-                content = nd.content
                 if prettify:
-                    time = ms_to_readable_time(time)
-                    content = content.replace("\n", "\n\t\t\t")
+                    print_str = nd.content.replace("\n", "\n\t\t\t")
                 else:
-                    content = content.replace("\n", "|").replace("\r", "|")
-                data_string += self.tsv_row_str("print", time=time, subtype=nd.subtype, content=content)
+                    print_str = nd.content.replace("\n", "|").replace("\r", "|")
+                data_string += self.tsv_row_str("print", time, nd.subtype, content=print_str)
             elif nd.type == MsgType.VARBL:  # Variable.
-                time = nd.time
-                content = nd.content
+                var_str = nd.content
                 if prettify:
-                    time = ms_to_readable_time(time)
-                    variables_dict = json.loads(content)
+                    variables_dict = json.loads(nd.content)
                     if len(repr(variables_dict)) > max_len:  # Wrap variables across multiple lines.
-                        content = "{\n"
+                        var_str = "{\n"
                         for var_name, var_value in sorted(variables_dict.items(), key=lambda x: x[0].lower()):
-                            content += f'\t\t\t"{var_name}": {var_value}\n'
-                        content += "\t\t\t}"
-                data_string = self.tsv_row_str("variable", time=time, subtype=nd.subtype, content=content)
+                            var_str += f'\t\t\t"{var_name}": {var_value}\n'
+                        var_str += "\t\t\t}"
+                data_string = self.tsv_row_str("variable", time, nd.subtype, content=var_str)
             elif nd.type == MsgType.WARNG:  # Warning
-                time = nd.time
-                if prettify:
-                    time = ms_to_readable_time(time)
-                data_string += self.tsv_row_str("warning", content=nd.content)
+                data_string += self.tsv_row_str("warning", time, content=nd.content)
             elif nd.type in (MsgType.ERROR, MsgType.STOPF):  # Error or stop framework.
                 self.end_datetime = datetime.utcnow()
                 self.end_timestamp = nd.time
                 if nd.type == MsgType.ERROR:
-                    time = nd.time
                     content = nd.content
                     if prettify:
-                        time = ms_to_readable_time(time)
                         content = f"\n\n{content}"
                     else:
                         content = content.replace("\n", "|").replace("\r", "|")
-                    data_string += self.tsv_row_str("error", time=time, content=content)
+                    data_string += self.tsv_row_str("error", time, content=content)
         return data_string
 
     def print_message(self, msg, source="u"):
