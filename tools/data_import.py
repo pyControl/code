@@ -408,7 +408,6 @@ def session_dataframe(file_path, paired_events={}, pair_end_suffix=None, time_un
         df = pd.read_csv(file_path, delimiter="\t")
 
         if time_unit == "ms":
-            df = df.loc[df["type"] != "warning", :]  # Warning rows have nan time so can't convert to int.
             df["time"] = (df["time"] * 1000).astype(int)
 
         # Convert variables row value fields to dicts from json strings.
@@ -519,7 +518,7 @@ def experiment_dataframe(folder_path, paired_events={}, pair_end_suffix=None, ti
 
 
 def load_analog_data(file_path):
-    """Load a pyControl analog data file and return the contents as a numpy array
-    whose first column is timestamps (ms) and second data values."""
+    """Load a pyControl version <2.0 .pca analog data file and return the contents as
+    a numpy array whose first column is timestamps (ms) and second data values."""
     with open(file_path, "rb") as f:
         return np.fromfile(f, dtype="<i").reshape(-1, 2)
