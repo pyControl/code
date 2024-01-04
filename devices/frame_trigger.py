@@ -9,7 +9,7 @@ class Frame_trigger(hw.IO_object):
         self.pin = pyb.Pin(pin, mode=pyb.Pin.OUT, value=0)
         self.name = name
         self.pulse_rate = pulse_rate
-        self.analog_channel = hw.Analog_channel(name, pulse_rate, plot=False)
+        self.analog_channel = hw.Analog_channel(name, pulse_rate, data_type="L", plot=False)
         hw.assign_ID(self)
 
     def _run_start(self):
