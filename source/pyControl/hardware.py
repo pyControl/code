@@ -235,7 +235,7 @@ class Analog_input(IO_object):
     # streams data to computer. Optionally can generate framework events when voltage
     #  goes above / below specified value theshold.
 
-    def __init__(self, pin, name, sampling_rate, threshold=None, rising_event=None, falling_event=None):
+    def __init__(self, pin, name, sampling_rate, threshold=None, rising_event=None, falling_event=None, data_type="H"):
         if rising_event or falling_event:
             self.threshold = Analog_threshold(threshold, rising_event, falling_event)
         else:
@@ -245,7 +245,7 @@ class Analog_input(IO_object):
             self.ADC = pyb.ADC(pin)
             self.read_sample = self.ADC.read
         self.name = name
-        self.Analog_channel = Analog_channel(name, sampling_rate, data_type="H")
+        self.Analog_channel = Analog_channel(name, sampling_rate, data_type)
         assign_ID(self)
 
     def _run_start(self):
