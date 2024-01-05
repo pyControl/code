@@ -36,7 +36,7 @@ class Rotary_encoder(Analog_input):
             threshold,
             rising_event,
             falling_event,
-            data_type={2: "h", 4: "l"}[bytes_per_sample],
+            data_type={2: "h", 4: "i"}[bytes_per_sample],
         )
 
     def read_sample(self):

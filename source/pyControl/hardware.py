@@ -286,7 +286,7 @@ class Analog_channel(IO_object):
     #     data array bytes (variable)
 
     def __init__(self, name, sampling_rate, data_type, plot=True):
-        assert data_type in ("b", "B", "h", "H", "l", "L"), "Invalid data_type."
+        assert data_type in ("b", "B", "h", "H", "i", "I"), "Invalid data_type."
         assert not any(
             [name == io.name for io in IO_dict.values() if isinstance(io, Analog_channel)]
         ), "Analog signals must have unique names."
@@ -295,7 +295,7 @@ class Analog_channel(IO_object):
         self.sampling_rate = sampling_rate
         self.data_type = data_type
         self.plot = plot
-        self.bytes_per_sample = {"b": 1, "B": 1, "h": 2, "H": 2, "l": 4, "L": 4}[data_type]
+        self.bytes_per_sample = {"b": 1, "B": 1, "h": 2, "H": 2, "i": 4, "I": 4}[data_type]
         self.buffer_size = max(4, min(256 // self.bytes_per_sample, sampling_rate // 10))
         self.buffers = (array(data_type, [0] * self.buffer_size), array(data_type, [0] * self.buffer_size))
         self.buffers_mv = (memoryview(self.buffers[0]), memoryview(self.buffers[1]))
