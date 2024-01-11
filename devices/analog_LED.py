@@ -1,9 +1,9 @@
 import pyb
 
-class Analog_LED():
 
-    def __init__(self,  port):
-        assert port.DAC is not None, '! Analog LED needs port with DAC.'
+class Analog_LED:
+    def __init__(self, port):
+        assert port.DAC is not None, "! Analog LED needs port with DAC."
         self.DAC = pyb.DAC(port.DAC, bits=12)
         self.off()
 

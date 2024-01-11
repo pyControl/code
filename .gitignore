@@ -1,2 +1,15 @@
 __pycache__/
 unversioned/
+ErrorLog.txt
+
+api_classes/
+!api_classes/Example_user_class.py
+
+controls_dialogs/
+!controls_dialogs/example*
+
+hardware_definitions/
+!hardware_definitions/example_hardware_definition.py
+
+tasks/
+!tasks/example

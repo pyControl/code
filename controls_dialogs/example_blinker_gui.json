@@ -1,0 +1,67 @@
+{
+    "blinker": {
+        "blink_rate": {
+            "widget": "slider",
+            "label": "\u23f1\ufe0fBlink rate",
+            "hint": "Rate which LED blinks",
+            "min": 1,
+            "max": 15,
+            "step": 0.5,
+            "suffix": "Hz"
+        },
+        "sep_0": {
+            "widget": "separator",
+            "label": "",
+            "hint": "",
+            "min": null,
+            "max": null,
+            "step": null,
+            "suffix": ""
+        },
+        "green_enabled": {
+            "widget": "checkbox",
+            "label": "\ud83d\udfe2Green active",
+            "hint": "some",
+            "min": null,
+            "max": null,
+            "step": null,
+            "suffix": ""
+        },
+        "green_count": {
+            "widget": "spinbox",
+            "label": "\ud83d\udfe2Green count",
+            "hint": "more",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "suffix": "blinks"
+        },
+        "sep_1": {
+            "widget": "separator",
+            "label": "",
+            "hint": "",
+            "min": null,
+            "max": null,
+            "step": null,
+            "suffix": ""
+        },
+        "red_enabled": {
+            "widget": "checkbox",
+            "label": "\ud83d\udd34Red active",
+            "hint": "hints",
+            "min": null,
+            "max": null,
+            "step": null,
+            "suffix": ""
+        },
+        "red_count": {
+            "widget": "spinbox",
+            "label": "\ud83d\udd34Red count",
+            "hint": "shown",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "suffix": "blinks"
+        }
+    }
+}

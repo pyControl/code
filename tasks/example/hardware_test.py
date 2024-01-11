@@ -6,80 +6,93 @@ import hardware_definition as hw
 
 # States and events.
 
-states = ['init_state',
-          'left_active',
-          'right_active',
-          'left_release',
-          'right_release']
+states = [
+    "init_state",
+    "left_active",
+    "right_active",
+    "left_release",
+    "right_release",
+]
 
-events = ['left_poke', 
-          'right_poke',
-          'center_poke',
-          'center_poke_out']
+events = [
+    "left_poke",
+    "right_poke",
+    "center_poke",
+    "center_poke_out",
+]
 
-initial_state = 'init_state'
+initial_state = "init_state"
+
 
 # Run start and stop behaviour.
 
-def run_start():  # 
+
+def run_start():
     hw.houselight.on()
 
-def run_end():  
+
+def run_end():
     hw.off()
 
-# State & event dependent behaviour.
+
+# State behaviour functions.
+
 
 def init_state(event):
     # Select left or right poke.
-    if event == 'entry':
+    if event == "entry":
         hw.center_poke.LED.on()
-    elif event == 'exit':
+    elif event == "exit":
         hw.center_poke.LED.off()
-    elif event == 'left_poke':
-        goto_state('left_active')
-    elif event == 'right_poke':
-        goto_state('right_active')
+    elif event == "left_poke":
+        goto_state("left_active")
+    elif event == "right_poke":
+        goto_state("right_active")
+
 
 def left_active(event):
     # Poke center to trigger solenoid or right to go to state right_active.
-    if event == 'entry':
+    if event == "entry":
         hw.left_poke.LED.on()
-    elif event == 'exit':
+    elif event == "exit":
         hw.left_poke.LED.off()
-    elif event == 'center_poke':
-        goto_state('left_release')
-    elif event == 'right_poke':
-        goto_state('right_active')
+    elif event == "center_poke":
+        goto_state("left_release")
+    elif event == "right_poke":
+        goto_state("right_active")
+
 
 def right_active(event):
     # Poke center to trigger solenoid or left to go to state left_active.
-    if event == 'entry':
+    if event == "entry":
         hw.right_poke.LED.on()
-    elif event == 'exit':
+    elif event == "exit":
         hw.right_poke.LED.off()
-    elif event == 'left_poke':
-        goto_state('left_active')
-    elif event == 'center_poke':
-        goto_state('right_release')
+    elif event == "left_poke":
+        goto_state("left_active")
+    elif event == "center_poke":
+        goto_state("right_release")
+
 
 def left_release(event):
     # Trigger left solenoid while center poke IR beam remains broken.
-    if event == 'entry':
+    if event == "entry":
         hw.left_poke.SOL.on()
-    elif event == 'exit':
+    elif event == "exit":
         hw.left_poke.SOL.off()
-    elif event == 'center_poke_out':
-        goto_state('left_active')
-    elif event == 'right_poke':
-        goto_state('right_active')
+    elif event == "center_poke_out":
+        goto_state("left_active")
+    elif event == "right_poke":
+        goto_state("right_active")
+
 
 def right_release(event):
     # Trigger right solenoid while center poke IR beam remains broken.
-    if event == 'entry':
+    if event == "entry":
         hw.right_poke.SOL.on()
-    elif event == 'exit':
+    elif event == "exit":
         hw.right_poke.SOL.off()
-    elif event == 'left_poke':
-        goto_state('left_active')
-    elif event == 'center_poke_out':
-        goto_state('right_active')
+    elif event == "left_poke":
+        goto_state("left_active")
+    elif event == "center_poke_out":
+        goto_state("right_active")
