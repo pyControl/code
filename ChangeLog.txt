@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
-Version 2.0rc1 2023-07-09
+Version 2.0 2024-01-11
 -------------------------------------------------------------------------------
 
 GUI:
@@ -16,6 +16,9 @@ GUI:
   which can be used across different tasks and experiments.
 
 - Setups Tab now does operations on multiple boards in parallel rather than serially.
+
+- Experiments can now be organised into subfolders within the experiments folder, 
+  to create a nested experiment select menu in the GUI.
 
 - UI improvements.
 

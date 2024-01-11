@@ -1,7 +1,7 @@
 import os
 import json
 
-VERSION = "2.0rc1"
+VERSION = "2.0"
 
 
 def get_setting(setting_type, setting_name, want_default=False):

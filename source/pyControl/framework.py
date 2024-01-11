@@ -6,7 +6,7 @@ from . import state_machine as sm
 from . import hardware as hw
 from . import utility as ut
 
-VERSION = "2.0rc1"
+VERSION = "2.0"
 
 
 class pyControlError(BaseException):  # Exception for pyControl errors.
