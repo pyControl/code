@@ -86,8 +86,8 @@ class Api:
         self.print_to_log = print_to_log
         self.ID2name = self.board.sm_info.ID2name
         self.ID2analog = {}  # Convert analog ID to name
-        for name, info in self.board.sm_info.analog_inputs.items():
-            self.ID2analog[info["ID"]] = name
+        for ID, info in self.board.sm_info.analog_inputs.items():
+            self.ID2analog[ID] = info["name"]
 
         # Declare the named tuples for the user friendly data
         # structure, so they are not newly declared with
