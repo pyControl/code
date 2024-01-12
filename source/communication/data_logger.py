@@ -139,7 +139,7 @@ class Data_logger:
                         for var_name, var_value in sorted(variables_dict.items(), key=lambda x: x[0].lower()):
                             var_str += f'\t\t\t"{var_name}": {var_value}\n'
                         var_str += "\t\t\t}"
-                data_string = self.tsv_row_str("variable", time, nd.subtype, content=var_str)
+                data_string += self.tsv_row_str("variable", time, nd.subtype, content=var_str)
             elif nd.type == MsgType.WARNG:  # Warning
                 data_string += self.tsv_row_str("warning", time, content=nd.content)
             elif nd.type in (MsgType.ERROR, MsgType.STOPF):  # Error or stop framework.
