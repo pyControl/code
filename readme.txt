@@ -20,5 +20,5 @@ pyControl
 ├── tasks               # Task definition files
 └── tools               # Tools for working with pycontrol data
 
-Version: v2.0
+Version: v2.0.1
 ---------------
