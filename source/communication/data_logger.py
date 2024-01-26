@@ -48,7 +48,7 @@ class Data_logger:
         self.end_timestamp = None
         file_name = self.subject_ID + datetime_now.strftime("-%Y-%m-%d-%H%M%S") + ".tsv"
         self.file_path = os.path.join(self.data_dir, file_name)
-        self.data_file = open(self.file_path, "w", newline="\n")
+        self.data_file = open(self.file_path, "w", encoding="utf-8", newline="\n")
         self.data_file.write(
             self.tsv_row_str(
                 time="time", rtype="type", subtype="subtype", content="content"
