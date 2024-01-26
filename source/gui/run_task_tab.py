@@ -267,7 +267,7 @@ class Run_task_tab(QtWidgets.QWidget):
             elif index == 3:
                 self.config_dropdown.setCurrentIndex(0)
                 self.board.DFU_mode()
-                self.disconnect = True
+                disconnect = True
             elif index == 4:
                 self.config_dropdown.setCurrentIndex(0)
                 self.board.enable_mass_storage()
