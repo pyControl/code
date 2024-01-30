@@ -167,6 +167,9 @@ class Data_logger:
         ]
         if self.board.framework_running:
             self.process_data(new_data)
+            if self.board.data_consumers:
+                for data_consumer in self.board.data_consumers:
+                    data_consumer.process_data(new_data)
         else:
             self.print_func(self.data_to_string(new_data, prettify=True), end="")
             if self.board.timestamp == 0:  # Pre-run, store note to log when file opened.
