@@ -440,6 +440,7 @@ class Pycboard(Pyboard):
         self.gc_collect()
         self.exec("fw.data_output = " + repr(data_output))
         self.serial.reset_input_buffer()
+        self.last_message_time = 0
         self.exec_raw_no_follow("fw.run()")
         self.framework_running = True
 
