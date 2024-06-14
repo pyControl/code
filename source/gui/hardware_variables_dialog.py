@@ -106,8 +106,8 @@ class VariablesTable(QtWidgets.QTableWidget):
                     value_edit.setText(str(value))
             self.setCellWidget(row, 0, setup_name)
             self.setCellWidget(row, 1, value_edit)
+            value_edit.textChanged.connect(self.refresh_save_button)
         self.last_saved_dict = self.get_hw_var_dict()
-        value_edit.textChanged.connect(self.refresh_save_button)
 
     def refresh_save_button(self):
         if self.get_hw_var_dict() != self.last_saved_dict:
