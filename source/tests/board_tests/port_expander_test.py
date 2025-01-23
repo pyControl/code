@@ -1,8 +1,7 @@
-# Install the driver files for the Port Expander (see
-# https://pycontrol.readthedocs.io/en/latest/user-guide/hardware/#more-devices).
 # Connect port expander board to port 3 of the breakout board 1.2, connect
-# breakout board to the computer, plug in the 12V power supply. Connect a
-#  breakout tester 1.0 board to each RJ45 port on the port expander in turn.
+# breakout board to the computer, plug in the 12V power supply.
+# Run this task file using the pyControl GUI.
+# Connect a breakout tester 1.0 board to each RJ45 port on the port expander in turn.
 # LEDs +12V and +5V on the tester should be on continuously and LEDs
 # DIO-A, DIO-B, POW-A, POW-B should cycle on and off.
 

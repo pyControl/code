@@ -1,7 +1,8 @@
 # Connect breakout board 1.2 to the computer, plug in the 12V power supply.
 # Connect a Stepper motor driver board to port 3 on the breakout board and
-# connect a stepper motor to it. The stepper motor will rotate forward and
-# backward.
+# connect a stepper motor to it.
+# Run this task file using the pyControl GUI.
+# The stepper motor will rotate forward and backward.
 
 from pyControl.utility import *
 from devices import Breakout_1_2, Stepper_motor

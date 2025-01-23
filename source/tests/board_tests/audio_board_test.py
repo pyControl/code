@@ -1,6 +1,8 @@
 # Connect breakout board 1.2 to the computer, plug in the 12V power supply.
 # Connect an audio board to port 3 on the breakout board and plug a speaker into
-# the audio board.  The speaker should play white noise at different volumes.
+# the audio board.
+# Run this task file using the pyControl GUI.
+# The speaker should play white noise at different volumes.
 
 from pyControl.utility import *
 from devices import Breakout_1_2, Audio_board

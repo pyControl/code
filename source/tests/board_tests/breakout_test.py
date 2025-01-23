@@ -1,6 +1,7 @@
 # Connect breakout board 1.2 to the computer, plug in the 12V power supply.
-# Connect a breakout tester 1.0 board to each RJ45 port in turn. In every port
-# LEDs +12V and +5V on the tester should be on continuously and LEDs
+# Connect a breakout tester 1.0 board to each RJ45 port in turn.
+# Run this task file using the pyControl GUI.
+# In every port LEDs +12V and +5V on the tester should be on continuously and LEDs
 # DIO-A, DIO-B, POW-A, POW-B should cycle on and off. In ports 1-4 the LED DP/C
 # should also cycle on and off. Connect a tester board to each BNC socket on
 # the breakout in turn, the BNC LED should turn on and off.

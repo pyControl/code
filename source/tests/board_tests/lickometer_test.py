@@ -1,11 +1,10 @@
-# Install the driver file for the Lickometer (see
-# https://pycontrol.readthedocs.io/en/latest/user-guide/hardware/#more-devices).
 # Connect breakout board 1.2 to the computer, plug in the 12V power supply.
 # Connect a Lickometer to port 1 of the breakout board. Plug a houselight into
-# the SOL-1 and SOL-2 ports on the Lickometer. When you make an electrical
-# connection between LK1 and GND the houselight connected to SOL-1 will turn on.
-# When you make an electrical connection between LK2 and GND the houselight
-# connected to SOL-2 will turn on.
+# the SOL-1 and SOL-2 ports on the Lickometer.
+# Run this task file using the pyControl GUI.
+# When you make an electrical connection between LK1 and GND the houselight
+# connected to SOL-1 will turn on. When you make an electrical connection between
+# LK2 and GND the houselight connected to SOL-2 will turn on.
 
 from pyControl.utility import *
 from devices import Breakout_1_2, Lickometer

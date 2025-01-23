@@ -4,8 +4,9 @@
 # a folder on the SD card called '01' and put a short wav file with name '001.wav'
 # in the folder.  You can use a wav file from the sample pack that can be
 # downloaded from this address address: http://smd-records.com/tr808/?page_id=14
-# Put the folder in the SD card socket on the audio player. Run the task and the
-# wav file should play alternately from each speaker at two different volumes.
+# Put the folder in the SD card socket on the audio player.
+# Run this task file using the pyControl GUI.
+# The wav file should play alternately from each speaker at two different volumes.
 
 from pyControl.utility import *
 from devices import Breakout_1_2, Audio_player
