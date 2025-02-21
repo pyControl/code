@@ -88,7 +88,7 @@ def output_data(event):
     content_bytes = str(event.content).encode() if event.content else b""
     message = timestamp + event.type + subtype_byte + content_bytes
     message_len = len(message).to_bytes(2, "little")
-    checksum = sum(message).to_bytes(2, "little")
+    checksum = (sum(message) & 0xFFFF).to_bytes(2, "little")
     usb_serial.send(b"\x07" + checksum + message_len + message)
 
 
