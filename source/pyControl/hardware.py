@@ -336,7 +336,7 @@ class Analog_channel(IO_object):
         self.data_header[5:9] = self.buffer_start_times[buffer_n].to_bytes(4, "little")
         checksum = sum(self.data_header[5:])
         checksum += sum(self.buffers_mv[buffer_n][:n_samples] if run_stop else self.buffers[buffer_n])
-        self.data_header[1:3] = checksum.to_bytes(2, "little")
+        self.data_header[1:3] = (checksum & 0xFFFF).to_bytes(2, "little")
         fw.usb_serial.write(self.data_header)
         if run_stop:
             fw.usb_serial.send(self.buffers_mv[buffer_n][:n_samples])
