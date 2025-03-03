@@ -15,3 +15,7 @@ class Breakout_1_2:
         self.DAC_1 = "X5"
         self.DAC_2 = "X6"
         self.button = "X17"
+        self.LED_blue = "B4"
+        self.LED_red = "A13"
+        self.LED_green = "A14"
+        self.LED_yellow = "A15"
