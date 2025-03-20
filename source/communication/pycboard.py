@@ -485,7 +485,7 @@ class Pycboard(Pyboard):
                 else:
                     message_sum = sum(message)
                 # Process message.
-                if checksum == message_sum & 0xFFFF:  # Checksum OK.
+                if checksum == (message_sum & 0xFFFF):  # Checksum OK.
                     self.last_message_time = time.time()
                     self.timestamp = int.from_bytes(message[:4], "little")
                     if msg_type in (MsgType.EVENT, MsgType.STATE):
