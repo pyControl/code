@@ -481,13 +481,16 @@ class Pycboard(Pyboard):
                     ID = int.from_bytes(content_bytes[:2], "little")
                     data = array(self.sm_info.analog_inputs[ID]["dtype"], content_bytes[2:])
                     content = (ID, data)
-                    message_sum = sum(message[:8]) + sum(data)
+                    msg_sum = sum(message[:8]) + sum(data)
                 else:
-                    message_sum = sum(message)
+                    msg_sum = sum(message)
                 # Process message.
-                if checksum == (message_sum & 0xFFFF):  # Checksum OK.
-                    self.last_message_time = time.time()
-                    self.timestamp = int.from_bytes(message[:4], "little")
+                if checksum == (msg_sum & 0xFFFF):  # Checksum OK.
+                    time_of_processing = time.time()
+                    msg_timestamp = int.from_bytes(message[:4], "little")
+                    if msg_timestamp > self.timestamp:
+                        self.last_message_time = time_of_processing
+                        self.timestamp = msg_timestamp
                     if msg_type in (MsgType.EVENT, MsgType.STATE):
                         content = int(content_bytes.decode())  # Event/state ID.
                     elif msg_type in (MsgType.PRINT, MsgType.WARNG):
@@ -495,7 +498,7 @@ class Pycboard(Pyboard):
                     elif msg_type == MsgType.VARBL:
                         content = content_bytes.decode()  # JSON string
                         self.sm_info.variables.update(json.loads(content))
-                    new_data.append(Datatuple(time=self.timestamp, type=msg_type, subtype=msg_subtype, content=content))
+                    new_data.append(Datatuple(time=msg_timestamp, type=msg_type, subtype=msg_subtype, content=content))
                 else:  # Bad checksum
                     new_data.append(
                         Datatuple(time=self.get_timestamp(), type=MsgType.WARNG, content="Bad data checksum.")
@@ -526,7 +529,7 @@ class Pycboard(Pyboard):
     def get_timestamp(self):
         """Get the current pyControl timestamp in ms since start of framework run."""
         seconds_elapsed = time.time() - self.last_message_time
-        return self.timestamp + round(1000 * (seconds_elapsed))
+        return self.timestamp + round(1000 * seconds_elapsed)
 
     def send_serial_data(self, data, command, cmd_type=""):
         """Send data to the pyboard while framework is running."""
