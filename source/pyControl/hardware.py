@@ -237,23 +237,26 @@ class Analog_input(IO_object):
 
     def __init__(self, pin, name, sampling_rate, threshold=None, rising_event=None, falling_event=None, data_type="H"):
         if rising_event or falling_event:
-            self.threshold = Analog_threshold(threshold, rising_event, falling_event)
+            if threshold is None:
+                raise ValueError("A threshold must be specified if rising or falling events are defined.")
+            self.threshold_watcher = Analog_threshold_watcher(threshold, rising_event, falling_event)
         else:
-            self.threshold = False
+            self.threshold_watcher = False
+
         self.timer = pyb.Timer(available_timers.pop())
         if pin:  # pin argument can be None when Analog_input subclassed.
             self.ADC = pyb.ADC(pin)
             self.read_sample = self.ADC.read
         self.name = name
-        self.Analog_channel = Analog_channel(name, sampling_rate, data_type)
+        self.channel = Analog_channel(name, sampling_rate, data_type)
         assign_ID(self)
 
     def _run_start(self):
         # Start sampling timer, initialise threshold, aquire first sample.
-        self.timer.init(freq=self.Analog_channel.sampling_rate)
+        self.timer.init(freq=self.channel.sampling_rate)
         self.timer.callback(self._timer_ISR)
-        if self.threshold:
-            self.threshold.run_start(self.read_sample())
+        if self.threshold_watcher:
+            self.threshold_watcher.run_start(self.read_sample())
         self._timer_ISR(0)
 
     def _run_stop(self):
@@ -263,9 +266,12 @@ class Analog_input(IO_object):
     def _timer_ISR(self, t):
         # Read a sample to the buffer, update write index.
         sample = self.read_sample()
-        self.Analog_channel.put(sample)
-        if self.threshold:
-            self.threshold.check(sample)
+        self.channel.put(sample)
+        if self.threshold_watcher:
+            self.threshold_watcher.check(sample)
+
+    def change_threshold(self, new_threshold):
+        self.threshold_watcher.set_threshold(new_threshold)
 
     def record(self):  # For backward compatibility.
         pass
@@ -286,15 +292,21 @@ class Analog_channel(IO_object):
     #     data array bytes (variable)
 
     def __init__(self, name, sampling_rate, data_type, plot=True):
-        assert data_type in ("b", "B", "h", "H", "i", "I"), "Invalid data_type."
-        assert not any(
-            [name == io.name for io in IO_dict.values() if isinstance(io, Analog_channel)]
-        ), "Analog signals must have unique names."
+        if data_type not in ("b", "B", "h", "H", "i", "I"):
+            raise ValueError("Invalid data_type.")
+        if any([name == io.name for io in IO_dict.values() if isinstance(io, Analog_channel)]):
+            raise ValueError(
+                "Analog signals must have unique names.{} {}".format(
+                    name, [io.name for io in IO_dict.values() if isinstance(io, Analog_channel)]
+                )
+            )
+
         self.name = name
         assign_ID(self)
         self.sampling_rate = sampling_rate
         self.data_type = data_type
         self.plot = plot
+
         self.bytes_per_sample = {"b": 1, "B": 1, "h": 2, "H": 2, "i": 4, "I": 4}[data_type]
         self.buffer_size = max(4, min(256 // self.bytes_per_sample, sampling_rate // 10))
         self.buffers = (array(data_type, [0] * self.buffer_size), array(data_type, [0] * self.buffer_size))
@@ -344,19 +356,46 @@ class Analog_channel(IO_object):
             fw.usb_serial.send(self.buffers[buffer_n])
 
 
-class Analog_threshold(IO_object):
-    # Generates framework events when an analog signal goes above or below specified threshold.
+class Crossing:
+    above = "above"
+    below = "below"
+    none = "none"
 
-    def __init__(self, threshold=None, rising_event=None, falling_event=None):
-        assert isinstance(
-            threshold, int
-        ), "Integer threshold must be specified if rising or falling events are defined."
-        self.threshold = threshold
+
+class Analog_threshold_watcher(IO_object):
+    """
+    Generates framework events when an analog signal goes above or below specified threshold.
+    If given single threshold value, rising event is triggered when signal > threshold, falling event is triggered when signal <= threshold.
+    If given tuple of two threshold values, rising event is triggered when signal > upper bound, falling event is triggered when signal < lower bound.
+    """
+
+    def __init__(self, threshold, rising_event=None, falling_event=None):
+        self.set_threshold(threshold)
         self.rising_event = rising_event
         self.falling_event = falling_event
         self.timestamp = 0
-        self.crossing_direction = False
+        self.last_crossing = Crossing.none
         assign_ID(self)
+
+    def set_threshold(self, threshold):
+        if isinstance(threshold, int):  # single threshold value
+            self.upper_threshold = threshold
+            self.lower_threshold = threshold + 1  # +1 so falling event is triggered when crossing into <= threshold
+        elif isinstance(threshold, tuple):
+            threshold_requirements_str = "The threshold must be a single integer or a tuple of two integers (lower_bound, upper_bound) where lower_bound <= upper_bound."
+            if len(threshold) != 2:
+                raise ValueError("{} is not a valid threshold. {}".format(threshold, threshold_requirements_str))
+            lower, upper = threshold
+            if not upper >= lower:
+                raise ValueError(
+                    "{} is not a valid threshold because the lower bound {} is greater than the upper bound {}. {}".format(
+                        threshold, lower, upper, threshold_requirements_str
+                    )
+                )
+            self.upper_threshold = upper
+            self.lower_threshold = lower
+        else:
+            raise ValueError("{} is not a valid threshold. {}".format(threshold, threshold_requirements_str))
 
     def _initialise(self):
         # Set event codes for rising and falling events.
@@ -365,24 +404,33 @@ class Analog_threshold(IO_object):
         self.threshold_active = self.rising_event_ID or self.falling_event_ID
 
     def run_start(self, sample):
-        self.above_threshold = sample > self.threshold
+        self.was_above = sample > self.upper_threshold
+        self.was_below = sample < self.lower_threshold
 
     def _process_interrupt(self):
         # Put event generated by threshold crossing in event queue.
-        if self.crossing_direction:
+        if self.was_above:
             fw.event_queue.put(fw.Datatuple(self.timestamp, fw.EVENT_TYP, "i", self.rising_event_ID))
         else:
             fw.event_queue.put(fw.Datatuple(self.timestamp, fw.EVENT_TYP, "i", self.falling_event_ID))
 
     @micropython.native
     def check(self, sample):
-        new_above_threshold = sample > self.threshold
-        if new_above_threshold != self.above_threshold:  # Threshold crossing.
-            self.above_threshold = new_above_threshold
-            if (self.above_threshold and self.rising_event_ID) or (not self.above_threshold and self.falling_event_ID):
-                self.timestamp = fw.current_time
-                self.crossing_direction = self.above_threshold
+        is_above_threshold = sample > self.upper_threshold
+        is_below_threshold = sample < self.lower_threshold
+
+        if is_above_threshold and not self.was_above and self.last_crossing != Crossing.above:
+            self.timestamp = fw.current_time
+            self.last_crossing = Crossing.above
+            if self.rising_event_ID:
                 interrupt_queue.put(self.ID)
+        elif is_below_threshold and not self.was_below and self.last_crossing != Crossing.below:
+            self.timestamp = fw.current_time
+            self.last_crossing = Crossing.below
+            if self.falling_event_ID:
+                interrupt_queue.put(self.ID)
+
+        self.was_above, self.was_below = is_above_threshold, is_below_threshold
 
 
 # Digital Output --------------------------------------------------------------
