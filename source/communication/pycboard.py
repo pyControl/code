@@ -486,10 +486,9 @@ class Pycboard(Pyboard):
                     msg_sum = sum(message)
                 # Process message.
                 if checksum == (msg_sum & 0xFFFF):  # Checksum OK.
-                    time_of_processing = time.time()
                     msg_timestamp = int.from_bytes(message[:4], "little")
                     if msg_timestamp > self.timestamp:
-                        self.last_message_time = time_of_processing
+                        self.last_message_time = time.time()
                         self.timestamp = msg_timestamp
                     if msg_type in (MsgType.EVENT, MsgType.STATE):
                         content = int(content_bytes.decode())  # Event/state ID.
