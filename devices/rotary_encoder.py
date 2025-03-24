@@ -9,9 +9,7 @@ class Rotary_encoder(Analog_input):
         name,
         sampling_rate,
         output="velocity",
-        threshold=None,
-        rising_event=None,
-        falling_event=None,
+        triggers=None,
         bytes_per_sample=2,
         reverse=False,
     ):
@@ -28,14 +26,13 @@ class Rotary_encoder(Analog_input):
         self.position = 0
         self.velocity = 0
         self.sampling_rate = sampling_rate
+
         Analog_input.__init__(
             self,
             None,
             name,
             int(sampling_rate),
-            threshold,
-            rising_event,
-            falling_event,
+            triggers,
             data_type={2: "h", 4: "i"}[bytes_per_sample],
         )
 
