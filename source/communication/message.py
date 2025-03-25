@@ -51,5 +51,6 @@ class MsgType(Enum):
                     "t": "task",
                     "a": "api",
                     "u": "user",
+                    "s": "trigger",
                 },
             }[self][subtype_char]
