@@ -1,4 +1,4 @@
-from devices._poke import _Poke
+from devices.poke import _Poke
 
 
 class Five_poke:

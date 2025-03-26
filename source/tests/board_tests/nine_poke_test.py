@@ -5,12 +5,12 @@
 # for 500ms when you poke it.
 
 from pyControl.utility import *
-from devices import Breakout_1_2, nine_poke
+from devices import Breakout_1_2, Nine_poke
 
 # Define hardware
 
 board = Breakout_1_2()
-nine_poke = Nine_poke(port=board.port_3)
+nine_poke = Nine_poke(port=board.port_3, solenoid_driver=False)
 
 # State machine.
 
