@@ -235,8 +235,21 @@ class Analog_input(IO_object):
     # streams data to computer. Optionally can generate framework events when voltage
     #  goes above / below specified value theshold.
 
-    def __init__(self, pin, name, sampling_rate, triggers=None, data_type="H"):
-        self.triggers = triggers
+    def __init__(
+        self,
+        pin,
+        name,
+        sampling_rate,
+        threshold=None,
+        rising_event=None,
+        falling_event=None,
+        data_type="H",
+        triggers=None,
+    ):
+        self.triggers = triggers if triggers is not None else []
+        if threshold is not None:
+            self.triggers.append(Analog_threshold(threshold, rising_event, falling_event))
+
         self.timer = pyb.Timer(available_timers.pop())
         if pin:  # pin argument can be None when Analog_input subclassed.
             self.ADC = pyb.ADC(pin)
@@ -348,7 +361,7 @@ class Analog_channel(IO_object):
             fw.usb_serial.send(self.buffers[buffer_n])
 
 
-class ValueTrigger(IO_object):
+class Analog_threshold(IO_object):
     # Generates framework events when an analog signal goes above or below specified threshold value.
 
     def __init__(self, threshold, rising_event=None, falling_event=None):
@@ -407,8 +420,6 @@ class ValueTrigger(IO_object):
                 "({}, {}) threshold = {}".format(self.rising_event, self.falling_event, self.threshold),
             )
         )
-
-
 
 
 # Digital Output --------------------------------------------------------------
