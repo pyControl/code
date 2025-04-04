@@ -412,12 +412,17 @@ class Analog_threshold(IO_object):
         self.threshold = threshold
         self.reset_above_threshold = True
 
+        content = {"value": self.threshold}
+        if self.rising_event is not None:
+            content["rising_event"] = self.rising_event
+        if self.falling_event is not None:
+            content["falling_event"] = self.falling_event
         fw.data_output_queue.put(
             fw.Datatuple(
                 fw.current_time,
-                fw.PRINT_TYP,
+                fw.THRSH_TYP,
                 "s",
-                "({}, {}) threshold = {}".format(self.rising_event, self.falling_event, self.threshold),
+                str(content),
             )
         )
 

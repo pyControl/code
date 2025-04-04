@@ -16,6 +16,7 @@ class MsgType(Enum):
     ERROR = b"!!"  # Error
     STOPF = b"X"  # Stop framework
     ANLOG = b"A"  # Analog
+    THRSH = b"T"  # Threshold
 
     @classmethod
     def from_byte(cls, byte_value):
@@ -52,5 +53,8 @@ class MsgType(Enum):
                     "a": "api",
                     "u": "user",
                     "s": "trigger",
+                },
+                MsgType.THRSH: {
+                    "s": "set",
                 },
             }[self][subtype_char]

@@ -492,7 +492,7 @@ class Pycboard(Pyboard):
                         self.timestamp = msg_timestamp
                     if msg_type in (MsgType.EVENT, MsgType.STATE):
                         content = int(content_bytes.decode())  # Event/state ID.
-                    elif msg_type in (MsgType.PRINT, MsgType.WARNG):
+                    elif msg_type in (MsgType.PRINT, MsgType.WARNG, MsgType.THRSH):
                         content = content_bytes.decode()  # Print or error string.
                     elif msg_type == MsgType.VARBL:
                         content = content_bytes.decode()  # JSON string

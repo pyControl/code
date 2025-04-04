@@ -55,14 +55,17 @@ class SchmittTrigger(IO_object):
             raise ValueError("{} is not a valid threshold. {}".format(threshold, threshold_requirements_str))
         self.reset_crossing = True
 
+        content = {"bounds": (self.lower_threshold, self.upper_threshold)}
+        if self.rising_event is not None:
+            content["rising_event"] = self.rising_event
+        if self.falling_event is not None:
+            content["falling_event"] = self.falling_event
         fw.data_output_queue.put(
             fw.Datatuple(
                 fw.current_time,
-                fw.PRINT_TYP,
+                fw.THRSH_TYP,
                 "s",
-                "({}, {}) bounds = ({},{})".format(
-                    self.rising_event, self.falling_event, self.upper_threshold, self.lower_threshold
-                ),
+                str(content),
             )
         )
 
