@@ -527,7 +527,7 @@ class UART_handler(IO_object):
     def _initialise(self):
         self.event_ID = sm.events[self.event_name] if self.event_name in sm.events else False
 
-    def _ISR(self, _):
+    def ISR(self, _):
         if self.event_ID:
             # - pyboard v1.1 (and other STM32F4 boards): IRQ_RXIDLE interrupt is triggered after the first character
             #   AND at the end when the RX is idle.
