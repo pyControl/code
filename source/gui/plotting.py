@@ -47,7 +47,13 @@ class Task_plot(QtWidgets.QWidget):
 
     def set_state_machine(self, sm_info):
         # Initialise plots with state machine information.
-        self.axiswidth = 6 + 6 * max([len(n) for n in list(sm_info.states) + list(sm_info.events)])
+
+        font = QtGui.QFont()  # inherits application font size
+        metrics = QtGui.QFontMetrics(font)
+        max_tick_label_width = max([metrics.horizontalAdvance(n) for n in list(sm_info.states) + list(sm_info.events)])
+        padding = 10
+        self.axiswidth = max_tick_label_width + padding
+
         self.states_plot.set_state_machine(sm_info)
         self.events_plot.set_state_machine(sm_info)
         self.analog_plot.set_state_machine(sm_info)
