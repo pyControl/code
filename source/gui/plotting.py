@@ -57,18 +57,29 @@ class Task_plot(QtWidgets.QWidget):
         self.states_plot.set_state_machine(sm_info)
         self.events_plot.set_state_machine(sm_info)
         self.analog_plot.set_state_machine(sm_info)
+
+        # size the states and events plots relative to the number of states and events
+        num_states = max(1, len(sm_info.states))
+        num_events = max(1, len(sm_info.events))
+        total = num_states + num_events
+        states_fraction = num_states / total
+        events_fraction = num_events / total
+
         if self.analog_plot.inputs:
+            # state and event plots are 2/3 of the total height
+            # analog plot is 1/3 of the total height
             self.analog_plot.axis.setVisible(True)
             self.events_plot.axis.getAxis("bottom").setLabel("")
-            self.layout.setRowStretch(0, 1)
-            self.layout.setRowStretch(1, 1)
-            self.layout.setRowStretch(2, 1)
+            self.layout.setRowStretch(0, int(states_fraction * 66))  # States plot
+            self.layout.setRowStretch(1, int(events_fraction * 66))  # Events plot
+            self.layout.setRowStretch(2, 33)  # Analog plot
         else:
+            # state and event plots
             self.analog_plot.axis.setVisible(False)
             self.events_plot.axis.getAxis("bottom").setLabel("Time (seconds)")
-            self.layout.setRowStretch(0, 1)
-            self.layout.setRowStretch(1, 1)
-            self.layout.setRowStretch(2, 0)
+            self.layout.setRowStretch(0, int(states_fraction * 100))  # States plot
+            self.layout.setRowStretch(1, int(events_fraction * 100))  # Events plot
+            self.layout.setRowStretch(2, 0)  # No analog plot
 
     def run_start(self, recording):
         self.pause_button.setChecked(False)
