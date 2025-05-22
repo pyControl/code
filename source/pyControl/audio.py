@@ -36,21 +36,21 @@ class Audio_output(hw.IO_object):
     # User functions
 
     def off(self):
-        self._DAC.write_timed(_off_buf, pyb.Timer(2, freq=10000), mode=pyb.DAC.NORMAL)
+        self._DAC.write_timed(_off_buf, pyb.Timer(4, freq=10000), mode=pyb.DAC.NORMAL)
         self._timer.deinit()
         self._playing = False
 
     def sine(self, freq):  # Play a sine wave tone at the specified frequency.
-        self._DAC.write_timed(_sine_buf, pyb.Timer(2, freq=freq * _sine_len), mode=pyb.DAC.CIRCULAR)
+        self._DAC.write_timed(_sine_buf, pyb.Timer(4, freq=freq * _sine_len), mode=pyb.DAC.CIRCULAR)
 
     def square(self, freq):  # Play a square wave tone at the specified frequency.
-        self._DAC.write_timed(_sqr_buf, pyb.Timer(2, freq=freq * 2), mode=pyb.DAC.CIRCULAR)
+        self._DAC.write_timed(_sqr_buf, pyb.Timer(4, freq=freq * 2), mode=pyb.DAC.CIRCULAR)
 
     def noise(self, freq=10000):  # Play white noise with specified maximum frequency.
         self._DAC.noise(freq * 2)
 
     def click(self, timer=None):  # Play a single click.
-        self._DAC.write_timed(_click_buf, pyb.Timer(2, freq=40000), mode=pyb.DAC.NORMAL)
+        self._DAC.write_timed(_click_buf, pyb.Timer(4, freq=40000), mode=pyb.DAC.NORMAL)
 
     def clicks(self, rate):  # Play clicks at specified rate.
         self._timer.init(freq=rate)

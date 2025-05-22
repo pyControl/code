@@ -43,8 +43,8 @@ next_ID = 0  # Next hardware object ID.
 
 IO_dict = {}  # Dictionary {ID: IO_object} containing all hardware inputs and outputs.
 
-available_timers = [3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14]  # Hardware timers not in use
-# Used timers; 1: Framework clock tick, 2: Audio write_timed, 6: DAC write_timed.
+available_timers = [3, 5, 7, 8, 9, 10, 11, 12, 13, 14]  # Hardware timers not in use.
+# Used timers; 1: Framework clock tick, 2: Rotary encoder, 4: Audio write_timed, 6: DAC write_timed.
 
 initialised = False  # Set to True once hardware has been intiialised.
 
