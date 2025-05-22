@@ -14,6 +14,7 @@ class Rotary_encoder(Analog_input):
         falling_event=None,
         bytes_per_sample=2,
         reverse=False,
+        triggers=None,
     ):
         assert output in ("velocity", "position"), "ouput argument must be 'velocity' or 'position'."
         assert bytes_per_sample in (2, 4), "bytes_per_sample must be 2 or 4"
@@ -28,6 +29,7 @@ class Rotary_encoder(Analog_input):
         self.position = 0
         self.velocity = 0
         self.sampling_rate = sampling_rate
+
         Analog_input.__init__(
             self,
             None,
@@ -37,6 +39,7 @@ class Rotary_encoder(Analog_input):
             rising_event,
             falling_event,
             data_type={2: "h", 4: "i"}[bytes_per_sample],
+            triggers=triggers,
         )
 
     def read_sample(self):

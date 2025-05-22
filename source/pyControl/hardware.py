@@ -235,25 +235,35 @@ class Analog_input(IO_object):
     # streams data to computer. Optionally can generate framework events when voltage
     #  goes above / below specified value theshold.
 
-    def __init__(self, pin, name, sampling_rate, threshold=None, rising_event=None, falling_event=None, data_type="H"):
-        if rising_event or falling_event:
-            self.threshold = Analog_threshold(threshold, rising_event, falling_event)
-        else:
-            self.threshold = False
+    def __init__(
+        self,
+        pin,
+        name,
+        sampling_rate,
+        threshold=None,
+        rising_event=None,
+        falling_event=None,
+        data_type="H",
+        triggers=None,
+    ):
+        self.triggers = triggers if triggers is not None else []
+        if threshold is not None:
+            self.triggers.append(Analog_threshold(threshold, rising_event, falling_event))
+
         self.timer = pyb.Timer(available_timers.pop())
         if pin:  # pin argument can be None when Analog_input subclassed.
             self.ADC = pyb.ADC(pin)
             self.read_sample = self.ADC.read
         self.name = name
-        self.Analog_channel = Analog_channel(name, sampling_rate, data_type)
+        self.channel = Analog_channel(name, sampling_rate, data_type)
         assign_ID(self)
 
     def _run_start(self):
         # Start sampling timer, initialise threshold, aquire first sample.
-        self.timer.init(freq=self.Analog_channel.sampling_rate)
+        self.timer.init(freq=self.channel.sampling_rate)
         self.timer.callback(self._timer_ISR)
-        if self.threshold:
-            self.threshold.run_start(self.read_sample())
+        for trigger in self.triggers:
+            trigger.run_start()
         self._timer_ISR(0)
 
     def _run_stop(self):
@@ -263,9 +273,10 @@ class Analog_input(IO_object):
     def _timer_ISR(self, t):
         # Read a sample to the buffer, update write index.
         sample = self.read_sample()
-        self.Analog_channel.put(sample)
-        if self.threshold:
-            self.threshold.check(sample)
+        self.channel.put(sample)
+        if self.triggers:
+            for trigger in self.triggers:
+                trigger.check(sample)
 
     def record(self):  # For backward compatibility.
         pass
@@ -286,15 +297,21 @@ class Analog_channel(IO_object):
     #     data array bytes (variable)
 
     def __init__(self, name, sampling_rate, data_type, plot=True):
-        assert data_type in ("b", "B", "h", "H", "i", "I"), "Invalid data_type."
-        assert not any(
-            [name == io.name for io in IO_dict.values() if isinstance(io, Analog_channel)]
-        ), "Analog signals must have unique names."
+        if data_type not in ("b", "B", "h", "H", "i", "I"):
+            raise ValueError("Invalid data_type.")
+        if any([name == io.name for io in IO_dict.values() if isinstance(io, Analog_channel)]):
+            raise ValueError(
+                "Analog signals must have unique names.{} {}".format(
+                    name, [io.name for io in IO_dict.values() if isinstance(io, Analog_channel)]
+                )
+            )
+
         self.name = name
         assign_ID(self)
         self.sampling_rate = sampling_rate
         self.data_type = data_type
         self.plot = plot
+
         self.bytes_per_sample = {"b": 1, "B": 1, "h": 2, "H": 2, "i": 4, "I": 4}[data_type]
         self.buffer_size = max(4, min(256 // self.bytes_per_sample, sampling_rate // 10))
         self.buffers = (array(data_type, [0] * self.buffer_size), array(data_type, [0] * self.buffer_size))
@@ -345,15 +362,14 @@ class Analog_channel(IO_object):
 
 
 class Analog_threshold(IO_object):
-    # Generates framework events when an analog signal goes above or below specified threshold.
+    # Generates framework events when an analog signal goes above or below specified threshold value.
 
-    def __init__(self, threshold=None, rising_event=None, falling_event=None):
-        assert isinstance(
-            threshold, int
-        ), "Integer threshold must be specified if rising or falling events are defined."
-        self.threshold = threshold
+    def __init__(self, threshold, rising_event=None, falling_event=None):
+        if rising_event is None and falling_event is None:
+            raise ValueError("Either rising_event or falling_event or both must be specified.")
         self.rising_event = rising_event
         self.falling_event = falling_event
+        self.threshold = threshold
         self.timestamp = 0
         self.crossing_direction = False
         assign_ID(self)
@@ -364,8 +380,8 @@ class Analog_threshold(IO_object):
         self.falling_event_ID = sm.events[self.falling_event] if self.falling_event in sm.events else False
         self.threshold_active = self.rising_event_ID or self.falling_event_ID
 
-    def run_start(self, sample):
-        self.above_threshold = sample > self.threshold
+    def run_start(self):
+        self.set_threshold(self.threshold)
 
     def _process_interrupt(self):
         # Put event generated by threshold crossing in event queue.
@@ -376,13 +392,39 @@ class Analog_threshold(IO_object):
 
     @micropython.native
     def check(self, sample):
+        if self.reset_above_threshold:
+            # this gets run when the first sample is taken and whenever the threshold is changed
+            self.reset_above_threshold = False
+            self.above_threshold = sample > self.threshold
+            return
         new_above_threshold = sample > self.threshold
         if new_above_threshold != self.above_threshold:  # Threshold crossing.
             self.above_threshold = new_above_threshold
             if (self.above_threshold and self.rising_event_ID) or (not self.above_threshold and self.falling_event_ID):
                 self.timestamp = fw.current_time
                 self.crossing_direction = self.above_threshold
+
                 interrupt_queue.put(self.ID)
+
+    def set_threshold(self, threshold):
+        if not isinstance(threshold, int):
+            raise ValueError(f"Threshold must be an integer, got {type(threshold).__name__}.")
+        self.threshold = threshold
+        self.reset_above_threshold = True
+
+        content = {"value": self.threshold}
+        if self.rising_event is not None:
+            content["rising_event"] = self.rising_event
+        if self.falling_event is not None:
+            content["falling_event"] = self.falling_event
+        fw.data_output_queue.put(
+            fw.Datatuple(
+                fw.current_time,
+                fw.THRSH_TYP,
+                "s",
+                str(content),
+            )
+        )
 
 
 # Digital Output --------------------------------------------------------------
