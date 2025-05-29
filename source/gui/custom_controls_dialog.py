@@ -6,7 +6,7 @@ from typing import Union
 from copy import deepcopy
 from dataclasses import dataclass, asdict
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from source.gui.settings import user_folder
+from source.gui.settings import user_folder, get_setting
 from source.gui.utility import variable_constants, null_resize, cbox_set_item, cbox_update_options
 
 
@@ -487,8 +487,27 @@ class Custom_controls_grid(QtWidgets.QWidget):
             widget.setLayout(layout)
             variable_tabs.addTab(widget, tab)
 
+        # the leftover section (a tab with ...) will containt a notes widget and
+        # any variables not used by the Custom Controls Dialog Editor
         leftover_widget = QtWidgets.QWidget()
         leftover_layout = QtWidgets.QGridLayout()
+
+        # notes section
+        self.parent_controls_dialog = parent_controls_dialog
+        notes_widget = QtWidgets.QWidget()
+        notes_layout = QtWidgets.QGridLayout()
+        self.notes_textbox = QtWidgets.QTextEdit()
+        self.notes_textbox.setFixedHeight(get_setting("GUI", "log_font_size") * 4)
+        self.notes_textbox.setFont(QtGui.QFont("Courier New", get_setting("GUI", "log_font_size")))
+        note_button = QtWidgets.QPushButton("Add note")
+        note_button.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+        note_button.clicked.connect(self.add_note)
+        notes_layout.addWidget(self.notes_textbox, 0, 0, 1, 3)
+        notes_layout.addWidget(note_button, 1, 2)
+        notes_layout.setContentsMargins(0, 0, 0, 10)
+        notes_widget.setLayout(notes_layout)
+        leftover_layout.addWidget(notes_widget, 0, 0, 1, 4)
+
         leftover_vars = sorted(list(set(variables) - set(used_vars)), key=str.lower)
         leftover_vars = [
             v_name
@@ -498,18 +517,23 @@ class Custom_controls_grid(QtWidgets.QWidget):
             and not v_name.startswith("hw_")
             and v_name != "api_class"
         ]
-        if len(leftover_vars) > 0:
-            for row, var in enumerate(leftover_vars):
-                self.widget_dict[var] = Text_var(init_vars, var, var)
-                self.widget_dict[var].setBoard(parent_controls_dialog.parent_tab.board)
-                self.widget_dict[var].add_to_grid(leftover_layout, row + 1)
-            leftover_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
-            leftover_widget.setLayout(leftover_layout)
-            variable_tabs.addTab(leftover_widget, "...")
+        for row, var in enumerate(leftover_vars):
+            self.widget_dict[var] = Text_var(init_vars, var, var)
+            self.widget_dict[var].setBoard(parent_controls_dialog.parent_tab.board)
+            self.widget_dict[var].add_to_grid(leftover_layout, row + 1)
+        leftover_layout.setRowStretch(row + 2, 1)
+        leftover_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
+        leftover_widget.setLayout(leftover_layout)
+        variable_tabs.addTab(leftover_widget, "...")
 
         grid_layout.addWidget(variable_tabs, 0, 0, QtCore.Qt.AlignmentFlag.AlignLeft)
         grid_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.setLayout(grid_layout)
+
+    def add_note(self):
+        note_text = self.notes_textbox.toPlainText()
+        self.notes_textbox.clear()
+        self.parent_controls_dialog.parent_tab.board.data_logger.print_message(note_text, source="u")
 
 
 # GUI editor dialog. ---------------------------------------------------------
@@ -663,7 +687,7 @@ class Controls_dialog_editor(QtWidgets.QDialog):
         if name:
             tab_title = name
         else:
-            tab_title = f"tab-{len(self.tables)+1}"
+            tab_title = f"tab-{len(self.tables) + 1}"
         self.tables[tab_title] = new_table
         self.tabs.addTab(new_table, tab_title)
         if len(self.tables) < 2:
