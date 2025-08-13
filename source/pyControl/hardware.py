@@ -287,9 +287,9 @@ class Analog_channel(IO_object):
 
     def __init__(self, name, sampling_rate, data_type, plot=True):
         assert data_type in ("b", "B", "h", "H", "i", "I"), "Invalid data_type."
-        assert not any(
-            [name == io.name for io in IO_dict.values() if isinstance(io, Analog_channel)]
-        ), "Analog signals must have unique names."
+        assert not any([name == io.name for io in IO_dict.values() if isinstance(io, Analog_channel)]), (
+            "Analog signals must have unique names."
+        )
         self.name = name
         assign_ID(self)
         self.sampling_rate = sampling_rate
@@ -348,9 +348,9 @@ class Analog_threshold(IO_object):
     # Generates framework events when an analog signal goes above or below specified threshold.
 
     def __init__(self, threshold=None, rising_event=None, falling_event=None):
-        assert isinstance(
-            threshold, int
-        ), "Integer threshold must be specified if rising or falling events are defined."
+        assert isinstance(threshold, int), (
+            "Integer threshold must be specified if rising or falling events are defined."
+        )
         self.threshold = threshold
         self.rising_event = rising_event
         self.falling_event = falling_event
@@ -509,3 +509,4 @@ class Rsync(IO_object):
             fw.data_output_queue.put(fw.Datatuple(fw.current_time, fw.EVENT_TYP, "s", self.event_ID))
         self.state = not self.state
         self.sync_pin.value(self.state)
+
