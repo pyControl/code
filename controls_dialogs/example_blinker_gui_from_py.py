@@ -106,14 +106,14 @@ class Controls_gui(QtWidgets.QWidget):
 
         # image
         self.picture = QtWidgets.QLabel()
-        image = QtGui.QPixmap("config/user_controls_dialogs/example_image.png")
+        image = QtGui.QPixmap("controls_dialogs/example_image.png")
         self.picture.setPixmap(image)
         layout.addWidget(self.picture, row, 0, 1, 4)
         row += 1
 
         # gif
         self.gif = QtWidgets.QLabel()
-        self.movie = QtGui.QMovie("config/user_controls_dialogs/example_movie.gif")
+        self.movie = QtGui.QMovie("controls_dialogs/example_movie.gif")
         self.gif.setMovie(self.movie)
         self.movie.start()
         layout.addWidget(self.gif, row, 0, 1, 4)
