@@ -230,6 +230,7 @@ def launch_GUI():
     app = QtWidgets.QApplication(sys.argv)
     app.setStyle("Fusion")
     app.setWindowIcon(QtGui.QIcon("source/gui/icons/logo.svg"))
+    app.setAttribute(QtCore.Qt.ApplicationAttribute.AA_DontShowIconsInMenus, False)  # enable icons in mac menus
     font = QtGui.QFont()
     font.setPixelSize(get_setting("GUI", "ui_font_size"))
     app.setFont(font)
