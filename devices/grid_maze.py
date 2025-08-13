@@ -42,6 +42,8 @@ class Grid_maze(IO_object):
         self.audio = Audio_output(1)
         self.audio.set_volume = self._set_volume
         self.timer = pyb.Timer(hw.available_timers.pop())
+        self.pulse_timer = None  # only ask for a timer if we're going to need one
+        self.stop_pulse = False
 
         # Initialise pins used for pokes that are directly connected to mazehub.
 
@@ -90,13 +92,73 @@ class Grid_maze(IO_object):
             self.write_bit(exp_n, 1, "GPIO", 2 * (port - 1), True)
 
     def LED_off(self, loc):
+        if self.pulse_timer is not None: # If there's a timer delegate led off
+            self.stop_pulse = True
+            return None
         exp_n, port = self.map[loc]
         if exp_n == -1:
             self.hub_pokes[port]["LED"].off()
         else:
             self.write_bit(exp_n, 1, "GPIO", 2 * (port - 1), False)
 
+    def LED_pulse(self, loc, freq, duty_cycle=50, n_pulses=False):
+        # NOTE: (1) pulsing an LED takes a lot of CPU, and (ii) in this version
+        # of the code, when a LED is pusling, you CANNOT use other LEDs or
+        # solenoids - though in principle the code can be updated for that.
+        # Mouse critical flicker fusion frequency is estimated to be 14Hz; see
+        # https://www.sciencedirect.com/science/article/pii/S0168010218303882
+
+        # Turn on pulsed output with specified frequency and duty cycle.
+        if self.pulse_timer is None:
+            self.pulse_timer = pyb.Timer(hw.available_timers.pop())
+        self.fm = int(100 / next(x for x in (50, 25, 20, 10, 5, 1) if duty_cycle % x == 0))
+        self.off_ind = int(duty_cycle / 100 * self.fm)
+        self.i = 0
+        self.pulse_timer.init(freq=freq*self.fm)
+        exp_n, port = self.map[loc]
+        reg_value = self.read_register(exp_n, 1, "GPIO", 2)
+
+        # In ISR we cannot allocate memory, and we need to be fast to prevent
+        # problems, see:
+        # https://docs.micropython.org/en/latest/reference/isr_rules.html
+        # Therefore we pre-allocate a buffer for led on and off, and just write
+        # this in the callback, which is fast, doesn't allocate memory, etc.
+        # However, this means that other code that touches the reg_values will
+        # be overwritten by this tight loop, unless they update the LED_buf
+        # variuables themselves.
+        if exp_n == 0:
+            self.LED_buf_off = reg_value.to_bytes(2, "little")
+            self.LED_buf_on = (reg_value | 1 << (2 * (port - 1))).to_bytes(2, "little")
+        self.pulse_timer.callback(lambda _: self._LED_pulse_callback(exp_n, port))
+
+    @micropython.native
+    def _LED_pulse_callback(self, exp_n, port):
+        self.i += 1
+        if self.i == self.off_ind or self.stop_pulse:
+            # LED_off but use the buffer to avoid memory allocation in tight loop
+            if exp_n == -1:
+                 self.hub_pokes[port]["LED"].off()
+            else:
+                self.I2C[1].mem_write(self.LED_buf_off, self.addr[exp_n], self.reg_addr["GPIO"], timeout=15)
+            # Stop from the callback (plus run rest of it) to avoid race conditions.
+            if self.stop_pulse:
+                self.pulse_timer.deinit()
+                self.stop_pulse = False
+        elif self.i == self.fm:
+            # LED_on but use the buffer to avoid memory allocation in tight loop
+            self.i = 0
+            if exp_n == -1:
+                self.hub_pokes[port]["LED"].on()
+            else:
+                self.I2C[1].mem_write(self.LED_buf_on, self.addr[exp_n], self.reg_addr["GPIO"], timeout=15)
+
     def SOL_on(self, loc):
+        # This error should never be raised BUT there's a possibility of a race
+        # condition. I have never seen it given how the rest of the code is
+        # structured. This _can_ be fixed but I'm delaying fixing this to this
+        # being an actual problem.
+        if self.stop_pulse:
+            pyControlError("race condition: fix LED_off happening after SOL_off.")
         exp_n, port = self.map[loc]
         if exp_n == -1:
             self.hub_pokes[port]["SOL"].on()
@@ -135,6 +197,8 @@ class Grid_maze(IO_object):
     def _run_stop(self):
         # Turn off outputs
         self.timer.deinit()
+        if self.pulse_timer is not None:
+            self.pulse_timer.deinit()
         for exp_n in range(self.n_exp):  # Turn off outputs on expanders.
             self.write_register(exp_n, 0, "GPIO", int("01" * 8, 2))  # Set speaker enable pins high (disable speakers).
             self.write_register(exp_n, 1, "GPIO", 0)  # Set LED and SOL pins low.
