@@ -35,9 +35,9 @@ class SchmittTrigger(IO_object):
         assign_ID(self)
 
     def run_start(self):
-        self.set_bounds(self.bounds)
+        self.set_bounds(self.bounds, run_start=True)
 
-    def set_bounds(self, threshold):
+    def set_bounds(self, threshold, run_start=False):
         if isinstance(threshold, tuple):
             threshold_requirements_str = "The threshold must be a tuple of two integers (lower_bound, upper_bound) where lower_bound <= upper_bound."
             if len(threshold) != 2:
@@ -64,7 +64,7 @@ class SchmittTrigger(IO_object):
             fw.Datatuple(
                 fw.current_time,
                 fw.THRSH_TYP,
-                "s",
+                "s" if run_start else "t",
                 str(content),
             )
         )

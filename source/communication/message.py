@@ -55,6 +55,7 @@ class MsgType(Enum):
                     "s": "trigger",
                 },
                 MsgType.THRSH: {
-                    "s": "set",
+                    "s": "run_start",
+                    "t": "task",
                 },
             }[self][subtype_char]
