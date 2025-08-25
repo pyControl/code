@@ -34,7 +34,8 @@ class SchmittTrigger(IO_object):
         self.timestamp = 0
         assign_ID(self)
 
-    def run_start(self):
+    def run_start(self, attached_to):
+        self.attached_to = attached_to
         self.set_bounds(self.bounds, run_start=True)
 
     def set_bounds(self, threshold, run_start=False):
@@ -55,7 +56,7 @@ class SchmittTrigger(IO_object):
             raise ValueError("{} is not a valid threshold. {}".format(threshold, threshold_requirements_str))
         self.reset_crossing = True
 
-        content = {"bounds": (self.lower_threshold, self.upper_threshold)}
+        content = {"bounds": (self.lower_threshold, self.upper_threshold), "attached_to": self.attached_to}
         if self.rising_event is not None:
             content["rising_event"] = self.rising_event
         if self.falling_event is not None:

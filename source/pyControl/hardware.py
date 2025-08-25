@@ -264,7 +264,7 @@ class Analog_input(IO_object):
         self.timer.init(freq=self.channel.sampling_rate)
         self.timer.callback(self._timer_ISR)
         for trigger in self.triggers:
-            trigger.run_start()
+            trigger.run_start(self.name)
         self._timer_ISR(0)
 
     def _run_stop(self):
@@ -381,7 +381,8 @@ class AnalogTrigger(IO_object):
         self.falling_event_ID = sm.events[self.falling_event] if self.falling_event in sm.events else False
         self.threshold_active = self.rising_event_ID or self.falling_event_ID
 
-    def run_start(self):
+    def run_start(self, attached_to):
+        self.attached_to = attached_to
         self.set_threshold(self.threshold, run_start=True)
 
     def _process_interrupt(self):
@@ -413,7 +414,7 @@ class AnalogTrigger(IO_object):
         self.threshold = threshold
         self.reset_above_threshold = True
 
-        content = {"value": self.threshold}
+        content = {"value": self.threshold, "attached_to": self.attached_to}
         if self.rising_event is not None:
             content["rising_event"] = self.rising_event
         if self.falling_event is not None:
