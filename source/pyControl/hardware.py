@@ -249,7 +249,7 @@ class Analog_input(IO_object):
         self.triggers = triggers if triggers is not None else []
 
         if threshold is not None:  # For backward compatibility
-            self.triggers.append(Analog_threshold(threshold, rising_event, falling_event))
+            self.triggers.append(AnalogTrigger(threshold, rising_event, falling_event))
 
         self.timer = pyb.Timer(available_timers.pop())
         if pin:  # pin argument can be None when Analog_input subclassed.
@@ -362,7 +362,7 @@ class Analog_channel(IO_object):
             fw.usb_serial.send(self.buffers[buffer_n])
 
 
-class Analog_threshold(IO_object):
+class AnalogTrigger(IO_object):
     # Generates framework events when an analog signal goes above or below specified threshold value.
 
     def __init__(self, threshold, rising_event=None, falling_event=None):
