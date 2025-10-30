@@ -288,6 +288,7 @@ class Keyboard_shortcuts_dialog(QtWidgets.QDialog):
         label_strings = [
             "<b><u>Global:</u></b>",
             f'<b style="color:#0220e0;">{modifier_key} + t</b> : Open tasks folder',
+            f'<b style="color:#0220e0;">Shift + {modifier_key} + t</b> : Edit task',
             f'<b style="color:#0220e0;">{modifier_key} + d</b> : Open data folder',
             f'<b style="color:#0220e0;">{modifier_key} + e</b> : Open error log',
             f'<b style="color:#0220e0;">{modifier_key} + ,</b> : Open settings',
@@ -305,6 +306,10 @@ class Keyboard_shortcuts_dialog(QtWidgets.QDialog):
             self.Vlayout.addWidget(label)
 
         self.setFixedSize(self.sizeHint())
+
+        # make dialog closable with Ctrl + w
+        self.close_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+W"), self)
+        self.close_shortcut.activated.connect(self.close)
 
 
 # Settings dialog. ---------------------------------------------------------

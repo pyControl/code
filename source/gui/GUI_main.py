@@ -91,6 +91,13 @@ class GUI_main(QtWidgets.QMainWindow):
         task_action.setShortcut("Ctrl+T")
         task_action.triggered.connect(self.go_to_tasks)
         view_menu.addAction(task_action)
+
+        # Edit task in external editor using cntl + shift + t
+        edit_task_action = QtGui.QAction("&Edit task", self)
+        edit_task_action.setShortcut("Ctrl+Shift+T")
+        edit_task_action.triggered.connect(self.edit_task)
+        view_menu.addAction(edit_task_action)
+
         # View error log
         error_log_action = QtGui.QAction("&Error log", self)
         error_log_action.setShortcut("Ctrl+E")
@@ -134,6 +141,16 @@ class GUI_main(QtWidgets.QMainWindow):
 
     def go_to_tasks(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(user_folder("tasks")))
+
+    def edit_task(self):
+        # if on the run task tab, edit the selected task
+        if self.tab_widget.currentIndex() == 0:
+            selected_task = self.run_task_tab.task_select.text()
+            if selected_task == "select task":
+                return
+            QtGui.QDesktopServices.openUrl(
+                QtCore.QUrl.fromLocalFile(str(Path(self.task_directory) / (selected_task + ".py")))
+            )
 
     def view_docs(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://pycontrol.readthedocs.io/en/latest/"))
