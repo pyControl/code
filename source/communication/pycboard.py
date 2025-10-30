@@ -421,6 +421,7 @@ class Pycboard(Pyboard):
             micropython_version=self.micropython_version,
         )
         self.data_logger.reset()
+        self.timestamp = 0
 
     def get_states(self):
         """Return states as a dictionary {state_name: state_ID}"""
@@ -440,7 +441,6 @@ class Pycboard(Pyboard):
         self.exec("fw.data_output = " + repr(data_output))
         self.serial.reset_input_buffer()
         self.last_message_time = time.time()
-        self.timestamp = 0
         self.exec_raw_no_follow("fw.run()")
         self.framework_running = True
 
