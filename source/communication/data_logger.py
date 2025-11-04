@@ -73,7 +73,7 @@ class Data_logger:
         self.data_file.write(self.tsv_row_str("info", time, subtype, content))
 
     def tsv_row_str(self, rtype, time, subtype="", content=""):
-        time_str = f"{time/1000:.3f}" if isinstance(time, int) else time
+        time_str = f"{time / 1000:.3f}" if isinstance(time, int) else time
         return f"{time_str}\t{rtype}\t{subtype}\t{content}\n"
 
     def copy_task_file(self, data_dir, tasks_dir, dir_name="task_files"):
@@ -140,6 +140,8 @@ class Data_logger:
                             var_str += f'\t\t\t"{var_name}": {var_value}\n'
                         var_str += "\t\t\t}"
                 data_string += self.tsv_row_str("variable", time, nd.subtype, content=var_str)
+            elif nd.type == MsgType.THRSH:  # Threshold
+                data_string += self.tsv_row_str("threshold", time, nd.subtype, content=nd.content)
             elif nd.type == MsgType.WARNG:  # Warning
                 data_string += self.tsv_row_str("warning", time, content=nd.content)
             elif nd.type in (MsgType.ERROR, MsgType.STOPF):  # Error or stop framework.

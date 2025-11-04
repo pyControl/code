@@ -36,9 +36,9 @@ class Audio_output(hw.IO_object):
     # User functions
 
     def off(self):
-        self._DAC.write_timed(_off_buf, pyb.Timer(4, freq=10000), mode=pyb.DAC.NORMAL)
         self._timer.deinit()
         self._playing = False
+        self._DAC.write_timed(_off_buf, pyb.Timer(4, freq=10000), mode=pyb.DAC.NORMAL)
 
     def sine(self, freq):  # Play a sine wave tone at the specified frequency.
         self._DAC.write_timed(_sine_buf, pyb.Timer(4, freq=freq * _sine_len), mode=pyb.DAC.CIRCULAR)
@@ -76,6 +76,8 @@ class Audio_output(hw.IO_object):
     def _pulsed_sound(self, freq, pulse_rate, func):
         self._freq = freq
         self._func = func
+        self._func(self._freq)
+        self._playing = True
         self._timer.init(freq=2 * pulse_rate)
         self._timer.callback(self._toggle_sound)
 
@@ -92,9 +94,10 @@ class Audio_output(hw.IO_object):
         self._freq = [int(start_freq * (freq_ratio**i)) for i in range(n_steps)]
         self._freq_ind = 0
         self._func = func
+        self._func(self._freq[self._freq_ind])
         self._timer.init(freq=step_rate)
         self._timer.callback(self._step_sound)
 
     def _step_sound(self, timer):  # Timer callback to increment frequency during sweeped sounds.
-        self._func(self._freq[self._freq_ind])
         self._freq_ind = (self._freq_ind + 1) % len(self._freq)
+        self._func(self._freq[self._freq_ind])

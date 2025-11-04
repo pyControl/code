@@ -24,6 +24,7 @@ HARDW_TYP = b"H"  # Harware callback : (time, HARDW_TYP, "", hardware_ID)
 VARBL_TYP = b"V"  # Variable change  : (time, VARBL_TYP, [g]et/user_[s]et/[a]pi_set/[p]rint/s[t]art/[e]nd, json_str)
 WARNG_TYP = b"!"  # Warning          : (time, WARNG_TYP, "", print_string)
 STOPF_TYP = b"X"  # Stop framework   : (time, STOPF_TYP, "", "")
+THRSH_TYP = b"T"  # Threshold        : (time, THRSH_TYP, [s]et)
 
 # Event_queue -----------------------------------------------------------------
 
