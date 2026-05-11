@@ -1,2 +1,12 @@
-[tool.black]
-line-length = 120
+[project]
+name = "code"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "numpy>=2.4.4",
+    "pyqt6>=6.11.0",
+    "pyqtgraph>=0.14.0",
+    "pyserial>=3.5",
+]
