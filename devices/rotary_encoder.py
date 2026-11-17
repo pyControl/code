@@ -22,9 +22,9 @@ class Rotary_encoder(Analog_input):
         self.reverse = reverse
         self.pin_a = pyb.Pin("X1", pyb.Pin.AF_PP, pull=pyb.Pin.PULL_NONE, af=pyb.Pin.AF1_TIM2)
         self.pin_b = pyb.Pin("X2", pyb.Pin.AF_PP, pull=pyb.Pin.PULL_NONE, af=pyb.Pin.AF1_TIM2)
-        self.counter_max_value = 0xFFFF
-        self.counter_half_max_value = self.counter_max_value // 2
-        self.enc_timer = pyb.Timer(2, prescaler=1, period=self.counter_max_value)
+        self.counter_modulus = 0x10000
+        self.counter_half_modulus = self.counter_modulus // 2
+        self.enc_timer = pyb.Timer(2, prescaler=1, period=self.counter_modulus - 1)
         self.enc_channel = self.enc_timer.channel(1, pyb.Timer.ENC_AB)
         self.position = 0
         self.velocity = 0
@@ -47,10 +47,10 @@ class Rotary_encoder(Analog_input):
         new_counter_value = self.enc_timer.counter()
         counter_change = new_counter_value - self.counter_value
         self.counter_value = new_counter_value
-        if counter_change > self.counter_half_max_value:  # Backward counter rollover.
-            counter_change = counter_change - self.counter_max_value
-        elif counter_change < -self.counter_half_max_value:  # Forward counter rollover.
-            counter_change = counter_change & self.counter_max_value
+        if counter_change > self.counter_half_modulus:  # Backward counter rollover.
+            counter_change -= self.counter_modulus
+        elif counter_change < -self.counter_half_modulus:  # Forward counter rollover.
+            counter_change += self.counter_modulus
         if self.reverse:
             counter_change = -counter_change
         self.position += counter_change
