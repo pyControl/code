@@ -25,6 +25,7 @@ class Run_task_tab(QtWidgets.QWidget):
         # Variables.
         self.GUI_main = self.parent()
         self.board = None  # Pycboard class instance.
+        self.serial_port = None
         self.task = None  # Task currently uploaded on pyboard.
         self.task_hash = None  # Used to check if file has changed.
         self.data_dir = None  # Folder to save data files.
@@ -207,6 +208,8 @@ class Run_task_tab(QtWidgets.QWidget):
 
     def refresh(self):
         # Called regularly when framework not running.
+        if self.connected and self.serial_port not in self.GUI_main.available_ports:
+            self.disconnect()
         if self.GUI_main.setups_tab.available_setups_changed:
             self.board_select.clear()
             if self.GUI_main.setups_tab.setup_names:
@@ -322,10 +325,16 @@ class Run_task_tab(QtWidgets.QWidget):
 
     def disconnect(self):
         # Disconnect from pyboard.
+        board_unplugged = self.connected and self.serial_port not in self.GUI_main.available_ports
         if self.board:
-            self.board.close()
-            self.print_to_log("\nDisconnected from board.")
+            try:
+                self.board.close()
+            except (OSError, SerialException):
+                pass  # Board may already be gone (e.g. unplugged).
+            message = "Board disconnected (unplugged)." if board_unplugged else "Disconnected from board."
+            self.print_to_log(f"\n{message}")
         self.board = None
+        self.serial_port = None
         self.task_groupbox.setEnabled(False)
         self.file_groupbox.setEnabled(False)
         self.session_groupbox.setEnabled(False)

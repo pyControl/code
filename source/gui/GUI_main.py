@@ -196,10 +196,10 @@ class GUI_main(QtWidgets.QMainWindow):
         self.available_ports_changed = ports != self.available_ports
         if self.available_ports_changed:
             self.available_ports = ports
-        # Refresh tabs.
+        # Refresh setup discovery before tabs that consume its state.
+        self.setups_tab.refresh()
         self.run_task_tab.refresh()
         self.configure_experiment_tab.refresh()
-        self.setups_tab.refresh()
         # Clear flags.
         self.data_dir_changed = False
 
