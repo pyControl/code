@@ -160,6 +160,10 @@ class Digital_input(IO_object):
         self.rising_event = rising_event
         self.falling_event = falling_event
         self.debounce = debounce
+        self.debounce_active = False
+        self.interrupt_timestamp = 0
+        self.use_both_edges = False
+        self.pin_state = False
 
         assign_ID(self)
 
@@ -170,6 +174,8 @@ class Digital_input(IO_object):
         self.use_both_edges = False
         if self.rising_event_ID or self.falling_event_ID:  # Setup interrupts.
             if self.debounce or (self.rising_event_ID and self.falling_event_ID):
+                if not self.expander_pin:
+                    self.pin_state = self.pin.value()
                 self.ExtInt(self.pin, pyb.ExtInt.IRQ_RISING_FALLING, self.pull, self._ISR)
                 self.use_both_edges = True
             else:
@@ -373,6 +379,7 @@ class Analog_trigger(IO_object):
         self.threshold = threshold
         self.timestamp = 0
         self.crossing_direction = False
+        self.attached_to = None
         assign_ID(self)
 
     def _initialise(self):

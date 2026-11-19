@@ -16,6 +16,17 @@ from dataclasses import dataclass
 # ----------------------------------------------------------------------------------------
 
 
+def _get_pyboard_error_message(error):
+    """Return the most informative text from any PyboardError argument shape."""
+    for argument in reversed(error.args):
+        if isinstance(argument, bytes):
+            if argument:
+                return argument.decode(errors="replace")
+        elif isinstance(argument, str) and argument:
+            return argument
+    return str(error)
+
+
 # djb2 hashing algorithm used to check integrity of transfered files.
 def _djb2_file(file_path):
     with open(file_path, "rb") as f:
@@ -134,7 +145,7 @@ class Pycboard(Pyboard):
             self.status["framework"] = True  # Framework imported OK.
             self.device_files_on_pyboard = self.get_folder_contents("devices", get_hash=True)
         except PyboardError as e:
-            error_message = e.args[2].decode()
+            error_message = _get_pyboard_error_message(e)
             if ("ImportError: no module named 'pyControl'" in error_message) or (
                 "ImportError: no module named 'devices'" in error_message
             ):
@@ -325,7 +336,7 @@ class Pycboard(Pyboard):
                 self.exec("import hardware_definition")
                 self.print(" OK")
             except PyboardError as e:
-                error_message = e.args[2].decode()
+                error_message = _get_pyboard_error_message(e)
                 self.print("\n\nError importing hardware definition:\n")
                 self.print(error_message)
         else:
@@ -404,8 +415,9 @@ class Pycboard(Pyboard):
             self.exec("sm.setup_state_machine(task_file)")
             self.print("OK")
         except PyboardError as e:
-            self.print("\n\nError: Unable to setup state machine.\n\n" + e.args[2].decode())
-            raise PyboardError("Unable to setup state machine.", e.args[2])
+            error_message = _get_pyboard_error_message(e)
+            self.print("\n\nError: Unable to setup state machine.\n\n" + error_message)
+            raise PyboardError("Unable to setup state machine.", error_message) from e
         # Get information about state machine.
         states = self.get_states()
         events = self.get_events()
