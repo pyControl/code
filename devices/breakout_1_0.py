@@ -6,7 +6,9 @@ class Breakout_1_0:
         # Inputs and outputs.
 
         # Jumper required to use either DAC/DIO_C or POW_C.
-        self.port_1 = Port(DIO_A="X1", DIO_B="X2", DIO_C="X5", POW_A="Y8", POW_B="Y4", POW_C="Y2", DAC=1, UART=4)
+        self.port_1 = Port(
+            DIO_A="X1", DIO_B="X2", DIO_C="X5", POW_A="Y8", POW_B="Y4", POW_C="Y2", DAC=1, UART=4, ENCODER=2
+        )
 
         # Jumper required to use either DAC or POW_C.
         self.port_2 = Port(DIO_A="X3", DIO_B="X4", DIO_C="X6", POW_A="Y7", POW_B="Y3", POW_C="Y1", DAC=2)

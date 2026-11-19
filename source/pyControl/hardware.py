@@ -43,8 +43,14 @@ next_ID = 0  # Next hardware object ID.
 
 IO_dict = {}  # Dictionary {ID: IO_object} containing all hardware inputs and outputs.
 
-available_timers = [3, 5, 7, 8, 9, 10, 11, 12, 13, 14]  # Hardware timers not in use.
-# Used timers; 1: Framework clock tick, 2: Rotary encoder, 4: Audio write_timed, 6: DAC write_timed.
+# Default F405/F7 timer pool. Breakouts for other MCUs can replace this list
+# before constructing timer-backed devices. Devices that need any timer pop()
+# from the end; devices that need a specific timer (e.g. a rotary encoder wired
+# to its channels) use claim_timer(), so encoder-capable timers go first.
+available_timers = [2, 3, 5, 7, 8, 9, 10, 11, 12, 13, 14]
+# Reserved timers; 1: framework clock, 4: audio write_timed, 6: DAC write_timed.
+
+claimed_timers = {}  # {timer: owner} for timers reserved with claim_timer().
 
 initialised = False  # Set to True once hardware has been intiialised.
 
@@ -53,6 +59,19 @@ interrupt_queue = Ring_buffer()  # Queue for processing hardware interrupts.
 stream_data_queue = Ring_buffer()  # Queue for streaming data to computer.
 
 # Functions -------------------------------------------------------------------
+
+
+def claim_timer(timer, owner):
+    # Remove a specific timer from the shared pool, or raise if it is not free.
+    if timer in claimed_timers:
+        raise ValueError("Timer {} is already used by {}.".format(timer, claimed_timers[timer]))
+    if timer not in available_timers:
+        raise ValueError(
+            "Timer {} is not available to {}: it is reserved or already allocated. "
+            "Construct devices that need a specific timer before other timer-using devices.".format(timer, owner)
+        )
+    available_timers.remove(timer)
+    claimed_timers[timer] = owner
 
 
 def assign_ID(hardware_object):
@@ -499,7 +518,7 @@ class Digital_output(IO_object):
 
 class Port:
     # Class representing one RJ45 behavioural hardware port.
-    def __init__(self, DIO_A, DIO_B, POW_A, POW_B, DIO_C=None, POW_C=None, DAC=None, I2C=None, UART=None):
+    def __init__(self, DIO_A, DIO_B, POW_A, POW_B, DIO_C=None, POW_C=None, DAC=None, I2C=None, UART=None, ENCODER=None):
         self.DIO_A = DIO_A
         self.DIO_B = DIO_B
         self.DIO_C = DIO_C
@@ -509,6 +528,7 @@ class Port:
         self.DAC = DAC
         self.I2C = I2C
         self.UART = UART
+        self.ENCODER = ENCODER  # Timer whose CH1/CH2 inputs are DIO_A/DIO_B, if the port supports an encoder.
 
 
 # IO_expander_pin -------------------------------------------------------------

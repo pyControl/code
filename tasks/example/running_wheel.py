@@ -38,7 +38,8 @@ running_wheel = Rotary_encoder(
     sampling_rate=100,
     output="velocity",
     triggers=[running_trigger, bonus_trigger],
-)  # Running wheel must be plugged into port 1 of breakout board.
+    port=board.port_1,  # Running wheel must be plugged into port 1 of breakout board.
+)
 
 solenoid = Digital_output(board.port_2.POW_A)  # Reward delivery solenoid.
 
